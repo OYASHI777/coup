@@ -24,7 +24,7 @@ use std::time::Instant;
 //          2. Adjust Collective Constraints to include new logic
 //          3. Shift Constraint history to history
 //     2. Make Constraints History seperate from History
-//          [Constraints] - TODO C
+//          [Constraints] - TODO C (TO WRITE A DOCUMENT FOR THIS TOO)
 //          a) Personal, Group, Private (Exchange card seen which are chance sampled)
 //          [Illegal Action Pruning in History] - TODO D
 //          b) So illegal actions will be pruned here -> naive prob will only calculate the probabilities
@@ -43,6 +43,7 @@ use std::time::Instant;
 //                  b) So [Think] of if we need ambassador action! We do need it stored in strategy, and reflected in self play but idt we need it for simulation
 //                      We do not need it stored in past history as we dont care about card state in history
 //                      Self play should be with rust game.
+//                  c) Only for exchangedraw not revealredraw
 //          [Exchange Draw] - TODO A
 //          d) Need exchangedraw? Yes
 //                  Will however need to serialise the exchangechoice? Consider how to do this!
@@ -50,11 +51,17 @@ use std::time::Instant;
 //          e) What about revealredraw? and initial distribution?
 //              I think we can ignore initial distribution because its uniform, and we want the model to not need to know starting card dist
 //              Ignoring revealredraw chance ignores the proper prob of redraw and assumes uniform very wrongly
-//              We could do MC for revealredraw and have a private constraint for it. I dont think I want to serialise the private information
+//              We could do MC for revealredraw and have a private constraint for it. We [Do not Serialise RevealRedraw private information]
+//              [Serialise The Revealed Card] [Do not Serialise Drawn Card]
 //              We [Serialise the Exchange Draw] because the exchange choices depends on it. You can only choose cards based on the pool given and infostate
+//              Reveal Redraw is different as its information about your past hand, which we wish to represent in infostates not private info
+//              We can however, represent the conditional prob NN input as a work around
 //              For revealredraw, no choice depends on it, the game continues
 //              Serialisation is only for future simulations, not past history so there should be no conflict with self play
-//          f) What happens in self play?
+//          f) How to choose an action for revealredraw or discard, as it affects infostate!
+//              Each infostate will have a different Mixed Strategy and Best Response
+//              We are sampling all possible actions so [no issue]
+//          g) What happens in self play?
 //              In past history, we know they Exchanged and saw something, but we do not know which, and we do not want to MC sample the past.
 //              We can just not include them in private constraint, and continue only with public constraints
 //              Might need private constraint of exchangedraw that was realised for the playing player!
