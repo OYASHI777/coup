@@ -19,8 +19,47 @@ use prob_manager::naive_prob::NaiveProb;
 use std::time::Instant;
 
 // MACRO Objective
-//     0. Make Git
 //     1. Settle Constraints and group representation history
+//          1. Make Group Constraint
+//          2. Adjust Collective Constraints to include new logic
+//          3. Shift Constraint history to history
+//     2. Make Constraints History seperate from History
+//          [Constraints] - TODO C
+//          a) Personal, Group, Private (Exchange card seen which are chance sampled)
+//          [Illegal Action Pruning in History] - TODO D
+//          b) So illegal actions will be pruned here -> naive prob will only calculate the probabilities
+//          c) Might a private/public exchange choice? [Public Only]
+//                  If private exchange choice and card shown, then it is consistent to receive starting hand too
+//                  No need to receive starting hand. The AI should work without knowing card dist see ReBeL Paper PBS Game type
+//                  May avoid private exchange choice by having probabilities all conditional on infostate!
+//                  Prob dont need private exchange choice as the choice is different for each infostate, so its not a commmon public choice
+//                  So the choice rearranges the infostates and will not be stored.
+//          [Private Constraints] - TODO B
+//          d) But card seen on draw is random sampled by MC and so will be private information
+//                  Each player on their exchangedraw will have some private information
+//                  Store for each player? Will all then calculate probability based on all private information?
+//                  a) Perspective 1: All calculate based on private information because its a simulation of what might happen
+//                      Maybe thats why the history also stores private information | Store private information not private action
+//                  b) So [Think] of if we need ambassador action! We do need it stored in strategy, and reflected in self play but idt we need it for simulation
+//                      We do not need it stored in past history as we dont care about card state in history
+//                      Self play should be with rust game.
+//          [Exchange Draw] - TODO A
+//          d) Need exchangedraw? Yes
+//                  Will however need to serialise the exchangechoice? Consider how to do this!
+//                  Ok so we do need exchange draw because we will need to take an input for what card was drawn in an extensible way
+//          e) What about revealredraw? and initial distribution?
+//              I think we can ignore initial distribution because its uniform, and we want the model to not need to know starting card dist
+//              Ignoring revealredraw chance ignores the proper prob of redraw and assumes uniform very wrongly
+//              We could do MC for revealredraw and have a private constraint for it. I dont think I want to serialise the private information
+//              We [Serialise the Exchange Draw] because the exchange choices depends on it. You can only choose cards based on the pool given and infostate
+//              For revealredraw, no choice depends on it, the game continues
+//              Serialisation is only for future simulations, not past history so there should be no conflict with self play
+//          f) What happens in self play?
+//              In past history, we know they Exchanged and saw something, but we do not know which, and we do not want to MC sample the past.
+//              We can just not include them in private constraint, and continue only with public constraints
+//              Might need private constraint of exchangedraw that was realised for the playing player!
+//              So PMCCFR should take history that is public
+//              So it should store a constraint history for simulation and a constraint history for future self play
 //     2. Run a test PMCCFR with dummy value function
 
 // TODO: Add comments for every function and file... its getting big
