@@ -1,0 +1,74 @@
+// I1 1
+// Income [Update] => Next Turn
+// FA1 1
+// ForeignAid => CollectiveBlock (No Block) [Update] => Next Turn
+// FA2 5
+// ForeignAid => CollectiveBlock (Block) => Challenge Duke => Eval(Pass) => Next Turn
+// FA3 5x5x5x5 = 625
+// ForeignAid => CollectiveBlock (Block) => Challenge Duke => Eval(Failure) => RevealRedraw (Challenged) => Discard (Challenger) => Next Turn
+// FA4 5x5x5 = 125
+// ForeignAid => CollectiveBlock (Block) => Challenge Duke => Eval(Success) => Discard (Blocker) [Update] => Next Turn
+// COUP1 5
+// Coup [Update] => Discard => Next Turn
+// A1 15 = 15
+// Exchange => Collective Challenge => Eval(Pass) => ExchangeChoice => Next Turn
+// A2 5x5 = 25
+// Exchange => Collective Challenge => Eval(Success) => Discard (Player) => Next Turn
+// A3 5x5x5x15 = 1875
+// Exchange => Collective Challenge => Eval(Failure) => RevealRedraw (player) => Discard (Opposer) => ExchangeChoice => Next Turn
+// B1 5x5 = 25
+// Assassinate [Update] => Challenge Assassinate => Eval(Pass) => BlockAssassinate => Eval(Pass) => Discard (Victim) => Next Turn
+// B2 5
+// Assassinate [Update] => Challenge Assassinate => Eval(Pass) => BlockAssassinate => Eval(Success) => ChallengeBlock => Eval(Pass) => Next Turn
+// B3 5x5x5
+// Assassinate [Update] => Challenge Assassinate => Eval(Pass) => BlockAssassinate => Eval(Success) => ChallengeBlock => Eval(Success) => Discard (Victim) x1 Cards (dead) => Next Turn
+// B4 5x5x5
+// Assassinate [Update] => Challenge Assassinate => Eval(Pass) => BlockAssassinate => Eval(Success) => ChallengeBlock => Eval(Success) => Discard (Victim) x2 Cards => Next Turn
+// B5 5x5x5 = 125
+// Assassinate [Update] => Challenge Assassinate => Eval(Pass) => BlockAssassinate => Eval(Success) => ChallengeBlock => Eval(Failure) => RevealRedraw (Victim) => Discard (Challenger) => Next Turn
+// B6 5x5x5x5 = 625
+// Assassinate [Update] => Challenge Assassinate => Eval(Success) => Discard (Player) => Next Turn
+// B7 5x5x5x5 = 625
+// Assassinate [Update] => Challenge Assassinate => Eval(Failure) => RevealRedraw (Player) => Discard (Challenger == Victim) (dead)  => Next Turn
+// B8 5x5x5x5 = 625
+// Assassinate [Update] => Challenge Assassinate => Eval(Failure) => RevealRedraw (Player) => Discard (Challenger != Victim) (alive) => BlockAssassinate => Eval(Pass) => Discard (Victim) => Next Turn
+// B9 5x5x5x5x5x5 = 15625 
+// Assassinate [Update] => Challenge Assassinate => Eval(Failure) => RevealRedraw (Player) => Discard (Challenger != Victim) (alive) => BlockAssassinate => Eval(Success) => ChallengeBlock => Eval(Pass) => Next Turn
+// B10 5x5x5x5x5 = 3125
+// Assassinate [Update] => Challenge Assassinate => Eval(Failure) => RevealRedraw (Player) => Discard (Challenger != Victim) (alive) => BlockAssassinate => Eval(Success) => ChallengeBlock => Eval(Success) => Discard (Victim) x1 Cards(dead) => Next Turn
+// B11 
+// Assassinate [Update] => Challenge Assassinate => Eval(Failure) => RevealRedraw (Player) => Discard (Challenger != Victim) (alive) => BlockAssassinate => Eval(Success) => ChallengeBlock => Eval(Success) => Discard (Victim) x2 Cards => Next Turn
+// B12
+// Assassinate [Update] => Challenge Assassinate => Eval(Failure) => RevealRedraw (Player) => Discard (Challenger != Victim) (alive) => BlockAssassinate => Eval(Success) => ChallengeBlock => Eval(Failure) => RevealRedraw (Victim) => Discard (Challenger) => Next Turn
+// C1
+// Steal => Challenge Captain => Eval(Pass) => BlockSteal => Eval(Pass) [Update] => Next Turn
+// C2
+// Steal => Challenge Captain => Eval(Pass) => BlockSteal => Eval(Success) => ChallengeBlock => Eval(Pass) => Next Turn
+// C3
+// Steal => Challenge Captain => Eval(Pass) => BlockSteal => Eval(Success) => ChallengeBlock => Eval(Success) => Discard (Victim) [Update] => Next Turn
+// C4
+// Steal => Challenge Captain => Eval(Pass) => BlockSteal => Eval(Success) => ChallengeBlock => Eval(Failure) => RevealRedraw (Victim) => Discard (Challenger) => Next Turn
+// C5
+// Steal => Challenge Captain => Eval(Success) => Discard (Player) => Next Turn
+// C6
+// Steal => Challenge Captain => Eval(Failure) => RevealRedraw (Player) => Discard (Opposer) [Update if blocker dead]=> BlockSteal (if alive) => Eval(Pass) [Update]=> Next Turn
+// C7
+// Steal => Challenge Captain => Eval(Failure) => RevealRedraw (Player) => Discard (Opposer) [Update if blocker dead]=> BlockSteal (if alive) => Eval(Success) => ChallengeBlock => Eval(Pass) => Next Turn
+// C8
+// Steal => Challenge Captain => Eval(Failure) => RevealRedraw (Player) => Discard (Opposer) [Update if blocker dead]=> BlockSteal (if alive) => Eval(Success) => ChallengeBlock => Eval(Success) => Discard (Victim) [Update] => Next Turn
+// C9
+// Steal => Challenge Captain => Eval(Failure) => RevealRedraw (Player) => Discard (Opposer) [Update if blocker dead] => BlockSteal (if alive) => Eval(Success) => ChallengeBlock => Eval(Failure) => RevealRedraw (Victim) => Discard (Challenger) => Next Turn
+// D1
+// Tax => Challenge Duke => Eval(Pass) [Update] => Next Turn
+// D2
+// Tax => Challenge Duke => Eval(Success) => Discard (Player) => Next Turn
+// D3
+// Tax => Challenge Duke => Eval(Failure) => RevealRedraw (Player) => Discard (Opposer) [Update] => Next Turn
+
+
+// Compare 
+History: [Steal { player_id: 0, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, true, true, true, true], opposing_player_id: 0, final_actioner: 4 }, EvalResult { result: Failure }, RevealRedraw { player_id: 0, card: Captain }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 1 }, BlockSteal { player_id: 5, opposing_player_id: 0, card: Captain }, EvalResult { result: Success }, CollectiveChallenge { participants: [false, true, true, false, true, false], opposing_player_id: 5, final_actioner: 1 }, EvalResult { result: Failure }, RevealRedraw { player_id: 5, card: Captain }, Discard { player_id: 1, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, true], opposing_player_id: 1, final_actioner: 4 }, EvalResult { result: Failure }, RevealRedraw { player_id: 1, card: Captain }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 1 }, BlockSteal { player_id: 5, opposing_player_id: 1, card: Ambassador }, EvalResult { result: Success }, CollectiveChallenge { participants: [false, true, true, false, false, false], opposing_player_id: 5, final_actioner: 2 }, EvalResult { result: Failure }, RevealRedraw { player_id: 5, card: Ambassador }, Discard { player_id: 2, card: [Captain, Captain], no_cards: 1 }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [true, false, false, true, false, true], opposing_player_id: 2, final_actioner: 5 }, CollectiveChallenge { participants: [true, false, false, true, false, false], opposing_player_id: 5, final_actioner: 3 }, EvalResult { result: Failure }, RevealRedraw { player_id: 5, card: Duke }, Discard { player_id: 3, card: [Duke, Duke], no_cards: 1 }, ForeignAid { player_id: 3 }, CollectiveBlock { participants: [true, true, true, false, false, true], opposing_player_id: 3, final_actioner: 2 }, CollectiveChallenge { participants: [true, true, false, false, false, false], opposing_player_id: 2, final_actioner: 0 }, EvalResult { result: Success }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, true, false, true, false, false], opposing_player_id: 5, final_actioner: 1 }, CollectiveChallenge { participants: [false, false, false, false, false, true], opposing_player_id: 1, final_actioner: 5 }, EvalResult { result: Success }, Discard { player_id: 1, card: [Duke, Duke], no_cards: 1 }, Tax { player_id: 0 }, CollectiveChallenge { participants: [false, false, false, true, false, false], opposing_player_id: 0, final_actioner: 3 }, EvalResult { result: Failure }, RevealRedraw { player_id: 0, card: Duke }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, Income { player_id: 5 }, Tax { player_id: 0 }, CollectiveChallenge { participants: [false, false, false, false, false, true], opposing_player_id: 0, final_actioner: 5 }, EvalResult { result: Failure }, RevealRedraw { player_id: 0, card: Duke }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 5, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 5, final_actioner: 0 }, EvalResult { result: Failure }, RevealRedraw { player_id: 5, card: Captain }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, 
+BlockSteal { player_id: 0, opposing_player_id: 5, card: Captain }, 
+EvalResult { result: Pass }, 
+Income { player_id: 0 }, 
+Coup { player_id: 5, opposing_player_id: 0 }]

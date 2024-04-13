@@ -1,0 +1,421 @@
+// mod unittests;
+// mod string_utils;
+// mod prob_manager;
+use std::collections::{HashSet, HashMap};
+pub mod history_public;
+pub mod pcmccfr;
+use pcmccfr::ReachProbability;
+use history_public::{ActionObservation, History, AOName};
+use std::fs::File;
+use std::io::Write;
+use log::{info, LevelFilter};
+use env_logger::{Builder, Env, Target};
+use rand::{Rng, thread_rng};
+use rand::prelude::SliceRandom;
+pub mod prob_manager;
+// use prob_manager::prob_state::ProbState;
+mod string_utils;
+use prob_manager::naive_prob::NaiveProb;
+use std::time::Instant;
+
+// MACRO Objective
+//     0. Make Git
+//     1. Settle Constraints and group representation history
+//     2. Run a test PMCCFR with dummy value function
+
+// TODO: Add comments for every function and file... its getting big
+
+// TODO: Make constraint work properly
+    // SUBTODO: Consider how to make only legal moves possible?
+    // This should be handled on probability side. The game side only offers moves that are possible because it has game hand
+    // Check according to constraints only possible?
+        // Possible, check if the group constraints when merged includes the particular player
+    // Might want to add constraints to history or consider if constraint should be tracked on both prob and history side
+    // I think history should track constraints and naive_prob should take it as an input
+
+//TOADD: Make the constraints a hash and store them locally to be preloaded
+    // Since it can be stored, jsut test if belief prob are right then use this
+    //TOCONSIDER: Next time if I should break up the hashmap to be stored based on groupings of depth 0-10, 11-20 etc..
+    // For now just test how large it can be
+
+//TODO: Make chance function for RevealRedraw and ExchangeChoice
+    // For ExchangeChoice, dont have to actually calculate the probabilities
+    // For each infostate Just filter out the possible states out of all states, randomly choose one state, and randomly draw two card for the new state
+    // For RevealRedraw
+    // A players infostate transitions to another infostate if reveal "A" all other than states with "A" are kept
+    // "AA" "AB" "AC" "AD" "AE" are current and next infostates
+    // Filter first all with "A"
+    // For each current infostate filter again for the double constraint randomly choose a state, randomly choose among the 4 possible draws 
+//TODO: Load Hashmap by depth instead figure out later!
+
+//TODO: Make CardState into statehistory
+//TODO: Make naive probability belief generator
+//TODO: Make PureCFR run it for every initialised state => initialised state determines chance actions
+//TODO: Since initialised policy is uniform, you can train basic value function based off of random games or dont
+
+// 2024-03-23T23:18:59 [INFO] - Time taken for Optimal JC Filter: 300ns
+// 2024-03-23T23:18:59 [INFO] - Time taken for Optimal PC Filter: 32.8897ms
+// 2024-03-23T23:18:59 [INFO] - Time taken for Optimal GC Filter: 100ns
+// 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
+fn main() {
+    // game_rnd(1000, true);
+    // test_belief(20000000);
+    // make_belief(20000000);
+    // game_rnd(20000000, false);
+    // test_filter(1000);
+    // test_reach(); 
+    test_shuffle(100);
+}
+pub fn test_shuffle(iterations: usize){
+    logger();
+    let mut prob: NaiveProb = NaiveProb::new();
+
+    for i in 0..iterations {
+        let mut hh = History::new(0);
+
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        let mut rng = thread_rng();
+        let top: usize = rng.gen_range(50..200);
+        let limit = rng.gen_range(0..10);
+
+    // let limit: usize = 200;
+        while !hh.game_won() {
+            
+            new_moves = hh.generate_legal_moves();
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                hh.push_ao(output);
+                prob.push_ao(&output);
+            } else {
+                break;
+            }
+            step += 1;
+            if step > limit {
+                break;
+            }
+        }
+    
+    // So for small vectors after optimal_filter maybe around 150000 size, should shuffle then iterate through
+    // For large vectors like 1500000 in size, maybe try to pogo jump it. The max search if no constraint is 1500000 - 90000 incredibly unlkely
+    // 400ms
+        let start_time = Instant::now();
+        let output = prob.chance_reveal_redraw(0, vec!["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE", "EE"].into_iter().map(|s| s.to_string()).collect());
+        let elapsed_time = start_time.elapsed();
+        log::info!("Time: {:?}", elapsed_time);
+        log::info!("Output: {:?}", output);
+        let start_time = Instant::now();
+        let output = prob.chance_reveal_redraw_exit(0, vec!["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD","BE", "CC", "CD", "CE", "DD", "DE", "EE"].into_iter().map(|s| s.to_string()).collect());
+        let elapsed_time = start_time.elapsed();
+        log::info!("Time Exit: {:?}", elapsed_time);
+        log::info!("Output Exit: {:?}", output);
+        let start_time = Instant::now();
+        let output = prob.chance_reveal_redraw_norm(0, vec!["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD","BE", "CC", "CD", "CE", "DD", "DE", "EE"].into_iter().map(|s| s.to_string()).collect());
+        let elapsed_time = start_time.elapsed();
+        log::info!("Time Norm: {:?}", elapsed_time);
+        log::info!("Output Norm: {:?}", output);
+        prob.reset();
+    }
+}
+pub fn test_reach() {
+    let mut rp: ReachProbability = ReachProbability::initialise();
+    let vec0: Vec<String> = vec!["AA", "BE"].into_iter().map(|s| s.to_string()).collect();
+    let vec1: Vec<String> = vec!["AA", "AB", "AC", "AD", "AE"].into_iter().map(|s| s.to_string()).collect();
+    let vec2: Vec<String> = vec!["CC"].into_iter().map(|s| s.to_string()).collect();
+    let vec3: Vec<String> = vec!["AD", "BD", "CD", "DD", "DE"].into_iter().map(|s| s.to_string()).collect();
+    let vec4: Vec<String> = vec!["AB", "AC", "AD", "AE", "AA"].into_iter().map(|s| s.to_string()).collect();
+    let vec5: Vec<String> = vec!["AE", "BE", "CE", "DE", "EE"].into_iter().map(|s| s.to_string()).collect();
+    let hash_set0: HashSet<String> = vec!["AA", "BE"].into_iter().map(|s| s.to_string()).collect();
+    let hash_set1: HashSet<String> = vec!["AA", "AB", "AC", "AD", "AE"].into_iter().map(|s| s.to_string()).collect();
+    let hash_set2: HashSet<String> = vec!["CC"].into_iter().map(|s| s.to_string()).collect();
+    let hash_set3: HashSet<String> = vec!["AD", "BD", "CD", "DD", "DE"].into_iter().map(|s| s.to_string()).collect();
+    let hash_set4: HashSet<String> = vec!["AB", "AC", "AD", "AE", "AA"].into_iter().map(|s| s.to_string()).collect();
+    let hash_set5: HashSet<String> = vec!["AE", "BE", "CE", "DE", "EE"].into_iter().map(|s| s.to_string()).collect();
+    // let hash_set0: HashSet<String> = vec!["AA", "AC", "AE", "BB", "BD", "CC", "CD", "CE", "DD"].into_iter().map(|s| s.to_string()).collect();
+    // let hash_set1: HashSet<String> = vec!["AB", "AC", "AD", "BC", "BD", "CC", "CD", "CE", "DD", "EE"].into_iter().map(|s| s.to_string()).collect();
+    // let hash_set2: HashSet<String> = vec!["AA", "AC", "AE", "BD", "BE", "CC", "CD", "CE", "DD", "DE"].into_iter().map(|s| s.to_string()).collect();
+    // let hash_set3: HashSet<String> = vec!["AB", "AB", "AE", "BB", "BD", "CC", "CD", "DD", "EE"].into_iter().map(|s| s.to_string()).collect();
+    // let hash_set4: HashSet<String> = vec!["AA", "AD", "AE", "BC", "BE", "CD", "CE", "DD", "DE"].into_iter().map(|s| s.to_string()).collect();
+    // let hash_set5: HashSet<String> = vec!["AB", "AD", "AE", "BB", "BE", "CC", "CD", "CE", "DD", "EE"].into_iter().map(|s| s.to_string()).collect();
+    rp.modify_player_set(0, hash_set0);
+    rp.modify_player_set(1, hash_set1);
+    rp.modify_player_set(2, hash_set2);
+    rp.modify_player_set(3, hash_set3);
+    rp.modify_player_set(4, hash_set4);
+    rp.modify_player_set(5, hash_set5);
+    rp.modify_player_vec(0, vec0);
+    rp.modify_player_vec(1, vec1);
+    rp.modify_player_vec(2, vec2);
+    rp.modify_player_vec(3, vec3);
+    rp.modify_player_vec(4, vec4);
+    rp.modify_player_vec(5, vec5);
+    let hand: String = "BE".to_string();
+    let start_time = Instant::now();
+    let output: bool = rp.info_state_prune(0, hand.clone());
+    let elapsed_time = start_time.elapsed();
+    println!("time: {:?}", elapsed_time);
+    println!("output: {}", output);
+    let start_time = Instant::now();
+    let output: bool = rp.info_state_prune_vec(0, hand.clone());
+    let elapsed_time = start_time.elapsed();
+    println!("time: {:?}", elapsed_time);
+    println!("output: {}", output);
+}
+pub fn test_belief(iterations: usize){
+    logger();
+
+    let mut hh = History::new(0);
+    let mut step: usize = 0;
+    let mut new_moves: Vec<ActionObservation>;
+    
+    // Just initial part
+    // Mid game can be like microseconds
+    
+    log::trace!("Start");
+    new_moves = hh.generate_legal_moves();
+    let mut prob = NaiveProb::new();
+    
+    if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+        hh.push_ao(output);
+        prob.push_ao(&output);
+    } else {
+        log::trace!("Pushed bad move!");
+    }
+    let hist_vec: Vec<ActionObservation> = hh.get_history(0);
+    for i in 0..iterations {
+        let start_time = Instant::now();
+        let elapsed_time_concurrent = start_time.elapsed();
+        prob.filter_state_concurrent();
+        log::info!("Time taken for filter_state_concurrent: {:?}", elapsed_time_concurrent);
+        let start_time_2 = Instant::now();
+        let output: Vec<f64> = prob.get_latest_beliefs();
+        let output: Vec<f64> = prob.get_latest_beliefs_concurrent();
+        let elapsed_time = start_time_2.elapsed();
+        log::info!("Time taken for belief: {:?}", elapsed_time);
+        if i % 10 == 0 {
+            println!("Done with {}", i);
+        }
+    }
+}
+pub fn test_filter(iterations: usize){
+    logger();
+
+    let mut prob = NaiveProb::new();
+    // println!("Initialising Sets");
+    // let start_time = Instant::now();
+    // prob.set_generation();
+    // let elapsed_time = start_time.elapsed();
+    // println!("Finished Initialising Sets");
+    // println!("Total Time to Initialise Sets: {:?}", elapsed_time);
+    // log::info!("Total Time taken to Initialise Sets: {:?}", elapsed_time);
+    for i in 0..iterations {
+
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        let mut rng = thread_rng();
+        let top: usize = rng.gen_range(50..200);
+        let limit = rng.gen_range(0..10);
+        // let limit: usize = 200;
+        while !hh.game_won() {
+            
+            new_moves = hh.generate_legal_moves();
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                hh.push_ao(output);
+                prob.push_ao(&output);
+            } else {
+                break;
+            }
+            step += 1;
+            if step > limit {
+                break;
+            }
+        }
+        hh.log_state();
+        log::info!("{}", format!("Game Final Step : {:?}",step));
+        prob.printlog();
+        let start_time = Instant::now();
+        prob.filter_state();
+        let elapsed_time = start_time.elapsed();
+        prob.log_calc_state_len();
+        log::info!("Total Time taken for filter_state: {:?}", elapsed_time);
+        let start_time_concurrent = Instant::now();
+        prob.filter_state_concurrent();
+        let elapsed_time_concurrent = start_time_concurrent.elapsed();
+        prob.log_calc_state_len();
+        log::info!("Total Time taken for filter_state_concurrent: {:?}", elapsed_time_concurrent);
+        let start_time = Instant::now();
+        prob.filter_state_optimal();
+        let elapsed_time = start_time.elapsed();
+        log::info!("Total Time taken for filter_state_optimal: {:?}", elapsed_time);
+        let start_time = Instant::now();
+        prob.filter_state_optimal2();
+        let elapsed_time = start_time.elapsed();
+        log::info!("Total Time taken for filter_state_optimal2: {:?}", elapsed_time);
+        let start_time = Instant::now();
+        let output: Vec<f64> = prob.compute_beliefs_direct();
+        let elapsed_time = start_time.elapsed();
+        log::info!("Belief Prob: {:?}", output);
+        log::info!("Total Time taken for compute_belief_direct: {:?}", elapsed_time);
+        prob.log_calc_state_len();
+
+        let start_time_2 = Instant::now();
+        let output: Vec<f64> = prob.get_latest_beliefs();
+        let elapsed_time_belief = start_time_2.elapsed();
+        log::info!("Belief Prob: {:?}", output);
+        log::info!("Time taken for belief: {:?}", elapsed_time_belief);
+        let start_time_2 = Instant::now();
+        let output: Vec<f64> = prob.get_latest_beliefs_concurrent();
+        let elapsed_time_belief = start_time_2.elapsed();
+        log::info!("Belief Prob: {:?}", output);
+        log::info!("Time taken for conc belief: {:?}", elapsed_time_belief);
+        let start_time_2 = Instant::now();
+        let key: String = prob.make_key_belief();
+        let elapsed_time_belief = start_time_2.elapsed();
+        log::info!("Key: {:?}", key);
+        log::info!("Time taken to generate key: {:?}", elapsed_time_belief);
+        if i % 10 == 0 {
+            println!("Done with {}", i);
+        }
+        log::info!("");
+        prob.reset();
+    }
+}
+
+pub fn make_belief(iterations: usize){
+    // logger();
+
+    let mut prob = NaiveProb::new();
+    // println!("Initialising Sets");
+    // let start_time = Instant::now();
+    // prob.set_generation();
+    // let elapsed_time = start_time.elapsed();
+    // println!("Finished Initialising Sets");
+    // println!("Total Time to Initialise Sets: {:?}", elapsed_time);
+    // log::info!("Total Time taken to Initialise Sets: {:?}", elapsed_time);
+    prob.load_bson_hashmap();
+    println!("Load Success");
+    for i in 0..iterations {
+
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        let mut rng = thread_rng();
+        // let top: usize = rng.gen_range(50..200);
+        let limit = rng.gen_range(0..150);
+        while !hh.game_won() {
+            
+            new_moves = hh.generate_legal_moves();
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                hh.push_ao(output);
+                prob.push_ao(&output);
+            } else {
+                break;
+            }
+            step += 1;
+            if step > limit {
+                break;
+            }
+        }
+        hh.log_state();
+        log::info!("{}", format!("Game Final Step : {:?}",step));
+        prob.printlog();
+        if i % 10000 == 0 {
+            println!("Done with {}", i);
+            prob.save_bson_hashmap();
+            println!("Saved Bson!");
+            prob.print_belief_hm_len();
+        }
+        if prob.key_in_bson_hashmap(prob.make_key_belief()) {
+            continue;
+        }
+        prob.gen_and_save_belief();
+
+        log::info!("");
+        prob.reset();
+    }
+}
+
+pub fn game_rnd(game_no: usize, log_bool: bool){
+    if log_bool{
+        logger();
+    }
+    let mut game: usize = 0;
+    let mut max_steps: usize = 0;
+    while game < game_no {
+        log::info!("Game : {}", game);
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        if game % 1000000 == 0 {
+            println!("Game: {}", game);
+        }
+        log::trace!("Game Made:");
+        while !hh.game_won() {
+            
+            log::trace!("Game Made:");
+            // log::info!("{}", format!("Step : {:?}",step));
+            hh.log_state();
+            // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+            // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+            new_moves = hh.generate_legal_moves();
+            if new_moves[0].name() != AOName::CollectiveChallenge {
+    
+                log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+            } else {
+                log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+                // log::info!("{}", format!("Legal Moves: CollectiveChallenge"));
+            }
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                log::info!("{}", format!("Choice: {:?}", output));
+                hh.push_ao(output);
+            } else {
+                log::trace!("Pushed bad move!");
+                break;
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            log::info!("");
+        }
+        if step > max_steps {
+            max_steps = step;
+        }
+        log::info!("{}", format!("Game Won : {:?}",step));
+        hh.log_state();
+        log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+        log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+        log::info!("");
+        game += 1;
+    }
+    log::info!("Most Steps: {}", max_steps);
+    println!("Most Steps: {}", max_steps);
+}
+pub fn logger(){
+    // let log_file = File::create("app.log").unwrap();
+
+    let log_file = File::create("rustapp.log").expect("Failed to create log file");
+
+    // Initialize the env_logger builder with custom format
+    Builder::from_env(Env::default().default_filter_or("info"))
+        .format(|buf, record| {
+            // Custom format: Timestamp, Level, and Message
+            writeln!(
+                buf,
+                "{} [{}] - {}",
+                chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
+                record.level(),
+                record.args()
+            )
+        })
+        // Set log level filter; this line is optional if using default_filter_or in from_env
+        .filter(None, LevelFilter::Trace) // Adjust the log level as needed
+        // Direct logs to the file
+        .target(Target::Pipe(Box::new(log_file)))
+        // Apply the configuration
+        .init();
+}
