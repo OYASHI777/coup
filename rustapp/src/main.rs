@@ -18,12 +18,17 @@ mod string_utils;
 use prob_manager::naive_prob::NaiveProb;
 use std::time::Instant;
 
+// QUICK TEMP: Exchange Draw showing 2 cards should prune the other groups? because they found out the pile has 2 cards
+//              Make Func to initialise past constraint history based on player perspective in naive_prob
+//              Integrate this by having an initial constraint history that can be loaded in
+
 // MACRO Objective
 //     1. Settle Constraints and group representation history
 //          1. Make Group Constraint
 //          2. Adjust Collective Constraints to include new logic
 //          3. Shift Constraint history to history
 //     2. Make Constraints History seperate from History
+//          [DONE] - Can identify impossible moves that might be suggested by history
 //          [Constraints] - TODO C (TO WRITE A DOCUMENT FOR THIS TOO)
 //          a) Personal, Group, Private (Exchange card seen which are chance sampled)
 //          [Illegal Action Pruning in History] - TODO D
@@ -104,7 +109,7 @@ use std::time::Instant;
 // 2024-03-23T23:18:59 [INFO] - Time taken for Optimal GC Filter: 100ns
 // 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
 fn main() {
-    game_rnd(1000, true);
+    game_rnd_constraint(100, true);
     // test_belief(20000000);
     // make_belief(20000000);
     // game_rnd(20000000, false);
@@ -207,182 +212,182 @@ pub fn test_reach() {
     println!("time: {:?}", elapsed_time);
     println!("output: {}", output);
 }
-pub fn test_belief(iterations: usize){
-    logger();
+// pub fn test_belief(iterations: usize){
+//     logger();
 
-    let mut hh = History::new(0);
-    let mut step: usize = 0;
-    let mut new_moves: Vec<ActionObservation>;
+//     let mut hh = History::new(0);
+//     let mut step: usize = 0;
+//     let mut new_moves: Vec<ActionObservation>;
     
-    // Just initial part
-    // Mid game can be like microseconds
+//     // Just initial part
+//     // Mid game can be like microseconds
     
-    log::trace!("Start");
-    new_moves = hh.generate_legal_moves();
-    let mut prob = NaiveProb::new();
+//     log::trace!("Start");
+//     new_moves = hh.generate_legal_moves();
+//     let mut prob = NaiveProb::new();
     
-    if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
-        hh.push_ao(output);
-        prob.push_ao(&output);
-    } else {
-        log::trace!("Pushed bad move!");
-    }
-    let hist_vec: Vec<ActionObservation> = hh.get_history(0);
-    for i in 0..iterations {
-        let start_time = Instant::now();
-        let elapsed_time_concurrent = start_time.elapsed();
-        prob.filter_state_concurrent();
-        log::info!("Time taken for filter_state_concurrent: {:?}", elapsed_time_concurrent);
-        let start_time_2 = Instant::now();
-        let output: Vec<f64> = prob.get_latest_beliefs();
-        let output: Vec<f64> = prob.get_latest_beliefs_concurrent();
-        let elapsed_time = start_time_2.elapsed();
-        log::info!("Time taken for belief: {:?}", elapsed_time);
-        if i % 10 == 0 {
-            println!("Done with {}", i);
-        }
-    }
-}
-pub fn test_filter(iterations: usize){
-    logger();
+//     if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+//         hh.push_ao(output);
+//         prob.push_ao(&output);
+//     } else {
+//         log::trace!("Pushed bad move!");
+//     }
+//     let hist_vec: Vec<ActionObservation> = hh.get_history(0);
+//     for i in 0..iterations {
+//         let start_time = Instant::now();
+//         let elapsed_time_concurrent = start_time.elapsed();
+//         prob.filter_state_concurrent();
+//         log::info!("Time taken for filter_state_concurrent: {:?}", elapsed_time_concurrent);
+//         let start_time_2 = Instant::now();
+//         let output: Vec<f64> = prob.get_latest_beliefs();
+//         let output: Vec<f64> = prob.get_latest_beliefs_concurrent();
+//         let elapsed_time = start_time_2.elapsed();
+//         log::info!("Time taken for belief: {:?}", elapsed_time);
+//         if i % 10 == 0 {
+//             println!("Done with {}", i);
+//         }
+//     }
+// }
+// pub fn test_filter(iterations: usize){
+//     logger();
 
-    let mut prob = NaiveProb::new();
-    // println!("Initialising Sets");
-    // let start_time = Instant::now();
-    // prob.set_generation();
-    // let elapsed_time = start_time.elapsed();
-    // println!("Finished Initialising Sets");
-    // println!("Total Time to Initialise Sets: {:?}", elapsed_time);
-    // log::info!("Total Time taken to Initialise Sets: {:?}", elapsed_time);
-    for i in 0..iterations {
+//     let mut prob = NaiveProb::new();
+//     // println!("Initialising Sets");
+//     // let start_time = Instant::now();
+//     // prob.set_generation();
+//     // let elapsed_time = start_time.elapsed();
+//     // println!("Finished Initialising Sets");
+//     // println!("Total Time to Initialise Sets: {:?}", elapsed_time);
+//     // log::info!("Total Time taken to Initialise Sets: {:?}", elapsed_time);
+//     for i in 0..iterations {
 
-        let mut hh = History::new(0);
-        let mut step: usize = 0;
-        let mut new_moves: Vec<ActionObservation>;
-        let mut rng = thread_rng();
-        let top: usize = rng.gen_range(50..200);
-        let limit = rng.gen_range(0..10);
-        // let limit: usize = 200;
-        while !hh.game_won() {
+//         let mut hh = History::new(0);
+//         let mut step: usize = 0;
+//         let mut new_moves: Vec<ActionObservation>;
+//         let mut rng = thread_rng();
+//         let top: usize = rng.gen_range(50..200);
+//         let limit = rng.gen_range(0..10);
+//         // let limit: usize = 200;
+//         while !hh.game_won() {
             
-            new_moves = hh.generate_legal_moves();
+//             new_moves = hh.generate_legal_moves();
             
-            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
-                hh.push_ao(output);
-                prob.push_ao(&output);
-            } else {
-                break;
-            }
-            step += 1;
-            if step > limit {
-                break;
-            }
-        }
-        hh.log_state();
-        log::info!("{}", format!("Game Final Step : {:?}",step));
-        prob.printlog();
-        let start_time = Instant::now();
-        prob.filter_state();
-        let elapsed_time = start_time.elapsed();
-        prob.log_calc_state_len();
-        log::info!("Total Time taken for filter_state: {:?}", elapsed_time);
-        let start_time_concurrent = Instant::now();
-        prob.filter_state_concurrent();
-        let elapsed_time_concurrent = start_time_concurrent.elapsed();
-        prob.log_calc_state_len();
-        log::info!("Total Time taken for filter_state_concurrent: {:?}", elapsed_time_concurrent);
-        let start_time = Instant::now();
-        prob.filter_state_optimal();
-        let elapsed_time = start_time.elapsed();
-        log::info!("Total Time taken for filter_state_optimal: {:?}", elapsed_time);
-        let start_time = Instant::now();
-        prob.filter_state_optimal2();
-        let elapsed_time = start_time.elapsed();
-        log::info!("Total Time taken for filter_state_optimal2: {:?}", elapsed_time);
-        let start_time = Instant::now();
-        let output: Vec<f64> = prob.compute_beliefs_direct();
-        let elapsed_time = start_time.elapsed();
-        log::info!("Belief Prob: {:?}", output);
-        log::info!("Total Time taken for compute_belief_direct: {:?}", elapsed_time);
-        prob.log_calc_state_len();
+//             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+//                 hh.push_ao(output);
+//                 prob.push_ao(&output);
+//             } else {
+//                 break;
+//             }
+//             step += 1;
+//             if step > limit {
+//                 break;
+//             }
+//         }
+//         hh.log_state();
+//         log::info!("{}", format!("Game Final Step : {:?}",step));
+//         prob.printlog();
+//         let start_time = Instant::now();
+//         prob.filter_state();
+//         let elapsed_time = start_time.elapsed();
+//         prob.log_calc_state_len();
+//         log::info!("Total Time taken for filter_state: {:?}", elapsed_time);
+//         let start_time_concurrent = Instant::now();
+//         prob.filter_state_concurrent();
+//         let elapsed_time_concurrent = start_time_concurrent.elapsed();
+//         prob.log_calc_state_len();
+//         log::info!("Total Time taken for filter_state_concurrent: {:?}", elapsed_time_concurrent);
+//         let start_time = Instant::now();
+//         prob.filter_state_optimal();
+//         let elapsed_time = start_time.elapsed();
+//         log::info!("Total Time taken for filter_state_optimal: {:?}", elapsed_time);
+//         let start_time = Instant::now();
+//         prob.filter_state_optimal2();
+//         let elapsed_time = start_time.elapsed();
+//         log::info!("Total Time taken for filter_state_optimal2: {:?}", elapsed_time);
+//         let start_time = Instant::now();
+//         let output: Vec<f64> = prob.compute_beliefs_direct();
+//         let elapsed_time = start_time.elapsed();
+//         log::info!("Belief Prob: {:?}", output);
+//         log::info!("Total Time taken for compute_belief_direct: {:?}", elapsed_time);
+//         prob.log_calc_state_len();
 
-        let start_time_2 = Instant::now();
-        let output: Vec<f64> = prob.get_latest_beliefs();
-        let elapsed_time_belief = start_time_2.elapsed();
-        log::info!("Belief Prob: {:?}", output);
-        log::info!("Time taken for belief: {:?}", elapsed_time_belief);
-        let start_time_2 = Instant::now();
-        let output: Vec<f64> = prob.get_latest_beliefs_concurrent();
-        let elapsed_time_belief = start_time_2.elapsed();
-        log::info!("Belief Prob: {:?}", output);
-        log::info!("Time taken for conc belief: {:?}", elapsed_time_belief);
-        let start_time_2 = Instant::now();
-        let key: String = prob.make_key_belief();
-        let elapsed_time_belief = start_time_2.elapsed();
-        log::info!("Key: {:?}", key);
-        log::info!("Time taken to generate key: {:?}", elapsed_time_belief);
-        if i % 10 == 0 {
-            println!("Done with {}", i);
-        }
-        log::info!("");
-        prob.reset();
-    }
-}
+//         let start_time_2 = Instant::now();
+//         let output: Vec<f64> = prob.get_latest_beliefs();
+//         let elapsed_time_belief = start_time_2.elapsed();
+//         log::info!("Belief Prob: {:?}", output);
+//         log::info!("Time taken for belief: {:?}", elapsed_time_belief);
+//         let start_time_2 = Instant::now();
+//         let output: Vec<f64> = prob.get_latest_beliefs_concurrent();
+//         let elapsed_time_belief = start_time_2.elapsed();
+//         log::info!("Belief Prob: {:?}", output);
+//         log::info!("Time taken for conc belief: {:?}", elapsed_time_belief);
+//         let start_time_2 = Instant::now();
+//         let key: String = prob.make_key_belief();
+//         let elapsed_time_belief = start_time_2.elapsed();
+//         log::info!("Key: {:?}", key);
+//         log::info!("Time taken to generate key: {:?}", elapsed_time_belief);
+//         if i % 10 == 0 {
+//             println!("Done with {}", i);
+//         }
+//         log::info!("");
+//         prob.reset();
+//     }
+// }
 
-pub fn make_belief(iterations: usize){
-    // logger();
+// pub fn make_belief(iterations: usize){
+//     // logger();
 
-    let mut prob = NaiveProb::new();
-    // println!("Initialising Sets");
-    // let start_time = Instant::now();
-    // prob.set_generation();
-    // let elapsed_time = start_time.elapsed();
-    // println!("Finished Initialising Sets");
-    // println!("Total Time to Initialise Sets: {:?}", elapsed_time);
-    // log::info!("Total Time taken to Initialise Sets: {:?}", elapsed_time);
-    prob.load_bson_hashmap();
-    println!("Load Success");
-    for i in 0..iterations {
+//     let mut prob = NaiveProb::new();
+//     // println!("Initialising Sets");
+//     // let start_time = Instant::now();
+//     // prob.set_generation();
+//     // let elapsed_time = start_time.elapsed();
+//     // println!("Finished Initialising Sets");
+//     // println!("Total Time to Initialise Sets: {:?}", elapsed_time);
+//     // log::info!("Total Time taken to Initialise Sets: {:?}", elapsed_time);
+//     prob.load_bson_hashmap();
+//     println!("Load Success");
+//     for i in 0..iterations {
 
-        let mut hh = History::new(0);
-        let mut step: usize = 0;
-        let mut new_moves: Vec<ActionObservation>;
-        let mut rng = thread_rng();
-        // let top: usize = rng.gen_range(50..200);
-        let limit = rng.gen_range(0..150);
-        while !hh.game_won() {
+//         let mut hh = History::new(0);
+//         let mut step: usize = 0;
+//         let mut new_moves: Vec<ActionObservation>;
+//         let mut rng = thread_rng();
+//         // let top: usize = rng.gen_range(50..200);
+//         let limit = rng.gen_range(0..150);
+//         while !hh.game_won() {
             
-            new_moves = hh.generate_legal_moves();
+//             new_moves = hh.generate_legal_moves();
             
-            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
-                hh.push_ao(output);
-                prob.push_ao(&output);
-            } else {
-                break;
-            }
-            step += 1;
-            if step > limit {
-                break;
-            }
-        }
-        hh.log_state();
-        log::info!("{}", format!("Game Final Step : {:?}",step));
-        prob.printlog();
-        if i % 10000 == 0 {
-            println!("Done with {}", i);
-            prob.save_bson_hashmap();
-            println!("Saved Bson!");
-            prob.print_belief_hm_len();
-        }
-        if prob.key_in_bson_hashmap(prob.make_key_belief()) {
-            continue;
-        }
-        prob.gen_and_save_belief();
+//             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+//                 hh.push_ao(output);
+//                 prob.push_ao(&output);
+//             } else {
+//                 break;
+//             }
+//             step += 1;
+//             if step > limit {
+//                 break;
+//             }
+//         }
+//         hh.log_state();
+//         log::info!("{}", format!("Game Final Step : {:?}",step));
+//         prob.printlog();
+//         if i % 10000 == 0 {
+//             println!("Done with {}", i);
+//             prob.save_bson_hashmap();
+//             println!("Saved Bson!");
+//             prob.print_belief_hm_len();
+//         }
+//         if prob.key_in_bson_hashmap(prob.make_key_belief()) {
+//             continue;
+//         }
+//         prob.gen_and_save_belief();
 
-        log::info!("");
-        prob.reset();
-    }
-}
+//         log::info!("");
+//         prob.reset();
+//     }
+// }
 
 pub fn game_rnd(game_no: usize, log_bool: bool){
     if log_bool{
@@ -404,6 +409,7 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
             log::trace!("Game Made:");
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
+
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
             new_moves = hh.generate_legal_moves();
@@ -436,6 +442,74 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
         log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
         log::info!("{}", format!("History: {:?}",hh.get_history(step)));
         log::info!("");
+        game += 1;
+    }
+    log::info!("Most Steps: {}", max_steps);
+    println!("Most Steps: {}", max_steps);
+}
+pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
+    if log_bool{
+        logger();
+    }
+    let mut game: usize = 0;
+    let mut max_steps: usize = 0;
+    let mut prob = NaiveProb::new();
+    while game < game_no {
+        log::info!("Game : {}", game);
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        if game % 1000000 == 0 {
+            println!("Game: {}", game);
+        }
+        log::trace!("Game Made:");
+        while !hh.game_won() {
+            
+            log::trace!("Game Made:");
+            // log::info!("{}", format!("Step : {:?}",step));
+            hh.log_state();
+            prob.printlog();
+            if step != 0 {
+                let start_time = Instant::now();
+                prob.filter_state_simple();
+                let elapsed_time = start_time.elapsed();
+                log::info!("Time: {:?}", elapsed_time);
+            }
+            prob.log_calc_state_len();
+            // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+            // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+            new_moves = hh.generate_legal_moves();
+            if new_moves[0].name() != AOName::CollectiveChallenge {
+    
+                log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+            } else {
+                log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+                // log::info!("{}", format!("Legal Moves: CollectiveChallenge"));
+            }
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                log::info!("{}", format!("Choice: {:?}", output));
+                hh.push_ao(output);
+                prob.push_ao(&output);
+            } else {
+                log::trace!("Pushed bad move!");
+                break;
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            log::info!("");
+        }
+        if step > max_steps {
+            max_steps = step;
+        }
+        log::info!("{}", format!("Game Won : {:?}",step));
+        hh.log_state();
+        log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+        log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+        log::info!("");
+        prob.reset();
         game += 1;
     }
     log::info!("Most Steps: {}", max_steps);

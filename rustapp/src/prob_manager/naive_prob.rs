@@ -25,15 +25,17 @@ pub struct GroupConstraint {
     // e.g. [1,1,0,0,0,0,0] indicates that in the union of hands 0 and hand 1 collectively contain some card
     participation_list: [u8; 7],
     card: Card,
+    count: usize,
 }
 
 impl GroupConstraint {
-    pub fn new(player_id: usize, card: Card) -> Self {
+    pub fn new(player_id: usize, card: Card, count: usize) -> Self {
         // Default includes the pile (player_id = 7) because all player mixes are with the pile and not with other players
         let participation_list: [u8; 7] = [0, 0, 0, 0, 0, 0, 1];
         let mut output = GroupConstraint{
             participation_list,
             card,
+            count,
         };
         output.group_add(player_id);
         output
@@ -41,6 +43,18 @@ impl GroupConstraint {
     pub fn group_add(&mut self, player_id: usize){
         debug_assert!(player_id < 7, "Invalid Player Id");
         self.participation_list[player_id] = 1;
+    }
+    pub fn count_add(&mut self, num: usize){
+        self.count += num;
+    }
+    pub fn count_subtract(&mut self, num: usize){
+        self.count -= num;
+    }
+    pub fn count(&self) -> usize {
+        self.count
+    }
+    pub fn indicator(&self, player_id : usize) -> u8 {
+        self.participation_list[player_id]
     }
     pub fn all_in(&self) -> bool {
         let sum: u8 = self.participation_list.iter().sum();
@@ -50,7 +64,7 @@ impl GroupConstraint {
             false
         }
     }
-    pub fn get_list(&self) -> &[u8]{
+    pub fn get_list(&self) -> &[u8; 7]{
         &self.participation_list
     }
     pub fn card(&self) -> &Card {
@@ -69,57 +83,127 @@ struct CollectiveConstraint {
     pc_hm: HashMap<usize, Card>,
     jc_hm: HashMap<usize, Vec<Card>>,
     //TODO:
-    // gc_vec: Vec<GroupConstraint>,
+    gc_vec: Vec<GroupConstraint>,
+    dead_card_count: HashMap<Card, u8>,
     // Add another gc_vec for the group constraints
     // gc_hm will be for the collective group
-    gc_initial_hm: HashMap<Card, [usize; 7]>,
-    gc_hm: HashMap<Card, [usize; 7]>,
+    // gc_initial_hm: HashMap<Card, [usize; 7]>,
+    // gc_hm: HashMap<Card, [usize; 7]>,
     // gc_hm_count: HashMap<Card, u8>,
 }
 impl CollectiveConstraint{
     pub fn new() -> Self {
         let pc_hm: HashMap<usize, Card> = HashMap::new();
         let jc_hm: HashMap<usize, Vec<Card>> = HashMap::new();
-        // let gc_vec = Vec::new();
-        let mut gc_initial_hm: HashMap<Card, [usize; 7]> = HashMap::new();
-        gc_initial_hm.insert(Card::Ambassador, [0, 0, 0, 0, 0, 0, 1]);
-        gc_initial_hm.insert(Card::Assassin, [0, 0, 0, 0, 0, 0, 1]);
-        gc_initial_hm.insert(Card::Captain, [0, 0, 0, 0, 0, 0, 1]);
-        gc_initial_hm.insert(Card::Duke, [0, 0, 0, 0, 0, 0, 1]);
-        gc_initial_hm.insert(Card::Contessa, [0, 0, 0, 0, 0, 0, 1]);
-        let gc_hm: HashMap<Card, [usize; 7]> = HashMap::new();
+        let gc_vec = Vec::new();
+        // let mut gc_initial_hm: HashMap<Card, [usize; 7]> = HashMap::new();
+        // gc_initial_hm.insert(Card::Ambassador, [0, 0, 0, 0, 0, 0, 1]);
+        // gc_initial_hm.insert(Card::Assassin, [0, 0, 0, 0, 0, 0, 1]);
+        // gc_initial_hm.insert(Card::Captain, [0, 0, 0, 0, 0, 0, 1]);
+        // gc_initial_hm.insert(Card::Duke, [0, 0, 0, 0, 0, 0, 1]);
+        // gc_initial_hm.insert(Card::Contessa, [0, 0, 0, 0, 0, 0, 1]);
+        let mut dead_card_count: HashMap<Card, u8> = HashMap::new();
+        dead_card_count.insert(Card::Ambassador, 0);
+        dead_card_count.insert(Card::Assassin, 0);
+        dead_card_count.insert(Card::Captain, 0);
+        dead_card_count.insert(Card::Duke, 0);
+        dead_card_count.insert(Card::Contessa, 0);
+        // let gc_hm: HashMap<Card, [usize; 7]> = HashMap::new();
         CollectiveConstraint{
             pc_hm,
             jc_hm,
-            // gc_vec,
-            gc_initial_hm,
-            gc_hm,
+            gc_vec,
+            dead_card_count,
+            // gc_initial_hm,
+            // gc_hm,
+        }
+    }
+    pub fn is_complement_of_pcjc(&self, group: &GroupConstraint) -> bool{
+        let mut indicators: [u8; 7] = group.get_list().clone();
+        for (key, value) in &self.pc_hm {
+            if value == group.card() {
+                indicators[*key] = 1;
+            }
+        }
+        for (key, value) in &self.jc_hm {
+            if value.contains(group.card()) {
+                indicators[*key] = 1;
+            }
+        }
+        if indicators.iter().sum::<u8>() == 7 {
+            true
+        } else {
+            false
         }
     }
     // Technically can remove too but its not in Coup so..
     pub fn add_public_constraint(&mut self, player_id: usize, card: Card){
+        if let Some(value) = self.dead_card_count.get_mut(&card){
+            *value += 1;
+        }
         if let Some(pc_hm_card) = self.pc_hm.remove(&player_id){
             // If pc_hm has a card already, remove it and add to jc_hm
             debug_assert!(!self.jc_hm.contains_key(&player_id), "jc_hm also contains key! Should not happen!");
             let mut card_vec: Vec<Card> = vec![pc_hm_card, card];
             card_vec.sort();
-            self.jc_hm.insert(player_id, card_vec);
+            self.jc_hm.insert(player_id, card_vec.clone());
+
+            let player_count: usize;
+            player_count = card_vec.iter().filter(|&icard| icard == &card).count();
+
+            let mut index = 0;
+            while index < self.gc_vec.len(){
+                let group: &mut GroupConstraint = &mut self.gc_vec[index];
+                if group.indicator(player_id) == 1 && group.count() <= player_count{
+                    // Joint Constraint is subset of group so prune group because group will definitely be fulfilled
+                    // [SUBSET PRUNE]
+                    self.gc_vec.swap_remove(index);
+                } else if self.dead_card_count[group.card()] == 3 {
+                    // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
+                    self.gc_vec.swap_remove(index);
+                } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
+                    // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+                    self.gc_vec.swap_remove(index);
+                } else {
+                    index += 1;
+                }
+            }
         } else {
             self.pc_hm.insert(player_id, card);
-        }
-        self.gc_initial_hm.entry(card).and_modify(|arr| arr[player_id] = 1);
-        // TODO update group if it exists
-        if let Some(array) = self.gc_hm.get_mut(&card){
-            // Updating
-            array[player_id] = 1;
-            // Remove if condition just means that the card can literally be anywhere
-            if array.iter().sum::<usize>() == 7 {
-                self.gc_hm.remove(&card);
+
+            let mut index = 0;
+            while index < self.gc_vec.len(){
+                let group: &mut GroupConstraint = &mut self.gc_vec[index];
+                if group.indicator(player_id) == 1 && group.count() == 1{
+                    // Public Constraint is subset of group so prune group because group will definitely be fulfilled
+                    // [SUBSET PRUNE]
+                    self.gc_vec.swap_remove(index);
+                } else if self.dead_card_count[group.card()] == 3 {
+                    // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
+                    self.gc_vec.swap_remove(index);
+                } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
+                    // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+                    self.gc_vec.swap_remove(index);
+                } else {
+                    index += 1;
+                }
             }
         }
+        // BONUS: Can add PRUNE GROUP if public constraint indicator Union group constrain indicator is full set
+
+        // self.gc_initial_hm.entry(card).and_modify(|arr| arr[player_id] = 1);
+        // // TODO update group if it exists
+        // if let Some(array) = self.gc_hm.get_mut(&card){
+        //     // Updating
+        //     array[player_id] = 1;
+        //     // Remove if condition just means that the card can literally be anywhere
+        //     if array.iter().sum::<usize>() == 7 {
+        //         self.gc_hm.remove(&card);
+        //     }
+        // }
     }
     pub fn remove_public_constraint(&mut self, player_id: usize, card: Card){
-        self.gc_initial_hm.entry(card).and_modify(|arr| arr[player_id] = 0);
+        // self.gc_initial_hm.entry(card).and_modify(|arr| arr[player_id] = 0);
         if let Some(pc_hm_card) = self.pc_hm.get(&player_id){
             // card in pc_hm?
             if *pc_hm_card == card {
@@ -150,78 +234,200 @@ impl CollectiveConstraint{
     pub fn add_joint_constraint(&mut self, player_id: usize, card_vec: &Vec<Card>){
         debug_assert!(self.pc_hm.get(&player_id).is_none(), "Player already half dead, how to die again??");
         debug_assert!(self.jc_hm.get(&player_id).is_none(), "Player already dead, how to die again??");
+        for card in card_vec.iter() {
+            if let Some(value) = self.dead_card_count.get_mut(card){
+                *value += 1;
+            }
+        }
         self.jc_hm.insert(player_id, card_vec.clone());
+        // Pruning
+        let mut do_not_repeat: bool = false;
         for card in card_vec.iter(){
-            self.gc_initial_hm.entry(*card).and_modify(|arr| arr[player_id] = 1);
-            // TODO Updates group if it exists
-            if let Some(array) = self.gc_hm.get_mut(card){
-                // Updating
-                array[player_id] = 1;
-                // Remove if condition just means that the card can literally be anywhere
-                if array.iter().sum::<usize>() == 7 {
-                    self.gc_hm.remove(card);
+            // Prune for each card added
+            if do_not_repeat {
+                break
+            }
+            let player_count: usize;
+            player_count = card_vec.iter().filter(|&icard| icard == card).count();
+            if player_count == 2 {
+                // Dont repeat the prune if both cards are the same
+                do_not_repeat = true;
+            }
+            let mut index = 0;
+            while index < self.gc_vec.len(){
+                let group: &mut GroupConstraint = &mut self.gc_vec[index];
+                if group.indicator(player_id) == 1 && group.count() <= player_count{
+                    // Joint Constraint is subset of group so prune group because group will definitely be fulfilled
+                    // [SUBSET PRUNE]
+                    self.gc_vec.swap_remove(index);
+                } else if self.dead_card_count[group.card()] == 3 {
+                    // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
+                    self.gc_vec.swap_remove(index);
+                } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
+                    // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+                    self.gc_vec.swap_remove(index);
+                } else {
+                    index += 1;
                 }
             }
         }
+
+
+        // Changing Group Constraint
+        // for card in card_vec.iter(){
+        //     // self.gc_initial_hm.entry(*card).and_modify(|arr| arr[player_id] = 1);
+        //     // TODO Updates group if it exists
+
+        //     if let Some(array) = self.gc_hm.get_mut(card){
+        //         // Updating
+        //         array[player_id] = 1;
+        //         // Remove if condition just means that the card can literally be anywhere
+        //         if array.iter().sum::<usize>() == 7 {
+        //             self.gc_hm.remove(card);
+        //         }
+        //     }
+        // }
     }
     // You will never remove from group only pop to reverse it because you cannot unmix cards
-    // pub fn add_group_constraint(&mut self, player_id: usize, card: Card){
-    //     // Add new constraint on RevealRedraw
-    //     let addition: GroupConstraint = GroupConstraint::new(player_id, card);
-    //     self.gc_vec.push(addition);
+    pub fn group_initial_prune(&mut self, player_id: usize, card: &Card, count: usize){
+        debug_assert!(player_id == 6, "Current implementation only intended to receive Pile ID");
+        let mut index: usize = 0;
+        while index < self.gc_vec.len() {
+            // [INITIAL PRUNE] if player 0 revealredraws a Duke, we prune the groups that had player 0 duke and oldcount <= newcount
+            // Only required for ExchangeDraw because for revealredraw it will be pruned in [SUBSET PRUNE] as both will be satisfied
+            // This special case is for the original ambassadar version of coup only you might need to initial prune for the inquisitor
+            let group = &mut self.gc_vec[index];
+            if group.card() == card && group.get_list()[player_id] == 1 && group.count() <= count{
+                // Prune If same card and is subset if old group count <= revealed count
+                // Because the group is redundant
+                self.gc_vec.swap_remove(index);
+            } else {
+                index += 1;
+            }
+        }
+    }
+    pub fn add_group_constraint(&mut self, player_id: usize, card: &Card, count: usize){
+        // Adds a new constraint used for RevealRedraw and ExchangeDraw (Private Information)
+        // There is an [INITIAL PRUNE] because we know player had a card before the swap!
+        let mut new_count: usize = count;
+        if let Some(card_dead) = self.pc_hm.get(&player_id) {
+            if card_dead == card {
+                // RevealRedraw Case
+                // Increase the count if player who revealed the card already has a dead card that is the same!
+                // Player & Pile will have at least 2 of the card
+                new_count += 1;
+            }
+        } else if let Some(cards) = self.jc_hm.get(&player_id){
+            // Should not be able to revealredraw or exchangedraw if jc_hm has player as the player would be dead!
+            debug_assert!(false, "Impossible Case Reached");
+        }
+        let mut index: usize = 0;
+        // Iterate and update current groups
+        while index < self.gc_vec.len() {
+            let group = &mut self.gc_vec[index];
+            // TO confirm
+            if group.get_list()[player_id] == 0 {
+                group.group_add(player_id);
+                // Add one because the new player shows he has a card and swaps it into the pile & his hand
+                // So the past group + new player has an additional card
+                
+                // Its not possible to reveal a card that the player should not even be able to have!
+                debug_assert!(group.count() <= 3, "Impossible case reached!");
+                
+                // Old Group: Duke [0 1 0 0 0 0 1] Count 1
+                // Move RevealRedraw a Duke is revealed and shuffled into pile
+                // Add Group: Duke [0 0 1 0 0 0 1] Count 1
+                // Intuitively there will be 1 Duke at first with player 2 now shuffled among himself and the pile
+                // And 1 Duke that was originally with Player 1 & pile
+                // After RevealRedraw there are in total 2 Dukes among player 1,2 and Pile
+                // So we must increment the old counter by new_count
+                group.count_add(new_count);
+                if group.all_in() == true {
+                    // [FULL PRUNE] because group constraint just means there could be a Duke anywhere (anyone or the pile might have it)
+                    self.gc_vec.swap_remove(index);
+                } else {
+                    index += 1;
+                }
+            } else if group.card() == card {
+                if group.count() <= new_count {
+                    // If group has same card, and the player_id indicator is 1
+                    // ExchangeDraw Case and Draw 2 same cards included here
+                    // [SUBSET PRUNE] because the new group is a subset of the old group and the new_count is >= old group count
+                    // This means that old group constraint will definitely be satisfied
+                    self.gc_vec.swap_remove(index);
+                } else {
+                    // group.count() > new_count
+                    index += 1;
+                }
+            } else {
+                index += 1;
+            }
+        }
+        let addition: GroupConstraint = GroupConstraint::new(player_id, *card, new_count);
+        if !self.is_complement_of_pcjc(&addition) {
+            // [COMPLEMENT PRUNE] We push only if it isnt a complement
+            self.gc_vec.push(addition);
+        }
+    }
+    pub fn update_group_constraint(&mut self, player_id: usize){
+        // For each gc, if player is not a participant, they now become one
+        // If all players are participants, remove from tracking
+        // This is used for moves like ExchangeChoice where players do not reveal their card but share but swap cards into and out of the pile
+        let mut index: usize = 0;
+        while index < self.gc_vec.len() {
+            let group = &mut self.gc_vec[index];
+            group.group_add(player_id);
+            if group.all_in() {
+                // [FULL PRUNE] because group constraint just means there could be a Duke anywhere (anyone or the pile might have it)
+                self.gc_vec.swap_remove(index);
+            } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
+                // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+                self.gc_vec.swap_remove(index);
+            } else {
+                index += 1;
+            }
+        }
+    }
+    // Create and initialise from history to make history (Past) based on current player perspective
+
+    // pub fn add_group_constraint_hm(&mut self, player_id: usize, card: Card){
+    //     // Insert if array doesnt exist
+    //     let card_list: [Card; 5] = [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa];
+    //     // Initialise default
+    //     self.gc_hm.entry(card)
+    //     .or_insert_with(|| self.gc_initial_hm[&card].clone());
+    //     // Adding new entry
+    //     for c in card_list {
+    //         if let Some(array) = self.gc_hm.get_mut(&c){
+    //             // Updating
+    //             array[player_id] = 1;
+    //             // Remove if condition just means that the card can literally be anywhere
+    //             if array.iter().sum::<usize>() == 7 {
+    //                 self.gc_hm.remove(&c);
+    //             }
+    //         }
+    //     }
     // }
-    pub fn add_group_constraint_hm(&mut self, player_id: usize, card: Card){
-        // Insert if array doesnt exist
-        let card_list: [Card; 5] = [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa];
-        // Initialise default
-        self.gc_hm.entry(card)
-        .or_insert_with(|| self.gc_initial_hm[&card].clone());
-        // Adding new entry
-        for c in card_list {
-            if let Some(array) = self.gc_hm.get_mut(&c){
-                // Updating
-                array[player_id] = 1;
-                // Remove if condition just means that the card can literally be anywhere
-                if array.iter().sum::<usize>() == 7 {
-                    self.gc_hm.remove(&c);
-                }
-            }
-        }
-    }
-    pub fn update_group_constraint_hm(&mut self, player_id: usize){
-        // Insert if array doesnt exist
-        let card_list: [Card; 5] = [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa];
-        for c in card_list {
-            if let Some(array) = self.gc_hm.get_mut(&c){
-                // Updating
-                array[player_id] = 1;
-                // Remove if condition just means that the card can literally be anywhere
-                if array.iter().sum::<usize>() == 7 {
-                    self.gc_hm.remove(&c);
-                }
-            }
-        }
-    }
-    // pub fn update_group_constraint(&mut self, player_id: usize){
-    //     // For each gc, if player is not a participant, they now become one
-    //     // If all players are participants, remove from tracking
-    //     let mut index: usize = 0;
-    //     while index < self.gc_vec.len() {
-    //         let group = &mut self.gc_vec[index];
-    //         group.group_add(player_id);
-    //         if group.all_in() {
-    //             self.gc_vec.swap_remove(index);
-    //         } else {
-    //             index += 1;
+    // pub fn update_group_constraint_hm(&mut self, player_id: usize){
+    //     // Insert if array doesnt exist
+    //     let card_list: [Card; 5] = [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa];
+    //     for c in card_list {
+    //         if let Some(array) = self.gc_hm.get_mut(&c){
+    //             // Updating
+    //             array[player_id] = 1;
+    //             // Remove if condition just means that the card can literally be anywhere
+    //             if array.iter().sum::<usize>() == 7 {
+    //                 self.gc_hm.remove(&c);
+    //             }
     //         }
     //     }
     // }
     pub fn printlog(&self) {
         log::trace!("{}", format!("Public Constraint HM: {:?}", self.pc_hm));
         log::trace!("{}", format!("Joint Constraint HM: {:?}", self.jc_hm));
-        // log::trace!("{}", format!("Group Constraint HM: {:?}", self.gc_vec));
-        log::trace!("{}", format!("Group Constraint HM: {:?}", self.gc_hm));
-        log::trace!("{}", format!("Initial Group Constraint HM: {:?}", self.gc_initial_hm));
+        log::trace!("{}", format!("Group Constraint VEC: {:?}", self.gc_vec));
+        // log::trace!("{}", format!("Group Constraint HM: {:?}", self.gc_hm));
+        // log::trace!("{}", format!("Initial Group Constraint HM: {:?}", self.gc_initial_hm));
         // log::trace!("{}", format!("GC History: {:?}", self.gc_vec));
     }
 
@@ -315,55 +521,57 @@ impl NaiveProb {
     pub fn prev_index(&self) -> usize {
         self.dist_from_last[self.dist_from_last.len() - 1]
     }
-    pub fn sort_and_serialize_hashmap<K, V>(&self, hashmap: &HashMap<K, V>) -> String
-    where
-        K: Serialize + Ord + std::hash::Hash,
-        V: Serialize,
-    {   // Serializes Hashmap
-        let mut sorted_map: HashMap<&K, &V> = hashmap.iter().collect();
-        let mut sorted_pairs: Vec<(&K, &V)> = sorted_map.drain().collect();
-        sorted_pairs.sort_by_key(|&(k, _)| k);
-        serde_json::to_string(&sorted_pairs).unwrap()
-    }
-    pub fn make_key_belief(&self) -> String {
-        // Makes key to store the belief probabilities based on constraints
-        let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
-        let public_constraint_key: String = self.sort_and_serialize_hashmap(&latest_constraint.pc_hm);
-        let joint_constraint_key: String = self.sort_and_serialize_hashmap(&latest_constraint.jc_hm);
-        let group_constraint_key: String = self.sort_and_serialize_hashmap(&latest_constraint.gc_hm);
-        let big_key: String = format!("{}_{}_{}", public_constraint_key, joint_constraint_key, group_constraint_key);
-        big_key
-    }
-    pub fn key_in_bson_hashmap(&mut self, key: String) -> bool {
-        if self.belief_hm.contains_key(&key){
-            true
-        } else {
-            false
-        }
-    }
-    pub fn add_to_hashmap(&mut self, key: String, belief_vec: Vec<f64>){
-        self.belief_hm.entry(key).or_insert(belief_vec);
-    }
-    pub fn load_bson_hashmap(&mut self){
-        self.belief_hm = load_initial_hashmap("naive_belief_prob_hashmap.bson");
-        log::trace!("{}", format!("Loaded up with len: {:?}", self.belief_hm.len()));
-    }
-    pub fn save_bson_hashmap(&mut self){
-        match save_bson_hashmap(&self.belief_hm, "naive_belief_prob_hashmap.bson"){
-            Ok(_) => log::info!("Saved HashMap of len: {}", self.belief_hm.len()),
-            Err(_) => log::info!("Failed to save HashMap"),
-        }
-    }
+    // pub fn sort_and_serialize_hashmap<K, V>(&self, hashmap: &HashMap<K, V>) -> String
+    // where
+    //     K: Serialize + Ord + std::hash::Hash,
+    //     V: Serialize,
+    // {   // Serializes Hashmap
+    //     let mut sorted_map: HashMap<&K, &V> = hashmap.iter().collect();
+    //     let mut sorted_pairs: Vec<(&K, &V)> = sorted_map.drain().collect();
+    //     sorted_pairs.sort_by_key(|&(k, _)| k);
+    //     serde_json::to_string(&sorted_pairs).unwrap()
+    // }
+    // pub fn make_key_belief(&self) -> String {
+    //     // Makes key to store the belief probabilities based on constraints
+    //     let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+    //     let public_constraint_key: String = self.sort_and_serialize_hashmap(&latest_constraint.pc_hm);
+    //     let joint_constraint_key: String = self.sort_and_serialize_hashmap(&latest_constraint.jc_hm);
+    //     let group_constraint_key: String = self.sort_and_serialize_hashmap(&latest_constraint.gc_hm);
+    //     let big_key: String = format!("{}_{}_{}", public_constraint_key, joint_constraint_key, group_constraint_key);
+    //     big_key
+    // }
+    // pub fn key_in_bson_hashmap(&mut self, key: String) -> bool {
+    //     if self.belief_hm.contains_key(&key){
+    //         true
+    //     } else {
+    //         false
+    //     }
+    // }
+    // pub fn add_to_hashmap(&mut self, key: String, belief_vec: Vec<f64>){
+    //     self.belief_hm.entry(key).or_insert(belief_vec);
+    // }
+    // pub fn load_bson_hashmap(&mut self){
+    //     self.belief_hm = load_initial_hashmap("naive_belief_prob_hashmap.bson");
+    //     log::trace!("{}", format!("Loaded up with len: {:?}", self.belief_hm.len()));
+    // }
+    // pub fn save_bson_hashmap(&mut self){
+    //     match save_bson_hashmap(&self.belief_hm, "naive_belief_prob_hashmap.bson"){
+    //         Ok(_) => log::info!("Saved HashMap of len: {}", self.belief_hm.len()),
+    //         Err(_) => log::info!("Failed to save HashMap"),
+    //     }
+    // }
     pub fn print_belief_hm_len(&self){
         println!("HashMap now of len: {}", self.belief_hm.len());
     }
     pub fn printlog(&self) {
+        log::trace!("{}", format!("Constraint History Len{}", self.constraint_history.len()));
         if self.constraint_history.len() == 0 {
 
         } else {
             let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
             latest_constraint.printlog();
         }
+        // log::info!("{}", format!("Set Size: {}", self.calculated_states.len()));
     }
     pub fn log_calc_state_len(&self){
         log::trace!("{}", format!("Calculated_State Length: {}", self.calculated_states.len()));
@@ -404,14 +612,39 @@ impl NaiveProb {
             self.constraint_history.push(self.constraint_history[self.constraint_history.len() - self.prev_index()].clone());
             if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
                 // We update when cards a mixed with pile by player_id but no card is revealed
-                last_constraint.update_group_constraint_hm(ao.player_id());
-                last_constraint.add_group_constraint_hm(ao.player_id(), ao.card());
+                // last_constraint.update_group_constraint_hm(ao.player_id());
+                // last_constraint.add_group_constraint_hm(ao.player_id(), ao.card());
+                last_constraint.update_group_constraint(ao.player_id());
+                last_constraint.add_group_constraint(ao.player_id(), &ao.card(), 1);
+
                 // last_constraint.update_group_constraint(ao.player_id());
                 // We add because a card is revealed before mixing | We add after updating for minor efficiency
                 // TODEBUG: Should only add if not already inside!
                 // last_constraint.add_group_constraint(ao.player_id(), ao.card());
             } else {
                 // Handle the case where the last element is None or the vector is empty
+                debug_assert!(false, "constraint not stored at prev_index!");
+            }
+            self.dist_from_last.push(1);
+        } else if ao.name() == AOName::ExchangeDraw {
+            self.constraint_history.push(self.constraint_history[self.constraint_history.len() - self.prev_index()].clone());
+            if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
+                // Player gets info that the pile has 2 cards, which prunes other groups
+                if ao.cards()[0] == ao.cards()[1]{
+                    last_constraint.group_initial_prune(6, &ao.cards()[0], 2);
+                } else {
+                    last_constraint.group_initial_prune(6, &ao.cards()[0], 1);
+                    last_constraint.group_initial_prune(6, &ao.cards()[1], 1);
+
+                }
+                last_constraint.update_group_constraint(ao.player_id());
+                if ao.cards()[0] == ao.cards()[1] {
+                    last_constraint.add_group_constraint(ao.player_id(), &ao.cards()[0], 2);
+                } else {
+                    last_constraint.add_group_constraint(ao.player_id(), &ao.cards()[0], 1);
+                    last_constraint.add_group_constraint(ao.player_id(), &ao.cards()[1], 1);
+                }
+            } else {
                 debug_assert!(false, "constraint not stored at prev_index!");
             }
             self.dist_from_last.push(1);
@@ -424,8 +657,8 @@ impl NaiveProb {
             }
             if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
                 // We update when cards a mixed with pile by player_id but no card is revealed
-                // last_constraint.update_group_constraint(ao.player_id());
-                last_constraint.update_group_constraint_hm(ao.player_id());
+                last_constraint.update_group_constraint(ao.player_id());
+                // last_constraint.update_group_constraint_hm(ao.player_id());
             } else {
                 // Handle the case where the last element is None or the vector is empty
                 debug_assert!(false, "constraint not stored at prev_index!");
@@ -449,239 +682,239 @@ impl NaiveProb {
     }
     //TODO: Add union constraints
     //TODO: Calculate Beliefs
-    pub fn filter_state(&mut self) {
-        // Test for 
-        // RELEASE MODE TIME           : 0.10~0.14 s for just the public constraints both single and joint
-        // RELEASE MODE TIME concurrent: 0.13~0.23 s for just the public constraints both single and joint
-        // RELEASE MODE TIME           : 0.15~0.18 s with single, joint and group
-        // RELEASE MODE TIME concurrent: 0.10~0.11 s for just the public constraints both single and joint
-        // if let Some(latest_constraint) = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone();
-        let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
-        self.calculated_states = self.all_states.clone();
-        let mut start_time = Instant::now();
-        for i in 0..6{
-            if let Some(cards) = latest_constraint.jc_hm.get(&i){
-                // cards is a Vec<Card> of size 2
-                // Convert to chars like "AB"
-                // check that at the current_states state[index_start..index_end] == "AB"
-                let card_char_vec: Vec<char> = cards.iter().map(|c| self.card_to_char(c)).collect();
-                let index_start: usize = 2 * i;
-                let index_end: usize = index_start + 2;
-                self.calculated_states.retain(
-                    |state| {
-                        let state_chars: Vec<char> = state[index_start..index_end].chars().collect();
-                        state.len() >= index_end && state_chars == *card_char_vec
-                    }
-                );
-            }
-        }
-        let elapsed_time = start_time.elapsed();
-        log::info!("Time taken for JC Filter: {:?}", elapsed_time);
-        start_time = Instant::now();
-        for i in 0..6 {
-            if let Some(card) = latest_constraint.pc_hm.get(&i){
-                let card_char: char = self.card_to_char(&card);
-                let index_start: usize = 2 * i;
-                let index_end: usize = index_start + 2;
-                // filter the string where [index_start: index_end] contains card_char
-                self.calculated_states.retain(|state| state[index_start..index_end].contains(card_char));
-            }
-        }
-        let elapsed_time = start_time.elapsed();
-        log::info!("Time taken for PC Filter: {:?}", elapsed_time);
-        //TODO: move these items to self
-        let index_start_arr: [usize; 7] = [0, 2, 4, 6, 8, 10, 12];
-        let index_end_arr: [usize; 7] = [2, 4, 6, 8, 10, 12, 15];
-        let card_list: [Card; 5] = [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa];
-        for card in card_list {
-            if let Some(participation_list) = latest_constraint.gc_hm.get(&card){
-                let card_char: char = self.card_to_char(&card);
+    // pub fn filter_state(&mut self) {
+    //     // Test for 
+    //     // RELEASE MODE TIME           : 0.10~0.14 s for just the public constraints both single and joint
+    //     // RELEASE MODE TIME concurrent: 0.13~0.23 s for just the public constraints both single and joint
+    //     // RELEASE MODE TIME           : 0.15~0.18 s with single, joint and group
+    //     // RELEASE MODE TIME concurrent: 0.10~0.11 s for just the public constraints both single and joint
+    //     // if let Some(latest_constraint) = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone();
+    //     let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+    //     self.calculated_states = self.all_states.clone();
+    //     let mut start_time = Instant::now();
+    //     for i in 0..6{
+    //         if let Some(cards) = latest_constraint.jc_hm.get(&i){
+    //             // cards is a Vec<Card> of size 2
+    //             // Convert to chars like "AB"
+    //             // check that at the current_states state[index_start..index_end] == "AB"
+    //             let card_char_vec: Vec<char> = cards.iter().map(|c| self.card_to_char(c)).collect();
+    //             let index_start: usize = 2 * i;
+    //             let index_end: usize = index_start + 2;
+    //             self.calculated_states.retain(
+    //                 |state| {
+    //                     let state_chars: Vec<char> = state[index_start..index_end].chars().collect();
+    //                     state.len() >= index_end && state_chars == *card_char_vec
+    //                 }
+    //             );
+    //         }
+    //     }
+    //     let elapsed_time = start_time.elapsed();
+    //     log::info!("Time taken for JC Filter: {:?}", elapsed_time);
+    //     start_time = Instant::now();
+    //     for i in 0..6 {
+    //         if let Some(card) = latest_constraint.pc_hm.get(&i){
+    //             let card_char: char = self.card_to_char(&card);
+    //             let index_start: usize = 2 * i;
+    //             let index_end: usize = index_start + 2;
+    //             // filter the string where [index_start: index_end] contains card_char
+    //             self.calculated_states.retain(|state| state[index_start..index_end].contains(card_char));
+    //         }
+    //     }
+    //     let elapsed_time = start_time.elapsed();
+    //     log::info!("Time taken for PC Filter: {:?}", elapsed_time);
+    //     //TODO: move these items to self
+    //     let index_start_arr: [usize; 7] = [0, 2, 4, 6, 8, 10, 12];
+    //     let index_end_arr: [usize; 7] = [2, 4, 6, 8, 10, 12, 15];
+    //     let card_list: [Card; 5] = [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa];
+    //     for card in card_list {
+    //         if let Some(participation_list) = latest_constraint.gc_hm.get(&card){
+    //             let card_char: char = self.card_to_char(&card);
 
-                let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
-                .filter_map(|(player_id, &participation)| {
-                    if participation == 1{
-                        Some((index_start_arr[player_id], index_end_arr[player_id]))
-                    } else {
-                        None
-                    }
-                }).collect();
-                self.calculated_states.retain(|state| {
-                    participating_indices.iter().any(|&(start, end)|{
-                        state.len() >= end && state[start..end].contains(card_char)
-                    })
-                });
-            }
-        }
-        let elapsed_time = start_time.elapsed();
-        log::info!("Time taken for GC Filter: {:?}", elapsed_time);
-        // for group_constraint in latest_constraint.gc_vec.iter(){
-        //     // group_constraint.participation_list: [u8; 7]
-        //     let participation_list: &[u8] = group_constraint.get_list();
-        //     let card: &Card = group_constraint.card();
-        //     let card_char: char = self.card_to_char(&card);
+    //             let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
+    //             .filter_map(|(player_id, &participation)| {
+    //                 if participation == 1{
+    //                     Some((index_start_arr[player_id], index_end_arr[player_id]))
+    //                 } else {
+    //                     None
+    //                 }
+    //             }).collect();
+    //             self.calculated_states.retain(|state| {
+    //                 participating_indices.iter().any(|&(start, end)|{
+    //                     state.len() >= end && state[start..end].contains(card_char)
+    //                 })
+    //             });
+    //         }
+    //     }
+    //     let elapsed_time = start_time.elapsed();
+    //     log::info!("Time taken for GC Filter: {:?}", elapsed_time);
+    //     // for group_constraint in latest_constraint.gc_vec.iter(){
+    //     //     // group_constraint.participation_list: [u8; 7]
+    //     //     let participation_list: &[u8] = group_constraint.get_list();
+    //     //     let card: &Card = group_constraint.card();
+    //     //     let card_char: char = self.card_to_char(&card);
 
-        //     let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
-        //         .filter_map(|(player_id, &participation)| {
-        //             if participation == 1{
-        //                 Some((index_start_arr[player_id], index_end_arr[player_id]))
-        //             } else {
-        //                 None
-        //             }
-        //         }).collect();
-        //     self.calculated_states.retain(|state| {
-        //         participating_indices.iter().any(|&(start, end)|{
-        //             state.len() >= end && state[start..end].contains(card_char)
-        //         })
-        //     });
-        // }
-    }
-    pub fn filter_state_concurrent(&mut self) {
-        let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
-        self.calculated_states = self.all_states.clone();
+    //     //     let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
+    //     //         .filter_map(|(player_id, &participation)| {
+    //     //             if participation == 1{
+    //     //                 Some((index_start_arr[player_id], index_end_arr[player_id]))
+    //     //             } else {
+    //     //                 None
+    //     //             }
+    //     //         }).collect();
+    //     //     self.calculated_states.retain(|state| {
+    //     //         participating_indices.iter().any(|&(start, end)|{
+    //     //             state.len() >= end && state[start..end].contains(card_char)
+    //     //         })
+    //     //     });
+    //     // }
+    // }
+    // pub fn filter_state_concurrent(&mut self) {
+    //     let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+    //     self.calculated_states = self.all_states.clone();
 
-        // USE NORMAL VERSION FOR THIS, NON CONCURRENT ALWAYS WINS IN TIME WHEN THERE IS NO JOINT
-        let mut start_time = Instant::now();
-        for i in 0..6{
-            if let Some(cards) = latest_constraint.jc_hm.get(&i){
-                // cards is a Vec<Card> of size 2
-                // Convert to chars like "AB"
-                // check that at the current_states state[index_start..index_end] == "AB"
-                let card_char_vec: Vec<char> = cards.iter().map(|c| self.card_to_char(c)).collect();
-                let index_start: usize = 2 * i;
-                let index_end: usize = index_start + 2;
-                let filtered: Vec<String> = self.calculated_states.par_iter()
-                    .filter(|state| {
-                        let state_chars: Vec<char> = state[index_start..index_end].chars().collect();
-                        state.len() >= index_end && state_chars == *card_char_vec
-                    })
-                    .cloned().collect();
-                self.calculated_states = filtered;
-            }
-        }
-        let elapsed_time = start_time.elapsed();
-        log::info!("Time taken for Concurrent JC Filter: {:?}", elapsed_time);
-        start_time = Instant::now();
-        for i in 0..6 {
-            if let Some(card) = latest_constraint.pc_hm.get(&i){
-                let card_char: char = self.card_to_char(&card);
-                let index_start: usize = 2 * i;
-                let index_end: usize = index_start + 2;
-                // filter the string where [index_start: index_end] contains card_char
-                let filtered: Vec<String> = self.calculated_states.par_iter()
-                    .filter(|state| state[index_start..index_end].contains(card_char))
-                    .cloned().collect();
-                self.calculated_states = filtered;
-            }
-        }
-        let elapsed_time = start_time.elapsed();
-        log::info!("Time taken for Concurrent PC Filter: {:?}", elapsed_time);
-        // Add concurrent version
-        let index_start_arr: [usize; 7] = [0, 2, 4, 6, 8, 10, 12];
-        let index_end_arr: [usize; 7] = [2, 4, 6, 8, 10, 12, 15];
+    //     // USE NORMAL VERSION FOR THIS, NON CONCURRENT ALWAYS WINS IN TIME WHEN THERE IS NO JOINT
+    //     let mut start_time = Instant::now();
+    //     for i in 0..6{
+    //         if let Some(cards) = latest_constraint.jc_hm.get(&i){
+    //             // cards is a Vec<Card> of size 2
+    //             // Convert to chars like "AB"
+    //             // check that at the current_states state[index_start..index_end] == "AB"
+    //             let card_char_vec: Vec<char> = cards.iter().map(|c| self.card_to_char(c)).collect();
+    //             let index_start: usize = 2 * i;
+    //             let index_end: usize = index_start + 2;
+    //             let filtered: Vec<String> = self.calculated_states.par_iter()
+    //                 .filter(|state| {
+    //                     let state_chars: Vec<char> = state[index_start..index_end].chars().collect();
+    //                     state.len() >= index_end && state_chars == *card_char_vec
+    //                 })
+    //                 .cloned().collect();
+    //             self.calculated_states = filtered;
+    //         }
+    //     }
+    //     let elapsed_time = start_time.elapsed();
+    //     log::info!("Time taken for Concurrent JC Filter: {:?}", elapsed_time);
+    //     start_time = Instant::now();
+    //     for i in 0..6 {
+    //         if let Some(card) = latest_constraint.pc_hm.get(&i){
+    //             let card_char: char = self.card_to_char(&card);
+    //             let index_start: usize = 2 * i;
+    //             let index_end: usize = index_start + 2;
+    //             // filter the string where [index_start: index_end] contains card_char
+    //             let filtered: Vec<String> = self.calculated_states.par_iter()
+    //                 .filter(|state| state[index_start..index_end].contains(card_char))
+    //                 .cloned().collect();
+    //             self.calculated_states = filtered;
+    //         }
+    //     }
+    //     let elapsed_time = start_time.elapsed();
+    //     log::info!("Time taken for Concurrent PC Filter: {:?}", elapsed_time);
+    //     // Add concurrent version
+    //     let index_start_arr: [usize; 7] = [0, 2, 4, 6, 8, 10, 12];
+    //     let index_end_arr: [usize; 7] = [2, 4, 6, 8, 10, 12, 15];
 
-        let index_start_arr: [usize; 7] = [0, 2, 4, 6, 8, 10, 12];
-        let index_end_arr: [usize; 7] = [2, 4, 6, 8, 10, 12, 15];
-        let card_list: [Card; 5] = [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa];
-        start_time = Instant::now();
-        for card in card_list {
-            if let Some(participation_list) = latest_constraint.gc_hm.get(&card){
-                let card_char: char = self.card_to_char(&card);
+    //     let index_start_arr: [usize; 7] = [0, 2, 4, 6, 8, 10, 12];
+    //     let index_end_arr: [usize; 7] = [2, 4, 6, 8, 10, 12, 15];
+    //     let card_list: [Card; 5] = [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa];
+    //     start_time = Instant::now();
+    //     for card in card_list {
+    //         if let Some(participation_list) = latest_constraint.gc_hm.get(&card){
+    //             let card_char: char = self.card_to_char(&card);
 
-                let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
-                .filter_map(|(player_id, &participation)| {
-                    if participation == 1{
-                        Some((index_start_arr[player_id], index_end_arr[player_id]))
-                    } else {
-                        None
-                    }
-                }).collect();
-                let filtered: Vec<String> = self.calculated_states.par_iter()
-                    .filter(|state| {
-                        participating_indices.iter().any(|&(start, end)| {
-                            state.len() >= end && state[start..end].contains(card_char)
-                        })
-                    })
-                    .cloned().collect();
+    //             let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
+    //             .filter_map(|(player_id, &participation)| {
+    //                 if participation == 1{
+    //                     Some((index_start_arr[player_id], index_end_arr[player_id]))
+    //                 } else {
+    //                     None
+    //                 }
+    //             }).collect();
+    //             let filtered: Vec<String> = self.calculated_states.par_iter()
+    //                 .filter(|state| {
+    //                     participating_indices.iter().any(|&(start, end)| {
+    //                         state.len() >= end && state[start..end].contains(card_char)
+    //                     })
+    //                 })
+    //                 .cloned().collect();
 
-                // Update calculated_states with filtered results
-                self.calculated_states = filtered;
-            }
-        }
-        let elapsed_time = start_time.elapsed();
-        log::info!("Time taken for Concurrent GC Filter: {:?}", elapsed_time);
-        // Assuming participation_list and card_char are prepared as before
-        // for group_constraint in latest_constraint.gc_vec.iter() {
-        //     // Assuming get_list() and card() methods, similar preparation as in sequential version
-        //     let participation_list = group_constraint.get_list(); // Example method call, adjust as needed
-        //     let card_char = self.card_to_char(&group_constraint.card());
+    //             // Update calculated_states with filtered results
+    //             self.calculated_states = filtered;
+    //         }
+    //     }
+    //     let elapsed_time = start_time.elapsed();
+    //     log::info!("Time taken for Concurrent GC Filter: {:?}", elapsed_time);
+    //     // Assuming participation_list and card_char are prepared as before
+    //     // for group_constraint in latest_constraint.gc_vec.iter() {
+    //     //     // Assuming get_list() and card() methods, similar preparation as in sequential version
+    //     //     let participation_list = group_constraint.get_list(); // Example method call, adjust as needed
+    //     //     let card_char = self.card_to_char(&group_constraint.card());
 
-        //     let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
-        //         .filter_map(|(player_id, &participation)| {
-        //             if participation == 1 {
-        //                 Some((index_start_arr[player_id], index_end_arr[player_id]))
-        //             } else {
-        //                 None
-        //             }
-        //         })
-        //         .collect();
+    //     //     let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
+    //     //         .filter_map(|(player_id, &participation)| {
+    //     //             if participation == 1 {
+    //     //                 Some((index_start_arr[player_id], index_end_arr[player_id]))
+    //     //             } else {
+    //     //                 None
+    //     //             }
+    //     //         })
+    //     //         .collect();
 
-        //     // Concurrently filter states based on group constraints
-        //     let filtered: Vec<String> = self.calculated_states.par_iter()
-        //         .filter(|state| {
-        //             participating_indices.iter().any(|&(start, end)| {
-        //                 state.len() >= end && state[start..end].contains(card_char)
-        //             })
-        //         })
-        //         .cloned().collect();
+    //     //     // Concurrently filter states based on group constraints
+    //     //     let filtered: Vec<String> = self.calculated_states.par_iter()
+    //     //         .filter(|state| {
+    //     //             participating_indices.iter().any(|&(start, end)| {
+    //     //                 state.len() >= end && state[start..end].contains(card_char)
+    //     //             })
+    //     //         })
+    //     //         .cloned().collect();
 
-        //     // Update calculated_states with filtered results
-        //     self.calculated_states = filtered;
-        // }
-    }
-    pub fn filter_state_set(&mut self) {
-        let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
-        let mut state_set: HashSet<String> = HashSet::new();
-        let mut temp_set: HashSet<String> = HashSet::new();
-        let mut bool_first: bool = true;
-        let mut key: String;
-        // JC Filter
-        let start_time = Instant::now();
-        for i in 0..6 {
-            if let Some(cards) = latest_constraint.jc_hm.get(&i) {
-                key = cards.iter().map(|c| self.card_to_char(c)).collect::<String>();
-                println!("key, {}", key);
-                if bool_first {
-                    state_set = self.set_store[i][&key].clone();
-                    bool_first = false;
-                } else {
-                    temp_set = self.set_store[i][&key].clone();
-                    state_set = state_set.intersection(&temp_set).cloned().collect::<HashSet<_>>();
-                }
-            }
-        }
-        let elapsed_time = start_time.elapsed();
-        log::info!("Time taken for Set JC Filter: {:?}", elapsed_time);
-        // PC Filter
-        let start_time = Instant::now();
-        for i in 0..6 {
-            if let Some(card) = latest_constraint.pc_hm.get(&i){
-                key = self.card_to_char(&card).to_string();
-                if bool_first {
-                    state_set = self.set_store[i][&key].clone();
-                    bool_first = false;
-                } else {
-                    temp_set = self.set_store[i][&key].clone();
-                    state_set = state_set.intersection(&temp_set).cloned().collect::<HashSet<_>>();
-                }
-            }
-        }
-        // Do a check to convert to vec at the end! store in self.calculated_states
-        // Before GC
-        let elapsed_time = start_time.elapsed();
-        log::info!("Time taken for Set CC Filter: {:?}", elapsed_time);
+    //     //     // Update calculated_states with filtered results
+    //     //     self.calculated_states = filtered;
+    //     // }
+    // }
+    // pub fn filter_state_set(&mut self) {
+    //     let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+    //     let mut state_set: HashSet<String> = HashSet::new();
+    //     let mut temp_set: HashSet<String> = HashSet::new();
+    //     let mut bool_first: bool = true;
+    //     let mut key: String;
+    //     // JC Filter
+    //     let start_time = Instant::now();
+    //     for i in 0..6 {
+    //         if let Some(cards) = latest_constraint.jc_hm.get(&i) {
+    //             key = cards.iter().map(|c| self.card_to_char(c)).collect::<String>();
+    //             println!("key, {}", key);
+    //             if bool_first {
+    //                 state_set = self.set_store[i][&key].clone();
+    //                 bool_first = false;
+    //             } else {
+    //                 temp_set = self.set_store[i][&key].clone();
+    //                 state_set = state_set.intersection(&temp_set).cloned().collect::<HashSet<_>>();
+    //             }
+    //         }
+    //     }
+    //     let elapsed_time = start_time.elapsed();
+    //     log::info!("Time taken for Set JC Filter: {:?}", elapsed_time);
+    //     // PC Filter
+    //     let start_time = Instant::now();
+    //     for i in 0..6 {
+    //         if let Some(card) = latest_constraint.pc_hm.get(&i){
+    //             key = self.card_to_char(&card).to_string();
+    //             if bool_first {
+    //                 state_set = self.set_store[i][&key].clone();
+    //                 bool_first = false;
+    //             } else {
+    //                 temp_set = self.set_store[i][&key].clone();
+    //                 state_set = state_set.intersection(&temp_set).cloned().collect::<HashSet<_>>();
+    //             }
+    //         }
+    //     }
+    //     // Do a check to convert to vec at the end! store in self.calculated_states
+    //     // Before GC
+    //     let elapsed_time = start_time.elapsed();
+    //     log::info!("Time taken for Set CC Filter: {:?}", elapsed_time);
         
-        self.calculated_states = state_set.into_iter().collect();
-    }
+    //     self.calculated_states = state_set.into_iter().collect();
+    // }
     pub fn card_to_char(&self, card: &Card) -> char {
         // Example implementation, adjust according to your Card enum and logic
         match card {
@@ -702,285 +935,293 @@ impl NaiveProb {
             _ => panic!("Bad char used!"),
         }
     }
-    pub fn get_latest_beliefs(&mut self) -> Vec<f64>{
-        // This is microsecond for small calculated states
-        // Time 0.17 ~ 0.20 s for full state
-        // I wish to iterate through Vec<String>
-        // For each
-        //TODO: Also store total times each move has been played 
-         // Can make it output the beliefs
-        // your trainer takes history and naive_prob, uses PMCCFR to search
-         // When it reaches a node it needs to collect their states to modify a beliefstate
+    // pub fn get_latest_beliefs(&mut self) -> Vec<f64>{
+    //     // This is microsecond for small calculated states
+    //     // Time 0.17 ~ 0.20 s for full state
+    //     // I wish to iterate through Vec<String>
+    //     // For each
+    //     //TODO: Also store total times each move has been played 
+    //      // Can make it output the beliefs
+    //     // your trainer takes history and naive_prob, uses PMCCFR to search
+    //      // When it reaches a node it needs to collect their states to modify a beliefstate
 
-        let mut hand_to_index_offset_map: HashMap<String, usize> = HashMap::new();
-        let mut count: usize = 0;
-        let mut max_count: usize = 0;
-        for hand in &self.unique_2p_hands {
-            hand_to_index_offset_map.insert(hand.clone(), count);
-            count += 1;
-        }
+    //     let mut hand_to_index_offset_map: HashMap<String, usize> = HashMap::new();
+    //     let mut count: usize = 0;
+    //     let mut max_count: usize = 0;
+    //     for hand in &self.unique_2p_hands {
+    //         hand_to_index_offset_map.insert(hand.clone(), count);
+    //         count += 1;
+    //     }
 
-        max_count = 6 * count;
-        count = 0;
-        // Doing the same but for player 7, the pile which has 3 cards
-        for hand in &self.unique_3p_hands {
-            hand_to_index_offset_map.insert(hand.clone(), count);
-            count += 1;
-        }
-        // 35 combinations
-        // How do you speed the bottom up
-        max_count += count;
-        let mut card_freq: Vec<f64> = vec![0.0; max_count];
-        let mut total_sum: u64 = 0;
-        for state in &self.calculated_states {
-            for player_index in 0..7 {
-                let start_index = self.index_start_arr[player_index];
-                let end_index = self.index_end_arr[player_index];
-                let player_hand = &state[start_index..end_index];
+    //     max_count = 6 * count;
+    //     count = 0;
+    //     // Doing the same but for player 7, the pile which has 3 cards
+    //     for hand in &self.unique_3p_hands {
+    //         hand_to_index_offset_map.insert(hand.clone(), count);
+    //         count += 1;
+    //     }
+    //     // 35 combinations
+    //     // How do you speed the bottom up
+    //     max_count += count;
+    //     let mut card_freq: Vec<f64> = vec![0.0; max_count];
+    //     let mut total_sum: u64 = 0;
+    //     for state in &self.calculated_states {
+    //         for player_index in 0..7 {
+    //             let start_index = self.index_start_arr[player_index];
+    //             let end_index = self.index_end_arr[player_index];
+    //             let player_hand = &state[start_index..end_index];
                 
-                let card_index = match hand_to_index_offset_map.get(player_hand) {
-                    Some(index) => *index,
-                    None => panic!("Invalid card combination"),
-                };
-                card_freq[player_index * 15 + card_index] += 1.0; 
-            }
-            total_sum += 1;
-        }
-        card_freq.iter_mut().for_each(|f| *f /= total_sum as f64);
-        // Up till here
-        let key: String = self.make_key_belief();
-        self.add_to_hashmap(key, card_freq.clone());
-        card_freq
-    }
-    pub fn get_latest_beliefs_concurrent(&mut self) -> Vec<f64>{
-        //TIME Significantly reduced for large state sets
-        // E.g 1.5million full set from 173 ms => 51ms
-        // Using this and filter_optimal, longest time all in is around 150ms tops down from 300-400ms
-        // OK what if we dont use filter_optimal first, but we just directly iter through the whole thing from here
-        // I wish to iterate through Vec<String>
-        // For each
-        //TODO: Also store total times each move has been played 
-         // Can make it output the beliefs
-        // your trainer takes history and naive_prob, uses PMCCFR to search
-         // When it reaches a node it needs to collect their states to modify a beliefstate
+    //             let card_index = match hand_to_index_offset_map.get(player_hand) {
+    //                 Some(index) => *index,
+    //                 None => panic!("Invalid card combination"),
+    //             };
+    //             card_freq[player_index * 15 + card_index] += 1.0; 
+    //         }
+    //         total_sum += 1;
+    //     }
+    //     card_freq.iter_mut().for_each(|f| *f /= total_sum as f64);
+    //     // Up till here
+    //     let key: String = self.make_key_belief();
+    //     self.add_to_hashmap(key, card_freq.clone());
+    //     card_freq
+    // }
+    // pub fn get_latest_beliefs_concurrent(&mut self) -> Vec<f64>{
+    //     //TIME Significantly reduced for large state sets
+    //     // E.g 1.5million full set from 173 ms => 51ms
+    //     // Using this and filter_optimal, longest time all in is around 150ms tops down from 300-400ms
+    //     // OK what if we dont use filter_optimal first, but we just directly iter through the whole thing from here
+    //     // I wish to iterate through Vec<String>
+    //     // For each
+    //     //TODO: Also store total times each move has been played 
+    //      // Can make it output the beliefs
+    //     // your trainer takes history and naive_prob, uses PMCCFR to search
+    //      // When it reaches a node it needs to collect their states to modify a beliefstate
 
-        // Move hand_to_index_map out
-        let mut hand_to_index_offset_map: HashMap<String, usize> = HashMap::new();
-        let mut count: usize = 0;
-        let mut max_count: usize = 0;
-        for hand in &self.unique_2p_hands {
-            hand_to_index_offset_map.insert(hand.clone(), count);
-            count += 1;
-        }
-        max_count = 6 * count;
-        count = 0;
-        // Doing the same but for player 7, the pile which has 3 cards
-        for hand in &self.unique_3p_hands {
-            hand_to_index_offset_map.insert(hand.clone(), count);
-            count += 1;
-        }
-        max_count += count;
-        let card_freq: Arc<Vec<AtomicUsize>> = Arc::new((0..max_count).map(|_| AtomicUsize::new(0)).collect::<Vec<_>>());
-        let total_sum = Arc::new(AtomicUsize::new(0));
-        let total_sum = self.calculated_states.len() as u64;
+    //     // Move hand_to_index_map out
+    //     let mut hand_to_index_offset_map: HashMap<String, usize> = HashMap::new();
+    //     let mut count: usize = 0;
+    //     let mut max_count: usize = 0;
+    //     for hand in &self.unique_2p_hands {
+    //         hand_to_index_offset_map.insert(hand.clone(), count);
+    //         count += 1;
+    //     }
+    //     max_count = 6 * count;
+    //     count = 0;
+    //     // Doing the same but for player 7, the pile which has 3 cards
+    //     for hand in &self.unique_3p_hands {
+    //         hand_to_index_offset_map.insert(hand.clone(), count);
+    //         count += 1;
+    //     }
+    //     max_count += count;
+    //     let card_freq: Arc<Vec<AtomicUsize>> = Arc::new((0..max_count).map(|_| AtomicUsize::new(0)).collect::<Vec<_>>());
+    //     let total_sum = Arc::new(AtomicUsize::new(0));
+    //     let total_sum = self.calculated_states.len() as u64;
 
-        self.calculated_states.par_iter().for_each(|state| {
-            let mut local_counts = vec![0usize; max_count];
+    //     self.calculated_states.par_iter().for_each(|state| {
+    //         let mut local_counts = vec![0usize; max_count];
     
-            for player_index in 0..7 {
-                let start_index = self.index_start_arr[player_index];
-                let end_index = self.index_end_arr[player_index];
-                let player_hand = &state[start_index..end_index];
+    //         for player_index in 0..7 {
+    //             let start_index = self.index_start_arr[player_index];
+    //             let end_index = self.index_end_arr[player_index];
+    //             let player_hand = &state[start_index..end_index];
     
-                if let Some(&card_index) = hand_to_index_offset_map.get(player_hand) {
-                    local_counts[player_index * 15 + card_index] += 1;
-                } else {
-                    panic!("Invalid card combination");
-                }
-            }
+    //             if let Some(&card_index) = hand_to_index_offset_map.get(player_hand) {
+    //                 local_counts[player_index * 15 + card_index] += 1;
+    //             } else {
+    //                 panic!("Invalid card combination");
+    //             }
+    //         }
     
-            for (card_index, &count) in local_counts.iter().enumerate() {
-                if count > 0 {
-                    card_freq[card_index].fetch_add(count, Ordering::SeqCst);
-                }
-            }
-        });
+    //         for (card_index, &count) in local_counts.iter().enumerate() {
+    //             if count > 0 {
+    //                 card_freq[card_index].fetch_add(count, Ordering::SeqCst);
+    //             }
+    //         }
+    //     });
     
-        let beliefs: Vec<f64> = card_freq.iter()
-            .map(|freq| freq.load(Ordering::SeqCst) as f64 / total_sum as f64)
+    //     let beliefs: Vec<f64> = card_freq.iter()
+    //         .map(|freq| freq.load(Ordering::SeqCst) as f64 / total_sum as f64)
+    //         .collect();
+
+    //     beliefs
+    // }
+    pub fn filter_state_simple(&mut self){
+        let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+        self.calculated_states = self.all_states.par_iter()
+            .filter(|state| self.state_satisfies_constraints(state, &latest_constraint))
+            .cloned()
             .collect();
-
-        beliefs
     }
-    pub fn filter_state_optimal(&mut self){
-        let mut start_time = Instant::now();
-        let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
-        let elapsed_time = start_time.elapsed();
-        log::info!("Time taken for Getting latest_constraint: {:?}", elapsed_time);
-        start_time = Instant::now();
-        self.calculated_states = self.all_states.clone();
-        let elapsed_time = start_time.elapsed();
-        log::info!("Time taken for Cloning all states: {:?}", elapsed_time);
+    // pub fn filter_state_optimal(&mut self){
+    //     let mut start_time = Instant::now();
+    //     let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+    //     let elapsed_time = start_time.elapsed();
+    //     log::info!("Time taken for Getting latest_constraint: {:?}", elapsed_time);
+    //     start_time = Instant::now();
+    //     self.calculated_states = self.all_states.clone();
+    //     let elapsed_time = start_time.elapsed();
+    //     log::info!("Time taken for Cloning all states: {:?}", elapsed_time);
 
 
-        // let mut start_time = Instant::now();
-        for i in 0..6{
-            if let Some(cards) = latest_constraint.jc_hm.get(&i){
-                // cards is a Vec<Card> of size 2
-                // Convert to chars like "AB"
-                // check that at the current_states state[index_start..index_end] == "AB"
-                let card_char_vec: Vec<char> = cards.iter().map(|c| self.card_to_char(c)).collect();
-                let index_start: usize = 2 * i;
-                let index_end: usize = index_start + 2;
-                let filtered: Vec<String> = self.calculated_states.par_iter()
-                    .filter(|state| {
-                        let state_chars: Vec<char> = state[index_start..index_end].chars().collect();
-                        state.len() >= index_end && state_chars == *card_char_vec
-                    })
-                    .cloned().collect();
-                self.calculated_states = filtered;
-            }
-        }
-        // let elapsed_time = start_time.elapsed();
-        // log::info!("Time taken for Optimal JC Filter: {:?}", elapsed_time);
-        // start_time = Instant::now();
-        for i in 0..6 {
-            if let Some(card) = latest_constraint.pc_hm.get(&i){
-                let card_char: char = self.card_to_char(&card);
-                let index_start: usize = 2 * i;
-                let index_end: usize = index_start + 2;
-                // filter the string where [index_start: index_end] contains card_char
-                self.calculated_states.retain(|state| state[index_start..index_end].contains(card_char));
-            }
-        }
-        // let elapsed_time = start_time.elapsed();
-        // log::info!("Time taken for Optimal PC Filter: {:?}", elapsed_time);
-        // Add concurrent version
-        // start_time = Instant::now();
-        for card in self.card_list {
-            if let Some(participation_list) = latest_constraint.gc_hm.get(&card){
-                let card_char: char = self.card_to_char(&card);
+    //     // let mut start_time = Instant::now();
+    //     for i in 0..6{
+    //         if let Some(cards) = latest_constraint.jc_hm.get(&i){
+    //             // cards is a Vec<Card> of size 2
+    //             // Convert to chars like "AB"
+    //             // check that at the current_states state[index_start..index_end] == "AB"
+    //             let card_char_vec: Vec<char> = cards.iter().map(|c| self.card_to_char(c)).collect();
+    //             let index_start: usize = 2 * i;
+    //             let index_end: usize = index_start + 2;
+    //             let filtered: Vec<String> = self.calculated_states.par_iter()
+    //                 .filter(|state| {
+    //                     let state_chars: Vec<char> = state[index_start..index_end].chars().collect();
+    //                     state.len() >= index_end && state_chars == *card_char_vec
+    //                 })
+    //                 .cloned().collect();
+    //             self.calculated_states = filtered;
+    //         }
+    //     }
+    //     // let elapsed_time = start_time.elapsed();
+    //     // log::info!("Time taken for Optimal JC Filter: {:?}", elapsed_time);
+    //     // start_time = Instant::now();
+    //     for i in 0..6 {
+    //         if let Some(card) = latest_constraint.pc_hm.get(&i){
+    //             let card_char: char = self.card_to_char(&card);
+    //             let index_start: usize = 2 * i;
+    //             let index_end: usize = index_start + 2;
+    //             // filter the string where [index_start: index_end] contains card_char
+    //             self.calculated_states.retain(|state| state[index_start..index_end].contains(card_char));
+    //         }
+    //     }
+    //     // let elapsed_time = start_time.elapsed();
+    //     // log::info!("Time taken for Optimal PC Filter: {:?}", elapsed_time);
+    //     // Add concurrent version
+    //     // start_time = Instant::now();
 
-                let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
-                .filter_map(|(player_id, &participation)| {
-                    if participation == 1{
-                        Some((self.index_start_arr[player_id], self.index_end_arr[player_id]))
-                    } else {
-                        None
-                    }
-                }).collect();
-                let filtered: Vec<String> = self.calculated_states.par_iter()
-                    .filter(|state| {
-                        participating_indices.iter().any(|&(start, end)| {
-                            state.len() >= end && state[start..end].contains(card_char)
-                        })
-                    })
-                    .cloned().collect();
+    //     for card in self.card_list {
+    //         if let Some(participation_list) = latest_constraint.gc_hm.get(&card){
+    //             let card_char: char = self.card_to_char(&card);
 
-                // Update calculated_states with filtered results
-                self.calculated_states = filtered;
-            }
-        }
-        // let elapsed_time = start_time.elapsed();
-        // log::info!("Time taken for Optimal GC Filter: {:?}", elapsed_time);
-    }
-    pub fn filter_state_optimal2(&mut self){
-        // This is usually worse than filter_state_optimal
-        let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+    //             let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
+    //             .filter_map(|(player_id, &participation)| {
+    //                 if participation == 1{
+    //                     Some((self.index_start_arr[player_id], self.index_end_arr[player_id]))
+    //                 } else {
+    //                     None
+    //                 }
+    //             }).collect();
+    //             let filtered: Vec<String> = self.calculated_states.par_iter()
+    //                 .filter(|state| {
+    //                     participating_indices.iter().any(|&(start, end)| {
+    //                         state.len() >= end && state[start..end].contains(card_char)
+    //                     })
+    //                 })
+    //                 .cloned().collect();
 
-        self.calculated_states = self.all_states.clone();
+    //             // Update calculated_states with filtered results
+    //             self.calculated_states = filtered;
+    //         }
+    //     }
+    //     // let elapsed_time = start_time.elapsed();
+    //     // log::info!("Time taken for Optimal GC Filter: {:?}", elapsed_time);
+    // }
+    // pub fn filter_state_optimal2(&mut self){
+    //     // This is usually worse than filter_state_optimal
+    //     let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
 
-        let mut first_filter: bool = true;
+    //     self.calculated_states = self.all_states.clone();
 
-        // let mut start_time = Instant::now();
-        for i in 0..6{
-            if let Some(cards) = latest_constraint.jc_hm.get(&i){
-                // cards is a Vec<Card> of size 2
-                // Convert to chars like "AB"
-                // check that at the current_states state[index_start..index_end] == "AB"
-                let card_char_vec: Vec<char> = cards.iter().map(|c| self.card_to_char(c)).collect();
-                let index_start: usize = 2 * i;
-                let index_end: usize = index_start + 2;
-                let states_source = if first_filter {
-                    &self.all_states
-                } else {
-                    &self.calculated_states
-                };
-                let filtered: Vec<String> = states_source.par_iter()
-                .filter(|state| {
-                    let state_chars: Vec<char> = state[index_start..index_end].chars().collect();
-                    state.len() >= index_end && state_chars == *card_char_vec
-                })
-                .cloned().collect();
-                self.calculated_states = filtered;
-                first_filter = false;
-            }
-        }
-        // let elapsed_time = start_time.elapsed();
-        // log::info!("Time taken for Optimal JC Filter: {:?}", elapsed_time);
-        // start_time = Instant::now();
-        for i in 0..6 {
-            if let Some(card) = latest_constraint.pc_hm.get(&i){
-                let card_char: char = self.card_to_char(&card);
-                let index_start: usize = 2 * i;
-                let index_end: usize = index_start + 2;
-                // filter the string where [index_start: index_end] contains card_char
-                if first_filter {
-                    self.calculated_states = self.all_states.par_iter()
-                    .filter(|state| state[index_start..index_end].contains(card_char))
-                    .cloned().collect();
-                    first_filter = false;
-                } else {
+    //     let mut first_filter: bool = true;
 
-                    self.calculated_states.retain(|state| state[index_start..index_end].contains(card_char));
-                }
-            }
-        }
-        // let elapsed_time = start_time.elapsed();
-        // log::info!("Time taken for Optimal PC Filter: {:?}", elapsed_time);
-        // Add concurrent version
-        // start_time = Instant::now();
-        for card in self.card_list {
-            if let Some(participation_list) = latest_constraint.gc_hm.get(&card){
-                let card_char: char = self.card_to_char(&card);
+    //     // let mut start_time = Instant::now();
+    //     for i in 0..6{
+    //         if let Some(cards) = latest_constraint.jc_hm.get(&i){
+    //             // cards is a Vec<Card> of size 2
+    //             // Convert to chars like "AB"
+    //             // check that at the current_states state[index_start..index_end] == "AB"
+    //             let card_char_vec: Vec<char> = cards.iter().map(|c| self.card_to_char(c)).collect();
+    //             let index_start: usize = 2 * i;
+    //             let index_end: usize = index_start + 2;
+    //             let states_source = if first_filter {
+    //                 &self.all_states
+    //             } else {
+    //                 &self.calculated_states
+    //             };
+    //             let filtered: Vec<String> = states_source.par_iter()
+    //             .filter(|state| {
+    //                 let state_chars: Vec<char> = state[index_start..index_end].chars().collect();
+    //                 state.len() >= index_end && state_chars == *card_char_vec
+    //             })
+    //             .cloned().collect();
+    //             self.calculated_states = filtered;
+    //             first_filter = false;
+    //         }
+    //     }
+    //     // let elapsed_time = start_time.elapsed();
+    //     // log::info!("Time taken for Optimal JC Filter: {:?}", elapsed_time);
+    //     // start_time = Instant::now();
+    //     for i in 0..6 {
+    //         if let Some(card) = latest_constraint.pc_hm.get(&i){
+    //             let card_char: char = self.card_to_char(&card);
+    //             let index_start: usize = 2 * i;
+    //             let index_end: usize = index_start + 2;
+    //             // filter the string where [index_start: index_end] contains card_char
+    //             if first_filter {
+    //                 self.calculated_states = self.all_states.par_iter()
+    //                 .filter(|state| state[index_start..index_end].contains(card_char))
+    //                 .cloned().collect();
+    //                 first_filter = false;
+    //             } else {
 
-                let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
-                .filter_map(|(player_id, &participation)| {
-                    if participation == 1{
-                        Some((self.index_start_arr[player_id], self.index_end_arr[player_id]))
-                    } else {
-                        None
-                    }
-                }).collect();
-                if first_filter {
+    //                 self.calculated_states.retain(|state| state[index_start..index_end].contains(card_char));
+    //             }
+    //         }
+    //     }
+    //     // let elapsed_time = start_time.elapsed();
+    //     // log::info!("Time taken for Optimal PC Filter: {:?}", elapsed_time);
+    //     // Add concurrent version
+    //     // start_time = Instant::now();
+    //     for card in self.card_list {
+    //         if let Some(participation_list) = latest_constraint.gc_hm.get(&card){
+    //             let card_char: char = self.card_to_char(&card);
 
-                    self.calculated_states = self.all_states.par_iter()
-                        .filter(|state| {
-                            participating_indices.iter().any(|&(start, end)| {
-                                state.len() >= end && state[start..end].contains(card_char)
-                            })
-                        })
-                        .cloned().collect();
-                } else {
+    //             let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
+    //             .filter_map(|(player_id, &participation)| {
+    //                 if participation == 1{
+    //                     Some((self.index_start_arr[player_id], self.index_end_arr[player_id]))
+    //                 } else {
+    //                     None
+    //                 }
+    //             }).collect();
+    //             if first_filter {
 
-                    self.calculated_states = self.calculated_states.par_iter()
-                        .filter(|state| {
-                            participating_indices.iter().any(|&(start, end)| {
-                                state.len() >= end && state[start..end].contains(card_char)
-                            })
-                        })
-                        .cloned().collect();
-                }
+    //                 self.calculated_states = self.all_states.par_iter()
+    //                     .filter(|state| {
+    //                         participating_indices.iter().any(|&(start, end)| {
+    //                             state.len() >= end && state[start..end].contains(card_char)
+    //                         })
+    //                     })
+    //                     .cloned().collect();
+    //             } else {
 
-                // Eventually change this so if the constraints are empty and no filter is required, to just get belief states to use all_states
-                if first_filter {
-                    self.calculated_states = self.all_states.clone();
-                }
-            }
-        }
-        // let elapsed_time = start_time.elapsed();
-        // log::info!("Time taken for Optimal GC Filter: {:?}", elapsed_time);
-    }
+    //                 self.calculated_states = self.calculated_states.par_iter()
+    //                     .filter(|state| {
+    //                         participating_indices.iter().any(|&(start, end)| {
+    //                             state.len() >= end && state[start..end].contains(card_char)
+    //                         })
+    //                     })
+    //                     .cloned().collect();
+    //             }
+
+    //             // Eventually change this so if the constraints are empty and no filter is required, to just get belief states to use all_states
+    //             if first_filter {
+    //                 self.calculated_states = self.all_states.clone();
+    //             }
+    //         }
+    //     }
+    //     // let elapsed_time = start_time.elapsed();
+    //     // log::info!("Time taken for Optimal GC Filter: {:?}", elapsed_time);
+    // }
     pub fn compute_beliefs_direct(&mut self) -> Vec<f64> {
         // Very fast but values slightly different
         // The other versions actually produce wrong values when gc_hm is the only criterion... I dont know why but ill just use this
@@ -1044,6 +1285,7 @@ impl NaiveProb {
     
     // Helper method to determine if a state satisfies all constraints
     fn state_satisfies_constraints(&self, state: &str, latest_constraint: &CollectiveConstraint) -> bool {
+        // println!("Check");
         // Check jc_hm constraints
         for i in 0..6 {
             if let Some(cards) = latest_constraint.jc_hm.get(&i) {
@@ -1077,11 +1319,36 @@ impl NaiveProb {
     
         // This should check that there are gc_hm_count of the card.
         // Check gc_hm constraints
-        for card in &self.card_list {
-            if let Some(participation_list) = latest_constraint.gc_hm.get(&card) {
-                let card_char: char = self.card_to_char(&card);
+        // for card in &self.card_list {
+        //     if let Some(participation_list) = latest_constraint.gc_hm.get(&card) {
+        //         let card_char: char = self.card_to_char(&card);
     
-                let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
+        //         let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
+        //             .filter_map(|(player_id, &participation)| {
+        //                 if participation == 1 {
+        //                     Some((self.index_start_arr[player_id], self.index_end_arr[player_id]))
+        //                 } else {
+        //                     None
+        //                 }
+        //             }).collect();
+    
+        //         let satisfies_gc_hm = participating_indices.iter().any(|&(start, end)| {
+        //             state.len() >= end && state[start..end].contains(card_char)
+        //         });
+    
+        //         if !satisfies_gc_hm {
+        //             return false; // The state does not satisfy this gc_hm constraint
+        //         }
+        //     }
+        // }
+
+        // Check gc_vec constraints
+        let mut index: usize = 0;
+        while index < latest_constraint.gc_vec.len(){
+            let participation_list: &[u8; 7] = latest_constraint.gc_vec[index].get_list();
+            let card_char: char = latest_constraint.gc_vec[index].card().card_to_char();
+
+            let participating_indices: Vec<(usize, usize)> = participation_list.iter().enumerate()
                     .filter_map(|(player_id, &participation)| {
                         if participation == 1 {
                             Some((self.index_start_arr[player_id], self.index_end_arr[player_id]))
@@ -1089,29 +1356,36 @@ impl NaiveProb {
                             None
                         }
                     }).collect();
-    
-                let satisfies_gc_hm = participating_indices.iter().any(|&(start, end)| {
-                    state.len() >= end && state[start..end].contains(card_char)
-                });
-    
-                if !satisfies_gc_hm {
-                    return false; // The state does not satisfy this gc_hm constraint
+            let mut total_count = 0;
+            let required_count = latest_constraint.gc_vec[index].count();
+            let mut satisfies_gc_vec: bool = false;
+            for &(start, end) in participating_indices.iter() {
+                if state.len() >= end {
+                    total_count += state[start..end].matches(card_char).count();
+                    if total_count >= required_count {
+                        satisfies_gc_vec = true;
+                        break
+                    }
                 }
             }
+            if !satisfies_gc_vec {
+                return false; // The state does not satisfy this gc_vec constraint
+            }
+            index += 1;
         }
-    
+
         true // The state satisfies all constraints
     }
-    pub fn get_leaf_belief(&mut self) -> Vec<f64>{
-        self.filter_state_optimal();
-        self.get_latest_beliefs_concurrent()
-    }
-    pub fn gen_and_save_belief(&mut self) {
-        // self.filter_state_optimal();
-        let beliefs: Vec<f64> = self.compute_beliefs_direct();
-        let key: String = self.make_key_belief();
-        self.add_to_hashmap(key, beliefs.clone());
-    }
+    // pub fn get_leaf_belief(&mut self) -> Vec<f64>{
+    //     self.filter_state_optimal();
+    //     self.get_latest_beliefs_concurrent()
+    // }
+    // pub fn gen_and_save_belief(&mut self) {
+    //     // self.filter_state_optimal();
+    //     let beliefs: Vec<f64> = self.compute_beliefs_direct();
+    //     let key: String = self.make_key_belief();
+    //     self.add_to_hashmap(key, beliefs.clone());
+    // }
     pub fn chance_reveal_redraw(&mut self, player_id: usize, temp_vec: Vec<String>) -> HashMap<String, String>{
         // Hand list is a list of possible hands with valid reach probability we wish to search for
         // "AA" "AB" etc. 
