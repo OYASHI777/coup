@@ -104,13 +104,13 @@ use std::time::Instant;
 // 2024-03-23T23:18:59 [INFO] - Time taken for Optimal GC Filter: 100ns
 // 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
 fn main() {
-    // game_rnd(1000, true);
+    game_rnd(1000, true);
     // test_belief(20000000);
     // make_belief(20000000);
     // game_rnd(20000000, false);
     // test_filter(1000);
     // test_reach(); 
-    test_shuffle(100);
+    // test_shuffle(100);
 }
 pub fn test_shuffle(iterations: usize){
     logger();

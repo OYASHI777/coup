@@ -45,7 +45,7 @@ pub enum AOName {
     Discard,
     RevealRedraw,
     Exchange,
-    // ExchangeDraw,
+    ExchangeDraw,
     ExchangeChoice,
 }
 
@@ -117,6 +117,10 @@ pub enum ActionObservation {
     Exchange {
         player_id: usize,
     },
+    ExchangeDraw {
+        player_id: usize,
+        card: [Card; 2],
+    },
     ExchangeChoice {
         // cards represents their choice of hand
         // For no_cards == 1, both cards in cards should be the same
@@ -152,7 +156,7 @@ impl ActionObservation {
             Discard { .. } => AOName::Discard,
             RevealRedraw { .. } => AOName::RevealRedraw,
             Exchange { .. } => AOName::Exchange,
-            // ExchangeDraw { .. } => AOName::ExchangeDraw,
+            ExchangeDraw { .. } => AOName::ExchangeDraw,
             ExchangeChoice { .. } => AOName::ExchangeChoice,
             _ => panic!("bad kind"),
         }
@@ -172,7 +176,7 @@ impl ActionObservation {
             | ActionObservation::Discard { player_id, .. }
             | ActionObservation::RevealRedraw { player_id, .. }
             | ActionObservation::Exchange { player_id, .. }
-            // | ActionObservation::ExchangeDraw { player_id, .. }
+            | ActionObservation::ExchangeDraw { player_id, .. }
             | ActionObservation::ExchangeChoice { player_id, .. } => *player_id,
             // No player_id available in these variants, so we panic
             ActionObservation::EmptyAO
@@ -212,6 +216,7 @@ impl ActionObservation {
     pub fn cards(&self) -> &[Card] {
         match self {
             ActionObservation::Discard { card, .. } => card, 
+            ActionObservation::ExchangeDraw { card, .. } => card, 
             // Include other cases if there are more variants holding a result field
             _ => panic!("This ActionObservation variant does not contain a result"),
         }
@@ -263,8 +268,8 @@ impl ActionObservation {
             },
             ActionObservation::RevealRedraw { player_id, card } => format!("RRP{}{}", player_id, card.card_to_string()),
             ActionObservation::Exchange { player_id } => format!("EXP{}", player_id),
-            // ExchangeDraw { .. } => AOName::ExchangeDraw,
-            &ActionObservation::ExchangeChoice { player_id , no_cards, .. } => format!("EC{}P{}", no_cards, player_id),
+            ActionObservation::ExchangeDraw { player_id , card } => format!("EXD{}{}{}", player_id, card[0].card_to_string(), card[1].card_to_string()),
+            ActionObservation::ExchangeChoice { player_id , no_cards, .. } => format!("EC{}P{}", no_cards, player_id),
             _ => panic!("bad kind"),
         }
     }
@@ -480,10 +485,8 @@ impl History {
         current_turn
     }
     pub fn push_ao(&mut self, ao: ActionObservation) {
-        // Here gamestate, influence and coin values may be updated
-        // Case Checked
         // Adds ActionObservation to History and updates relevant gamestate
-        // Make Steal contains steal amount
+        // Here gamestate, influence and coin values may be updated
         let ao_name: AOName = ao.name();
         if ao_name == AOName::Income {
             // Case I1
@@ -1062,6 +1065,67 @@ impl History {
                     debug_assert!(false, "Player with abnormal influence given Exchange Choice [1]")
                 }
             },
+            AOName::ExchangeDraw => {
+                // No Pruning of impossible moves as I am going to do it in the naive_prob check anyways
+                let num_dead_amb: u8 =  self.get_public_card_count(&Card::Ambassador);
+                let num_dead_ass: u8 =  self.get_public_card_count(&Card::Assassin);
+                let num_dead_cpt: u8 =  self.get_public_card_count(&Card::Captain);
+                let num_dead_duk: u8 =  self.get_public_card_count(&Card::Duke);
+                let num_dead_con: u8 =  self.get_public_card_count(&Card::Contessa);
+                if num_dead_amb < 2 {
+                    changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Ambassador, Card::Ambassador] });
+                }
+                if num_dead_amb < 3 {
+                    if num_dead_ass < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Ambassador, Card::Assassin] });
+                    }
+                    if num_dead_cpt < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Ambassador, Card::Captain] });
+                    }
+                    if num_dead_duk < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Ambassador, Card::Duke] });
+                    }
+                    if num_dead_con < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Ambassador, Card::Contessa] });
+                    }
+                }
+                if num_dead_ass < 2 {
+                    changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Assassin, Card::Assassin] });
+                }
+                if num_dead_ass < 3 {
+                    if num_dead_cpt < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Assassin, Card::Captain] });
+                    }
+                    if num_dead_duk < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Assassin, Card::Duke] });
+                    }
+                    if num_dead_con < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Assassin, Card::Contessa] });
+                    }
+                }
+                if num_dead_cpt < 2 {
+                    changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Captain, Card::Captain] });
+                }
+                if num_dead_cpt < 3 {
+                    if num_dead_duk < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Captain, Card::Duke] });
+                    }
+                    if num_dead_con < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Captain, Card::Contessa] });
+                    }
+                }
+                if num_dead_duk < 2 {
+                    changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Duke, Card::Duke] });
+                }
+                if num_dead_duk < 3 {
+                    if num_dead_con < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Duke, Card::Contessa] });
+                    }
+                }
+                if num_dead_con < 2 {
+                    changed_vec.push(ActionObservation::ExchangeDraw { player_id: player_id, card: [Card::Contessa, Card::Contessa] });
+                }
+            }
             _ => panic!("{}", format!("add_move for AOName {:?} not implemented", move_name)),
         }
     }
@@ -1196,9 +1260,9 @@ impl History {
                         self.add_moves(&mut output, victim_id, AOName::Discard);
                         
                     }else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Exchange {
-                        // In Cases: A1 => ExchangeChoice
+                        // In Cases: A1 => ExchangeDraw
                         let exchanger_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-                        self.add_moves(&mut output, exchanger_id, AOName::ExchangeChoice);
+                        self.add_moves(&mut output, exchanger_id, AOName::ExchangeDraw);
                     } else {
                         debug_assert!(false, "Unintended End point for EvalResult Pass");
                     }
@@ -1256,7 +1320,7 @@ impl History {
                     if self.store[self.store_len - 2].name() == AOName::RevealRedraw {
                         // A3 => Exchange Choice
                         let exchange_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-                        self.add_moves(&mut output, exchange_id, AOName::ExchangeChoice);
+                        self.add_moves(&mut output, exchange_id, AOName::ExchangeDraw);
                     } else if self.store[self.store_len - 2].name() == AOName::EvalResult {
                         // A2 => Next Turn
                         debug_assert!(self.store[self.store_len - 2].result() == AOResult::Success, "Bad AOResult in generate_legal_moves Discard Ambassador");
@@ -1358,6 +1422,11 @@ impl History {
                 let discard_id: usize = self.store[self.store_len - 3].player_id();
                 self.add_moves(&mut output, discard_id, AOName::Discard);
             },
+            AOName::ExchangeDraw => {
+                // ID from ExchangeDraw
+                let exchange_id: usize = self.store[self.store_len - 1].player_id();
+                self.add_moves(&mut output, exchange_id, AOName::ExchangeChoice);
+            }
             AOName::ExchangeChoice => {
                 // Case Checked
                 let next_player_id: usize = self.next_player(self.current_player_turn);
