@@ -8,6 +8,8 @@ use crate::history_public::{Card, AOName, ActionObservation};
 use super::permutation_generator::{gen_table_combinations, gen_bag_combinations};
 use super::coup_const::{BAG_SIZES, TOKENS, MAX_PERM_STATES};
 use std::collections::{HashMap, HashSet};
+// use core::hash::Hasher;
+use std::hash::{Hash, Hasher};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -18,7 +20,7 @@ use super::loader::{load_initial_hashmap, save_bson_hashmap};
 use rand::prelude::SliceRandom;
 use std::sync::Mutex;
 use core::sync::atomic::AtomicBool;
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq)]
 pub struct GroupConstraint {
     // String not &str as it will not be known at compile time
     // Either 0 or 1, indicates if a particular index is part of a group that shares a card
@@ -73,6 +75,18 @@ impl GroupConstraint {
     pub fn printlog(&self) {
         log::trace!("{}", format!("Participation List: {:?}", self.participation_list));
         log::trace!("{}", format!("Card: {:?}", self.card));
+    }
+}
+impl PartialEq for GroupConstraint {
+    fn eq(&self, other: &Self) -> bool {
+        self.participation_list == other.participation_list && self.card == other.card && self.count == other.count
+    }
+}
+impl Hash for GroupConstraint {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.participation_list.hash(state);
+        self.card.hash(state);
+        self.count.hash(state);
     }
 }
 #[derive(Clone)]
@@ -154,11 +168,12 @@ impl CollectiveConstraint{
             let mut index = 0;
             while index < self.gc_vec.len(){
                 let group: &mut GroupConstraint = &mut self.gc_vec[index];
-                if group.indicator(player_id) == 1 && group.count() <= player_count{
-                    // Joint Constraint is subset of group so prune group because group will definitely be fulfilled
-                    // [SUBSET PRUNE]
-                    self.gc_vec.swap_remove(index);
-                } else if self.dead_card_count[group.card()] == 3 {
+                // if group.indicator(player_id) == 1 && group.count() <= player_count{
+                //     // Joint Constraint is subset of group so prune group because group will definitely be fulfilled
+                //     // [SUBSET PRUNE]
+                //     self.gc_vec.swap_remove(index);
+                // } else if self.dead_card_count[group.card()] == 3 {
+                if self.dead_card_count[group.card()] == 3 {
                     // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
                     self.gc_vec.swap_remove(index);
                 } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
@@ -256,11 +271,12 @@ impl CollectiveConstraint{
             let mut index = 0;
             while index < self.gc_vec.len(){
                 let group: &mut GroupConstraint = &mut self.gc_vec[index];
-                if group.indicator(player_id) == 1 && group.count() <= player_count{
-                    // Joint Constraint is subset of group so prune group because group will definitely be fulfilled
-                    // [SUBSET PRUNE]
-                    self.gc_vec.swap_remove(index);
-                } else if self.dead_card_count[group.card()] == 3 {
+                // if group.indicator(player_id) == 1 && group.count() <= player_count{
+                //     // Joint Constraint is subset of group so prune group because group will definitely be fulfilled
+                //     // [SUBSET PRUNE]
+                //     self.gc_vec.swap_remove(index);
+                // } else if self.dead_card_count[group.card()] == 3 {
+                if self.dead_card_count[group.card()] == 3 {
                     // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
                     self.gc_vec.swap_remove(index);
                 } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
@@ -290,17 +306,30 @@ impl CollectiveConstraint{
     }
     // You will never remove from group only pop to reverse it because you cannot unmix cards
     pub fn group_initial_prune(&mut self, player_id: usize, card: &Card, count: usize){
-        debug_assert!(player_id == 6, "Current implementation only intended to receive Pile ID");
+        debug_assert!(player_id <= 6, "Player ID Wrong");
+        let mut new_count: usize = count;
+        if let Some(card_dead) = self.pc_hm.get(&player_id) {
+            if card_dead == card {
+                // RevealRedraw Case
+                // Increase the count if player who revealed the card already has a dead card that is the same!
+                // Player & Pile will have at least 2 of the card
+                new_count += 1;
+            }
+        } else if let Some(cards) = self.jc_hm.get(&player_id){
+            // Should not be able to revealredraw or exchangedraw if jc_hm has player as the player would be dead!
+            debug_assert!(false, "Impossible Case Reached");
+        }
         let mut index: usize = 0;
         while index < self.gc_vec.len() {
             // [INITIAL PRUNE] if player 0 revealredraws a Duke, we prune the groups that had player 0 duke and oldcount <= newcount
-            // Only required for ExchangeDraw because for revealredraw it will be pruned in [SUBSET PRUNE] as both will be satisfied
             // This special case is for the original ambassadar version of coup only you might need to initial prune for the inquisitor
             let group = &mut self.gc_vec[index];
-            if group.card() == card && group.get_list()[player_id] == 1 && group.count() <= count{
+            // if group.card() == card && group.get_list()[player_id] == 1 && group.count() <= count{
+            if group.card() == card && group.get_list()[player_id] == 1 && group.count() <= new_count{
                 // Prune If same card and is subset if old group count <= revealed count
                 // Because the group is redundant
                 self.gc_vec.swap_remove(index);
+                log::trace!("GROUP INITIAL PRUNE");
             } else {
                 index += 1;
             }
@@ -327,12 +356,11 @@ impl CollectiveConstraint{
             let group = &mut self.gc_vec[index];
             // TO confirm
             if group.get_list()[player_id] == 0 {
+                log::trace!("ADD GROUP 0");
                 group.group_add(player_id);
                 // Add one because the new player shows he has a card and swaps it into the pile & his hand
                 // So the past group + new player has an additional card
                 
-                // Its not possible to reveal a card that the player should not even be able to have!
-                debug_assert!(group.count() <= 3, "Impossible case reached!");
                 
                 // Old Group: Duke [0 1 0 0 0 0 1] Count 1
                 // Move RevealRedraw a Duke is revealed and shuffled into pile
@@ -341,22 +369,24 @@ impl CollectiveConstraint{
                 // And 1 Duke that was originally with Player 1 & pile
                 // After RevealRedraw there are in total 2 Dukes among player 1,2 and Pile
                 // So we must increment the old counter by new_count
-                group.count_add(new_count);
+                if group.card() == card {
+                    group.count_add(new_count);
+                    log::trace!("GROUP COUNT ADDED");
+                    if group.count() > 3 {
+                        // Its not possible to reveal a card that the player should not even be able to have!
+                        // debug_assert!(group.count() <= 3, "Impossible case reached!");
+                        log::trace!("GROUP COUNT HIGH! FIX WITH LEGAL MOVE PRUNE");
+                    }
+                }
                 if group.all_in() == true {
                     // [FULL PRUNE] because group constraint just means there could be a Duke anywhere (anyone or the pile might have it)
+                    log::trace!("FULL PRUNE");
+                    self.gc_vec.swap_remove(index);
+                } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
+                    // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+                    log::trace!("COMPLEMENT PRUNE");
                     self.gc_vec.swap_remove(index);
                 } else {
-                    index += 1;
-                }
-            } else if group.card() == card {
-                if group.count() <= new_count {
-                    // If group has same card, and the player_id indicator is 1
-                    // ExchangeDraw Case and Draw 2 same cards included here
-                    // [SUBSET PRUNE] because the new group is a subset of the old group and the new_count is >= old group count
-                    // This means that old group constraint will definitely be satisfied
-                    self.gc_vec.swap_remove(index);
-                } else {
-                    // group.count() > new_count
                     index += 1;
                 }
             } else {
@@ -368,6 +398,7 @@ impl CollectiveConstraint{
             // [COMPLEMENT PRUNE] We push only if it isnt a complement
             self.gc_vec.push(addition);
         }
+        self.remove_duplicate_groups();
     }
     pub fn update_group_constraint(&mut self, player_id: usize){
         // For each gc, if player is not a participant, they now become one
@@ -385,6 +416,19 @@ impl CollectiveConstraint{
                 self.gc_vec.swap_remove(index);
             } else {
                 index += 1;
+            }
+        }
+        self.remove_duplicate_groups();
+    }
+    pub fn remove_duplicate_groups(&mut self){
+        let mut seen: HashSet<GroupConstraint> = HashSet::new();
+        let mut i: usize = 0;
+        while i < self.gc_vec.len() {
+            if seen.insert(self.gc_vec[i].clone()) {
+                i += 1;
+            } else {
+                self.gc_vec.swap_remove(i);
+                log::trace!("GROUP DUPES REMOVED");
             }
         }
     }
@@ -614,7 +658,8 @@ impl NaiveProb {
                 // We update when cards a mixed with pile by player_id but no card is revealed
                 // last_constraint.update_group_constraint_hm(ao.player_id());
                 // last_constraint.add_group_constraint_hm(ao.player_id(), ao.card());
-                last_constraint.update_group_constraint(ao.player_id());
+                last_constraint.group_initial_prune(ao.player_id(), &ao.card(), 1);
+                // last_constraint.update_group_constraint(ao.player_id());
                 last_constraint.add_group_constraint(ao.player_id(), &ao.card(), 1);
 
                 // last_constraint.update_group_constraint(ao.player_id());
@@ -635,9 +680,8 @@ impl NaiveProb {
                 } else {
                     last_constraint.group_initial_prune(6, &ao.cards()[0], 1);
                     last_constraint.group_initial_prune(6, &ao.cards()[1], 1);
-
                 }
-                last_constraint.update_group_constraint(ao.player_id());
+                // last_constraint.update_group_constraint(ao.player_id());
                 if ao.cards()[0] == ao.cards()[1] {
                     last_constraint.add_group_constraint(ao.player_id(), &ao.cards()[0], 2);
                 } else {

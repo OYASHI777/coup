@@ -109,7 +109,9 @@ use std::time::Instant;
 // 2024-03-23T23:18:59 [INFO] - Time taken for Optimal GC Filter: 100ns
 // 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
 fn main() {
-    game_rnd_constraint(100, true);
+
+    // game_rnd(100, true);
+    game_rnd_constraint(1000, true);
     // test_belief(20000000);
     // make_belief(20000000);
     // game_rnd(20000000, false);
@@ -395,6 +397,9 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
     }
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
+    let mut total_steps: usize = 0;
+    let mut prob = NaiveProb::new();
+    let start_time = Instant::now();
     while game < game_no {
         log::info!("Game : {}", game);
         let mut hh = History::new(0);
@@ -424,6 +429,7 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 log::info!("{}", format!("Choice: {:?}", output));
                 hh.push_ao(output);
+                prob.push_ao(&output);
             } else {
                 log::trace!("Pushed bad move!");
                 break;
@@ -437,15 +443,20 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
         if step > max_steps {
             max_steps = step;
         }
+        total_steps += step;
         log::info!("{}", format!("Game Won : {:?}",step));
         hh.log_state();
         log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
         log::info!("{}", format!("History: {:?}",hh.get_history(step)));
         log::info!("");
+        prob.reset();
         game += 1;
     }
+    let elapsed_time = start_time.elapsed();
     log::info!("Most Steps: {}", max_steps);
+    println!("Total Moves Calculated: {}", total_steps);
     println!("Most Steps: {}", max_steps);
+    println!("Total Time: {:?}", elapsed_time);
 }
 pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     if log_bool{
@@ -469,12 +480,6 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
             prob.printlog();
-            if step != 0 {
-                let start_time = Instant::now();
-                prob.filter_state_simple();
-                let elapsed_time = start_time.elapsed();
-                log::info!("Time: {:?}", elapsed_time);
-            }
             prob.log_calc_state_len();
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
