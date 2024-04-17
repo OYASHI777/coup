@@ -5,7 +5,7 @@ use std::collections::{HashSet, HashMap};
 pub mod history_public;
 pub mod pcmccfr;
 use pcmccfr::ReachProbability;
-use history_public::{ActionObservation, History, AOName};
+use history_public::{ActionObservation, History, AOName, Card};
 use std::fs::File;
 use std::io::Write;
 use log::{info, LevelFilter};
@@ -15,7 +15,7 @@ use rand::prelude::SliceRandom;
 pub mod prob_manager;
 // use prob_manager::prob_state::ProbState;
 mod string_utils;
-use prob_manager::naive_prob::NaiveProb;
+use prob_manager::naive_prob::{NaiveProb, CollectiveConstraint};
 use std::time::Instant;
 
 // QUICK TEMP: Exchange Draw showing 2 cards should prune the other groups? because they found out the pile has 2 cards
@@ -111,13 +111,29 @@ use std::time::Instant;
 fn main() {
 
     // game_rnd(100, true);
-    game_rnd_constraint(2000, true);
+    game_rnd_constraint(100, true);
+    // test_satis();
     // test_belief(20000000);
     // make_belief(20000000);
     // game_rnd(20000000, false);
     // test_filter(1000);
     // test_reach(); 
     // test_shuffle(100);
+}
+pub fn test_satis(){
+    let mut colcon = CollectiveConstraint::new();
+    colcon.add_public_constraint(3, Card::Captain);
+    colcon.add_public_constraint(0, Card::Ambassador);
+    colcon.add_public_constraint(2, Card::Ambassador);
+    colcon.add_public_constraint(5, Card::Ambassador);
+    colcon.add_public_constraint(5, Card::Captain);
+    colcon.add_group_constraint(4, &Card::Captain, 1);
+    colcon.add_raw_public_constraint(0, Card::Captain);
+    // colcon.add_public_constraint(1, Card::Captain);
+    let mut prob = NaiveProb::new();
+    let outcome = prob.state_satisfies_constraints("ACDDABCDEEACBBE", &colcon);
+    println!("{}", outcome);
+
 }
 pub fn test_shuffle(iterations: usize){
     logger();
@@ -465,6 +481,11 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob = NaiveProb::new();
+    let mut total_wrong_legal: usize = 0;
+    let mut total_wrong_illegal: usize = 0;
+    let mut total_wrong_legal_proper: usize = 0;
+    let mut total_wrong_illegal_proper: usize = 0;
+    let mut total_tries: usize = 0;
     while game < game_no {
         log::info!("Game : {}", game);
         let mut hh = History::new(0);
@@ -480,12 +501,10 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
             prob.printlog();
-            prob.log_calc_state_len();
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
             new_moves = hh.generate_legal_moves();
             if new_moves[0].name() != AOName::CollectiveChallenge {
-    
                 log::info!("{}", format!("Legal Moves: {:?}", new_moves));
             } else {
                 log::info!("{}", format!("Legal Moves: {:?}", new_moves));
@@ -494,8 +513,67 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 log::info!("{}", format!("Choice: {:?}", output));
-                hh.push_ao(output);
-                prob.push_ao(&output);
+                if output.name() == AOName::Discard{
+                    hh.push_ao(output);
+                    prob.push_ao(&output);
+                } else if output.name() == AOName::RevealRedraw {
+                    let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.card());
+                    if set_legality{
+                        log::trace!("Set: Legal Move");
+                    } else {
+                        log::trace!("Set: Illegal Move");
+                    }
+                    hh.push_ao(output);
+                    prob.push_ao(&output);
+                    let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.card());
+                    prob.filter_player_can_have_card(output.player_id(), &output.card());
+                    let proper: usize = prob.calc_state_len();
+                    if proper == 0 {
+                        log::trace!("Actual Proper: Illegal Move");
+                        if set_legality {
+                            log::trace!("Verdict Proper: Legal Wrong");
+                            total_wrong_legal_proper += 1;
+                            prob.log_calc_state();
+                            prob.log_calc_state_len();
+                            hh.log_state();
+                        }
+                    } else {
+                        log::trace!("Actual Proper: Legal Move");
+                        if !set_legality {
+                            log::trace!("Verdict Proper: Illegal Wrong");
+                            total_wrong_illegal_proper += 1;
+                            prob.log_calc_state();
+                            prob.log_calc_state_len();
+                            hh.log_state();
+                        }
+                    }
+                    if legality.is_none(){
+                        log::trace!("Actual: Illegal Move");
+                        if set_legality {
+                            log::trace!("Verdict: Legal Wrong");
+                            total_wrong_legal += 1;
+                            prob.log_calc_state();
+                            prob.log_calc_state_len();
+                            hh.log_state();
+                        }
+                    } else {
+                        log::trace!("Actual: Legal Move");
+                        if !set_legality {
+                            log::trace!("Verdict: Illegal Wrong");
+                            total_wrong_illegal += 1;
+                            prob.log_calc_state();
+                            prob.log_calc_state_len();
+                            hh.log_state();
+                        }
+                    }
+                    total_tries += 1;
+                } else if output.name() == AOName::ExchangeChoice {
+                    hh.push_ao(output);
+                    prob.push_ao(&output);
+                } else {
+                    hh.push_ao(output);
+                    prob.push_ao(&output);
+                }
             } else {
                 log::trace!("Pushed bad move!");
                 break;
@@ -519,6 +597,11 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     }
     log::info!("Most Steps: {}", max_steps);
     println!("Most Steps: {}", max_steps);
+    println!("Total Legal Predictions Wrong: {}", total_wrong_legal);
+    println!("Total Illegal Predictions Wrong: {}", total_wrong_illegal);
+    println!("Total Legal Predictions Wrong Proper: {}", total_wrong_legal_proper);
+    println!("Total Illegal Predictions Wrong Proper: {}", total_wrong_illegal_proper);
+    println!("Total Tries: {}", total_tries);
 }
 pub fn logger(){
     // let log_file = File::create("app.log").unwrap();

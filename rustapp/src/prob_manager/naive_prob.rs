@@ -127,7 +127,7 @@ impl Hash for GroupConstraint {
     }
 }
 #[derive(Clone)]
-struct CollectiveConstraint {
+pub struct CollectiveConstraint {
     // pc => PublicConstraint => Player i has card A
     // jc => JointConstraint => Player i has card AB
     // gc => GroupConstraint
@@ -177,6 +177,23 @@ impl CollectiveConstraint{
             false
         }
     }
+    pub fn add_raw_public_constraint(&mut self, player_id: usize, card: Card){
+        // This is useful for testing whether a player can have a particular card
+        if let Some(value) = self.dead_card_count.get_mut(&card){
+            *value += 1;
+        }
+        if let Some(pc_hm_card) = self.pc_hm.remove(&player_id){
+            // If pc_hm has a card already, remove it and add to jc_hm
+            debug_assert!(!self.jc_hm.contains_key(&player_id), "jc_hm also contains key! Should not happen!");
+            let mut card_vec: Vec<Card> = vec![pc_hm_card, card];
+            card_vec.sort();
+            self.jc_hm.insert(player_id, card_vec.clone());
+          
+        } else {
+            self.pc_hm.insert(player_id, card);
+        }
+
+    }
     // Technically can remove too but its not in Coup so..
     pub fn add_public_constraint(&mut self, player_id: usize, card: Card){
         if let Some(value) = self.dead_card_count.get_mut(&card){
@@ -188,9 +205,6 @@ impl CollectiveConstraint{
             let mut card_vec: Vec<Card> = vec![pc_hm_card, card];
             card_vec.sort();
             self.jc_hm.insert(player_id, card_vec.clone());
-
-            let player_count: usize;
-            player_count = card_vec.iter().filter(|&icard| icard == &card).count();
 
             self.group_dead_player_prune(player_id, &card_vec);            
 
@@ -293,6 +307,7 @@ impl CollectiveConstraint{
         }
     }
     pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: &Vec<Card>){
+        // Prunes relevant groups in gc_vec when player loses all their cards
         log::trace!("Dead Player PRUNE");
         let mut index: usize = 0;
         let mut bool_subtract: bool = false;
@@ -348,6 +363,7 @@ impl CollectiveConstraint{
         }
     }
     pub fn group_redundant_prune(&mut self){
+        // Loops through gc_vec and removes redundant groups
         if self.gc_vec.len() >= 2 {
             let mut i: usize = 0;
             let mut j: usize = 1;
@@ -503,7 +519,55 @@ impl CollectiveConstraint{
             }
         }
     }
+    pub fn player_dead_card_count(&self, player_id: usize, card: &Card) -> usize {
+        let mut output: usize = 0;
+        if let Some(_value) = self.pc_hm.get_key_value(&player_id){
+            output += 1;
+        } else if let Some(card_vec) = self.jc_hm.get(&player_id){
+            for icard in card_vec.iter() {
+                if icard == card {
+                    output += 1;
+                }
+            }
+        }
+        return output;
+    }
+    pub fn player_can_have_active_card(&self, player_id: usize, card: &Card) -> bool {
+        // Returns true if player can have a card in his hand that is alive
+        if self.dead_card_count[card] == 3{
+            return false;
+        }
+        // Number of cards that can be alive remaining
+        let remaining_alive_count: usize = 3 - self.dead_card_count[card] as usize;
+        for group in self.gc_vec.iter() {
+            // Player may be alive and have one of the cards dead.
+            // In this case card: Duke
+            // Public Constraint HM: {2: Ambassador, 5: Duke, 3: Ambassador, 4: Ambassador}
+            // Joint Constraint HM: {0: [Assassin, Contessa], 1: [Contessa, Contessa]}
+            // Group Constraint VEC: [GroupConstraint { participation_list: [0, 0, 0, 0, 1, 1, 1], card: Captain, count: 1 }, GroupConstraint { participation_list: [0, 0, 0, 0, 0, 1, 1], card: Duke, count: 2 }]
+            // remaining_alive_count = 2 but player 3 still can reveal a Duke
+            // So we adjust the group count downward to prevent double counting the cards that are certain
 
+            // This count represents the number of cards within the participation list set that are ALIVE
+            let mut group_alive_count = group.count();
+            for indicator in group.get_list().iter(){
+                if *indicator == 1 {
+                    if let Some(value) = self.pc_hm.get(&(*indicator as usize)) {
+                        if value == card {
+                            group_alive_count -= 1;
+                        }
+                    }
+                }
+                // I do not subtract for jc_hm as group should not have indicator 1 for a dead player due to initial pruning
+            }
+            if group.card() == card && group_alive_count == remaining_alive_count && group.get_list()[player_id] == 0 {
+                return false;
+            }
+            // I reckon you don't have to check every possible union of groups because in coup when someone touches the middle pile
+            // All groups are updated
+        }
+        true
+    }
     pub fn printlog(&self) {
         log::trace!("{}", format!("Public Constraint HM: {:?}", self.pc_hm));
         log::trace!("{}", format!("Joint Constraint HM: {:?}", self.jc_hm));
@@ -652,8 +716,14 @@ impl NaiveProb {
         }
         // log::info!("{}", format!("Set Size: {}", self.calculated_states.len()));
     }
+    pub fn calc_state_len(&self) -> usize {
+        self.calculated_states.len()
+    }
     pub fn log_calc_state_len(&self){
         log::trace!("{}", format!("Calculated_State Length: {}", self.calculated_states.len()));
+    }
+    pub fn log_calc_state(&self){
+        log::trace!("{}", format!("Calculated_State: {:?}", self.calculated_states));
     }
     // Push()
     pub fn push_ao(&mut self, ao: &ActionObservation){
@@ -1370,7 +1440,8 @@ impl NaiveProb {
     }
     
     // Helper method to determine if a state satisfies all constraints
-    fn state_satisfies_constraints(&self, state: &str, latest_constraint: &CollectiveConstraint) -> bool {
+    // TODO: Change back to private
+    pub fn state_satisfies_constraints(&self, state: &str, latest_constraint: &CollectiveConstraint) -> bool {
         // println!("Check");
         // Check jc_hm constraints
         for i in 0..6 {
@@ -1427,9 +1498,10 @@ impl NaiveProb {
         //         }
         //     }
         // }
-
+        
         // Check gc_vec constraints
         let mut index: usize = 0;
+        // println!("Before While");
         while index < latest_constraint.gc_vec.len(){
             let participation_list: &[u8; 7] = latest_constraint.gc_vec[index].get_list();
             let card_char: char = latest_constraint.gc_vec[index].card().card_to_char();
@@ -1445,12 +1517,19 @@ impl NaiveProb {
             let mut total_count = 0;
             let required_count = latest_constraint.gc_vec[index].count();
             let mut satisfies_gc_vec: bool = false;
+            // println!("Required Count: {}", required_count);
+            // println!("Participation List: {:?}", participation_list);
+            // println!("Participation Indices: {:?}", participating_indices);
             for &(start, end) in participating_indices.iter() {
+                // println!("Start: {}", start);
+                // println!("End: {}", end);
+                // println!("State len: {}", state.len());
                 if state.len() >= end {
                     total_count += state[start..end].matches(card_char).count();
+                    // println!("Total Count: {}", total_count);
                     if total_count >= required_count {
                         satisfies_gc_vec = true;
-                        break
+                        break;
                     }
                 }
             }
@@ -1596,5 +1675,82 @@ impl NaiveProb {
         log::info!("Time Taken to check: {:?}", elapsed_time);
 
         results
+    }
+    pub fn chance_sample_exit(&mut self) -> Option<String> {
+        // Returns None if no String could be found
+        // Returns Some(String) if a string that satisfies the constraints could be found
+        // Randomly Finds the first string that fulfils the criterion
+        // Fastest, use this one
+        let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+        let mut rng = rand::thread_rng();
+        self.all_states.shuffle(&mut rng); // Shuffle in place
+
+        let result = Arc::new(Mutex::new(None));
+        let should_exit = Arc::new(AtomicBool::new(false));
+
+        self.all_states.par_iter().for_each_with(Arc::clone(&should_exit), |should_exit, state| {
+            if should_exit.load(Ordering::SeqCst) {
+                // Early exit if a string has been found.
+                return;
+            }
+            
+            if self.state_satisfies_constraints(state, &latest_constraint) {
+                let mut result_lock = result.lock().unwrap();
+                if result_lock.is_none() {
+                    *result_lock = Some(state.to_string());
+                    should_exit.store(true, Ordering::SeqCst); // Signal to other threads to stop processing
+                    return; // Exit this thread's processing early
+                }
+            }
+        });
+
+        let result_lock = result.lock().unwrap();
+        result_lock.clone() // Return the first result if available
+    }
+    pub fn can_player_have_card(&mut self, player_id: usize, card: &Card) -> Option<String> {
+        // Returns None if no String could be found
+        // Returns Some(String) if a string that satisfies the constraints could be found
+        // Randomly Finds the first string that fulfils the criterion
+        // Fastest, use this one
+        let mut latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+        latest_constraint.add_raw_public_constraint(player_id, *card);
+        let mut rng = rand::thread_rng();
+        self.all_states.shuffle(&mut rng); // Shuffle in place
+
+        let result = Arc::new(Mutex::new(None));
+        let should_exit = Arc::new(AtomicBool::new(false));
+
+        self.all_states.par_iter().for_each_with(Arc::clone(&should_exit), |should_exit, state| {
+            if should_exit.load(Ordering::SeqCst) {
+                // Early exit if a string has been found.
+                return;
+            }
+            
+            if self.state_satisfies_constraints(state, &latest_constraint) {
+                let mut result_lock = result.lock().unwrap();
+                if result_lock.is_none() {
+                    *result_lock = Some(state.to_string());
+                    should_exit.store(true, Ordering::SeqCst); // Signal to other threads to stop processing
+                    return; // Exit this thread's processing early
+                }
+            }
+        });
+
+        let result_lock = result.lock().unwrap();
+        result_lock.clone() // Return the first result if available
+    }
+
+    pub fn player_can_have_card(&self, player_id: usize, card: &Card) -> bool {
+        // This is the ideal set theory version
+        let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+        latest_constraint.player_can_have_active_card(player_id, card)
+    }
+    pub fn filter_player_can_have_card(&mut self, player_id: usize, card: &Card){
+        let mut latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+        latest_constraint.add_raw_public_constraint(player_id, *card);
+        self.calculated_states = self.all_states.par_iter()
+            .filter(|state| self.state_satisfies_constraints(state, &latest_constraint))
+            .cloned()
+            .collect();
     }
 }
