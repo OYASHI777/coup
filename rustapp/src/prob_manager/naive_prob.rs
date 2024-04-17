@@ -46,11 +46,19 @@ impl GroupConstraint {
         debug_assert!(player_id < 7, "Invalid Player Id");
         self.participation_list[player_id] = 1;
     }
+    pub fn group_subtract(&mut self, player_id: usize){
+        debug_assert!(player_id < 7, "Invalid Player Id");
+        self.participation_list[player_id] = 0;
+    }
     pub fn count_add(&mut self, num: usize){
         self.count += num;
     }
     pub fn count_subtract(&mut self, num: usize){
-        self.count -= num;
+        if self.count < num {
+            self.count = 0;
+        } else {
+            self.count -= num;
+        }
     }
     pub fn count(&self) -> usize {
         self.count
@@ -72,6 +80,35 @@ impl GroupConstraint {
     pub fn card(&self) -> &Card {
         &self.card
     } 
+    pub fn is_subset_of(&self, group: &Self) -> bool {
+        // Returns true if group makes self redundant
+        // Its redundant if they have the same participation list and their counts are equal
+        // Its also redundant if they have the same participation list and group has a higher count
+        //      If a group has at least 2 Dukes, it also fulfils having at least 1 Duke.
+        //      Therefore having at least 1 Duke is redundant
+        if self.card() != group.card(){
+            return false;
+        }
+        if self.get_list() == group.get_list() && self.count() <= group.count() {
+            true
+        } else {
+            false
+        }
+    }
+    pub fn part_list_is_subset_of(&self, group: &Self) -> bool {
+        // Checks if self participation list is a subset of group's participation list
+        // This means that Any 1 in self list must have a 1 in group's list
+        let mut index: usize = 0;
+        while index < self.get_list().len(){
+            if self.get_list()[index] == 1 {
+                if group.get_list()[index] == 0 {
+                    return false;
+                }
+            }
+            index += 1;
+        }
+        true
+    }
     pub fn printlog(&self) {
         log::trace!("{}", format!("Participation List: {:?}", self.participation_list));
         log::trace!("{}", format!("Card: {:?}", self.card));
@@ -165,35 +202,45 @@ impl CollectiveConstraint{
             let player_count: usize;
             player_count = card_vec.iter().filter(|&icard| icard == &card).count();
 
-            let mut index = 0;
-            while index < self.gc_vec.len(){
-                let group: &mut GroupConstraint = &mut self.gc_vec[index];
-                // if group.indicator(player_id) == 1 && group.count() <= player_count{
-                //     // Joint Constraint is subset of group so prune group because group will definitely be fulfilled
-                //     // [SUBSET PRUNE]
-                //     self.gc_vec.swap_remove(index);
-                // } else if self.dead_card_count[group.card()] == 3 {
-                if self.dead_card_count[group.card()] == 3 {
-                    // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
-                    self.gc_vec.swap_remove(index);
-                } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
-                    // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
-                    self.gc_vec.swap_remove(index);
-                } else {
-                    index += 1;
-                }
-            }
+            self.group_dead_player_prune(player_id, &card_vec);            
+            // let mut index: usize = 0;
+            // while index < self.gc_vec.len(){
+            //     let group: &mut GroupConstraint = &mut self.gc_vec[index];
+            //     // if group.indicator(player_id) == 1 && group.count() <= player_count{
+            //     //     // Joint Constraint is subset of group so prune group because group will definitely be fulfilled
+            //     //     // [SUBSET PRUNE]
+            //     //     self.gc_vec.swap_remove(index);
+            //     // } else if self.dead_card_count[group.card()] == 3 {
+            //     if group.indicator(player_id) == 1 {
+            //         if group.card() != &card_vec[0] && group.card() != &card_vec[0]{
+            //             // Modify Group whose cards are different!
+            //             // Their card will not be in the indicator because it is full!
+            //             group.group_subtract(player_id);
+            //         }
+            //     }
+            //     if self.dead_card_count[group.card()] == 3 {
+            //         // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
+            //         self.gc_vec.swap_remove(index);
+            //     } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
+            //         // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+            //         self.gc_vec.swap_remove(index);
+            //     } else {
+            //         index += 1;
+            //     }
+            // }
+            // self.group_redundant_prune();
         } else {
             self.pc_hm.insert(player_id, card);
 
             let mut index = 0;
             while index < self.gc_vec.len(){
                 let group: &mut GroupConstraint = &mut self.gc_vec[index];
-                if group.indicator(player_id) == 1 && group.count() == 1{
-                    // Public Constraint is subset of group so prune group because group will definitely be fulfilled
-                    // [SUBSET PRUNE]
-                    self.gc_vec.swap_remove(index);
-                } else if self.dead_card_count[group.card()] == 3 {
+                // if group.indicator(player_id) == 1 && group.count() == 1{
+                //     // Public Constraint is subset of group so prune group because group will definitely be fulfilled
+                //     // [SUBSET PRUNE]
+                //     self.gc_vec.swap_remove(index);
+                // } else if self.dead_card_count[group.card()] == 3 {
+                if self.dead_card_count[group.card()] == 3 {
                     // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
                     self.gc_vec.swap_remove(index);
                 } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
@@ -257,57 +304,24 @@ impl CollectiveConstraint{
         self.jc_hm.insert(player_id, card_vec.clone());
         // Pruning
         let mut do_not_repeat: bool = false;
-        for card in card_vec.iter(){
-            // Prune for each card added
-            if do_not_repeat {
-                break
-            }
-            let player_count: usize;
-            player_count = card_vec.iter().filter(|&icard| icard == card).count();
-            if player_count == 2 {
-                // Dont repeat the prune if both cards are the same
-                do_not_repeat = true;
-            }
-            let mut index = 0;
-            while index < self.gc_vec.len(){
-                let group: &mut GroupConstraint = &mut self.gc_vec[index];
-                // if group.indicator(player_id) == 1 && group.count() <= player_count{
-                //     // Joint Constraint is subset of group so prune group because group will definitely be fulfilled
-                //     // [SUBSET PRUNE]
-                //     self.gc_vec.swap_remove(index);
-                // } else if self.dead_card_count[group.card()] == 3 {
-                if self.dead_card_count[group.card()] == 3 {
-                    // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
-                    self.gc_vec.swap_remove(index);
-                } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
-                    // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
-                    self.gc_vec.swap_remove(index);
-                } else {
-                    index += 1;
-                }
-            }
-        }
-
-
-        // Changing Group Constraint
         // for card in card_vec.iter(){
-        //     // self.gc_initial_hm.entry(*card).and_modify(|arr| arr[player_id] = 1);
-        //     // TODO Updates group if it exists
-
-        //     if let Some(array) = self.gc_hm.get_mut(card){
-        //         // Updating
-        //         array[player_id] = 1;
-        //         // Remove if condition just means that the card can literally be anywhere
-        //         if array.iter().sum::<usize>() == 7 {
-        //             self.gc_hm.remove(card);
-        //         }
+        //     // Prune for each card added
+        //     if do_not_repeat {
+        //         break
         //     }
-        // }
+        //     let player_count: usize;
+        //     player_count = card_vec.iter().filter(|&icard| icard == card).count();
+        //     if player_count == 2 {
+        //         // Dont repeat the prune if both cards are the same
+        //         do_not_repeat = true;
+        //     }
+        self.group_dead_player_prune(player_id, card_vec);
     }
     // You will never remove from group only pop to reverse it because you cannot unmix cards
     pub fn group_initial_prune(&mut self, player_id: usize, card: &Card, count: usize){
         debug_assert!(player_id <= 6, "Player ID Wrong");
         let mut new_count: usize = count;
+        // Considering the case where another card is dead, adds to card count for pruning
         if let Some(card_dead) = self.pc_hm.get(&player_id) {
             if card_dead == card {
                 // RevealRedraw Case
@@ -335,6 +349,124 @@ impl CollectiveConstraint{
             }
         }
     }
+    pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: &Vec<Card>){
+        log::trace!("Dead Player PRUNE");
+        let mut index: usize = 0;
+        let mut bool_subtract: bool = false;
+        while index < self.gc_vec.len(){
+            let group: &mut GroupConstraint = &mut self.gc_vec[index];
+
+            if group.indicator(player_id) == 1 {
+                if group.card() != &card_vec[0] && group.card() != &card_vec[0]{
+                    // Modify Group whose cards are different!
+                    // Their card will not be in the indicator because it is full!
+                    group.group_subtract(player_id);
+                    bool_subtract = true;
+                } else if &card_vec[0] == &card_vec[1]{
+                    if group.card() == &card_vec[0] {
+                        group.group_subtract(player_id);
+                        group.count_subtract(2);
+                        bool_subtract = true;
+                    }
+                    if group.count() == 0 {
+                        log::trace!("Unexpected 0 A");
+                    }
+                } else {
+                    if group.card() == &card_vec[0] {
+                        group.group_subtract(player_id);
+                        group.count_subtract(1);
+                        bool_subtract = true;
+                    }else if group.card() == &card_vec[1] {
+                        group.group_subtract(player_id);
+                        group.count_subtract(1);
+                        bool_subtract = true;
+                    }
+                    if group.count() == 0 {
+                        log::trace!("Unexpected 0 B");
+                    }
+                }
+                // Other cases PRUNED in Initial PRUNE
+            }
+            if group.count() == 0{
+                // This part is technically redundant as this case should be handled in group_initial_prune
+                self.gc_vec.swap_remove(index);
+            } else if self.dead_card_count[group.card()] == 3 {
+                // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
+                self.gc_vec.swap_remove(index);
+            } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
+                // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+                self.gc_vec.swap_remove(index);
+            } else {
+                index += 1;
+            }
+        }
+        if bool_subtract {
+            self.group_redundant_prune();
+        }
+    }
+    pub fn group_redundant_prune(&mut self){
+        if self.gc_vec.len() >= 2 {
+            let mut i: usize = 0;
+            let mut j: usize = 1;
+            let mut i_incremented: bool;
+            while i < self.gc_vec.len() - 1 {
+                j = i + 1;
+                i_incremented = false;
+                while j < self.gc_vec.len() {
+                    let group_i = &self.gc_vec[i];
+                    let group_j = &self.gc_vec[j];
+                    if self.is_redundant(group_i, group_j){
+                        // group i is redundant
+                        log::trace!("Redundant PRUNE i: {:?}", group_i);
+                        log::trace!("Kept j: {:?}", group_j);
+                        
+                        self.gc_vec.swap_remove(i);
+                        i_incremented  = true;
+                        break;
+                    } else if self.is_redundant(group_j, group_i) {
+                        // group j is redundant
+                        log::trace!("Redundant PRUNE j: {:?}", group_j);
+                        log::trace!("Kept i: {:?}", group_i);
+                        self.gc_vec.swap_remove(j);
+                    } else {
+                        j += 1;
+                    }
+                }
+                if !i_incremented {
+                    i += 1;
+                }
+            }
+        }
+    }
+    pub fn is_redundant(&self, group1: &GroupConstraint, group2: &GroupConstraint) -> bool {
+        // Returns true if GROUP 1 is redundant and false if not
+        if group1.is_subset_of(group2){
+            return true;
+        }
+        if group1.card() != group2.card(){
+            return false;
+        }
+        let card: &Card = group1.card();
+        let remaining_count: usize = 3 - self.dead_card_count[card] as usize;
+
+        if group1.count() == remaining_count && group2.count() == remaining_count {
+            // Keep the subset as it is smaller!
+            if group2.part_list_is_subset_of(group1) {
+                // e.g. where group 2 part list is subset of group 1 part list
+                // Group 1 [0 1 0 0 1 0 1] : count = remaining_count
+                // Group 2 [0 1 0 0 0 0 1] : count = remaining_count
+                // We know both conditions must be true
+                // All remaining cards are within the set denoted by group 1 and the set denoted by group 2
+                // For both conditions to be true, player 4 must not have the card
+                // Therefore group 1 is redundant
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
     pub fn add_group_constraint(&mut self, player_id: usize, card: &Card, count: usize){
         // Adds a new constraint used for RevealRedraw and ExchangeDraw (Private Information)
         // There is an [INITIAL PRUNE] because we know player had a card before the swap!
@@ -346,7 +478,7 @@ impl CollectiveConstraint{
                 // Player & Pile will have at least 2 of the card
                 new_count += 1;
             }
-        } else if let Some(cards) = self.jc_hm.get(&player_id){
+        } else if !self.jc_hm.get(&player_id).is_none(){
             // Should not be able to revealredraw or exchangedraw if jc_hm has player as the player would be dead!
             debug_assert!(false, "Impossible Case Reached");
         }
@@ -356,7 +488,6 @@ impl CollectiveConstraint{
             let group = &mut self.gc_vec[index];
             // TO confirm
             if group.get_list()[player_id] == 0 {
-                log::trace!("ADD GROUP 0");
                 group.group_add(player_id);
                 // Add one because the new player shows he has a card and swaps it into the pile & his hand
                 // So the past group + new player has an additional card
@@ -371,7 +502,6 @@ impl CollectiveConstraint{
                 // So we must increment the old counter by new_count
                 if group.card() == card {
                     group.count_add(new_count);
-                    log::trace!("GROUP COUNT ADDED");
                     if group.count() > 3 {
                         // Its not possible to reveal a card that the player should not even be able to have!
                         // debug_assert!(group.count() <= 3, "Impossible case reached!");
@@ -380,11 +510,9 @@ impl CollectiveConstraint{
                 }
                 if group.all_in() == true {
                     // [FULL PRUNE] because group constraint just means there could be a Duke anywhere (anyone or the pile might have it)
-                    log::trace!("FULL PRUNE");
                     self.gc_vec.swap_remove(index);
                 } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
                     // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
-                    log::trace!("COMPLEMENT PRUNE");
                     self.gc_vec.swap_remove(index);
                 } else {
                     index += 1;
@@ -630,6 +758,7 @@ impl NaiveProb {
                     if let Some(temp_card) = ao.cards().first(){
                         self.constraint_history.push(self.constraint_history[self.constraint_history.len() - self.prev_index()].clone());
                         if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
+                            last_constraint.group_initial_prune(ao.player_id(), temp_card, 1);
                             last_constraint.add_public_constraint(ao.player_id(), *temp_card);
                         } else {
                             debug_assert!(false, "constraint not stored at prev_index!");
@@ -642,6 +771,12 @@ impl NaiveProb {
                     let temp_cards = ao.cards();
                     self.constraint_history.push(self.constraint_history[self.constraint_history.len() - self.prev_index()].clone());
                     if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
+                        if temp_cards[0] == temp_cards[1]{
+                            last_constraint.group_initial_prune(ao.player_id(), &temp_cards[0], 2);
+                        } else {
+                            last_constraint.group_initial_prune(ao.player_id(), &temp_cards[0], 1);
+                            last_constraint.group_initial_prune(ao.player_id(), &temp_cards[1], 1);
+                        }
                         last_constraint.add_joint_constraint(ao.player_id(), &temp_cards.to_vec());
                     } else {
                         debug_assert!(false, "Card does not exist!!");

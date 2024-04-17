@@ -111,7 +111,7 @@ use std::time::Instant;
 fn main() {
 
     // game_rnd(100, true);
-    game_rnd_constraint(1000, true);
+    game_rnd_constraint(2000, true);
     // test_belief(20000000);
     // make_belief(20000000);
     // game_rnd(20000000, false);
