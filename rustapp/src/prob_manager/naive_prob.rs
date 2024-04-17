@@ -136,37 +136,27 @@ struct CollectiveConstraint {
     //TODO:
     gc_vec: Vec<GroupConstraint>,
     dead_card_count: HashMap<Card, u8>,
-    // Add another gc_vec for the group constraints
-    // gc_hm will be for the collective group
-    // gc_initial_hm: HashMap<Card, [usize; 7]>,
-    // gc_hm: HashMap<Card, [usize; 7]>,
-    // gc_hm_count: HashMap<Card, u8>,
+
 }
 impl CollectiveConstraint{
     pub fn new() -> Self {
         let pc_hm: HashMap<usize, Card> = HashMap::new();
         let jc_hm: HashMap<usize, Vec<Card>> = HashMap::new();
         let gc_vec = Vec::new();
-        // let mut gc_initial_hm: HashMap<Card, [usize; 7]> = HashMap::new();
-        // gc_initial_hm.insert(Card::Ambassador, [0, 0, 0, 0, 0, 0, 1]);
-        // gc_initial_hm.insert(Card::Assassin, [0, 0, 0, 0, 0, 0, 1]);
-        // gc_initial_hm.insert(Card::Captain, [0, 0, 0, 0, 0, 0, 1]);
-        // gc_initial_hm.insert(Card::Duke, [0, 0, 0, 0, 0, 0, 1]);
-        // gc_initial_hm.insert(Card::Contessa, [0, 0, 0, 0, 0, 0, 1]);
+
         let mut dead_card_count: HashMap<Card, u8> = HashMap::new();
         dead_card_count.insert(Card::Ambassador, 0);
         dead_card_count.insert(Card::Assassin, 0);
         dead_card_count.insert(Card::Captain, 0);
         dead_card_count.insert(Card::Duke, 0);
         dead_card_count.insert(Card::Contessa, 0);
-        // let gc_hm: HashMap<Card, [usize; 7]> = HashMap::new();
+
         CollectiveConstraint{
             pc_hm,
             jc_hm,
             gc_vec,
             dead_card_count,
-            // gc_initial_hm,
-            // gc_hm,
+
         }
     }
     pub fn is_complement_of_pcjc(&self, group: &GroupConstraint) -> bool{
@@ -203,32 +193,7 @@ impl CollectiveConstraint{
             player_count = card_vec.iter().filter(|&icard| icard == &card).count();
 
             self.group_dead_player_prune(player_id, &card_vec);            
-            // let mut index: usize = 0;
-            // while index < self.gc_vec.len(){
-            //     let group: &mut GroupConstraint = &mut self.gc_vec[index];
-            //     // if group.indicator(player_id) == 1 && group.count() <= player_count{
-            //     //     // Joint Constraint is subset of group so prune group because group will definitely be fulfilled
-            //     //     // [SUBSET PRUNE]
-            //     //     self.gc_vec.swap_remove(index);
-            //     // } else if self.dead_card_count[group.card()] == 3 {
-            //     if group.indicator(player_id) == 1 {
-            //         if group.card() != &card_vec[0] && group.card() != &card_vec[0]{
-            //             // Modify Group whose cards are different!
-            //             // Their card will not be in the indicator because it is full!
-            //             group.group_subtract(player_id);
-            //         }
-            //     }
-            //     if self.dead_card_count[group.card()] == 3 {
-            //         // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
-            //         self.gc_vec.swap_remove(index);
-            //     } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
-            //         // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
-            //         self.gc_vec.swap_remove(index);
-            //     } else {
-            //         index += 1;
-            //     }
-            // }
-            // self.group_redundant_prune();
+
         } else {
             self.pc_hm.insert(player_id, card);
 
@@ -251,18 +216,7 @@ impl CollectiveConstraint{
                 }
             }
         }
-        // BONUS: Can add PRUNE GROUP if public constraint indicator Union group constrain indicator is full set
 
-        // self.gc_initial_hm.entry(card).and_modify(|arr| arr[player_id] = 1);
-        // // TODO update group if it exists
-        // if let Some(array) = self.gc_hm.get_mut(&card){
-        //     // Updating
-        //     array[player_id] = 1;
-        //     // Remove if condition just means that the card can literally be anywhere
-        //     if array.iter().sum::<usize>() == 7 {
-        //         self.gc_hm.remove(&card);
-        //     }
-        // }
     }
     pub fn remove_public_constraint(&mut self, player_id: usize, card: Card){
         // self.gc_initial_hm.entry(card).and_modify(|arr| arr[player_id] = 0);
@@ -303,18 +257,7 @@ impl CollectiveConstraint{
         }
         self.jc_hm.insert(player_id, card_vec.clone());
         // Pruning
-        let mut do_not_repeat: bool = false;
-        // for card in card_vec.iter(){
-        //     // Prune for each card added
-        //     if do_not_repeat {
-        //         break
-        //     }
-        //     let player_count: usize;
-        //     player_count = card_vec.iter().filter(|&icard| icard == card).count();
-        //     if player_count == 2 {
-        //         // Dont repeat the prune if both cards are the same
-        //         do_not_repeat = true;
-        //     }
+
         self.group_dead_player_prune(player_id, card_vec);
     }
     // You will never remove from group only pop to reverse it because you cannot unmix cards
@@ -560,47 +503,11 @@ impl CollectiveConstraint{
             }
         }
     }
-    // Create and initialise from history to make history (Past) based on current player perspective
 
-    // pub fn add_group_constraint_hm(&mut self, player_id: usize, card: Card){
-    //     // Insert if array doesnt exist
-    //     let card_list: [Card; 5] = [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa];
-    //     // Initialise default
-    //     self.gc_hm.entry(card)
-    //     .or_insert_with(|| self.gc_initial_hm[&card].clone());
-    //     // Adding new entry
-    //     for c in card_list {
-    //         if let Some(array) = self.gc_hm.get_mut(&c){
-    //             // Updating
-    //             array[player_id] = 1;
-    //             // Remove if condition just means that the card can literally be anywhere
-    //             if array.iter().sum::<usize>() == 7 {
-    //                 self.gc_hm.remove(&c);
-    //             }
-    //         }
-    //     }
-    // }
-    // pub fn update_group_constraint_hm(&mut self, player_id: usize){
-    //     // Insert if array doesnt exist
-    //     let card_list: [Card; 5] = [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa];
-    //     for c in card_list {
-    //         if let Some(array) = self.gc_hm.get_mut(&c){
-    //             // Updating
-    //             array[player_id] = 1;
-    //             // Remove if condition just means that the card can literally be anywhere
-    //             if array.iter().sum::<usize>() == 7 {
-    //                 self.gc_hm.remove(&c);
-    //             }
-    //         }
-    //     }
-    // }
     pub fn printlog(&self) {
         log::trace!("{}", format!("Public Constraint HM: {:?}", self.pc_hm));
         log::trace!("{}", format!("Joint Constraint HM: {:?}", self.jc_hm));
         log::trace!("{}", format!("Group Constraint VEC: {:?}", self.gc_vec));
-        // log::trace!("{}", format!("Group Constraint HM: {:?}", self.gc_hm));
-        // log::trace!("{}", format!("Initial Group Constraint HM: {:?}", self.gc_initial_hm));
-        // log::trace!("{}", format!("GC History: {:?}", self.gc_vec));
     }
 
 }
