@@ -300,7 +300,6 @@ impl CollectiveConstraint{
                 // Prune If same card and is subset if old group count <= revealed count
                 // Because the group is redundant
                 self.gc_vec.swap_remove(index);
-                log::trace!("GROUP INITIAL PRUNE");
             } else {
                 index += 1;
             }
@@ -308,7 +307,6 @@ impl CollectiveConstraint{
     }
     pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: &Vec<Card>){
         // Prunes relevant groups in gc_vec when player loses all their cards
-        log::trace!("Dead Player PRUNE");
         let mut index: usize = 0;
         let mut bool_subtract: bool = false;
         while index < self.gc_vec.len(){
@@ -376,16 +374,11 @@ impl CollectiveConstraint{
                     let group_j = &self.gc_vec[j];
                     if self.is_redundant(group_i, group_j){
                         // group i is redundant
-                        log::trace!("Redundant PRUNE i: {:?}", group_i);
-                        log::trace!("Kept j: {:?}", group_j);
-                        
                         self.gc_vec.swap_remove(i);
                         i_incremented  = true;
                         break;
                     } else if self.is_redundant(group_j, group_i) {
                         // group j is redundant
-                        log::trace!("Redundant PRUNE j: {:?}", group_j);
-                        log::trace!("Kept i: {:?}", group_i);
                         self.gc_vec.swap_remove(j);
                     } else {
                         j += 1;
@@ -550,9 +543,9 @@ impl CollectiveConstraint{
 
             // This count represents the number of cards within the participation list set that are ALIVE
             let mut group_alive_count = group.count();
-            for indicator in group.get_list().iter(){
+            for (player_id, indicator) in group.get_list().iter().enumerate(){
                 if *indicator == 1 {
-                    if let Some(value) = self.pc_hm.get(&(*indicator as usize)) {
+                    if let Some(value) = self.pc_hm.get(&player_id) {
                         if value == card {
                             group_alive_count -= 1;
                         }
