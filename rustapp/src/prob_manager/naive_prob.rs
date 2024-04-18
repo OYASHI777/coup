@@ -526,7 +526,7 @@ impl CollectiveConstraint{
             self.gc_vec.push(addition);
         }
         self.add_inferred_groups();
-        self.remove_duplicate_groups();
+        self.group_redundant_prune();
     }
     pub fn add_inferred_groups(&mut self) {
         // e.g. Player 1 has 1 life left
@@ -542,16 +542,22 @@ impl CollectiveConstraint{
             let group_card: Card = self.gc_vec[index].card().clone();
             if group_count > 1 {
                 for (player_id, indicator) in group_list.iter().enumerate() {
+                    // Skipping player_id 6 because its the pile and pile always has 3 lives same as max number of a card
+                    if player_id == 6 {
+                        continue;
+                    }
                     if *indicator == 1 {
                         // The maximum amount of a card the player may hold
                         let mut max_possible_holdings: usize;
                         if let Some(dead_card) = self.pc_hm.get(&player_id) {
                             // Player has 1 Life
+
                             if *dead_card == group_card {
                                 max_possible_holdings = 2;
                             } else {
                                 max_possible_holdings = 1;
                             }
+
                         } else if let Some(dead_card_vec) = self.jc_hm.get(&player_id) {
                             debug_assert!(false, "This should not happen");
                             // I have implemented this for extensibility options
@@ -598,7 +604,7 @@ impl CollectiveConstraint{
                 index += 1;
             }
         }
-        self.remove_duplicate_groups();
+        self.group_redundant_prune();
     }
     pub fn remove_duplicate_groups(&mut self){
         let mut seen: HashSet<GroupConstraint> = HashSet::new();
@@ -695,28 +701,25 @@ impl CollectiveConstraint{
                     // Filling up total_card_count for dead cards that are in group
                     // Filling up card_count to include dead cards of alive players?
                     // Dont need to count dead card of dead players as DEAD PRUNE prevents group from having 1 if player is dead
-                    if let Some(vcard) = self.pc_hm.get(&i) {
+                    if let Some(vcard) = self.pc_hm.get(&iplayer_id) {
                         total_card_count += 1;
+                        // log::trace!("Found Dead Player: {}", format!("{}: {:?}", iplayer_id, vcard));
                         if let Some(value) = card_count.get_mut(vcard) {
                             *value += 1;
                         }
                     }
-                    // if let Some(card_vec) = self.jc_hm.get(&i) {
-                    //     total_card_count += 2;
-                    //     for card in card_vec.iter() {
-                    //         if let Some(value) = card_count.get_mut(card) {
-                    //             *value += 1;
-                    //         }
-                    //     }
-                    // }
                 }
             }
+            log::trace!("Starting Group: {:?}", self.gc_vec[i]);
+            log::trace!("Total Capacity: {}", total_card_capacity);
+            log::trace!("Filled Card Count dead: {:?}", card_count);
+            log::trace!("Total Card Count: {}", total_card_count);
             let mut j = 0;
             while j < self.gc_vec.len() {
-                if i == j {
-                    j += 1;
-                    continue;
-                }
+                // if i == j {
+                //     j += 1;
+                //     continue;
+                // }
                 // subsume if possible
                 // Checks if j group is subset of i group
                 if self.gc_vec[j].part_list_is_subset_of(&self.gc_vec[i]) {
@@ -728,9 +731,9 @@ impl CollectiveConstraint{
                     // Increment counts accordingly
                     if let Some(count_hm) = card_count.get_mut(vcard){
                         if count > *count_hm {
-                            *count_hm = count;
                             // Adding increase to total_card_count
                             total_card_count += count - *count_hm;
+                            *count_hm = count;
                         }
                     }
                     // If group card capacity has been reached
@@ -768,6 +771,10 @@ impl CollectiveConstraint{
                         debug_assert!(false, "Impossible State Reached");
                     }
                 }
+                log::trace!("Considered: {:?}", self.gc_vec[j]);
+                log::trace!("Card Count: {:?}", card_count);
+                log::trace!("Total Capacity: {}", total_card_capacity);
+                log::trace!("Total Card Count: {}", total_card_count);
                 j += 1;
             }
             i += 1;
@@ -796,10 +803,10 @@ impl CollectiveConstraint{
             let mut j: usize = 0;
             // Collect hashmap of what cards must exist outside of player hand
             while j < self.gc_vec.len() {
-                if j == i {
-                    j += 1;
-                    continue;
-                }
+                // if j == i {
+                //     j += 1;
+                //     continue;
+                // }
                 if self.gc_vec[j].get_list()[i] == 1 {
                     j += 1;
                     continue;
@@ -958,7 +965,7 @@ impl CollectiveConstraint{
                     // Filling up total_card_count for dead cards that are in group
                     // Filling up card_count to include dead cards of alive players
                     // Dont need to count dead card of dead players as DEAD PRUNE prevents group from having 1 if player is dead
-                    if let Some(vcard) = constraint.pc_hm.get(&i) {
+                    if let Some(vcard) = constraint.pc_hm.get(&iplayer_id) {
                         total_card_count += 1;
                         if let Some(value) = card_count.get_mut(vcard) {
                             *value += 1;
@@ -974,8 +981,10 @@ impl CollectiveConstraint{
                     // }
                 }
             }
+            log::trace!("Starting Group: {:?}", constraint.gc_vec[i]);
             log::trace!("Total Capacity: {}", total_card_capacity);
-            log::trace!("card count dead: {:?}", card_count);
+            log::trace!("Filled Card Count dead: {:?}", card_count);
+            log::trace!("Total Card Count: {}", total_card_count);
             let mut j = 0;
             while j < constraint.gc_vec.len() {
                 if i == j {
@@ -993,9 +1002,9 @@ impl CollectiveConstraint{
                     // Increment counts accordingly
                     if let Some(count_hm) = card_count.get_mut(vcard){
                         if count > *count_hm {
-                            *count_hm = count;
-                            // Adding increase to total_card_count
                             total_card_count += count - *count_hm;
+                            // Adding increase to total_card_count
+                            *count_hm = count;
                         }
                     }
                     // If group card capacity has been reached
@@ -1034,8 +1043,10 @@ impl CollectiveConstraint{
                     }
                     
                 }
-                log::trace!("card count dead: {:?}", card_count);
+                log::trace!("Considered: {:?}", constraint.gc_vec[j]);
+                log::trace!("Card Count: {:?}", card_count);
                 log::trace!("Total Capacity: {}", total_card_capacity);
+                log::trace!("Total Card Count: {}", total_card_count);
                 j += 1;
             }
             i += 1;
