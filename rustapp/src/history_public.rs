@@ -213,7 +213,7 @@ impl ActionObservation {
             _ => panic!("This ActionObservation variant does not contain a result"),
         }
     }
-    pub fn cards(&self) -> &[Card] {
+    pub fn cards(&self) -> &[Card; 2] {
         match self {
             ActionObservation::Discard { card, .. } => card, 
             ActionObservation::ExchangeDraw { card, .. } => card, 

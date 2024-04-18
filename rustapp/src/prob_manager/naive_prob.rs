@@ -108,16 +108,42 @@ impl GroupConstraint {
     pub fn part_list_is_subset_of(&self, group: &Self) -> bool {
         // Checks if self participation list is a subset of group's participation list
         // This means that Any 1 in self list must have a 1 in group's list
+        GroupConstraint::list1_is_subset_list2(&self.get_list(), &group.get_list())
+    }
+    pub fn list1_is_subset_list2(list1: &[u8; 7], list2: &[u8; 7]) -> bool {
+        // Checks if list1 is subset of list2
         let mut index: usize = 0;
-        while index < self.get_list().len(){
-            if self.get_list()[index] == 1 {
-                if group.get_list()[index] == 0 {
+        while index < list1.len(){
+            if list1[index] == 1 && list2[index] == 0 {
                     return false;
                 }
-            }
             index += 1;
         }
         true
+    }
+    pub fn part_list_is_mut_excl(&self, group: &Self) -> bool {
+        // Checks if the groups are mutually exclusive
+        GroupConstraint::lists_are_mut_excl(self.get_list(), group.get_list())
+    }
+    pub fn lists_are_mut_excl(list1: &[u8; 7], list2: &[u8; 7]) -> bool {
+        let mut index: usize = 0;
+        while index < list1.len(){
+            if list1[index] == 1 && list2[index] == 1{
+                return false;
+            } 
+            index += 1;
+        }
+        true
+    }
+    pub fn list_union<'a>(list1: &'a mut [u8; 7], list2: &[u8; 7]) -> &'a [u8; 7] {
+        let mut index: usize = 0;
+        while index < list1.len() {
+            if list1[index] == 0 && list2[index] == 1 {
+                list1[index] = 1;
+            }
+            index += 1;
+        }
+        list1
     }
     pub fn printlog(&self) {
         log::trace!("{}", format!("Participation List: {:?}", self.participation_list));
@@ -189,6 +215,10 @@ impl CollectiveConstraint{
     }
     pub fn add_raw_public_constraint(&mut self, player_id: usize, card: Card){
         // This is useful for testing whether a player can have a particular card
+        // This does not prune groups 
+        // Therefore its useful for determining if a player can have a card
+        // It does this by adding the constraint without pruning
+        // So the check becomes, if we add this constraint, can the old constraints still be fulfilled?
         if let Some(value) = self.dead_card_count.get_mut(&card){
             *value += 1;
         }
@@ -690,6 +720,386 @@ impl CollectiveConstraint{
             }
             i += 1;
         }
+
+        // [MUST HAVE CARD CHECK]
+        // Check if player must have certain cards
+        // if player_id must have some cards and its not card of interest then false
+        // if some other players must have card of interest, and there are no more remaining, return false
+        // recursive? if player must have some card add to pc_hm? (not raw add but add with prune because its not a query but a deduction!)
+        // Store impossible active cards for the player i includes all jc_hm cards and player_i pc_hm
+        let mut i: usize = 0;
+        while i < 7 {
+            // skip if player i is dead because we know all their cards
+            if self.jc_hm.contains_key(&i) {
+                i += 1;
+                continue;
+            }
+            let mut excl_list: [u8; 7] = [0; 7];
+            let mut excl_card_count: HashMap<Card, usize> = HashMap::with_capacity(5);
+            excl_card_count.insert(Card::Ambassador, 0);
+            excl_card_count.insert(Card::Assassin, 0);
+            excl_card_count.insert(Card::Captain, 0);
+            excl_card_count.insert(Card::Duke, 0);
+            excl_card_count.insert(Card::Contessa, 0);
+            let mut j: usize = 0;
+            // Collect hashmap of what cards must exist outside of player hand
+            while j < self.gc_vec.len() {
+                if j == i {
+                    j += 1;
+                    continue;
+                }
+                if self.gc_vec[j].get_list()[i] == 1 {
+                    j += 1;
+                    continue;
+                } else {
+                    // update counts and list
+                    // modifies excl_list to include list of group j
+                    // Assume group constraints include dead card of alive players (pc_hm) if their indicator is 1
+                    // Assume group constraints exclude dead players [DEAD PLAYER PRUNE]
+                    if GroupConstraint::lists_are_mut_excl(&excl_list, &self.gc_vec[j].get_list()) {
+                        if let Some(value) = excl_card_count.get_mut(&self.gc_vec[j].card()) {
+                            *value += self.gc_vec[j].count();
+                        }
+                    } else {
+                        // Either Subset or Some intersection exists
+                        if let Some(value) = excl_card_count.get_mut(&self.gc_vec[j].card()) {
+                            if self.gc_vec[j].count() > *value {
+                                *value = self.gc_vec[j].count();
+                            }
+                        }
+                    }
+                    GroupConstraint::list_union(&mut excl_list, &self.gc_vec[j].get_list());
+                }
+                j += 1;
+            }
+            // Adding dead cards if not already included
+            let mut k: usize = 0;
+            while k < excl_list.len() {
+                if excl_list[k] == 0 {
+                    // Include dead players card if they are not in the excl_list group and the player is fully dead
+                    // This will include player i as player i excl_list value will be 0
+                    if let Some(temp_card_vec) = self.jc_hm.get(&k) {
+                        for vcard in temp_card_vec.iter() {
+                            // update Hashmap
+                            if let Some(value) = excl_card_count.get_mut(&vcard) {
+                                *value += 1;
+                            }
+                        }
+                    }
+                    // Include dead card of alive player if they are not in excl_list group
+                    if let Some(vcard) = self.pc_hm.get(&k) {
+                        if let Some(value) = excl_card_count.get_mut(&vcard) {
+                            *value += 1;
+                        }
+                    }
+                }
+                k += 1;
+            }
+            // Check if excl count implies player i must have a certain card
+            let mut possible_cards: Vec<Card> = Vec::with_capacity(5);
+            let mut possible_count: usize = 0;
+            for vcard in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa].iter() {
+                if excl_card_count[vcard] != 3 {
+                    possible_cards.push(*vcard);
+                    possible_count += 1;
+                }
+            }
+            if possible_count == 1 {
+                log::trace!("HAVE CARD CASE FOUND");
+            }
+            if player_id == i {
+                // If the player of interest has card of interest return true
+                if possible_count == 1 && possible_cards[0] == *card {
+                    return true;
+                } else if possible_count == 1 && possible_cards[0] != *card {
+                    return false;
+                }
+                // continue checking if unsure
+            } else {
+                // Not player of interest
+                if possible_count == 1 {
+                    // create new constraint and recurse
+                    // if recurse value is false return false, else continue
+                    let mut new_constraint: CollectiveConstraint = self.clone();
+                    new_constraint.add_public_constraint(i, possible_cards[0]);
+                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card) {
+                        return false;
+                    }
+                }
+            }
+            // Check if player i must have some card, if they do call a recursive function
+            // if false return false
+            // Special case for if player i == player_id
+            // Then if player i must have some card, and it is not card of interest return false else return true
+            i += 1;
+        }   
+        true
+    }
+    pub fn player_can_have_active_card_pub(constraint: &CollectiveConstraint, player_id: usize, card: &Card) -> bool {
+        // Returns true if player can have a card in his hand that is alive
+        if constraint.dead_card_count[card] == 3{
+            return false;
+        }
+        // Number of cards that can be alive remaining
+        let remaining_alive_count: usize = 3 - constraint.dead_card_count[card] as usize;
+        for group in constraint.gc_vec.iter() {
+            // Player may be alive and have one of the cards dead.
+            // In this case card: Duke
+            // Public Constraint HM: {2: Ambassador, 5: Duke, 3: Ambassador, 4: Ambassador}
+            // Joint Constraint HM: {0: [Assassin, Contessa], 1: [Contessa, Contessa]}
+            // Group Constraint VEC: [GroupConstraint { participation_list: [0, 0, 0, 0, 1, 1, 1], card: Captain, count: 1 }, GroupConstraint { participation_list: [0, 0, 0, 0, 0, 1, 1], card: Duke, count: 2 }]
+            // remaining_alive_count = 2 but player 3 still can reveal a Duke
+            // So we adjust the group count downward to prevent double counting the cards that are certain
+
+            // This count represents the number of cards within the participation list set that are ALIVE
+            let mut group_alive_count = group.count();
+            for (iplayer_id, indicator) in group.get_list().iter().enumerate(){
+                if *indicator == 1 {
+                    if let Some(value) = constraint.pc_hm.get(&iplayer_id) {
+                        if value == card {
+                            group_alive_count -= 1;
+                        }
+                    }
+                }
+                // I do not subtract for jc_hm as group should not have indicator 1 for a dead player due to initial pruning
+            }
+            if group.card() == card && group_alive_count == remaining_alive_count && group.get_list()[player_id] == 0 {
+                return false;
+            }
+            // I reckon you don't have to check every possible union of groups because in coup when someone touches the middle pile
+            // All groups are updated
+        }
+        // Add O(n^2) combination thing
+        // Checks if some combination of the group constraint tells you that a group of players have X number of some cards
+        // Where the total number == the total unknown cards
+        // If this is known, we know a player cant have Duke if Duke is not included the the cards the whole group can have
+        let mut i = 0;
+
+        while i < constraint.gc_vec.len() {
+            if constraint.gc_vec[i].get_list()[player_id] == 0 {
+                // We are looking for cases where player i is part of a group and all cards for the group is known
+                // We continue if player i is not part of the group
+                i += 1;
+                continue;
+            }
+            let mut card_count: HashMap<Card, usize> = HashMap::with_capacity(5);
+            card_count.insert(Card::Ambassador, 0);
+            card_count.insert(Card::Assassin, 0);
+            card_count.insert(Card::Captain, 0);
+            card_count.insert(Card::Duke, 0);
+            card_count.insert(Card::Contessa, 0);
+            let mut total_card_count: usize = 0;
+            // Initialise cap for item i, because all other items will be subsumed only if part_list are subsets
+            let mut total_card_capacity: usize = 0;
+            // Add current into the subsumed pool
+            for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate(){
+                if *indicator == 1 {
+                    // Filling up total_card_capacity
+                    if iplayer_id < 6 {
+                        total_card_capacity += 2;
+                    } else if iplayer_id == 6 {
+                        total_card_capacity += 3;
+                    } else {
+                        debug_assert!(false, "Impossible State Reached");
+                    }
+                    // Filling up total_card_count for dead cards that are in group
+                    // Filling up card_count to include dead cards of alive players?
+                    // Dont need to count dead card of dead players as DEAD PRUNE prevents group from having 1 if player is dead
+                    if let Some(vcard) = constraint.pc_hm.get(&i) {
+                        total_card_count += 1;
+                        if let Some(value) = card_count.get_mut(vcard) {
+                            *value += 1;
+                        }
+                    }
+                    // if let Some(card_vec) = self.jc_hm.get(&i) {
+                    //     total_card_count += 2;
+                    //     for card in card_vec.iter() {
+                    //         if let Some(value) = card_count.get_mut(card) {
+                    //             *value += 1;
+                    //         }
+                    //     }
+                    // }
+                }
+            }
+            let mut j = 0;
+            while j < constraint.gc_vec.len() {
+                if i == j {
+                    j += 1;
+                    continue;
+                }
+                // subsume if possible
+                // Checks if j group is subset of i group
+                if constraint.gc_vec[j].part_list_is_subset_of(&constraint.gc_vec[i]) {
+                    // No need to store participation_list as j is a subset
+                    // i part_list Subsuming j will just be i
+                    let vcard: &Card = constraint.gc_vec[j].card();
+                    let count: usize = constraint.gc_vec[j].count();
+                    // Subsume part_list j into part_list i
+                    // Increment counts accordingly
+                    if let Some(count_hm) = card_count.get_mut(vcard){
+                        if count > *count_hm {
+                            *count_hm = count;
+                            // Adding increase to total_card_count
+                            total_card_count += count - *count_hm;
+                        }
+                    }
+                    // If group card capacity has been reached
+                    if total_card_count == total_card_capacity {
+                        // If all cards for a group is known
+                        let mut alive_count: usize = card_count[card];
+                        // Find all possible alive cards by subtracting dead cards for alive players
+                        // We do so only for the card of interest!
+                        for (index, indicator) in constraint.gc_vec[i].get_list().iter().enumerate(){
+                            if *indicator == 1 {
+                                if let Some(value) = constraint.pc_hm.get(&index) {
+                                    if *value == *card {
+                                        // Subtract all the dead card if an alive player had a dead card that was of interest
+                                        if alive_count == 0 {
+                                            debug_assert!(false, "Alive_Count Should not be 0 as we have added dead cards in!");
+                                        } else {
+                                            alive_count -= 1;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if alive_count == 0 {
+                            // If full group does not contain card of interest, its impossible for a player of that group to have the card
+                            // See start of fn => Group will always have player_id indicator as 1 so player_id will be part of the group
+                            return false
+                        } else {
+                            // Since group is full, subsuming more groups will not provide more information
+                            // This should continue to next i
+                            j += 1;
+                            break;
+                        }
+
+                    } else if total_card_count > total_card_capacity {
+                        debug_assert!(false, "Impossible State Reached");
+                    }
+                }
+                j += 1;
+            }
+            i += 1;
+        }
+
+        // [MUST HAVE CARD CHECK]
+        // Check if player must have certain cards
+        // if player_id must have some cards and its not card of interest then false
+        // if some other players must have card of interest, and there are no more remaining, return false
+        // recursive? if player must have some card add to pc_hm? (not raw add but add with prune because its not a query but a deduction!)
+        // Store impossible active cards for the player i includes all jc_hm cards and player_i pc_hm
+        let mut i: usize = 0;
+        while i < 7 {
+            // skip if player i is dead because we know all their cards
+            if constraint.jc_hm.contains_key(&i) {
+                i += 1;
+                continue;
+            }
+            let mut excl_list: [u8; 7] = [0; 7];
+            let mut excl_card_count: HashMap<Card, usize> = HashMap::with_capacity(5);
+            excl_card_count.insert(Card::Ambassador, 0);
+            excl_card_count.insert(Card::Assassin, 0);
+            excl_card_count.insert(Card::Captain, 0);
+            excl_card_count.insert(Card::Duke, 0);
+            excl_card_count.insert(Card::Contessa, 0);
+            let mut j: usize = 0;
+            // Collect hashmap of what cards must exist outside of player hand
+            while j < constraint.gc_vec.len() {
+                if j == i {
+                    j += 1;
+                    continue;
+                }
+                if constraint.gc_vec[j].get_list()[i] == 1 {
+                    j += 1;
+                    continue;
+                } else {
+                    // update counts and list by making a union of all groups that do not include player i in part_list
+                    // modifies excl_list to include list of group j
+                    // Assume group constraints include dead card of alive players (pc_hm) if their indicator is 1
+                    // Assume group constraints exclude dead players [DEAD PLAYER PRUNE]
+                    if GroupConstraint::lists_are_mut_excl(&excl_list, &constraint.gc_vec[j].get_list()) {
+                        if let Some(value) = excl_card_count.get_mut(&constraint.gc_vec[j].card()) {
+                            *value += constraint.gc_vec[j].count();
+                        }
+                    } else {
+                        // Either Subset or Some intersection exists
+                        if let Some(value) = excl_card_count.get_mut(&constraint.gc_vec[j].card()) {
+                            if constraint.gc_vec[j].count() > *value {
+                                *value = constraint.gc_vec[j].count();
+                            }
+                        }
+                    }
+                    GroupConstraint::list_union(&mut excl_list, &constraint.gc_vec[j].get_list());
+                }
+                j += 1;
+            }
+            // Adding dead cards if not already included
+            let mut k: usize = 0;
+            while k < excl_list.len() {
+                if excl_list[k] == 0 {
+                    // Include dead players card if they are not in the excl_list group and the player is fully dead
+                    // This will include player i as player i excl_list value will be 0 but player i should be alive so...
+                    if let Some(temp_card_vec) = constraint.jc_hm.get(&k) {
+                        for vcard in temp_card_vec.iter() {
+                            // update Hashmap
+                            if let Some(value) = excl_card_count.get_mut(&vcard) {
+                                *value += 1;
+                            }
+                        }
+                    }
+                    // Include dead card of alive player if they are not in excl_list group
+                    if let Some(vcard) = constraint.pc_hm.get(&k) {
+                        if let Some(value) = excl_card_count.get_mut(&vcard) {
+                            *value += 1;
+                        }
+                    }
+                }
+                k += 1;
+            }
+            // Check if excl count implies player i must have a certain card
+            let mut possible_cards: Vec<Card> = Vec::with_capacity(5);
+            let mut possible_count: usize = 0;
+            for vcard in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa].iter() {
+                if excl_card_count[vcard] != 3 {
+                    possible_cards.push(*vcard);
+                    possible_count += 1;
+                }
+                // Exiting early because we only care if possible_count == 1
+                if possible_count == 2 {
+                    break;
+                }
+            }
+            if possible_count == 0 {
+                log::trace!("HAVE CARD CASE FOUND DUMMY");
+            }
+            if player_id == i {
+                // If the player of interest has card of interest return true
+                if possible_count == 1 && possible_cards[0] == *card {
+                    return true;
+                } else if possible_count == 1 && possible_cards[0] != *card {
+                    return false;
+                }
+                // continue checking if unsure
+            } else {
+                // Not player of interest
+                if possible_count == 1 {
+                    // create new constraint and recurse
+                    // if recurse value is false return false, else continue
+                    let mut new_constraint: CollectiveConstraint = constraint.clone();
+                    // Im using the add_public instead of add_public_raw because I want pruning as I treat this 
+                    new_constraint.add_public_constraint(i, possible_cards[0]);
+                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card) {
+                        return false;
+                    }
+                }
+            }
+            // Check if player i must have some card, if they do call a recursive function
+            // if false return false
+            // Special case for if player i == player_id
+            // Then if player i must have some card, and it is not card of interest return false else return true
+            i += 1;
+        }   
         true
     }
     pub fn printlog(&self) {
@@ -697,7 +1107,15 @@ impl CollectiveConstraint{
         log::trace!("{}", format!("Joint Constraint HM: {:?}", self.jc_hm));
         log::trace!("{}", format!("Group Constraint VEC: {:?}", self.gc_vec));
     }
-
+    pub fn player_can_have_active_cards(&self, player_id: usize, cards: &[Card; 2]) -> bool {
+        if self.player_can_have_active_card(player_id, &cards[0]){
+            let mut new_constraint: CollectiveConstraint = self.clone();
+            new_constraint.add_public_constraint(player_id, cards[0]);
+            CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, &cards[1])
+        } else {
+            false
+        }
+    }
 }
 
 pub struct NaiveProb {
@@ -1863,19 +2281,74 @@ impl NaiveProb {
         let result_lock = result.lock().unwrap();
         result_lock.clone() // Return the first result if available
     }
+    pub fn can_player_have_cards(&mut self, player_id: usize, cards: &[Card; 2]) -> Option<String> {
+        // Returns None if no String could be found
+        // Returns Some(String) if a string that satisfies the constraints could be found
+        // Randomly Finds the first string that fulfils the criterion
+        // Fastest, use this one
+        if !self.can_player_have_card(player_id, &cards[0]).is_none(){
+            let mut latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+            // Now test with both constraints
+            latest_constraint.add_raw_public_constraint(player_id, cards[0]);
+            latest_constraint.add_raw_public_constraint(player_id, cards[1]);
+            let result = Arc::new(Mutex::new(None));
+            let should_exit = Arc::new(AtomicBool::new(false));
+
+            self.all_states.par_iter().for_each_with(Arc::clone(&should_exit), |should_exit, state| {
+                if should_exit.load(Ordering::SeqCst) {
+                    // Early exit if a string has been found.
+                    return;
+                }
+                
+                if self.state_satisfies_constraints(state, &latest_constraint) {
+                    let mut result_lock = result.lock().unwrap();
+                    if result_lock.is_none() {
+                        *result_lock = Some(state.to_string());
+                        should_exit.store(true, Ordering::SeqCst); // Signal to other threads to stop processing
+                        return; // Exit this thread's processing early
+                    }
+                }
+            });
+
+            let result_lock = result.lock().unwrap();
+            result_lock.clone() // Return the first result if available
+        } else {
+            None
+        }
+    }
 
     pub fn player_can_have_card(&self, player_id: usize, card: &Card) -> bool {
         // This is the ideal set theory version
         let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
         latest_constraint.player_can_have_active_card(player_id, card)
     }
+    pub fn player_can_have_cards(&self, player_id: usize, cards: &[Card; 2]) -> bool {
+        let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+        latest_constraint.player_can_have_active_cards(player_id, cards)
+    }
     pub fn filter_player_can_have_card(&mut self, player_id: usize, card: &Card){
         let mut latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+        // Use raw because we are wondering if player can have card and do not know if they actually have the card
         latest_constraint.add_raw_public_constraint(player_id, *card);
         self.calculated_states = self.all_states.par_iter()
             .filter(|state| self.state_satisfies_constraints(state, &latest_constraint))
             .cloned()
             .collect();
+    }
+    pub fn filter_player_can_have_cards(&mut self, player_id: usize, cards: &[Card; 2]){
+        self.filter_player_can_have_card(player_id, &cards[0]);
+        if self.calc_state_len() != 0 {
+
+            let mut latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+            // Use raw because we are wondering if player can have card and do not know if they actually have the card
+            // Now test with both constraints
+            latest_constraint.add_raw_public_constraint(player_id, cards[0]);
+            latest_constraint.add_raw_public_constraint(player_id, cards[1]);
+            self.calculated_states = self.all_states.par_iter()
+                .filter(|state| self.state_satisfies_constraints(state, &latest_constraint))
+                .cloned()
+                .collect();
+        }
     }
 
 }

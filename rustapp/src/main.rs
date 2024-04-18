@@ -111,7 +111,7 @@ use std::time::Instant;
 fn main() {
 
     // game_rnd(100, true);
-    game_rnd_constraint(1000, true);
+    game_rnd_constraint(2000, true);
     // test_satis();
     // test_belief(20000000);
     // make_belief(20000000);
@@ -505,8 +505,14 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
         let mut hh = History::new(0);
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
-        if game % 1000 == 0 {
+        if game % (game_no / 10) == 0 {
             println!("Game: {}", game);
+            println!("Total Legal Predictions Wrong: {}", total_wrong_legal);
+            println!("Total Illegal Predictions Wrong: {}", total_wrong_illegal);
+            println!("Total Legal Predictions Wrong Proper: {}", total_wrong_legal_proper);
+            println!("Total Illegal Predictions Wrong Proper: {}", total_wrong_illegal_proper);
+            println!("Total Same: {}", total_same);
+            println!("Total Tries: {}", total_tries);
         }
         log::trace!("Game Made:");
         while !hh.game_won() {
@@ -549,6 +555,8 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             if !set_legality {
                                 log::trace!("Verdict: Illegal Wrong");
                                 total_wrong_illegal += 1;
+                                prob.filter_state_simple();
+                                prob.log_calc_state();
                             }
                         }
                         total_tries += 1;
@@ -559,8 +567,37 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             prob.push_ao(&output);
                         }
                     } else {
-                        hh.push_ao(output);
-                        prob.push_ao(&output);
+                        let set_legality: bool = prob.player_can_have_cards(output.player_id(), output.cards());
+                        let legality: Option<String> = prob.can_player_have_cards(output.player_id(), output.cards());
+                        if set_legality{
+                            log::trace!("Set: Legal Move");
+                        } else {
+                            log::trace!("Set: Illegal Move");
+                        }
+                        if legality.is_none(){
+                            log::trace!("Actual: Illegal Move");
+                            if set_legality {
+                                log::trace!("Verdict: Legal Wrong");
+                                total_wrong_legal += 1;
+                                prob.filter_state_simple();
+                                prob.log_calc_state();
+                            }
+                        } else {
+                            log::trace!("Actual: Legal Move");
+                            if !set_legality {
+                                log::trace!("Verdict: Illegal Wrong");
+                                total_wrong_illegal += 1;
+                                prob.filter_state_simple();
+                                prob.log_calc_state();
+                            }
+                        }
+                        total_tries += 1;
+                        if !set_legality{
+                            break    
+                        } else {
+                            hh.push_ao(output);
+                            prob.push_ao(&output);
+                        }
                     }
                 } else if output.name() == AOName::RevealRedraw {
                     let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.card());
@@ -604,6 +641,8 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         if !set_legality {
                             log::trace!("Verdict: Illegal Wrong");
                             total_wrong_illegal += 1;
+                            prob.filter_state_simple();
+                            prob.log_calc_state();
                         }
                     }
                     // if proper == 0 && legality.is_none(){
@@ -618,7 +657,38 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         hh.push_ao(output);
                         prob.push_ao(&output);
                     }
-                } else if output.name() == AOName::ExchangeChoice {
+                } else if output.name() == AOName::ExchangeDraw {
+                    let set_legality: bool = prob.player_can_have_cards(6, output.cards());
+                    let legality: Option<String> = prob.can_player_have_cards(6, output.cards());
+                    if set_legality{
+                        log::trace!("Set: Legal Move");
+                    } else {
+                        log::trace!("Set: Illegal Move");
+                    }
+                    if legality.is_none(){
+                        log::trace!("Actual: Illegal Move");
+                        if set_legality {
+                            log::trace!("Verdict: Legal Wrong");
+                            total_wrong_legal += 1;
+                            prob.filter_state_simple();
+                            prob.log_calc_state();
+                        }
+                    } else {
+                        log::trace!("Actual: Legal Move");
+                        if !set_legality {
+                            log::trace!("Verdict: Illegal Wrong");
+                            total_wrong_illegal += 1;
+                            prob.filter_state_simple();
+                            prob.log_calc_state();
+                        }
+                    }
+                    total_tries += 1;
+                    if !set_legality{
+                        break    
+                    } else {
+                        hh.push_ao(output);
+                        prob.push_ao(&output);
+                    }
                     hh.push_ao(output);
                     prob.push_ao(&output);
                 } else {
