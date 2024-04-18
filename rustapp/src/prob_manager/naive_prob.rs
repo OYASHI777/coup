@@ -42,9 +42,19 @@ impl GroupConstraint {
         output.group_add(player_id);
         output
     }
+    pub fn new_list(participation_list: [u8; 7], card: Card, count: usize) -> Self {
+        GroupConstraint{
+            participation_list,
+            card,
+            count,
+        }
+    }
     pub fn group_add(&mut self, player_id: usize){
         debug_assert!(player_id < 7, "Invalid Player Id");
         self.participation_list[player_id] = 1;
+    }
+    pub fn group_add_list(&mut self, list: [u8; 7]){
+        self.participation_list = list;
     }
     pub fn group_subtract(&mut self, player_id: usize){
         debug_assert!(player_id < 7, "Invalid Player Id");
@@ -194,6 +204,9 @@ impl CollectiveConstraint{
         }
 
     }
+    pub fn add_raw_group(&mut self, group: GroupConstraint){
+        self.gc_vec.push(group);
+    }
     // Technically can remove too but its not in Coup so..
     pub fn add_public_constraint(&mut self, player_id: usize, card: Card){
         if let Some(value) = self.dead_card_count.get_mut(&card){
@@ -307,19 +320,22 @@ impl CollectiveConstraint{
     }
     pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: &Vec<Card>){
         // Prunes relevant groups in gc_vec when player loses all their cards
+        log::info!("DEAD PLAYER PRUNE");
         let mut index: usize = 0;
         let mut bool_subtract: bool = false;
         while index < self.gc_vec.len(){
             let group: &mut GroupConstraint = &mut self.gc_vec[index];
 
             if group.indicator(player_id) == 1 {
-                if group.card() != &card_vec[0] && group.card() != &card_vec[0]{
+                if group.card() != &card_vec[0] && group.card() != &card_vec[1]{
                     // Modify Group whose cards are different!
                     // Their card will not be in the indicator because it is full!
+                    log::trace!("SUBTRACT NO COUNT");
                     group.group_subtract(player_id);
                     bool_subtract = true;
                 } else if &card_vec[0] == &card_vec[1]{
                     if group.card() == &card_vec[0] {
+                        log::trace!("SUBTRACT 2");
                         group.group_subtract(player_id);
                         group.count_subtract(2);
                         bool_subtract = true;
@@ -329,10 +345,12 @@ impl CollectiveConstraint{
                     }
                 } else {
                     if group.card() == &card_vec[0] {
+                        log::trace!("SUBTRACT 1");
                         group.group_subtract(player_id);
                         group.count_subtract(1);
                         bool_subtract = true;
                     }else if group.card() == &card_vec[1] {
+                        log::trace!("SUBTRACT 1");
                         group.group_subtract(player_id);
                         group.count_subtract(1);
                         bool_subtract = true;
@@ -543,9 +561,9 @@ impl CollectiveConstraint{
 
             // This count represents the number of cards within the participation list set that are ALIVE
             let mut group_alive_count = group.count();
-            for (player_id, indicator) in group.get_list().iter().enumerate(){
+            for (iplayer_id, indicator) in group.get_list().iter().enumerate(){
                 if *indicator == 1 {
-                    if let Some(value) = self.pc_hm.get(&player_id) {
+                    if let Some(value) = self.pc_hm.get(&iplayer_id) {
                         if value == card {
                             group_alive_count -= 1;
                         }
@@ -558,6 +576,119 @@ impl CollectiveConstraint{
             }
             // I reckon you don't have to check every possible union of groups because in coup when someone touches the middle pile
             // All groups are updated
+        }
+        // Add O(n^2) combination thing
+        // Checks if some combination of the group constraint tells you that a group of players have X number of some cards
+        // Where the total number == the total unknown cards
+        // If this is known, we know a player cant have Duke if Duke is not included the the cards the whole group can have
+        let mut i = 0;
+
+        while i < self.gc_vec.len() {
+            if self.gc_vec[i].get_list()[player_id] == 0 {
+                // We are looking for cases where player i is part of a group and all cards for the group is known
+                // We continue if player i is not part of the group
+                i += 1;
+                continue;
+            }
+            let mut card_count: HashMap<Card, usize> = HashMap::with_capacity(5);
+            card_count.insert(Card::Ambassador, 0);
+            card_count.insert(Card::Assassin, 0);
+            card_count.insert(Card::Captain, 0);
+            card_count.insert(Card::Duke, 0);
+            card_count.insert(Card::Contessa, 0);
+            let mut total_card_count: usize = 0;
+            // Initialise cap for item i, because all other items will be subsumed only if part_list are subsets
+            let mut total_card_capacity: usize = 0;
+            // Add current into the subsumed pool
+            for (iplayer_id, indicator) in self.gc_vec[i].get_list().iter().enumerate(){
+                if *indicator == 1 {
+                    // Filling up total_card_capacity
+                    if iplayer_id < 6 {
+                        total_card_capacity += 2;
+                    } else if iplayer_id == 6 {
+                        total_card_capacity += 3;
+                    } else {
+                        debug_assert!(false, "Impossible State Reached");
+                    }
+                    // Filling up total_card_count for dead cards that are in group
+                    // Filling up card_count to include dead cards of alive players?
+                    // Dont need to count dead card of dead players as DEAD PRUNE prevents group from having 1 if player is dead
+                    if let Some(vcard) = self.pc_hm.get(&i) {
+                        total_card_count += 1;
+                        if let Some(value) = card_count.get_mut(vcard) {
+                            *value += 1;
+                        }
+                    }
+                    // if let Some(card_vec) = self.jc_hm.get(&i) {
+                    //     total_card_count += 2;
+                    //     for card in card_vec.iter() {
+                    //         if let Some(value) = card_count.get_mut(card) {
+                    //             *value += 1;
+                    //         }
+                    //     }
+                    // }
+                }
+            }
+            let mut j = 0;
+            while j < self.gc_vec.len() {
+                if i == j {
+                    j += 1;
+                    continue;
+                }
+                // subsume if possible
+                // Checks if j group is subset of i group
+                if self.gc_vec[j].part_list_is_subset_of(&self.gc_vec[i]) {
+                    // No need to store participation_list as j is a subset
+                    // i part_list Subsuming j will just be i
+                    let vcard: &Card = self.gc_vec[j].card();
+                    let count: usize = self.gc_vec[j].count();
+                    // Subsume part_list j into part_list i
+                    // Increment counts accordingly
+                    if let Some(count_hm) = card_count.get_mut(vcard){
+                        if count > *count_hm {
+                            *count_hm = count;
+                            // Adding increase to total_card_count
+                            total_card_count += count - *count_hm;
+                        }
+                    }
+                    // If group card capacity has been reached
+                    if total_card_count == total_card_capacity {
+                        // If all cards for a group is known
+                        let mut alive_count: usize = card_count[card];
+                        // Find all possible alive cards by subtracting dead cards for alive players
+                        // We do so only for the card of interest!
+                        for (index, indicator) in self.gc_vec[i].get_list().iter().enumerate(){
+                            if *indicator == 1 {
+                                if let Some(value) = self.pc_hm.get(&index) {
+                                    if *value == *card {
+                                        // Subtract all the dead card if an alive player had a dead card that was of interest
+                                        if alive_count == 0 {
+                                            debug_assert!(false, "Alive_Count Should not be 0 as we have added dead cards in!");
+                                        } else {
+                                            alive_count -= 1;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if alive_count == 0 {
+                            // If full group does not contain card of interest, its impossible for a player of that group to have the card
+                            // See start of fn => Group will always have player_id indicator as 1 so player_id will be part of the group
+                            return false
+                        } else {
+                            // Since group is full, subsuming more groups will not provide more information
+                            // This should continue to next i
+                            j += 1;
+                            break;
+                        }
+
+                    } else if total_card_count > total_card_capacity {
+                        debug_assert!(false, "Impossible State Reached");
+                    }
+                }
+                j += 1;
+            }
+            i += 1;
         }
         true
     }
@@ -1746,4 +1877,5 @@ impl NaiveProb {
             .cloned()
             .collect();
     }
+
 }
