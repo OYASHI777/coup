@@ -689,8 +689,6 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         hh.push_ao(output);
                         prob.push_ao(&output);
                     }
-                    hh.push_ao(output);
-                    prob.push_ao(&output);
                 } else {
                     hh.push_ao(output);
                     prob.push_ao(&output);
@@ -710,8 +708,8 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
         }
         log::info!("{}", format!("Game Won : {:?}",step));
         hh.log_state();
-        log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
-        log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+        // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+        // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
         log::info!("");
         prob.reset();
         game += 1;

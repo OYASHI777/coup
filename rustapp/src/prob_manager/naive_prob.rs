@@ -273,7 +273,8 @@ impl CollectiveConstraint{
                 }
             }
         }
-
+        self.add_inferred_groups();
+        self.group_redundant_prune();
     }
     pub fn remove_public_constraint(&mut self, player_id: usize, card: Card){
         // self.gc_initial_hm.entry(card).and_modify(|arr| arr[player_id] = 0);
@@ -314,7 +315,7 @@ impl CollectiveConstraint{
         }
         self.jc_hm.insert(player_id, card_vec.clone());
         // Pruning
-
+        self.add_inferred_groups();
         self.group_dead_player_prune(player_id, card_vec);
     }
     // You will never remove from group only pop to reverse it because you cannot unmix cards
@@ -404,15 +405,13 @@ impl CollectiveConstraint{
                 index += 1;
             }
         }
-        if bool_subtract {
-            self.group_redundant_prune();
-        }
+        self.group_redundant_prune();
     }
     pub fn group_redundant_prune(&mut self){
         // Loops through gc_vec and removes redundant groups
         if self.gc_vec.len() >= 2 {
             let mut i: usize = 0;
-            let mut j: usize = 1;
+            let mut j: usize;
             let mut i_incremented: bool;
             while i < self.gc_vec.len() - 1 {
                 j = i + 1;
@@ -526,7 +525,60 @@ impl CollectiveConstraint{
             // [COMPLEMENT PRUNE] We push only if it isnt a complement
             self.gc_vec.push(addition);
         }
+        self.add_inferred_groups();
         self.remove_duplicate_groups();
+    }
+    pub fn add_inferred_groups(&mut self) {
+        // e.g. Player 1 has 1 life left
+        // Duke [0 1 0 0 0 0 1] : count = 2
+        // If player 1's dead card is not Duke
+        // We know that there must be at least 1 Duke in the Pile
+        // Duke [0 0 0 0 0 0 1] : count = 1
+        // This functions adds all possible of such groups in!
+        let mut index: usize = 0;
+        while index < self.gc_vec.len() {
+            let group_count: usize = self.gc_vec[index].count();
+            let group_list: [u8; 7] = self.gc_vec[index].get_list().clone();
+            let group_card: Card = self.gc_vec[index].card().clone();
+            if group_count > 1 {
+                for (player_id, indicator) in group_list.iter().enumerate() {
+                    if *indicator == 1 {
+                        // The maximum amount of a card the player may hold
+                        let mut max_possible_holdings: usize;
+                        if let Some(dead_card) = self.pc_hm.get(&player_id) {
+                            // Player has 1 Life
+                            if *dead_card == group_card {
+                                max_possible_holdings = 2;
+                            } else {
+                                max_possible_holdings = 1;
+                            }
+                        } else if let Some(dead_card_vec) = self.jc_hm.get(&player_id) {
+                            debug_assert!(false, "This should not happen");
+                            // I have implemented this for extensibility options
+                            max_possible_holdings = 0;
+                            for card in dead_card_vec.iter() {
+                                if *card == group_card {
+                                    max_possible_holdings += 1;
+                                }
+                            }
+                        } else {
+                            // Player has 2 lives
+                            max_possible_holdings = 2;
+                        }
+                        if max_possible_holdings < group_count {
+                            let mut inferred_group: GroupConstraint = self.gc_vec[index].clone();
+                            log::trace!("INFERRED GROUP CLONED!: {:?}", inferred_group);
+                            inferred_group.group_subtract(player_id);
+                            inferred_group.count_subtract(max_possible_holdings);
+                            log::trace!("INFERRED GROUP ADDED!: {:?}", inferred_group);
+                            self.gc_vec.push(inferred_group);
+                        }
+                    }
+                }
+            }
+            index += 1;
+        }
+        // Unsure if need to prune?
     }
     pub fn update_group_constraint(&mut self, player_id: usize){
         // For each gc, if player is not a participant, they now become one
@@ -873,6 +925,7 @@ impl CollectiveConstraint{
         // Checks if some combination of the group constraint tells you that a group of players have X number of some cards
         // Where the total number == the total unknown cards
         // If this is known, we know a player cant have Duke if Duke is not included the the cards the whole group can have
+        // Issue with this!
         let mut i = 0;
 
         while i < constraint.gc_vec.len() {
@@ -894,7 +947,7 @@ impl CollectiveConstraint{
             // Add current into the subsumed pool
             for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate(){
                 if *indicator == 1 {
-                    // Filling up total_card_capacity
+                    // Filling up total_card_capacity includes dead cards for now
                     if iplayer_id < 6 {
                         total_card_capacity += 2;
                     } else if iplayer_id == 6 {
@@ -903,7 +956,7 @@ impl CollectiveConstraint{
                         debug_assert!(false, "Impossible State Reached");
                     }
                     // Filling up total_card_count for dead cards that are in group
-                    // Filling up card_count to include dead cards of alive players?
+                    // Filling up card_count to include dead cards of alive players
                     // Dont need to count dead card of dead players as DEAD PRUNE prevents group from having 1 if player is dead
                     if let Some(vcard) = constraint.pc_hm.get(&i) {
                         total_card_count += 1;
@@ -921,6 +974,8 @@ impl CollectiveConstraint{
                     // }
                 }
             }
+            log::trace!("Total Capacity: {}", total_card_capacity);
+            log::trace!("card count dead: {:?}", card_count);
             let mut j = 0;
             while j < constraint.gc_vec.len() {
                 if i == j {
@@ -963,6 +1018,7 @@ impl CollectiveConstraint{
                                 }
                             }
                         }
+                        log::trace!("ALIVE COUNT: {}", alive_count);
                         if alive_count == 0 {
                             // If full group does not contain card of interest, its impossible for a player of that group to have the card
                             // See start of fn => Group will always have player_id indicator as 1 so player_id will be part of the group
@@ -973,11 +1029,13 @@ impl CollectiveConstraint{
                             j += 1;
                             break;
                         }
-
                     } else if total_card_count > total_card_capacity {
                         debug_assert!(false, "Impossible State Reached");
                     }
+                    
                 }
+                log::trace!("card count dead: {:?}", card_count);
+                log::trace!("Total Capacity: {}", total_card_capacity);
                 j += 1;
             }
             i += 1;
@@ -1110,7 +1168,7 @@ impl CollectiveConstraint{
     pub fn player_can_have_active_cards(&self, player_id: usize, cards: &[Card; 2]) -> bool {
         if self.player_can_have_active_card(player_id, &cards[0]){
             let mut new_constraint: CollectiveConstraint = self.clone();
-            new_constraint.add_public_constraint(player_id, cards[0]);
+            new_constraint.add_raw_public_constraint(player_id, cards[0]);
             CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, &cards[1])
         } else {
             false
