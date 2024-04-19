@@ -496,6 +496,14 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     let mut prob = NaiveProb::new();
     let mut total_wrong_legal: usize = 0;
     let mut total_wrong_illegal: usize = 0;
+    let mut total_wrong_legal_discard_1: usize = 0;
+    let mut total_wrong_illegal_discard_1: usize = 0;
+    let mut total_wrong_legal_discard_2: usize = 0;
+    let mut total_wrong_illegal_discard_2: usize = 0;
+    let mut total_wrong_legal_reveal_redraw: usize = 0;
+    let mut total_wrong_illegal_reveal_redraw: usize = 0;
+    let mut total_wrong_legal_exchangedraw: usize = 0;
+    let mut total_wrong_illegal_exchangedraw: usize = 0;
     let mut total_wrong_legal_proper: usize = 0;
     let mut total_wrong_illegal_proper: usize = 0;
     let mut total_same: usize = 0;
@@ -505,12 +513,17 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
         let mut hh = History::new(0);
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
-        if game % (game_no / 10) == 0 {
+        // if game % (game_no / 10) == 0 {
+        if game % (500) == 0 {
             println!("Game: {}", game);
-            println!("Total Legal Predictions Wrong: {}", total_wrong_legal);
-            println!("Total Illegal Predictions Wrong: {}", total_wrong_illegal);
-            println!("Total Legal Predictions Wrong Proper: {}", total_wrong_legal_proper);
-            println!("Total Illegal Predictions Wrong Proper: {}", total_wrong_illegal_proper);
+            println!("Total (Discard 1) Legal Predictions Wrong: {}", total_wrong_legal_discard_1);
+            println!("Total (Discard 1) Illegal Predictions Wrong: {}", total_wrong_illegal_discard_1);
+            println!("Total (Discard 2) Legal Predictions Wrong: {}", total_wrong_legal_discard_2);
+            println!("Total (Discard 2) Illegal Predictions Wrong: {}", total_wrong_illegal_discard_2);
+            println!("Total (RevealRedraw) Legal Predictions Wrong: {}", total_wrong_legal_reveal_redraw);
+            println!("Total (RevealRedraw) Illegal Predictions Wrong: {}", total_wrong_illegal_reveal_redraw);
+            println!("Total (ExchangeDraw) Legal Predictions Wrong: {}", total_wrong_legal_exchangedraw);
+            println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}", total_wrong_illegal_exchangedraw);
             println!("Total Same: {}", total_same);
             println!("Total Tries: {}", total_tries);
         }
@@ -546,21 +559,25 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             log::trace!("Actual: Illegal Move");
                             if set_legality {
                                 log::trace!("Verdict: Legal Wrong");
-                                total_wrong_legal += 1;
-                                prob.filter_state_simple();
-                                prob.log_calc_state();
+                                total_wrong_legal_discard_1 += 1;
+                                if log_bool {
+                                    prob.filter_state_simple();
+                                    prob.log_calc_state();
+                                }
                             }
                         } else {
                             log::trace!("Actual: Legal Move");
                             if !set_legality {
                                 log::trace!("Verdict: Illegal Wrong");
-                                total_wrong_illegal += 1;
-                                prob.filter_state_simple();
-                                prob.log_calc_state();
+                                total_wrong_illegal_discard_1 += 1;
+                                if log_bool {
+                                    prob.filter_state_simple();
+                                    prob.log_calc_state();
+                                }
                             }
                         }
                         total_tries += 1;
-                        if !set_legality{
+                        if !set_legality || legality.is_none(){
                             break    
                         } else {
                             hh.push_ao(output);
@@ -578,21 +595,25 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             log::trace!("Actual: Illegal Move");
                             if set_legality {
                                 log::trace!("Verdict: Legal Wrong");
-                                total_wrong_legal += 1;
-                                prob.filter_state_simple();
-                                prob.log_calc_state();
+                                total_wrong_legal_discard_2 += 1;
+                                if log_bool {
+                                    prob.filter_state_simple();
+                                    prob.log_calc_state();
+                                }
                             }
                         } else {
                             log::trace!("Actual: Legal Move");
                             if !set_legality {
                                 log::trace!("Verdict: Illegal Wrong");
-                                total_wrong_illegal += 1;
-                                prob.filter_state_simple();
-                                prob.log_calc_state();
+                                total_wrong_illegal_discard_2 += 1;
+                                if log_bool {
+                                    prob.filter_state_simple();
+                                    prob.log_calc_state();
+                                }
                             }
                         }
                         total_tries += 1;
-                        if !set_legality{
+                        if !set_legality || legality.is_none(){
                             break    
                         } else {
                             hh.push_ao(output);
@@ -632,17 +653,21 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         log::trace!("Actual: Illegal Move");
                         if set_legality {
                             log::trace!("Verdict: Legal Wrong");
-                            total_wrong_legal += 1;
-                            prob.filter_state_simple();
-                            prob.log_calc_state();
+                            total_wrong_legal_reveal_redraw += 1;
+                            if log_bool {
+                                prob.filter_state_simple();
+                                prob.log_calc_state();
+                            }
                         }
                     } else {
                         log::trace!("Actual: Legal Move");
                         if !set_legality {
                             log::trace!("Verdict: Illegal Wrong");
-                            total_wrong_illegal += 1;
-                            prob.filter_state_simple();
-                            prob.log_calc_state();
+                            total_wrong_illegal_reveal_redraw += 1;
+                            if log_bool {
+                                prob.filter_state_simple();
+                                prob.log_calc_state();
+                            }
                         }
                     }
                     // if proper == 0 && legality.is_none(){
@@ -651,7 +676,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     //     total_same += 1;
                     // }
                     total_tries += 1;
-                    if !set_legality{
+                    if !set_legality || legality.is_none(){
                         break    
                     } else {
                         hh.push_ao(output);
@@ -669,21 +694,25 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         log::trace!("Actual: Illegal Move");
                         if set_legality {
                             log::trace!("Verdict: Legal Wrong");
-                            total_wrong_legal += 1;
-                            prob.filter_state_simple();
-                            prob.log_calc_state();
+                            total_wrong_legal_exchangedraw += 1;
+                            if log_bool {
+                                prob.filter_state_simple();
+                                prob.log_calc_state();
+                            }
                         }
                     } else {
                         log::trace!("Actual: Legal Move");
                         if !set_legality {
                             log::trace!("Verdict: Illegal Wrong");
-                            total_wrong_illegal += 1;
-                            prob.filter_state_simple();
-                            prob.log_calc_state();
+                            total_wrong_illegal_exchangedraw += 1;
+                            if log_bool {
+                                prob.filter_state_simple();
+                                prob.log_calc_state();
+                            }
                         }
                     }
                     total_tries += 1;
-                    if !set_legality{
+                    if !set_legality || legality.is_none() {
                         break    
                     } else {
                         hh.push_ao(output);
@@ -716,10 +745,14 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     }
     log::info!("Most Steps: {}", max_steps);
     println!("Most Steps: {}", max_steps);
-    println!("Total Legal Predictions Wrong: {}", total_wrong_legal);
-    println!("Total Illegal Predictions Wrong: {}", total_wrong_illegal);
-    println!("Total Legal Predictions Wrong Proper: {}", total_wrong_legal_proper);
-    println!("Total Illegal Predictions Wrong Proper: {}", total_wrong_illegal_proper);
+    println!("Total (Discard 1) Legal Predictions Wrong: {}", total_wrong_legal_discard_1);
+    println!("Total (Discard 1) Illegal Predictions Wrong: {}", total_wrong_illegal_discard_1);
+    println!("Total (Discard 2) Legal Predictions Wrong: {}", total_wrong_legal_discard_2);
+    println!("Total (Discard 2) Illegal Predictions Wrong: {}", total_wrong_illegal_discard_2);
+    println!("Total (RevealRedraw) Legal Predictions Wrong: {}", total_wrong_legal_reveal_redraw);
+    println!("Total (RevealRedraw) Illegal Predictions Wrong: {}", total_wrong_illegal_reveal_redraw);
+    println!("Total (ExchangeDraw) Legal Predictions Wrong: {}", total_wrong_legal_exchangedraw);
+    println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}", total_wrong_illegal_exchangedraw);
     println!("Total Same: {}", total_same);
     println!("Total Tries: {}", total_tries);
 }
