@@ -111,7 +111,7 @@ use std::time::Instant;
 fn main() {
 
     // game_rnd(100, true);
-    game_rnd_constraint(2000, true);
+    game_rnd_constraint(100000, false);
     // test_satis();
     // test_belief(20000000);
     // make_belief(20000000);
@@ -504,6 +504,15 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     let mut total_wrong_illegal_reveal_redraw: usize = 0;
     let mut total_wrong_legal_exchangedraw: usize = 0;
     let mut total_wrong_illegal_exchangedraw: usize = 0;
+    let mut total_legal_discard_1: usize = 0;
+    let mut total_illegal_discard_1: usize = 0;
+    let mut total_legal_discard_2: usize = 0;
+    let mut total_illegal_discard_2: usize = 0;
+    let mut total_legal_reveal_redraw: usize = 0;
+    let mut total_illegal_reveal_redraw: usize = 0;
+    let mut total_legal_exchangedraw: usize = 0;
+    let mut total_illegal_exchangedraw: usize = 0;
+    let mut total_already_illegal: usize = 0;
     let mut total_wrong_legal_proper: usize = 0;
     let mut total_wrong_illegal_proper: usize = 0;
     let mut total_same: usize = 0;
@@ -516,14 +525,15 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
         // if game % (game_no / 10) == 0 {
         if game % (500) == 0 {
             println!("Game: {}", game);
-            println!("Total (Discard 1) Legal Predictions Wrong: {}", total_wrong_legal_discard_1);
-            println!("Total (Discard 1) Illegal Predictions Wrong: {}", total_wrong_illegal_discard_1);
-            println!("Total (Discard 2) Legal Predictions Wrong: {}", total_wrong_legal_discard_2);
-            println!("Total (Discard 2) Illegal Predictions Wrong: {}", total_wrong_illegal_discard_2);
-            println!("Total (RevealRedraw) Legal Predictions Wrong: {}", total_wrong_legal_reveal_redraw);
-            println!("Total (RevealRedraw) Illegal Predictions Wrong: {}", total_wrong_illegal_reveal_redraw);
-            println!("Total (ExchangeDraw) Legal Predictions Wrong: {}", total_wrong_legal_exchangedraw);
-            println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}", total_wrong_illegal_exchangedraw);
+            println!("Total already illegal Wrong: {}/{}", total_already_illegal, total_tries);
+            println!("Total (Discard 1) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_1, total_legal_discard_1);
+            println!("Total (Discard 1) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_1, total_illegal_discard_1);
+            println!("Total (Discard 2) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_2, total_legal_discard_2);
+            println!("Total (Discard 2) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_2, total_illegal_discard_2);
+            println!("Total (RevealRedraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_reveal_redraw, total_legal_reveal_redraw);
+            println!("Total (RevealRedraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_reveal_redraw, total_illegal_reveal_redraw);
+            println!("Total (ExchangeDraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_exchangedraw, total_legal_exchangedraw);
+            println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_exchangedraw, total_illegal_exchangedraw);
             println!("Total Same: {}", total_same);
             println!("Total Tries: {}", total_tries);
         }
@@ -552,16 +562,22 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.cards()[0]);
                         if set_legality{
                             log::trace!("Set: Legal Move");
+                            total_legal_discard_1 += 1;
                         } else {
                             log::trace!("Set: Illegal Move");
+                            total_illegal_discard_1 += 1;
                         }
                         if legality.is_none(){
                             log::trace!("Actual: Illegal Move");
                             if set_legality {
                                 log::trace!("Verdict: Legal Wrong");
-                                total_wrong_legal_discard_1 += 1;
+                                prob.filter_state_simple();
+                                if prob.calc_state_len() == 0 {
+                                    total_already_illegal += 1;
+                                } else {
+                                    total_wrong_legal_discard_1 += 1;
+                                }
                                 if log_bool {
-                                    prob.filter_state_simple();
                                     prob.log_calc_state();
                                 }
                             }
@@ -569,9 +585,13 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             log::trace!("Actual: Legal Move");
                             if !set_legality {
                                 log::trace!("Verdict: Illegal Wrong");
-                                total_wrong_illegal_discard_1 += 1;
+                                prob.filter_state_simple();
+                                if prob.calc_state_len() == 0 {
+                                    total_already_illegal += 1;
+                                } else {
+                                    total_wrong_illegal_discard_1 += 1;
+                                }
                                 if log_bool {
-                                    prob.filter_state_simple();
                                     prob.log_calc_state();
                                 }
                             }
@@ -588,16 +608,22 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         let legality: Option<String> = prob.can_player_have_cards(output.player_id(), output.cards());
                         if set_legality{
                             log::trace!("Set: Legal Move");
+                            total_legal_discard_2 += 1;
                         } else {
                             log::trace!("Set: Illegal Move");
+                            total_illegal_discard_2 += 1;
                         }
                         if legality.is_none(){
                             log::trace!("Actual: Illegal Move");
                             if set_legality {
                                 log::trace!("Verdict: Legal Wrong");
-                                total_wrong_legal_discard_2 += 1;
+                                prob.filter_state_simple();
+                                if prob.calc_state_len() == 0 {
+                                    total_already_illegal += 1;
+                                } else {
+                                    total_wrong_legal_discard_2 += 1;
+                                }
                                 if log_bool {
-                                    prob.filter_state_simple();
                                     prob.log_calc_state();
                                 }
                             }
@@ -605,9 +631,13 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             log::trace!("Actual: Legal Move");
                             if !set_legality {
                                 log::trace!("Verdict: Illegal Wrong");
-                                total_wrong_illegal_discard_2 += 1;
+                                prob.filter_state_simple();
+                                if prob.calc_state_len() == 0 {
+                                    total_already_illegal += 1;
+                                } else {
+                                    total_wrong_illegal_discard_2 += 1;
+                                }
                                 if log_bool {
-                                    prob.filter_state_simple();
                                     prob.log_calc_state();
                                 }
                             }
@@ -624,8 +654,10 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.card());
                     if set_legality{
                         log::trace!("Set: Legal Move");
+                        total_legal_reveal_redraw += 1;
                     } else {
                         log::trace!("Set: Illegal Move");
+                        total_illegal_reveal_redraw += 1;
                     }
                     let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.card());
                     // prob.filter_player_can_have_card(output.player_id(), &output.card());
@@ -653,9 +685,13 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         log::trace!("Actual: Illegal Move");
                         if set_legality {
                             log::trace!("Verdict: Legal Wrong");
-                            total_wrong_legal_reveal_redraw += 1;
+                            prob.filter_state_simple();
+                            if prob.calc_state_len() == 0 {
+                                total_already_illegal += 1;
+                            } else {
+                                total_wrong_legal_reveal_redraw += 1;
+                            }
                             if log_bool {
-                                prob.filter_state_simple();
                                 prob.log_calc_state();
                             }
                         }
@@ -663,9 +699,13 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         log::trace!("Actual: Legal Move");
                         if !set_legality {
                             log::trace!("Verdict: Illegal Wrong");
-                            total_wrong_illegal_reveal_redraw += 1;
+                            prob.filter_state_simple();
+                            if prob.calc_state_len() == 0 {
+                                total_already_illegal += 1;
+                            } else {
+                                total_wrong_illegal_reveal_redraw += 1;
+                            }
                             if log_bool {
-                                prob.filter_state_simple();
                                 prob.log_calc_state();
                             }
                         }
@@ -687,16 +727,22 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     let legality: Option<String> = prob.can_player_have_cards(6, output.cards());
                     if set_legality{
                         log::trace!("Set: Legal Move");
+                        total_legal_exchangedraw += 1;
                     } else {
                         log::trace!("Set: Illegal Move");
+                        total_illegal_exchangedraw += 1;
                     }
                     if legality.is_none(){
                         log::trace!("Actual: Illegal Move");
                         if set_legality {
                             log::trace!("Verdict: Legal Wrong");
-                            total_wrong_legal_exchangedraw += 1;
+                            prob.filter_state_simple();
+                            if prob.calc_state_len() == 0 {
+                                total_already_illegal += 1;
+                            } else {
+                                total_wrong_legal_exchangedraw += 1;
+                            }
                             if log_bool {
-                                prob.filter_state_simple();
                                 prob.log_calc_state();
                             }
                         }
@@ -704,9 +750,13 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         log::trace!("Actual: Legal Move");
                         if !set_legality {
                             log::trace!("Verdict: Illegal Wrong");
-                            total_wrong_illegal_exchangedraw += 1;
+                            prob.filter_state_simple();
+                            if prob.calc_state_len() == 0 {
+                                total_already_illegal += 1;
+                            } else {
+                                total_wrong_illegal_exchangedraw += 1;
+                            }
                             if log_bool {
-                                prob.filter_state_simple();
                                 prob.log_calc_state();
                             }
                         }
@@ -745,14 +795,15 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     }
     log::info!("Most Steps: {}", max_steps);
     println!("Most Steps: {}", max_steps);
-    println!("Total (Discard 1) Legal Predictions Wrong: {}", total_wrong_legal_discard_1);
-    println!("Total (Discard 1) Illegal Predictions Wrong: {}", total_wrong_illegal_discard_1);
-    println!("Total (Discard 2) Legal Predictions Wrong: {}", total_wrong_legal_discard_2);
-    println!("Total (Discard 2) Illegal Predictions Wrong: {}", total_wrong_illegal_discard_2);
-    println!("Total (RevealRedraw) Legal Predictions Wrong: {}", total_wrong_legal_reveal_redraw);
-    println!("Total (RevealRedraw) Illegal Predictions Wrong: {}", total_wrong_illegal_reveal_redraw);
-    println!("Total (ExchangeDraw) Legal Predictions Wrong: {}", total_wrong_legal_exchangedraw);
-    println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}", total_wrong_illegal_exchangedraw);
+    println!("Total already illegal Wrong: {}/{}", total_already_illegal, total_tries);
+    println!("Total (Discard 1) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_1, total_legal_discard_1);
+    println!("Total (Discard 1) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_1, total_illegal_discard_1);
+    println!("Total (Discard 2) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_2, total_legal_discard_2);
+    println!("Total (Discard 2) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_2, total_illegal_discard_2);
+    println!("Total (RevealRedraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_reveal_redraw, total_legal_reveal_redraw);
+    println!("Total (RevealRedraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_reveal_redraw, total_illegal_reveal_redraw);
+    println!("Total (ExchangeDraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_exchangedraw, total_legal_exchangedraw);
+    println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_exchangedraw, total_illegal_exchangedraw);
     println!("Total Same: {}", total_same);
     println!("Total Tries: {}", total_tries);
 }
