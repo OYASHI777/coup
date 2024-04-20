@@ -111,7 +111,8 @@ use std::time::Instant;
 fn main() {
 
     // game_rnd(100, true);
-    game_rnd_constraint(100000, false);
+    game_rnd_constraint(100000, true);
+    // test_impossible_state(10000, true);
     // test_satis();
     // test_belief(20000000);
     // make_belief(20000000);
@@ -120,34 +121,32 @@ fn main() {
     // test_reach(); 
     // test_shuffle(100);
 }
-// pub fn test_satis(){
-//     let mut colcon = CollectiveConstraint::new();
-//     colcon.add_public_constraint(2, Card::Contessa);
-//     colcon.add_public_constraint(4, Card::Captain);
+pub fn test_satis(){
+    let mut colcon = CollectiveConstraint::new();
+    colcon.add_public_constraint(1, Card::Ambassador);
+    colcon.add_public_constraint(1, Card::Duke);
 
-//     colcon.add_public_constraint(1, Card::Ambassador);
-//     colcon.add_public_constraint(1, Card::Duke);
-//     colcon.add_public_constraint(0, Card::Contessa);
-//     colcon.add_public_constraint(0, Card::Duke);
+    colcon.add_public_constraint(4, Card::Contessa);
+    colcon.add_public_constraint(4, Card::Duke);
+    colcon.add_public_constraint(5, Card::Contessa);
+    colcon.add_public_constraint(5, Card::Duke);
+    colcon.add_public_constraint(0, Card::Assassin);
+    colcon.add_public_constraint(0, Card::Captain);
 
-//     let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 1, 1, 1], Card::Duke, 1);
-//     let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 1, 1], Card::Captain, 3);
-//     let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Captain, 1);
-//     colcon.add_raw_group(group1);
-//     colcon.add_raw_group(group2);
-//     colcon.add_raw_group(group3);
-//     let mut prob = NaiveProb::new();
-//     prob.filter_player_can_have_card_test(2, &Card::Duke, &colcon);
-//     let output = prob.can_player_have_card_test(2, &Card::Duke, &colcon);
-//     if output.is_none() {
-//         println!("Illegal");
-//     } else {
-//         println!("Legal");
-//     }
-//     colcon.add_raw_public_constraint(2, Card::Duke);
-//     let outcome = prob.state_satisfies_constraints("DEADDEBEBCACABC", &colcon);
-//     println!("Satisfies: {}", outcome);
-// }
+    // let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 1, 1, 1], Card::Duke, 1);
+    let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Captain, 2);
+    // let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Captain, 1);
+    // colcon.add_raw_group(group1);
+    colcon.add_raw_group(group2);
+    // colcon.add_raw_group(group3);
+    let mut prob = NaiveProb::new();
+    let output = prob.chance_sample_exit_test(&colcon);
+    if output.is_none() {
+        println!("Illegal");
+    } else {
+        println!("Legal");
+    }
+}
 pub fn test_shuffle(iterations: usize){
     logger();
     let mut prob: NaiveProb = NaiveProb::new();
@@ -550,8 +549,8 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
             if new_moves[0].name() != AOName::CollectiveChallenge {
                 log::info!("{}", format!("Legal Moves: {:?}", new_moves));
             } else {
-                log::info!("{}", format!("Legal Moves: {:?}", new_moves));
-                // log::info!("{}", format!("Legal Moves: CollectiveChallenge"));
+                // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+                log::info!("{}", format!("Legal Moves: CollectiveChallenge"));
             }
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
@@ -807,6 +806,112 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     println!("Total Same: {}", total_same);
     println!("Total Tries: {}", total_tries);
 }
+
+pub fn test_impossible_state(game_no: usize, log_bool: bool){
+    if log_bool{
+        logger();
+    }
+    let mut game: usize = 0;
+    let mut max_steps: usize = 0;
+    let mut total_steps: usize = 0;
+    let mut prob = NaiveProb::new();
+    let start_time = Instant::now();
+    while game < game_no {
+        log::info!("Game : {}", game);
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        if game % 200 == 0 {
+            println!("Game: {}", game);
+        }
+        log::trace!("Game Made:");
+        while !hh.game_won() {
+            
+            log::trace!("Game Made:");
+            // log::info!("{}", format!("Step : {:?}",step));
+            hh.log_state();
+            prob.printlog();
+            // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+            // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+            new_moves = hh.generate_legal_moves();
+            if new_moves[0].name() != AOName::CollectiveChallenge {
+    
+                log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+            } else {
+                // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+                log::info!("{}", format!("Legal Moves: CollectiveChallenge"));
+            }
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                log::info!("{}", format!("Choice: {:?}", output));
+                if !prob.latest_constraint_is_empty() {
+                    if output.name() == AOName::Discard {
+                        if output.no_cards() == 1 {
+                            let chosen_move_legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.cards()[0]);
+                            if chosen_move_legality.is_none() {
+                                log::trace!("Cant choose this move!");
+                                break;
+                            }
+                        } else {
+                            let chosen_move_legality: Option<String> = prob.can_player_have_cards(output.player_id(), &output.cards());
+                            if chosen_move_legality.is_none() {
+                                log::trace!("Cant choose this move!");
+                                break;
+                            }
+                        }
+                    } else if output.name() == AOName::RevealRedraw {
+                        let chosen_move_legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.card());
+                        if chosen_move_legality.is_none() {
+                            log::trace!("Cant choose this move!");
+                            break;
+                        }
+                    } else if output.name() == AOName::ExchangeDraw {
+                        let chosen_move_legality: Option<String> = prob.can_player_have_cards(output.player_id(), &output.cards());
+                        if chosen_move_legality.is_none() {
+                            log::trace!("Cant choose this move!");
+                            break;
+                        }
+                    }
+                }
+                hh.push_ao(output);
+                prob.push_ao(&output);
+                if !prob.latest_constraint_is_empty(){
+                    let legality: Option<String> = prob.chance_sample_exit();
+                    if legality.is_none(){
+                        log::trace!("New State Now Illegal!: ");
+                        prob.printlog();
+                        break;
+                    }
+                }
+            } else {
+                log::trace!("Pushed bad move!");
+                break;
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            log::info!("");
+        }
+        if step > max_steps {
+            max_steps = step;
+        }
+        total_steps += step;
+        log::info!("{}", format!("Game Won : {:?}",step));
+        hh.log_state();
+        log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+        log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+        log::info!("");
+        prob.reset();
+        game += 1;
+    }
+    let elapsed_time = start_time.elapsed();
+    log::info!("Most Steps: {}", max_steps);
+    println!("Total Moves Calculated: {}", total_steps);
+    println!("Most Steps: {}", max_steps);
+    println!("Total Time: {:?}", elapsed_time);
+}
+
 pub fn logger(){
     // let log_file = File::create("app.log").unwrap();
 
