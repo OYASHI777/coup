@@ -511,6 +511,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     let mut total_illegal_reveal_redraw: usize = 0;
     let mut total_legal_exchangedraw: usize = 0;
     let mut total_illegal_exchangedraw: usize = 0;
+    let mut total_wrong_same_cards_exchangedraw: usize = 0;
     let mut total_already_illegal: usize = 0;
     let mut total_wrong_legal_proper: usize = 0;
     let mut total_wrong_illegal_proper: usize = 0;
@@ -533,7 +534,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
             println!("Total (RevealRedraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_reveal_redraw, total_illegal_reveal_redraw);
             println!("Total (ExchangeDraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_exchangedraw, total_legal_exchangedraw);
             println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_exchangedraw, total_illegal_exchangedraw);
-            println!("Total Same: {}", total_same);
+            println!("Total Same Card Exchange Draw Wrong: {}", total_wrong_same_cards_exchangedraw);
             println!("Total Tries: {}", total_tries);
         }
         log::trace!("Game Made:");
@@ -740,6 +741,9 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                                 total_already_illegal += 1;
                             } else {
                                 total_wrong_legal_exchangedraw += 1;
+                                if output.cards()[0] == output.cards()[1] {
+                                    total_wrong_same_cards_exchangedraw += 1;
+                                }
                             }
                             if log_bool {
                                 prob.log_calc_state();
@@ -754,6 +758,9 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                                 total_already_illegal += 1;
                             } else {
                                 total_wrong_illegal_exchangedraw += 1;
+                                if output.cards()[0] == output.cards()[1] {
+                                    total_wrong_same_cards_exchangedraw += 1;
+                                }
                             }
                             if log_bool {
                                 prob.log_calc_state();
@@ -803,7 +810,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     println!("Total (RevealRedraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_reveal_redraw, total_illegal_reveal_redraw);
     println!("Total (ExchangeDraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_exchangedraw, total_legal_exchangedraw);
     println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_exchangedraw, total_illegal_exchangedraw);
-    println!("Total Same: {}", total_same);
+    println!("Total Same Card Exchange Draw Wrong: {}", total_wrong_same_cards_exchangedraw);
     println!("Total Tries: {}", total_tries);
 }
 
