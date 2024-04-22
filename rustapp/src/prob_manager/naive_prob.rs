@@ -2403,6 +2403,7 @@ impl NaiveProb {
         // Fastest, use this one
         let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
         let start_time = Instant::now();
+        // This takes around 50 ms out of the total 51 ms taken to run the function
         let mut rng = rand::thread_rng();
         self.all_states.shuffle(&mut rng); // Shuffle in place
         let elapsed_time = start_time.elapsed();

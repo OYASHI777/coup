@@ -18,6 +18,9 @@ mod string_utils;
 use prob_manager::naive_prob::{NaiveProb, CollectiveConstraint, GroupConstraint};
 use std::time::Instant;
 
+use rand::{rngs::SmallRng, SeedableRng};
+use rayon::prelude::*;
+use std::sync::Mutex;
 // QUICK TEMP: Exchange Draw showing 2 cards should prune the other groups? because they found out the pile has 2 cards
 //              Make Func to initialise past constraint history based on player perspective in naive_prob
 //              Integrate this by having an initial constraint history that can be loaded in
@@ -109,8 +112,15 @@ use std::time::Instant;
 // 2024-03-23T23:18:59 [INFO] - Time taken for Optimal GC Filter: 100ns
 // 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
 fn main() {
-
-    game_rnd(1000, true);
+    let mut vec: Vec<i32> = vec![0; 1500000];
+    // let mut vec: [i32; 20] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+    for i in (20..5000).step_by(7) {
+        let start_time = Instant::now();
+        parallel_shuffle(&mut vec, i as usize);
+        let elapsed_time = start_time.elapsed();
+        println!("Chunk Size: {} Time Exit: {:?}", i , elapsed_time);
+    }
+    // game_rnd(1000, true);
     // game_rnd_constraint(100000, true);
     // test_impossible_state(10000, true);
     // test_satis();
@@ -120,6 +130,31 @@ fn main() {
     // test_filter(1000);
     // test_reach(); 
     // test_shuffle(100);
+}
+fn parallel_shuffle<T>(data: &mut [T], chunks_count: usize)
+where
+    T: Send + Sync + Clone,
+{
+    let chunk_size = data.len() / chunks_count;
+    let rng = &Mutex::new(SmallRng::from_entropy());
+
+    // 1. Shuffle each chunk in parallel
+    let mut chunks: Vec<_> = data.par_chunks_mut(chunk_size).map(|chunk| {
+        let mut rng = rng.lock().unwrap();
+        let mut local_chunk = chunk.to_vec();
+        local_chunk.shuffle(&mut *rng);
+        local_chunk
+    }).collect();
+
+    // 2. Shuffle the chunks themselves
+    {
+        let mut rng = rng.lock().unwrap();
+        chunks.shuffle(&mut *rng);
+    }
+
+    // 4. Flatten chunks back into the original array
+    let flattened: Vec<T> = chunks.into_iter().flatten().collect();
+    data.clone_from_slice(&flattened);
 }
 pub fn test_satis(){
     let mut colcon = CollectiveConstraint::new();
