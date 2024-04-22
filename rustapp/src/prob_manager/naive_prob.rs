@@ -1300,9 +1300,12 @@ impl NaiveProb {
     pub fn new() -> Self {
         let unique_2p_hands: Vec<String> = gen_bag_combinations(TOKENS, &2);
         let unique_3p_hands: Vec<String> = gen_bag_combinations(TOKENS, &3);
+        let mut all_states: Vec<String> = gen_table_combinations(TOKENS, &BAG_SIZES);
+        let mut rng = rand::thread_rng();
+        all_states.shuffle(&mut rng); // Shuffle in place
         NaiveProb{
             constraint_history: Vec::with_capacity(1500),
-            all_states: gen_table_combinations(TOKENS, &BAG_SIZES),
+            all_states,
             dist_from_last:Vec::with_capacity(1500),
             calculated_states: Vec::with_capacity(MAX_PERM_STATES),
             index_start_arr: [0, 2, 4, 6, 8, 10, 12],
@@ -2399,8 +2402,11 @@ impl NaiveProb {
         // Randomly Finds the first string that fulfils the criterion
         // Fastest, use this one
         let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+        let start_time = Instant::now();
         let mut rng = rand::thread_rng();
         self.all_states.shuffle(&mut rng); // Shuffle in place
+        let elapsed_time = start_time.elapsed();
+        println!("Shuffle Time: {:?}", elapsed_time);
 
         let result = Arc::new(Mutex::new(None));
         let should_exit = Arc::new(AtomicBool::new(false));

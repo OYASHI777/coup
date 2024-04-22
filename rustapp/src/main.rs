@@ -110,8 +110,8 @@ use std::time::Instant;
 // 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
 fn main() {
 
-    // game_rnd(100, true);
-    game_rnd_constraint(100000, true);
+    game_rnd(1000, true);
+    // game_rnd_constraint(100000, true);
     // test_impossible_state(10000, true);
     // test_satis();
     // test_belief(20000000);
@@ -427,7 +427,7 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
     let mut max_steps: usize = 0;
     let mut total_steps: usize = 0;
     let mut prob = NaiveProb::new();
-    let start_time = Instant::now();
+    
     while game < game_no {
         log::info!("Game : {}", game);
         let mut hh = History::new(0);
@@ -458,6 +458,10 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
                 log::info!("{}", format!("Choice: {:?}", output));
                 hh.push_ao(output);
                 prob.push_ao(&output);
+                let start_time = Instant::now();
+                let output: Option<String> = prob.chance_sample_exit();
+                let elapsed_time = start_time.elapsed();
+                println!("Test Time: {:?}", elapsed_time);
             } else {
                 log::trace!("Pushed bad move!");
                 break;
@@ -480,11 +484,10 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
         prob.reset();
         game += 1;
     }
-    let elapsed_time = start_time.elapsed();
+
     log::info!("Most Steps: {}", max_steps);
     println!("Total Moves Calculated: {}", total_steps);
     println!("Most Steps: {}", max_steps);
-    println!("Total Time: {:?}", elapsed_time);
 }
 pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     if log_bool{
