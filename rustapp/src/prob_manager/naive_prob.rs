@@ -11,6 +11,7 @@ use std::collections::{HashMap, HashSet};
 // use core::hash::Hasher;
 use std::hash::{Hash, Hasher};
 use std::usize;
+use rand::Rng;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -2402,12 +2403,13 @@ impl NaiveProb {
         // Randomly Finds the first string that fulfils the criterion
         // Fastest, use this one
         let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
-        let start_time = Instant::now();
-        // This takes around 50 ms out of the total 51 ms taken to run the function
+        // let start_time = Instant::now();
+        // This takes around 20 ms instead of the 50 ms normally taken to shuffle
         let mut rng = rand::thread_rng();
+
         self.all_states.shuffle(&mut rng); // Shuffle in place
-        let elapsed_time = start_time.elapsed();
-        println!("Shuffle Time: {:?}", elapsed_time);
+        // let elapsed_time = start_time.elapsed();
+        // println!("Shuffle Time: {:?}", elapsed_time);
 
         let result = Arc::new(Mutex::new(None));
         let should_exit = Arc::new(AtomicBool::new(false));

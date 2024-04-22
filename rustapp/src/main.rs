@@ -112,16 +112,9 @@ use std::sync::Mutex;
 // 2024-03-23T23:18:59 [INFO] - Time taken for Optimal GC Filter: 100ns
 // 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
 fn main() {
-    let mut vec: Vec<i32> = vec![0; 1500000];
-    // let mut vec: [i32; 20] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-    for i in (20..5000).step_by(7) {
-        let start_time = Instant::now();
-        parallel_shuffle(&mut vec, i as usize);
-        let elapsed_time = start_time.elapsed();
-        println!("Chunk Size: {} Time Exit: {:?}", i , elapsed_time);
-    }
+
     // game_rnd(1000, true);
-    // game_rnd_constraint(100000, true);
+    game_rnd_constraint(100000, true);
     // test_impossible_state(10000, true);
     // test_satis();
     // test_belief(20000000);
@@ -131,31 +124,7 @@ fn main() {
     // test_reach(); 
     // test_shuffle(100);
 }
-fn parallel_shuffle<T>(data: &mut [T], chunks_count: usize)
-where
-    T: Send + Sync + Clone,
-{
-    let chunk_size = data.len() / chunks_count;
-    let rng = &Mutex::new(SmallRng::from_entropy());
 
-    // 1. Shuffle each chunk in parallel
-    let mut chunks: Vec<_> = data.par_chunks_mut(chunk_size).map(|chunk| {
-        let mut rng = rng.lock().unwrap();
-        let mut local_chunk = chunk.to_vec();
-        local_chunk.shuffle(&mut *rng);
-        local_chunk
-    }).collect();
-
-    // 2. Shuffle the chunks themselves
-    {
-        let mut rng = rng.lock().unwrap();
-        chunks.shuffle(&mut *rng);
-    }
-
-    // 4. Flatten chunks back into the original array
-    let flattened: Vec<T> = chunks.into_iter().flatten().collect();
-    data.clone_from_slice(&flattened);
-}
 pub fn test_satis(){
     let mut colcon = CollectiveConstraint::new();
     colcon.add_public_constraint(1, Card::Ambassador);
@@ -596,7 +565,10 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                 log::info!("{}", format!("Choice: {:?}", output));
                 if output.name() == AOName::Discard{
                     if output.no_cards() == 1 {
+                        let start_time = Instant::now();
                         let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.cards()[0]);
+                        let elapsed_time = start_time.elapsed();
+                        println!("Elapsed Time for set check : {:?}", elapsed_time);
                         let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.cards()[0]);
                         if set_legality{
                             log::trace!("Set: Legal Move");
