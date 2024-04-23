@@ -18,9 +18,6 @@ mod string_utils;
 use prob_manager::naive_prob::{NaiveProb, CollectiveConstraint, GroupConstraint};
 use std::time::Instant;
 
-use rand::{rngs::SmallRng, SeedableRng};
-use rayon::prelude::*;
-use std::sync::Mutex;
 // QUICK TEMP: Exchange Draw showing 2 cards should prune the other groups? because they found out the pile has 2 cards
 //              Make Func to initialise past constraint history based on player perspective in naive_prob
 //              Integrate this by having an initial constraint history that can be loaded in
@@ -114,7 +111,7 @@ use std::sync::Mutex;
 fn main() {
 
     // game_rnd(1000, true);
-    game_rnd_constraint(100000, true);
+    game_rnd_constraint(10000, true);
     // test_impossible_state(10000, true);
     // test_satis();
     // test_belief(20000000);
@@ -565,10 +562,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                 log::info!("{}", format!("Choice: {:?}", output));
                 if output.name() == AOName::Discard{
                     if output.no_cards() == 1 {
-                        let start_time = Instant::now();
                         let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.cards()[0]);
-                        let elapsed_time = start_time.elapsed();
-                        println!("Elapsed Time for set check : {:?}", elapsed_time);
                         let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.cards()[0]);
                         if set_legality{
                             log::trace!("Set: Legal Move");
