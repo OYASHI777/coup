@@ -844,14 +844,16 @@ impl CollectiveConstraint{
         // TODO: Consider making a version where you clone self here and let function take &mut constraint and let it modify it in function
         let mut constraint: CollectiveConstraint = self.clone();
         
-        if CollectiveConstraint::player_can_have_active_card_pub(&constraint, player_id, card) {
-            // Doing this because there is a case where adding inferred groups leads to miscounting of card_count and \
-            // Excluding inferred groups information is helpful
-            constraint.add_inferred_groups();
-            CollectiveConstraint::player_can_have_active_card_pub(&constraint, player_id, card)
-        } else {
-            false
-        }
+        // if CollectiveConstraint::player_can_have_active_card_pub(&constraint, player_id, card) {
+        //     // Doing this because there is a case where adding inferred groups leads to miscounting of card_count and \
+        //     // Excluding inferred groups information is helpful
+        //     constraint.add_inferred_groups();
+        //     CollectiveConstraint::player_can_have_active_card_pub(&constraint, player_id, card)
+        // } else {
+            //     false
+            // }
+        constraint.add_inferred_groups();
+        CollectiveConstraint::player_can_have_active_card_pub(&constraint, player_id, card)
     }
     pub fn player_can_have_active_card_pub(input_constraint: &CollectiveConstraint, player_id: usize, card: &Card) -> bool {
         // Returns true if player can have a card in his hand that is alive
@@ -937,6 +939,7 @@ impl CollectiveConstraint{
             card_count.insert(Card::Captain, 0);
             card_count.insert(Card::Duke, 0);
             card_count.insert(Card::Contessa, 0);
+            // Initialise card_count_dead and card_count_alive
             let mut card_group_sets: HashMap<Card, [u8; 7]> = HashMap::new();
             for icard in [Card::Ambassador, Card::Assassin ,Card::Captain, Card::Duke, Card::Contessa].iter(){
                 // if let Some(value) = card_count.get_mut(icard){
@@ -966,12 +969,14 @@ impl CollectiveConstraint{
                         total_card_count += 1;
                         if let Some(value) = card_count.get_mut(vcard) {
                             *value += 1;
+                            // Update card_count_dead
                         }
                         // [Addition to test]
                         if let Some(arr) = card_group_sets.get_mut(vcard){
                             arr[iplayer_id] = 1;
                         }
                     }
+                    // Include this just in case
                     // if let Some(card_vec) = self.jc_hm.get(&i) {
                     //     total_card_count += 2;
                     //     for card in card_vec.iter() {
@@ -1041,7 +1046,11 @@ impl CollectiveConstraint{
                         }
                         // log::trace!("bool ME: {}", bool_mutual_exclusive);
                         if let Some(count_value) = card_count.get_mut(&constraint.gc_vec[j].card()) {
+                            // TODO: Add dead/alive split
+                            // Create another hashmap for dead/alive too
                             if bool_mutual_exclusive {
+                                // Consider storing dead and alive in group constraint
+                                // Add to both card_count dead and card_count alive based on how many there are
                                 *count_value += constraint.gc_vec[j].count();
                                 total_card_count += constraint.gc_vec[j].count();
                             } else {
