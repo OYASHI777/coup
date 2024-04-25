@@ -112,7 +112,7 @@ fn main() {
 
     // game_rnd(1000, true);
     // test_satis();
-    game_rnd_constraint(1000, true);
+    game_rnd_constraint(10000, true);
     // test_impossible_state(10000, true);
     // test_belief(20000000);
     // make_belief(20000000);
@@ -124,6 +124,7 @@ fn main() {
 
 pub fn test_satis(){
     logger();
+    let mut prob = NaiveProb::new();
 //     let mut colcon = CollectiveConstraint::new();
 //     colcon.add_public_constraint(3, Card::Duke);
 //     colcon.add_public_constraint(1, Card::Duke);
@@ -308,47 +309,135 @@ pub fn test_satis(){
 //         println!("Test 6 Illegal Correct");
 //     }
     let mut colcon = CollectiveConstraint::new();
-    colcon.add_public_constraint(0, Card::Contessa);
-    colcon.add_public_constraint(1, Card::Assassin);
-    colcon.add_public_constraint(4, Card::Contessa);
-
     colcon.add_public_constraint(5, Card::Assassin);
-    colcon.add_public_constraint(5, Card::Captain);
-    colcon.add_public_constraint(3, Card::Duke);
-    colcon.add_public_constraint(3, Card::Captain);
-    colcon.add_public_constraint(2, Card::Assassin);
+
+    colcon.add_public_constraint(3, Card::Assassin);
+    colcon.add_public_constraint(3, Card::Contessa);
+    colcon.add_public_constraint(0, Card::Duke);
+    colcon.add_public_constraint(0, Card::Captain);
+    colcon.add_public_constraint(2, Card::Contessa);
     colcon.add_public_constraint(2, Card::Duke);
     
-    let group1: GroupConstraint = GroupConstraint::new_list([1, 1, 0, 0, 0, 0, 1], Card::Ambassador, 0,  2);
-    let group2: GroupConstraint = GroupConstraint::new_list([1, 1, 0, 0, 1, 0, 1], Card::Duke, 0, 1 );
-    let group3: GroupConstraint = GroupConstraint::new_list([1, 1, 0, 0, 1, 0, 1], Card::Ambassador, 0, 3 );
-    let group4: GroupConstraint = GroupConstraint::new_list([1, 1, 0, 0, 1, 0, 1], Card::Contessa , 2, 0 );
-    let group5: GroupConstraint = GroupConstraint::new_list([1, 1, 0, 0, 0, 0, 1], Card::Captain , 0, 1 );
-    let group6: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Ambassador , 0, 1 );
+    let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Contessa, 0,  1);
+    let group2: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 1, 1], Card::Captain, 0, 2 );
+    let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Ambassador, 0, 1 );
+    let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Duke , 0, 1 );
+    let group5: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Captain , 0, 1 );
     
     colcon.add_raw_group(group1);
     colcon.add_raw_group(group2);
     colcon.add_raw_group(group3);
     colcon.add_raw_group(group4);
     colcon.add_raw_group(group5);
-    colcon.add_raw_group(group6);
     log::info!(" === Test 7 === ");
     // This illegal wrong this is no reproducible 2 times
     colcon.printlog();
-    // inferred is wrong
-    colcon.group_initial_prune(1, &Card::Captain, 1, false);
-    colcon.group_initial_prune(1, &Card::Contessa, 1, false);
-    log::info!("Prune done");
+
+    let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 1, &Card::Assassin);
+    let brute_output: bool = !prob.can_player_have_card_test(&colcon, 1, &Card::Assassin).is_none();
+    log::trace!("Brute: {}", brute_output);
+    prob.filter_state_simple_test(&colcon);
+    prob.log_calc_state();
+    if output {
+        println!("Test 7 Legal Correct");
+    } else {
+        println!("Test 7 Illegal Wrong");
+    }
+    let mut colcon = CollectiveConstraint::new();
+    colcon.add_public_constraint(2, Card::Contessa);
+    colcon.add_public_constraint(5, Card::Assassin);
+    colcon.add_public_constraint(0, Card::Assassin);
+
+    colcon.add_public_constraint(4, Card::Captain);
+    colcon.add_public_constraint(4, Card::Contessa);
+    colcon.add_public_constraint(1, Card::Assassin);
+    colcon.add_public_constraint(1, Card::Captain);
+    
+    let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Duke, 0,  2);
+    let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Captain, 0, 1 );
+    let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Ambassador, 0, 1 );
+    
+    colcon.add_raw_group(group1);
+    colcon.add_raw_group(group2);
+    colcon.add_raw_group(group3);
+
+    log::info!(" === Test 8 === ");
+    // This illegal wrong this is no reproducible 2 times
     colcon.printlog();
-    colcon.add_group_constraint_exchange(1, &Card::Captain, 1);
-    colcon.add_group_constraint_exchange(1, &Card::Contessa, 1);
+    let dead_hm = colcon.dead_card_count();
+    log::trace!("dead_card_count: {:?}", dead_hm);
+    let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Ambassador);
+    let brute_output: bool = !prob.can_player_have_card_test(&colcon, 2, &Card::Ambassador).is_none();
+    log::trace!("Brute: {}", brute_output);
+    prob.filter_state_simple_test(&colcon);
+    prob.log_calc_state();
+    if output {
+        println!("Test 8 Legal Wrong");
+    } else {
+        println!("Test 8 Illegal Correct");
+    }
+
+    let mut colcon = CollectiveConstraint::new();
+
+    colcon.add_public_constraint(2, Card::Captain);
+    colcon.add_public_constraint(2, Card::Contessa);
+    colcon.add_public_constraint(3, Card::Assassin);
+    colcon.add_public_constraint(3, Card::Ambassador);
+    
+    let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Captain, 0,  2);
+    let group2: GroupConstraint = GroupConstraint::new_list([1, 0, 0, 0, 1, 0, 1], Card::Contessa, 0, 1 );
+    let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Assassin, 0, 2);
+    let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Duke, 0, 1);
+    
+    colcon.add_raw_group(group1);
+    colcon.add_raw_group(group2);
+    colcon.add_raw_group(group3);
+    colcon.add_raw_group(group4);
+
+    log::info!(" === Test 9 === ");
+    // This illegal wrong this is no reproducible 2 times
     colcon.printlog();
-    // let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Captain);
-    // if output {
-    //     println!("Test 6 Legal Wrong");
-    // } else {
-    //     println!("Test 6 Illegal Correct");
-    // }
+
+    let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 5, &Card::Contessa);
+    let brute_output: bool = !prob.can_player_have_card_test(&colcon, 1, &Card::Assassin).is_none();
+    log::trace!("Brute: {}", brute_output);
+    prob.filter_state_simple_test(&colcon);
+    prob.log_calc_state();
+    if output {
+        println!("Test 9 Legal Correct");
+    } else {
+        println!("Test 9 Illegal Wrong");
+    }
+    let mut colcon = CollectiveConstraint::new();
+
+    colcon.add_public_constraint(2, Card::Ambassador);
+    colcon.add_public_constraint(5, Card::Assassin);
+    colcon.add_public_constraint(1, Card::Assassin);
+    colcon.add_public_constraint(3, Card::Duke);
+    colcon.add_public_constraint(0, Card::Captain);
+    colcon.add_public_constraint(0, Card::Contessa);
+    
+    let group1: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Duke, 0, 2);
+    let group2: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Duke, 0, 1 );
+    
+    colcon.add_raw_group(group1);
+    colcon.add_raw_group(group2);
+
+
+    log::info!(" === Test 10 === ");
+    // This illegal wrong this is no reproducible 2 times
+    colcon.printlog();
+
+    let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 1, &Card::Assassin);
+    let brute_output: bool = !prob.can_player_have_card_test(&colcon, 1, &Card::Assassin).is_none();
+    log::trace!("Brute: {}", brute_output);
+    prob.filter_state_simple_test(&colcon);
+    prob.log_calc_state();
+    if output {
+        println!("Test 10 Legal Correct");
+    } else {
+        println!("Test 10 Illegal Wrong");
+    }
 }
 pub fn test_shuffle(iterations: usize){
     logger();
