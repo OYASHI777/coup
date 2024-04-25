@@ -29,25 +29,33 @@ pub struct GroupConstraint {
     // e.g. [1,1,0,0,0,0,0] indicates that in the union of hands 0 and hand 1 collectively contain some card
     participation_list: [u8; 7],
     card: Card,
+    count_dead: usize,
+    count_alive: usize,
     count: usize,
 }
 
 impl GroupConstraint {
-    pub fn new(player_id: usize, card: Card, count: usize) -> Self {
+    pub fn new(player_id: usize, card: Card, count_dead: usize, count_alive: usize) -> Self {
         // Default includes the pile (player_id = 7) because all player mixes are with the pile and not with other players
         let participation_list: [u8; 7] = [0, 0, 0, 0, 0, 0, 1];
+        let count: usize = count_dead + count_alive;
         let mut output = GroupConstraint{
             participation_list,
             card,
+            count_dead,
+            count_alive,
             count,
         };
         output.group_add(player_id);
         output
     }
-    pub fn new_list(participation_list: [u8; 7], card: Card, count: usize) -> Self {
+    pub fn new_list(participation_list: [u8; 7], card: Card, count_dead: usize, count_alive: usize) -> Self {
+        let count: usize = count_dead + count_alive;
         GroupConstraint{
             participation_list,
             card,
+            count_dead,
+            count_alive,
             count,
         }
     }
@@ -65,6 +73,14 @@ impl GroupConstraint {
     pub fn count_add(&mut self, num: usize){
         self.count += num;
     }
+    pub fn count_dead_add(&mut self, num: usize){
+        self.count_dead += num;
+        self.count += num;
+    }
+    pub fn count_alive_add(&mut self, num: usize){
+        self.count_alive += num;
+        self.count += num;
+    }
     pub fn count_subtract(&mut self, num: usize){
         if self.count < num {
             self.count = 0;
@@ -72,8 +88,30 @@ impl GroupConstraint {
             self.count -= num;
         }
     }
+    pub fn count_dead_subtract(&mut self, num: usize){
+        if self.count_dead < num {
+            self.count_dead = 0;
+        } else {
+            self.count_dead -= num;
+            self.count -= num;
+        }
+    }
+    pub fn count_alive_subtract(&mut self, num: usize){
+        if self.count_alive < num {
+            self.count_alive = 0;
+        } else {
+            self.count_alive -= num;
+            self.count -= num;
+        }
+    }
     pub fn count(&self) -> usize {
         self.count
+    }
+    pub fn count_dead(&self) -> usize {
+        self.count_dead
+    }
+    pub fn count_alive(&self) -> usize {
+        self.count_alive
     }
     pub fn indicator(&self, player_id : usize) -> u8 {
         self.participation_list[player_id]
@@ -101,7 +139,8 @@ impl GroupConstraint {
         if self.card() != group.card(){
             return false;
         }
-        if self.get_list() == group.get_list() && self.count() <= group.count() {
+        // if self.get_list() == group.get_list() && self.count() <= group.count() {
+        if self.get_list() == group.get_list() && self.count() <= group.count() && self.count_dead() <= group.count_dead() && self.count_alive() <= group.count_alive() {
             true
         } else {
             false
@@ -154,7 +193,7 @@ impl GroupConstraint {
 }
 impl PartialEq for GroupConstraint {
     fn eq(&self, other: &Self) -> bool {
-        self.participation_list == other.participation_list && self.card == other.card && self.count == other.count
+        self.participation_list == other.participation_list && self.card == other.card && self.count == other.count && self.count_dead == other.count_dead && self.count_alive == other.count_alive
     }
 }
 impl Hash for GroupConstraint {
@@ -205,6 +244,7 @@ impl CollectiveConstraint{
         }
     }
     pub fn is_complement_of_pcjc(&self, group: &GroupConstraint) -> bool{
+        // Tells us if information in a group is mutually exclusive from information in pc_hm and jc_hm
         let mut indicators: [u8; 7] = group.get_list().clone();
         for (key, value) in &self.pc_hm {
             if value == group.card() {
@@ -328,7 +368,12 @@ impl CollectiveConstraint{
         self.group_dead_player_prune(player_id, card_vec);
     }
     // You will never remove from group only pop to reverse it because you cannot unmix cards
-    pub fn group_initial_prune(&mut self, player_id: usize, card: &Card, count: usize){
+    pub fn group_initial_prune(&mut self, player_id: usize, card: &Card, count: usize, bool_card_dead: bool){
+        // Pruning for revealredraw or exchangedraw
+        // Modifies dead_count and alive_count of groups that have player indicator == 1 given the knowledge of a card being dead
+        // bool_cards_dead should only be true for discard and not revealredraw not exchangedraw
+        // Should be true if card revealed is dead, and false if card revealed is eventually reshuffled or alive
+        // count here is the number of cards revealed
         debug_assert!(player_id <= 6, "Player ID Wrong");
         let mut new_count: usize = count;
         // Considering the case where another card is dead, adds to card count for pruning
@@ -349,16 +394,28 @@ impl CollectiveConstraint{
             // This special case is for the original ambassadar version of coup only you might need to initial prune for the inquisitor
             let group = &mut self.gc_vec[index];
             // if group.card() == card && group.get_list()[player_id] == 1 && group.count() <= count{
+
             if group.card() == card && group.get_list()[player_id] == 1 && group.count() <= new_count{
                 // Prune If same card and is subset if old group count <= revealed count
                 // Because the group is redundant
+                log::trace!("Initial Prune Remove");
                 self.gc_vec.swap_remove(index);
+            } else if group.card() == card && group.get_list()[player_id] == 1 && group.count() > new_count && bool_card_dead{
+                // Adjusting figures appropriately to reflect number alive in the group and number dead
+                // In the case of Discard
+                log::trace!("initial prune add subtract");
+                log::trace!("Group: {:?}", group);
+                group.count_dead_add(count);
+                group.count_alive_subtract(count);
+                index += 1;
             } else {
                 index += 1;
             }
         }
+        // if its one dead one alive?
     }
     pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: &Vec<Card>){
+        // Group initial prune should have been used before this, so the dead counts should be correct in group
         // Prunes relevant groups in gc_vec when player loses all their cards
         log::info!("DEAD PLAYER PRUNE");
         let mut index: usize = 0;
@@ -377,7 +434,7 @@ impl CollectiveConstraint{
                     if group.card() == &card_vec[0] {
                         log::trace!("SUBTRACT 2");
                         group.group_subtract(player_id);
-                        group.count_subtract(2);
+                        group.count_dead_subtract(2);
                         bool_subtract = true;
                     }
                     if group.count() == 0 {
@@ -387,12 +444,12 @@ impl CollectiveConstraint{
                     if group.card() == &card_vec[0] {
                         log::trace!("SUBTRACT 1");
                         group.group_subtract(player_id);
-                        group.count_subtract(1);
+                        group.count_dead_subtract(1);
                         bool_subtract = true;
                     }else if group.card() == &card_vec[1] {
                         log::trace!("SUBTRACT 1");
                         group.group_subtract(player_id);
-                        group.count_subtract(1);
+                        group.count_dead_subtract(1);
                         bool_subtract = true;
                     }
                     if group.count() == 0 {
@@ -401,8 +458,9 @@ impl CollectiveConstraint{
                 }
                 // Other cases PRUNED in Initial PRUNE
             }
-            if group.count() == 0{
+            if group.count_alive() == 0{
                 // This part is technically redundant as this case should be handled in group_initial_prune
+                // No longer handled in group_initial_prune
                 self.gc_vec.swap_remove(index);
             } else if self.dead_card_count[group.card()] == 3 {
                 // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
@@ -430,11 +488,15 @@ impl CollectiveConstraint{
                     let group_j = &self.gc_vec[j];
                     if self.is_redundant(group_i, group_j){
                         // group i is redundant
+                        log::trace!("Redundant Group i < j i= {:?}", group_i);
+                        log::trace!("Redundant Group i < j j= {:?}", group_j);
                         self.gc_vec.swap_remove(i);
                         i_incremented  = true;
                         break;
                     } else if self.is_redundant(group_j, group_i) {
                         // group j is redundant
+                        log::trace!("Redundant Group j < i i= {:?}", group_i);
+                        log::trace!("Redundant Group j < i j= {:?}", group_j);
                         self.gc_vec.swap_remove(j);
                     } else {
                         j += 1;
@@ -454,10 +516,14 @@ impl CollectiveConstraint{
         if group1.card() != group2.card(){
             return false;
         }
+        if group1.count_alive() == 0 {
+            return true;
+        }
         let card: &Card = group1.card();
         let remaining_count: usize = 3 - self.dead_card_count[card] as usize;
 
-        if group1.count() == remaining_count && group2.count() == remaining_count {
+        if group1.count_alive() == remaining_count && group2.count_alive() == remaining_count {
+        // if group1.count() == remaining_count && group2.count() == remaining_count {
             // Keep the subset as it is smaller!
             if group2.part_list_is_subset_of(group1) {
                 // e.g. where group 2 part list is subset of group 1 part list
@@ -478,13 +544,15 @@ impl CollectiveConstraint{
     pub fn add_group_constraint(&mut self, player_id: usize, card: &Card, count: usize){
         // Adds a new constraint used for RevealRedraw
         // There is an [INITIAL PRUNE] because we know player had a card before the swap!
-        let mut new_count: usize = count;
+        // let mut new_count: usize = count;
+        let mut dead_count: usize = 0;
         if let Some(card_dead) = self.pc_hm.get(&player_id) {
             if card_dead == card {
                 // RevealRedraw Case
                 // Increase the count if player who revealed the card already has a dead card that is the same!
                 // Player & Pile will have at least 2 of the card
-                new_count += 1;
+                // new_count += 1;
+                dead_count += 1;
             }
         } else if !self.jc_hm.get(&player_id).is_none(){
             // Should not be able to revealredraw or exchangedraw if jc_hm has player as the player would be dead!
@@ -510,11 +578,20 @@ impl CollectiveConstraint{
                 // After RevealRedraw there are in total 2 Dukes among player 1,2 and Pile
                 // So we must increment the old counter by new_count
                 if group.card() == card {
-                    group.count_add(new_count);
+                    // log::trace!("RevealRedraw add group 1");
+                    group.count_alive_add(count);
+                    group.count_dead_add(dead_count);
                     if group.count() > 3 {
                         // Its not possible to reveal a card that the player should not even be able to have!
                         // debug_assert!(group.count() <= 3, "Impossible case reached!");
                         log::trace!("GROUP COUNT HIGH! FIX WITH LEGAL MOVE PRUNE");
+                    }
+                } else {
+                    if let Some(card_dead) = self.pc_hm.get(&player_id) { 
+                        if card_dead == group.card() {
+                            // log::trace!("reveal redraw dead card addition");
+                            group.count_dead_add(1);
+                        }
                     }
                 }
                 if group.all_in() == true {
@@ -530,7 +607,7 @@ impl CollectiveConstraint{
                 index += 1;
             }
         }
-        let addition: GroupConstraint = GroupConstraint::new(player_id, *card, new_count);
+        let addition: GroupConstraint = GroupConstraint::new(player_id, *card, dead_count, count);
         if !self.is_complement_of_pcjc(&addition) {
             // [COMPLEMENT PRUNE] We push only if it isnt a complement
             self.gc_vec.push(addition);
@@ -539,16 +616,18 @@ impl CollectiveConstraint{
         self.group_redundant_prune();
     }
     pub fn add_group_constraint_exchange(&mut self, player_id: usize, card: &Card, count: usize){
-        // Adds a new constraint used for 
+        // Adds a new constraint used for exchangedraw
         // Here Some Pile cards are revealed before a player chooses whether they want it
         // There is an [INITIAL PRUNE] because we know player had a card before the swap!
-        let mut new_count: usize = count;
+        // let mut new_count: usize = count;
+        let mut dead_count: usize = 0;
         if let Some(card_dead) = self.pc_hm.get(&player_id) {
             if card_dead == card {
                 // RevealRedraw Case
                 // Increase the count if player who revealed the card already has a dead card that is the same!
                 // Player & Pile will have at least 2 of the card
-                new_count += 1;
+                // new_count += 1;
+                dead_count += 1;
             }
         } else if !self.jc_hm.get(&player_id).is_none(){
             // Should not be able to revealredraw or exchangedraw if jc_hm has player as the player would be dead!
@@ -565,19 +644,43 @@ impl CollectiveConstraint{
                     // So the past group + new player has an additional card
                     // group is now mixed based on the swapping move
                     // [0 0 0 0 0 0 1] -> [0 0 0 1 0 0 1]
-                    group.group_add(player_id);
-                    // Exchange draw count is handled differently because pile is the card that is revealed
-                    if group.count() < new_count {
-                        group.count_add(new_count - group.count());
+                    // [0 0 0 1 0 0 1] -> [0 0 0 1 0 0 1]
+                    if group.get_list()[player_id] == 0 {
+                        group.group_add(player_id);
+                        group.count_dead_add(dead_count);
+                        log::trace!("ExchangeDraw add group 1");
+                    } 
+                    if group.count_alive() < count {
+                        log::trace!("ExchangeDraw add alive 1");
+                        group.count_alive_add(count - group.count_alive());
                     }
+                    // Exchange draw count is handled differently because pile is the card that is revealed
+                    // if group.count() < new_count {
+                        // group.count_add(new_count - group.count());
+                        // }
                     debug_assert!(group.count() < 4, "GROUP COUNT IN EXCHANGEDRAW TOO HIGH");
                 } 
             } else {
                 if group.get_list()[6] == 1{
-                    // Just mixes the set
                     if group.get_list()[player_id] == 0 {
-                        group.group_add(player_id);
+                        log::trace!("Exchange constraint do nothing");
                     }
+                    // Just mixes the set
+                    // Because this is private information, if this group considered is not tracking the card that was drawn
+                    // We know that the group.card() could not have been swapped to player unless they drew the group.card() from the pile in which case
+                    // group.card() == *card
+                    // So we do nothing
+                    // if group.get_list()[player_id] == 0{
+                    //     group.group_add(player_id);
+                    //     if let Some(dead_card) = self.pc_hm.get(&player_id) {
+                    //         if dead_card == group.card() {
+                    //             // Is this already done in initial prune?
+                    //             group.group_add(player_id);
+                    //             group.count_dead_add(1);
+                    //             log::trace!("ExchangeDraw add group 2");
+                    //         }
+                    //     }
+                    // }
                 }
             }
             if group.all_in() == true {
@@ -590,7 +693,8 @@ impl CollectiveConstraint{
                 index += 1;
             }
         }
-        let addition: GroupConstraint = GroupConstraint::new(player_id, *card, new_count);
+        // let addition: GroupConstraint = GroupConstraint::new(player_id, *card, new_count);
+        let addition: GroupConstraint = GroupConstraint::new(player_id, *card, dead_count, count);
         if !self.is_complement_of_pcjc(&addition) {
             // [COMPLEMENT PRUNE] We push only if it isnt a complement
             self.gc_vec.push(addition);
@@ -623,11 +727,13 @@ impl CollectiveConstraint{
                     if *indicator == 1 {
                         // The maximum amount of a card the player may hold
                         let mut max_possible_holdings: usize;
+                        let mut dead_count: usize = 0;
                         if let Some(dead_card) = self.pc_hm.get(&player_id) {
                             // Player has 1 Life
 
                             if *dead_card == group_card {
                                 max_possible_holdings = 2;
+                                dead_count += 1;
                             } else {
                                 max_possible_holdings = 1;
                             }
@@ -639,6 +745,7 @@ impl CollectiveConstraint{
                             for card in dead_card_vec.iter() {
                                 if *card == group_card {
                                     max_possible_holdings += 1;
+                                    dead_count += 1;
                                 }
                             }
                         } else {
@@ -649,7 +756,9 @@ impl CollectiveConstraint{
                             let mut inferred_group: GroupConstraint = self.gc_vec[index].clone();
                             log::trace!("INFERRED GROUP CLONED!: {:?}", inferred_group);
                             inferred_group.group_subtract(player_id);
-                            inferred_group.count_subtract(max_possible_holdings);
+                            // inferred_group.count_subtract(max_possible_holdings);
+                            inferred_group.count_dead_subtract(dead_count);
+                            inferred_group.count_alive_subtract(max_possible_holdings - dead_count);
                             log::trace!("INFERRED GROUP ADDED!: {:?}", inferred_group);
                             self.gc_vec.push(inferred_group);
                         }
@@ -796,12 +905,16 @@ impl CollectiveConstraint{
     pub fn update_group_constraint(&mut self, player_id: usize){
         // For each gc, if player is not a participant, they now become one
         // If all players are participants, remove from tracking
-        // This is used for moves like ExchangeChoice where players do not reveal their card but share but swap cards into and out of the pile
+        // This is only used in ExchangeChoice where players do not reveal their card but share but swap cards into and out of the pile
+        // Might already be done in exchangedraw
         let mut index: usize = 0;
         while index < self.gc_vec.len() {
             let group = &mut self.gc_vec[index];
             if group.get_list()[6] == 1 {
-                group.group_add(player_id);
+                if group.get_list()[player_id] == 0 {
+                    group.group_add(player_id);
+                    // Test to see if redundant
+                }
                 if group.all_in() {
                     // [FULL PRUNE] because group constraint just means there could be a Duke anywhere (anyone or the pile might have it)
                     self.gc_vec.swap_remove(index);
@@ -852,7 +965,7 @@ impl CollectiveConstraint{
         // } else {
             //     false
             // }
-        constraint.add_inferred_groups();
+        // constraint.add_inferred_groups();
         CollectiveConstraint::player_can_have_active_card_pub(&constraint, player_id, card)
     }
     pub fn player_can_have_active_card_pub(input_constraint: &CollectiveConstraint, player_id: usize, card: &Card) -> bool {
@@ -1293,7 +1406,7 @@ impl CollectiveConstraint{
                     if *indicator == 0 && iplayer_id == 6 {
                         for (card_hm, value_hm) in card_count.iter(){
                             if *value_hm > 0 {
-                                new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, *value_hm));
+                                new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 0, *value_hm));
                                 recurse_bool = true;
                             }
                         }     
@@ -1361,7 +1474,7 @@ impl CollectiveConstraint{
                         // Consider player 6 just add as group constraint
                         for (card_hm, value_hm) in card_count.iter(){
                             if *value_hm > 0 {
-                                new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, *value_hm));
+                                new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 0, *value_hm));
                                 recurse_bool = true;
                                 break;
                             }
@@ -1414,7 +1527,7 @@ impl CollectiveConstraint{
                     if *indicator == 0 && iplayer_id == 6 {
                         for (card_hm, value_hm) in card_count.iter(){
                             if *value_hm > 0 {
-                                new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, *value_hm));
+                                new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 0, *value_hm));
                                 recurse_bool = true;
                             }
                         }
@@ -1491,10 +1604,10 @@ impl CollectiveConstraint{
                             // 1 3 split add 2 of the 3 card type since it will definitely have at least 2 of that
                             for (card_hm, value_hm) in card_count.iter(){
                                 if *value_hm == 3 {
-                                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 2));
+                                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 0, 2));
                                     recurse_bool = true;
                                 } else if *value_hm == 2 {
-                                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 1));
+                                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 0, 1));
                                     recurse_bool = true;
                                 }
                             }
@@ -1697,7 +1810,7 @@ impl CollectiveConstraint{
                 // Add case for when both cards are the same!
                 // If both are the same it will return legal if 1 card works because I dont add [0, 0, 0, 0, 0, 0, 1] count: 2
                 if cards[0] != cards[1] {
-                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 1));
+                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 0, 1));
                 } else {
                     // When they are same, we put both constraints and see if can have the card? I dont think this should work tho?
                     // CURRENTLY NO PROPER FUNCTIONALITY IMPLEMENTED FOR TESTING IF PILE HAS 2 OF THE SAME CARD
@@ -1885,9 +1998,13 @@ impl NaiveProb {
                 1 => {
                     if let Some(temp_card) = ao.cards().first(){
                         self.constraint_history.push(self.constraint_history[self.constraint_history.len() - self.prev_index()].clone());
+                        log::trace!("Pushed");
                         if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
-                            last_constraint.group_initial_prune(ao.player_id(), temp_card, 1);
+                            log::trace!("Before Group Initial Prune");
+                            last_constraint.group_initial_prune(ao.player_id(), temp_card, 1, true);
+                            log::trace!("Group initial Pruned");
                             last_constraint.add_public_constraint(ao.player_id(), *temp_card);
+                            log::trace!("Public Constraint added");
                         } else {
                             debug_assert!(false, "constraint not stored at prev_index!");
                         }
@@ -1900,10 +2017,10 @@ impl NaiveProb {
                     self.constraint_history.push(self.constraint_history[self.constraint_history.len() - self.prev_index()].clone());
                     if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
                         if temp_cards[0] == temp_cards[1]{
-                            last_constraint.group_initial_prune(ao.player_id(), &temp_cards[0], 2);
+                            last_constraint.group_initial_prune(ao.player_id(), &temp_cards[0], 2, true);
                         } else {
-                            last_constraint.group_initial_prune(ao.player_id(), &temp_cards[0], 1);
-                            last_constraint.group_initial_prune(ao.player_id(), &temp_cards[1], 1);
+                            last_constraint.group_initial_prune(ao.player_id(), &temp_cards[0], 1, true);
+                            last_constraint.group_initial_prune(ao.player_id(), &temp_cards[1], 1, true);
                         }
                         last_constraint.add_joint_constraint(ao.player_id(), &temp_cards.to_vec());
                     } else {
@@ -1921,7 +2038,7 @@ impl NaiveProb {
                 // We update when cards a mixed with pile by player_id but no card is revealed
                 // last_constraint.update_group_constraint_hm(ao.player_id());
                 // last_constraint.add_group_constraint_hm(ao.player_id(), ao.card());
-                last_constraint.group_initial_prune(ao.player_id(), &ao.card(), 1);
+                last_constraint.group_initial_prune(ao.player_id(), &ao.card(), 1, false);
                 // last_constraint.update_group_constraint(ao.player_id());
                 last_constraint.add_group_constraint(ao.player_id(), &ao.card(), 1);
 
@@ -1939,10 +2056,10 @@ impl NaiveProb {
             if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
                 // Player gets info that the pile has 2 cards, which prunes other groups
                 if ao.cards()[0] == ao.cards()[1]{
-                    last_constraint.group_initial_prune(6, &ao.cards()[0], 2);
+                    last_constraint.group_initial_prune(6, &ao.cards()[0], 2, false);
                 } else {
-                    last_constraint.group_initial_prune(6, &ao.cards()[0], 1);
-                    last_constraint.group_initial_prune(6, &ao.cards()[1], 1);
+                    last_constraint.group_initial_prune(6, &ao.cards()[0], 1, false);
+                    last_constraint.group_initial_prune(6, &ao.cards()[1], 1, false);
                 }
 
                 if ao.cards()[0] == ao.cards()[1] {
@@ -1962,14 +2079,16 @@ impl NaiveProb {
                 let empty_collective_constraint: CollectiveConstraint = CollectiveConstraint::new();
                 self.constraint_history.push(Some(empty_collective_constraint));
             }
-            if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
-                // We update when cards a mixed with pile by player_id but no card is revealed
-                last_constraint.update_group_constraint(ao.player_id());
-                // last_constraint.update_group_constraint_hm(ao.player_id());
-            } else {
-                // Handle the case where the last element is None or the vector is empty
-                debug_assert!(false, "constraint not stored at prev_index!");
-            }
+            // Obsolete because it is handled in ExchangeDraw
+            // update_group_constraint will only be used for ExchangeDraw/ExchangeChoice when looking at past history and private information is not searched
+            // if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
+            //     // We update when cards a mixed with pile by player_id but no card is revealed
+            //     last_constraint.update_group_constraint(ao.player_id());
+            //     // last_constraint.update_group_constraint_hm(ao.player_id());
+            // } else {
+            //     // Handle the case where the last element is None or the vector is empty
+            //     debug_assert!(false, "constraint not stored at prev_index!");
+            // }
             self.dist_from_last.push(1);
         } else {
             // Add new case
@@ -2911,7 +3030,7 @@ impl NaiveProb {
             latest_constraint.add_raw_public_constraint(player_id, *card);
         } else {
             // Cannot treat the card as dead!
-            latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card, 1));
+            latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card, 0, 1));
         }
         let mut rng = rand::thread_rng();
         self.all_states.shuffle(&mut rng); // Shuffle in place
@@ -2946,10 +3065,10 @@ impl NaiveProb {
         let mut latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
         if player_id == 6 {
             if cards[0] == cards[1] {
-                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 2));
+                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 0, 2));
             } else {
-                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 1));
-                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[1], 1));
+                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 0,1));
+                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[1], 0, 1));
             }
         } else {
             // Now test with both constraints
