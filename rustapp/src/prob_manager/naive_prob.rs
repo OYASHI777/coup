@@ -187,8 +187,8 @@ impl GroupConstraint {
         list1
     }
     pub fn printlog(&self) {
-        log::trace!("{}", format!("Participation List: {:?}", self.participation_list));
-        log::trace!("{}", format!("Card: {:?}", self.card));
+        log::info!("{}", format!("Participation List: {:?}", self.participation_list));
+        log::info!("{}", format!("Card: {:?}", self.card));
     }
 }
 impl PartialEq for GroupConstraint {
@@ -444,7 +444,7 @@ impl CollectiveConstraint{
     pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: &Vec<Card>){
         // Group initial prune should have been used before this, so the dead counts should be correct in group
         // Prunes relevant groups in gc_vec when player loses all their cards
-        log::info!("DEAD PLAYER PRUNE");
+        // log::info!("DEAD PLAYER PRUNE");
         let mut index: usize = 0;
         let mut bool_subtract: bool = false;
         while index < self.gc_vec.len(){
@@ -454,7 +454,7 @@ impl CollectiveConstraint{
                 if group.card() != &card_vec[0] && group.card() != &card_vec[1]{
                     // Modify Group whose cards are different!
                     // Their card will not be in the indicator because it is full!
-                    log::trace!("SUBTRACT NO COUNT");
+                    // log::trace!("SUBTRACT NO COUNT");
                     group.group_subtract(player_id);
                     bool_subtract = true;
                 } else if &card_vec[0] == &card_vec[1]{
@@ -515,15 +515,15 @@ impl CollectiveConstraint{
                     let group_j = &self.gc_vec[j];
                     if self.is_redundant(group_i, group_j){
                         // group i is redundant
-                        log::trace!("Redundant Group i < j i= {:?}", group_i);
-                        log::trace!("Redundant Group i < j j= {:?}", group_j);
+                        // log::trace!("Redundant Group i < j i= {:?}", group_i);
+                        // log::trace!("Redundant Group i < j j= {:?}", group_j);
                         self.gc_vec.swap_remove(i);
                         i_incremented  = true;
                         break;
                     } else if self.is_redundant(group_j, group_i) {
                         // group j is redundant
-                        log::trace!("Redundant Group j < i i= {:?}", group_i);
-                        log::trace!("Redundant Group j < i j= {:?}", group_j);
+                        // log::trace!("Redundant Group j < i i= {:?}", group_i);
+                        // log::trace!("Redundant Group j < i j= {:?}", group_j);
                         self.gc_vec.swap_remove(j);
                     } else {
                         j += 1;
@@ -1002,8 +1002,8 @@ impl CollectiveConstraint{
         // Returns true if player can have a card in his hand that is alive
         // TODO: If this works, modify others to not clone before adding as input?
         let mut constraint: CollectiveConstraint = input_constraint.clone();
-        log::trace!("Entered Recursion");
-        constraint.printlog();
+        // log::trace!("Entered Recursion");
+        // constraint.printlog();
 
         // log::trace!("legality dead_card_count: {:?}", constraint.dead_card_count);
         if constraint.dead_card_count[card] == 3 {
@@ -2125,9 +2125,9 @@ impl CollectiveConstraint{
         true
     }
     pub fn printlog(&self) {
-        log::trace!("{}", format!("Public Constraint HM: {:?}", self.pc_hm));
-        log::trace!("{}", format!("Joint Constraint HM: {:?}", self.jc_hm));
-        log::trace!("{}", format!("Group Constraint VEC: {:?}", self.gc_vec));
+        log::info!("{}", format!("Public Constraint HM: {:?}", self.pc_hm));
+        log::info!("{}", format!("Joint Constraint HM: {:?}", self.jc_hm));
+        log::info!("{}", format!("Group Constraint VEC: {:?}", self.gc_vec));
     }
     pub fn player_can_have_active_cards(&self, player_id: usize, cards: &[Card; 2]) -> bool {
         if self.player_can_have_active_card(player_id, &cards[0]){

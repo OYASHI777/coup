@@ -112,8 +112,9 @@ use rand::prelude::IteratorRandom;
 fn main() {
 
     // game_rnd(1000, true);
-    test_satis();
+    // test_satis();
     // game_rnd_constraint(100000, false);
+    error_farmer(1000, true);
     // test_impossible_state(10000, true);
     // test_belief(20000000);
     // make_belief(20000000);
@@ -1631,6 +1632,305 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     println!("Total Same Card Exchange Draw Wrong: {}", total_wrong_same_cards_exchangedraw);
     println!("Total Tries: {}", total_tries);
 }
+pub fn error_farmer(game_no: usize, log_bool: bool){
+    if log_bool{
+        logger();
+    }
+    let mut game: usize = 0;
+    let mut max_steps: usize = 0;
+    let mut prob = NaiveProb::new();
+    let mut total_wrong_legal: usize = 0;
+    let mut total_wrong_illegal: usize = 0;
+    let mut total_wrong_legal_discard_1: usize = 0;
+    let mut total_wrong_illegal_discard_1: usize = 0;
+    let mut total_wrong_legal_discard_2: usize = 0;
+    let mut total_wrong_illegal_discard_2: usize = 0;
+    let mut total_wrong_legal_reveal_redraw: usize = 0;
+    let mut total_wrong_illegal_reveal_redraw: usize = 0;
+    let mut total_wrong_legal_exchangedraw: usize = 0;
+    let mut total_wrong_illegal_exchangedraw: usize = 0;
+    let mut total_legal_discard_1: usize = 0;
+    let mut total_illegal_discard_1: usize = 0;
+    let mut total_legal_discard_2: usize = 0;
+    let mut total_illegal_discard_2: usize = 0;
+    let mut total_legal_reveal_redraw: usize = 0;
+    let mut total_illegal_reveal_redraw: usize = 0;
+    let mut total_legal_exchangedraw: usize = 0;
+    let mut total_illegal_exchangedraw: usize = 0;
+    let mut total_wrong_same_cards_exchangedraw: usize = 0;
+    let mut total_already_illegal: usize = 0;
+    let mut total_wrong_legal_proper: usize = 0;
+    let mut total_wrong_illegal_proper: usize = 0;
+    let mut total_same: usize = 0;
+    let mut total_tries: usize = 0;
+    while game < game_no {
+        // log::info!("Game : {}", game);
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        // if game % (game_no / 10) == 0 {
+        if game % (500) == 0 {
+            println!("Game: {}", game);
+            println!("Total already illegal Wrong: {}/{}", total_already_illegal, total_tries);
+            println!("Total (Discard 1) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_1, total_legal_discard_1);
+            println!("Total (Discard 1) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_1, total_illegal_discard_1);
+            println!("Total (Discard 2) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_2, total_legal_discard_2);
+            println!("Total (Discard 2) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_2, total_illegal_discard_2);
+            println!("Total (RevealRedraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_reveal_redraw, total_legal_reveal_redraw);
+            println!("Total (RevealRedraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_reveal_redraw, total_illegal_reveal_redraw);
+            println!("Total (ExchangeDraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_exchangedraw, total_legal_exchangedraw);
+            println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_exchangedraw, total_illegal_exchangedraw);
+            println!("Total Same Card Exchange Draw Wrong: {}", total_wrong_same_cards_exchangedraw);
+            println!("Total Tries: {}", total_tries);
+        }
+
+        while !hh.game_won() {
+
+            new_moves = hh.generate_legal_moves();
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                if output.name() == AOName::Discard{
+                    if output.no_cards() == 1 {
+                        let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.cards()[0]);
+                        let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.cards()[0]);
+                        if set_legality{
+                            // log::trace!("Set: Legal Move");
+                            total_legal_discard_1 += 1;
+                        } else {
+                            // log::trace!("Set: Illegal Move");
+                            total_illegal_discard_1 += 1;
+                        }
+                        if legality.is_none(){
+                            // log::trace!("Actual: Illegal Move");
+                            if set_legality {
+                                log::info!("Verdict: Legal Wrong");
+                                prob.printlog();
+                                prob.filter_state_simple();
+                                if prob.calc_state_len() == 0 {
+                                    total_already_illegal += 1;
+                                } else {
+                                    total_wrong_legal_discard_1 += 1;
+                                }
+                                if log_bool {
+                                    // prob.log_calc_state();
+                                }
+                            }
+                        } else {
+                            // log::trace!("Actual: Legal Move");
+                            if !set_legality {
+                                log::info!("Verdict: Illegal Wrong");
+                                prob.printlog();
+                                prob.filter_state_simple();
+                                if prob.calc_state_len() == 0 {
+                                    total_already_illegal += 1;
+                                } else {
+                                    total_wrong_illegal_discard_1 += 1;
+                                }
+                                if log_bool {
+                                    // prob.log_calc_state();
+                                }
+                            }
+                        }
+                        total_tries += 1;
+                        if !set_legality || legality.is_none(){
+                            break    
+                        } else {
+                            hh.push_ao(output);
+                            prob.push_ao(&output);
+                        }
+                    } else {
+                        let set_legality: bool = prob.player_can_have_cards(output.player_id(), output.cards());
+                        let legality: Option<String> = prob.can_player_have_cards(output.player_id(), output.cards());
+                        if set_legality{
+                            // log::trace!("Set: Legal Move");
+                            total_legal_discard_2 += 1;
+                        } else {
+                            // log::trace!("Set: Illegal Move");
+                            total_illegal_discard_2 += 1;
+                        }
+                        if legality.is_none(){
+                            // log::trace!("Actual: Illegal Move");
+                            if set_legality {
+                                log::info!("Verdict: Legal Wrong");
+                                prob.printlog();
+                                prob.filter_state_simple();
+                                if prob.calc_state_len() == 0 {
+                                    total_already_illegal += 1;
+                                } else {
+                                    total_wrong_legal_discard_2 += 1;
+                                }
+                                if log_bool {
+                                    prob.log_calc_state();
+                                }
+                            }
+                        } else {
+                            // log::trace!("Actual: Legal Move");
+                            if !set_legality {
+                                log::info!("Verdict: Illegal Wrong");
+                                prob.printlog();
+                                prob.filter_state_simple();
+                                if prob.calc_state_len() == 0 {
+                                    total_already_illegal += 1;
+                                } else {
+                                    total_wrong_illegal_discard_2 += 1;
+                                }
+                                if log_bool {
+                                    // prob.log_calc_state();
+                                }
+                            }
+                        }
+                        total_tries += 1;
+                        if !set_legality || legality.is_none(){
+                            break    
+                        } else {
+                            hh.push_ao(output);
+                            prob.push_ao(&output);
+                        }
+                    }
+                } else if output.name() == AOName::RevealRedraw {
+                    let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.card());
+                    if set_legality{
+                        // log::trace!("Set: Legal Move");
+                        total_legal_reveal_redraw += 1;
+                    } else {
+                        // log::trace!("Set: Illegal Move");
+                        total_illegal_reveal_redraw += 1;
+                    }
+                    let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.card());
+
+                    if legality.is_none(){
+                        // log::trace!("Actual: Illegal Move");
+                        if set_legality {
+                            log::info!("Verdict: Legal Wrong");
+                            prob.printlog();
+                            prob.filter_state_simple();
+                            if prob.calc_state_len() == 0 {
+                                total_already_illegal += 1;
+                            } else {
+                                total_wrong_legal_reveal_redraw += 1;
+                            }
+                            if log_bool {
+                                prob.log_calc_state();
+                            }
+                        }
+                    } else {
+                        // log::trace!("Actual: Legal Move");
+                        if !set_legality {
+                            log::info!("Verdict: Illegal Wrong");
+                            prob.printlog();
+                            prob.filter_state_simple();
+                            if prob.calc_state_len() == 0 {
+                                total_already_illegal += 1;
+                            } else {
+                                total_wrong_illegal_reveal_redraw += 1;
+                            }
+                            if log_bool {
+                                prob.log_calc_state();
+                            }
+                            // log::trace!("Pringing another log for reproducibility");
+                            // prob.printlog();
+                        }
+                    }
+                    total_tries += 1;
+                    if !set_legality || legality.is_none(){
+                        break    
+                    } else {
+                        hh.push_ao(output);
+                        prob.push_ao(&output);
+                    }
+                } else if output.name() == AOName::ExchangeDraw {
+                    let set_legality: bool = prob.player_can_have_cards(6, output.cards());
+                    let legality: Option<String> = prob.can_player_have_cards(6, output.cards());
+                    if set_legality{
+                        // log::trace!("Set: Legal Move");
+                        total_legal_exchangedraw += 1;
+                    } else {
+                        // log::trace!("Set: Illegal Move");
+                        total_illegal_exchangedraw += 1;
+                    }
+                    if legality.is_none(){
+                        // log::trace!("Actual: Illegal Move");
+                        if set_legality {
+                            // log::trace!("Verdict: Legal Wrong");
+                            // prob.printlog();
+                            prob.filter_state_simple();
+                            if prob.calc_state_len() == 0 {
+                                total_already_illegal += 1;
+                            } else {
+                                total_wrong_legal_exchangedraw += 1;
+                                if output.cards()[0] == output.cards()[1] {
+                                    total_wrong_same_cards_exchangedraw += 1;
+                                }
+                            }
+                            if log_bool {
+                                // prob.log_calc_state();
+                            }
+                        }
+                    } else {
+                        // log::trace!("Actual: Legal Move");
+                        if !set_legality {
+                            // log::trace!("Verdict: Illegal Wrong");
+                            // prob.printlog();
+                            prob.filter_state_simple();
+                            if prob.calc_state_len() == 0 {
+                                total_already_illegal += 1;
+                            } else {
+                                total_wrong_illegal_exchangedraw += 1;
+                                if output.cards()[0] == output.cards()[1] {
+                                    total_wrong_same_cards_exchangedraw += 1;
+                                }
+                            }
+                            if log_bool {
+                                // prob.log_calc_state();
+                            }
+                        }
+                    }
+                    total_tries += 1;
+                    if !set_legality || legality.is_none() {
+                        break    
+                    } else {
+                        hh.push_ao(output);
+                        prob.push_ao(&output);
+                    }
+                } else {
+                    hh.push_ao(output);
+                    prob.push_ao(&output);
+                }
+            } else {
+                // log::trace!("Pushed bad move!");
+                break;
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            // log::info!("");
+        }
+        if step > max_steps {
+            max_steps = step;
+        }
+        // log::info!("{}", format!("Game Won : {:?}",step));
+        // hh.log_state();
+        // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+        // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+        // log::info!("");
+        prob.reset();
+        game += 1;
+    }
+    log::info!("Most Steps: {}", max_steps);
+    println!("Most Steps: {}", max_steps);
+    println!("Total already illegal Wrong: {}/{}", total_already_illegal, total_tries);
+    println!("Total (Discard 1) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_1, total_legal_discard_1);
+    println!("Total (Discard 1) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_1, total_illegal_discard_1);
+    println!("Total (Discard 2) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_2, total_legal_discard_2);
+    println!("Total (Discard 2) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_2, total_illegal_discard_2);
+    println!("Total (RevealRedraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_reveal_redraw, total_legal_reveal_redraw);
+    println!("Total (RevealRedraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_reveal_redraw, total_illegal_reveal_redraw);
+    println!("Total (ExchangeDraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_exchangedraw, total_legal_exchangedraw);
+    println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_exchangedraw, total_illegal_exchangedraw);
+    println!("Total Same Card Exchange Draw Wrong: {}", total_wrong_same_cards_exchangedraw);
+    println!("Total Tries: {}", total_tries);
+}
 
 pub fn test_impossible_state(game_no: usize, log_bool: bool){
     if log_bool{
@@ -1755,7 +2055,8 @@ pub fn logger(){
             )
         })
         // Set log level filter; this line is optional if using default_filter_or in from_env
-        .filter(None, LevelFilter::Trace) // Adjust the log level as needed
+        // .filter(None, LevelFilter::Trace) // Adjust the log level as needed
+        .filter(None, LevelFilter::Info) // Adjust the log level as needed
         // Direct logs to the file
         .target(Target::Pipe(Box::new(log_file)))
         // Apply the configuration
