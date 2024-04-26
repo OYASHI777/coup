@@ -379,27 +379,51 @@ pub fn par_constructor(constraint: &CollectiveConstraint) -> Option<String> {
     // Nested for loops
     log::trace!("pointers : {:?}", pointers);
 
-    let split_at_index = pointers[0].len() / 2;
-    let (first_half, second_half) = pointers[0].split_at(split_at_index);
-    let result = Mutex::new(None);
+    // let split_at_index = pointers[0].len() / 2;
+    // let (first_half, second_half) = pointers[0].split_at(split_at_index);
+    // let result = Mutex::new(None);
+    // rayon::scope(|s| {
+    //     s.spawn(|_| {
+    //         let res = search_in_half(first_half, &constraint, &pointers);
+    //         let mut result_lock = result.lock().unwrap();
+    //         if result_lock.is_none() && res.is_some() {
+    //             *result_lock = res;
+    //         }
+    //     });
+    //     s.spawn(|_| {
+    //         let res = search_in_half(second_half, &constraint, &pointers);
+    //         let mut result_lock = result.lock().unwrap();
+    //         if result_lock.is_none() && res.is_some() {
+    //             *result_lock = res;
+    //         }
+    //     });
+    // });
+    // Higher values makes longer tasks shorter but shorter tasks take more time!
+    let num_splits: usize;
+    if pointers[0].len() < 15 {
+        num_splits = pointers[0].len();
+    } else {
+        num_splits = 15;
+    }
+    let chunk_size: usize = pointers[0].len() / num_splits;
+    let result: Mutex<Option<String>> = Mutex::new(None);
     rayon::scope(|s| {
-        s.spawn(|_| {
-            let res = search_in_half(first_half, &constraint, &pointers);
-            let mut result_lock = result.lock().unwrap();
-            if result_lock.is_none() && res.is_some() {
-                *result_lock = res;
-            }
-        });
-        s.spawn(|_| {
-            let res = search_in_half(second_half, &constraint, &pointers);
-            let mut result_lock = result.lock().unwrap();
-            if result_lock.is_none() && res.is_some() {
-                *result_lock = res;
-            }
-        });
+        for i in 0..num_splits {
+            let start: usize = i * chunk_size;
+            let end: usize = if i == num_splits - 1 { pointers[0].len() } else { start + chunk_size };
+            let slice: &[&str] = &pointers[0][start..end];
+    
+            s.spawn(|_| {
+                let res: Option<String> = search_in_half(slice, &constraint, &pointers);
+                let mut result_lock = result.lock().unwrap();
+                if result_lock.is_none() && res.is_some() {
+                    *result_lock = res;
+                }
+            });
+        }
     });
 
-    let final_result = result.into_inner().unwrap();
+    let final_result: Option<String> = result.into_inner().unwrap();
     final_result
 }
 
