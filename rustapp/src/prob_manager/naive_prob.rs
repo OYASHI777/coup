@@ -2313,7 +2313,7 @@ impl NaiveProb {
         log::trace!("{}", format!("Calculated_State Length: {}", self.calculated_states.len()));
     }
     pub fn log_calc_state(&self){
-        log::trace!("{}", format!("Calculated_State: {:?}", self.calculated_states));
+        log::info!("{}", format!("Calculated_State: {:?}", self.calculated_states));
     }
     // Push()
     pub fn push_ao(&mut self, ao: &ActionObservation){
