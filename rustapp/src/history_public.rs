@@ -18,6 +18,15 @@ impl Card {
             Card::Contessa => "E".to_string(),
         }
     }
+    pub fn card_to_str(&self) -> &'static str {
+        match self {
+            Card::Ambassador => "A",
+            Card::Assassin => "B",
+            Card::Captain => "C",
+            Card::Duke => "D",
+            Card::Contessa => "E",
+        }
+    }
     pub fn card_to_char(&self) -> char {
         match self {
             Card::Ambassador => 'A',

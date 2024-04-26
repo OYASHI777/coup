@@ -4,6 +4,7 @@
 use std::collections::{HashSet, HashMap};
 pub mod history_public;
 pub mod pcmccfr;
+use crossbeam::thread;
 use pcmccfr::ReachProbability;
 use history_public::{ActionObservation, History, AOName, Card};
 use std::fs::File;
@@ -17,7 +18,7 @@ pub mod prob_manager;
 mod string_utils;
 use prob_manager::naive_prob::{NaiveProb, CollectiveConstraint, GroupConstraint};
 use std::time::Instant;
-
+use rand::prelude::IteratorRandom;
 // QUICK TEMP: Exchange Draw showing 2 cards should prune the other groups? because they found out the pile has 2 cards
 //              Make Func to initialise past constraint history based on player perspective in naive_prob
 //              Integrate this by having an initial constraint history that can be loaded in
@@ -111,8 +112,8 @@ use std::time::Instant;
 fn main() {
 
     // game_rnd(1000, true);
-    // test_satis();
-    game_rnd_constraint(10000, true);
+    test_satis();
+    // game_rnd_constraint(100000, false);
     // test_impossible_state(10000, true);
     // test_belief(20000000);
     // make_belief(20000000);
@@ -120,6 +121,483 @@ fn main() {
     // test_filter(1000);
     // test_reach(); 
     // test_shuffle(100);
+}
+pub fn generator(requirement: &str) -> &'static [&'static str] {
+    match requirement {
+        "A" => {
+            &["AA", "AB", "AC", "AD", "AE"]
+        },
+        "B" => {
+            &["AB", "BB", "BC", "BD", "BE"]
+        },
+        "C" => {
+            &["AC", "BC", "CC", "CD", "CE"]
+        },
+        "D" => {
+            &["AD", "BD", "CD", "DD", "DE"]
+        },
+        "E" => {
+            &["AE", "BE", "CE", "DE", "EE"]
+        },
+        _ => {
+            &["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE", "EE"]
+        },
+    }
+}
+pub fn constructor(constraint: &CollectiveConstraint) -> Option<String> {
+    let mut store: HashMap<&str, Vec<&str>> = HashMap::new();
+    let mut rng = thread_rng();
+    // Initialize and shuffle the card sets
+    let mut a = vec!["AA", "AB", "AC", "AD", "AE"];
+    let mut b = vec!["AB", "BB", "BC", "BD", "BE"];
+    let mut c = vec!["AC", "BC", "CC", "CD", "CE"];
+    let mut d = vec!["AD", "BD", "CD", "DD", "DE"];
+    let mut e = vec!["AE", "BE", "CE", "DE", "EE"];
+    let mut blank = vec!["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE", "EE"];
+    a.shuffle(&mut rng);
+    b.shuffle(&mut rng);
+    c.shuffle(&mut rng);
+    d.shuffle(&mut rng);
+    e.shuffle(&mut rng);
+    blank.shuffle(&mut rng);
+    log::trace!("A Shuffled: {:?}", a);
+    store.insert("A", a);
+    store.insert("B", b);
+    store.insert("C", c);
+    store.insert("D", d);
+    store.insert("E", e);
+    store.insert("_", blank);
+    store.insert("AA", vec!["AA"]);
+    store.insert("AB", vec!["AB"]);
+    store.insert("AC", vec!["AC"]);
+    store.insert("AD", vec!["AD"]);
+    store.insert("AE", vec!["AE"]);
+    store.insert("BB", vec!["BB"]);
+    store.insert("BC", vec!["BC"]);
+    store.insert("BD", vec!["BD"]);
+    store.insert("BE", vec!["BE"]);
+    store.insert("CC", vec!["CC"]);
+    store.insert("CD", vec!["CD"]);
+    store.insert("CE", vec!["CE"]);
+    store.insert("DD", vec!["DD"]);
+    store.insert("DE", vec!["DE"]);
+    store.insert("EE", vec!["EE"]);
+    // create 6 pointers 1 for each player, to point to the vector the player references
+    let mut pointers: Vec<&Vec<&str>> = vec![&store["_"]; 6]; 
+
+    // Run checks for each player_id to assign the right vector of Strings to them
+    for player_id in 0..6 {
+        if let Some(card) = constraint.pc_hm().get(&player_id){
+            // Assign the player's pointer to the relevant vector
+            // This should be the key to find the vector in store
+            pointers[player_id] = store.get(card.card_to_str()).unwrap_or(&store["_"]);
+        } else if let Some(card_vec) = constraint.jc_hm().get(&player_id){
+            //convert card_vec to a Vec of 1 string using card_to_char()
+            // Assign a pointer to this
+            let mut key_vec: Vec<char> = card_vec.iter().map(Card::card_to_char).collect();
+            key_vec.sort_unstable();
+            let key: String = key_vec.iter().collect();
+            pointers[player_id] = store.get(key.as_str()).unwrap_or(&store["_"]);
+        // } else {
+        //     //Assign pointer to store[blank]
+        //     pointers[player_id] = &store["_"];
+        }
+        log::trace!("Player: {player_id}, pointer: {:?}", pointers[player_id]);
+    }
+    let mut counter_hm: HashMap<&str, usize> = HashMap::new();
+    counter_hm.insert("A", 0);
+    counter_hm.insert("B", 0);
+    counter_hm.insert("C", 0);
+    counter_hm.insert("D", 0);
+    counter_hm.insert("E", 0);
+    // Nested for loops
+    log::trace!("pointers : {:?}", pointers);
+    for &card0 in pointers[0] {
+        // increment counter_hm based on &card0 cards
+        log::trace!("For card0: {}", card0);
+        log::trace!("counter_hm before enter increment: {:?}", counter_hm);
+        if increment_continue(&card0, &mut counter_hm) {
+            log::trace!("Increment True");
+            continue;
+        }
+        for &card1 in pointers[1] {
+            // Check if current string when incremented into counter_hm would make counter > 3
+            // if larger than 3 continue;
+            // else increment
+            log::trace!("For card1: {}", card1);
+            log::trace!("counter_hm before enter increment: {:?}", counter_hm);
+            if increment_continue(&card1, &mut counter_hm) {
+                log::trace!("Increment True");
+                continue;
+            }
+            for &card2 in pointers[2] {
+                // Check if current string when incremented into counter_hm would make counter > 3
+                // if larger than 3 continue;
+                // else increment
+                log::trace!("For card2: {}", card2);
+                log::trace!("counter_hm before enter increment: {:?}", counter_hm);
+                if increment_continue(&card2, &mut counter_hm) {
+                    log::trace!("Increment True");
+                    continue;
+                }
+                for &card3 in pointers[3] {
+                    // Check if current string when incremented into counter_hm would make counter > 3
+                    // if larger than 3 continue;
+                    // else increment
+                    log::trace!("For card3: {}", card3);
+                    log::trace!("counter_hm before enter increment: {:?}", counter_hm);
+                    if increment_continue(&card3, &mut counter_hm) {
+                        log::trace!("Increment True");
+                        continue;
+                    }              
+                    for &card4 in pointers[4] {
+                        // Check if current string when incremented into counter_hm would make counter > 3
+                        // if larger than 3 continue;
+                        // else increment            
+                        log::trace!("For card4: {}", card4);
+                        log::trace!("counter_hm before enter increment: {:?}", counter_hm);
+                        if increment_continue(&card4, &mut counter_hm) {
+                            log::trace!("Increment True");
+                            continue;
+                        }            
+                        for &card5 in pointers[5] {
+                            // Check if current string when incremented into counter_hm would make counter > 3
+                            // if larger than 3 continue;
+                            // else increment
+                            log::trace!("For card5: {}", card5);
+                            log::trace!("counter_hm before enter increment: {:?}", counter_hm);
+                            if increment_continue(&card5, &mut counter_hm) {
+                                log::trace!("Increment True");
+                                continue;
+                            }
+                            let mut card6 = String::new();
+                            for (&card_type, &count) in counter_hm.iter() {
+                                let remaining = 3 - count; // Calculate how many more of this card type are needed
+                                for _ in 0..remaining {
+                                    card6.push_str(card_type); // Append the card type as many times as needed
+                                }
+                            }
+                            let mut chars: Vec<char> = card6.chars().collect(); // Convert string to vector of characters
+                            chars.sort(); // Sort the vector in ascending order
+                            card6 = chars.into_iter().collect();
+                            // log::trace!("For card6: {}", card6);
+                            //infer &card6 to point to a 3 digit string
+                            // this is inferred by the remaining counts in counter_hm
+                            // Since all of counter_hm must be 3, the remaining strings are just the keys from counter_hm 
+                            // such that they all get incremented to 3
+
+                            // submit &card0 &card1 ... &card6 to a function that determines if they are legal
+                            // this function returns an Option<String>
+                            // return value is not none, return the Option<String>
+                                                    // Check if the entire combination is legal, including card6
+                            if let Some(result) = check_if_legal(&[card0, card1, card2, card3, card4, card5, &card6], constraint) {
+                                return Some(result);
+                            }
+                            decrement(&card5, &mut counter_hm);
+                            // decrement counter_hm based on &card5 cards
+                        }
+                        decrement(&card4, &mut counter_hm);
+                        // decrement counter_hm based on &card4 cards
+                    }
+                    decrement(&card3, &mut counter_hm);
+                    // decrement counter_hm based on &card3 cards
+                }
+                decrement(&card2, &mut counter_hm);
+                // decrement counter_hm based on &card2 cards
+            }
+            decrement(&card1, &mut counter_hm);
+            // decrement counter_hm based on &card1 cards
+        }
+        decrement(&card0, &mut counter_hm);
+        // decrement counter_hm based on &card0 cards
+    }
+    None
+}
+pub fn check_if_legal(cards: &[&str], constraint: &CollectiveConstraint) -> Option<String>{
+    // Check gc_vec constraints
+    log::trace!("Legal Check for: {:?}", cards);
+    for gc in constraint.gc_vec().iter() {
+        log::trace!("Checking Group: {:?}", gc);
+        let participation_list: &[u8; 7] = gc.get_list();  // Assume this returns a &[u8; 7]
+        let card_char: char = gc.card().card_to_char();  // Get the card character for this constraint
+        let required_count: usize = gc.count();  // Required count of this card character
+        let mut total_count: usize = 0;
+
+        // Loop through the participation list
+        for (i, &participation) in participation_list.iter().enumerate() {
+            if participation == 1 { 
+                total_count += cards[i].matches(card_char).count();
+            }
+        }
+        log::trace!("Total Count: {}", total_count);
+        // Check if the total count meets or exceeds the required count
+        if total_count < required_count {
+            return None;  // If any constraint is not met, return None
+        }
+    }
+    Some(cards.join(""))
+}
+pub fn increment_continue(str_ref: &str, counter_hm: &mut HashMap<&str, usize> ) -> bool {
+    log::trace!("str_ref: {}", str_ref);
+    log::trace!("counter_hm Beginning: {:?}", counter_hm);
+    if str_ref == "AA" {
+        if counter_hm["A"] > 1{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("A"){
+                *value += 2;
+            }
+        }
+    } else if str_ref == "AB" {
+        if counter_hm["A"] > 2 || counter_hm["B"] > 2{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("A"){
+                *value += 1;
+            }
+            if let Some(value) = counter_hm.get_mut("B"){
+                *value += 1;
+            }
+        }
+    } else if str_ref == "AC" {
+        if counter_hm["A"] > 2 || counter_hm["C"] > 2{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("A"){
+                *value += 1;
+            }
+            if let Some(value) = counter_hm.get_mut("C"){
+                *value += 1;
+            }
+        }
+    } else if str_ref == "AD" {
+        if counter_hm["A"] > 2 || counter_hm["D"] > 2{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("A"){
+                *value += 1;
+            }
+            if let Some(value) = counter_hm.get_mut("D"){
+                *value += 1;
+            }
+        }
+    } else if str_ref == "AE" {
+        if counter_hm["A"] > 2 || counter_hm["E"] > 2{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("A"){
+                *value += 1;
+            }
+            if let Some(value) = counter_hm.get_mut("E"){
+                *value += 1;
+            }
+        }
+    } else if str_ref == "BB" { 
+        if counter_hm["B"] > 1{
+            log::trace!("BB Return true");
+            log::trace!("Counter_hm exit: {:?}", counter_hm);
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("B"){
+                *value += 2;
+            }
+        }
+    } else if str_ref == "BC" { 
+        if counter_hm["B"] > 2 || counter_hm["C"] > 2{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("B"){
+                *value += 1;
+            }
+            if let Some(value) = counter_hm.get_mut("C"){
+                *value += 1;
+            }
+        }
+    } else if str_ref == "BD" { 
+        if counter_hm["B"] > 2 || counter_hm["D"] > 2{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("B"){
+                *value += 1;
+            }
+            if let Some(value) = counter_hm.get_mut("D"){
+                *value += 1;
+            }
+        }
+    } else if str_ref == "BE" { 
+        if counter_hm["B"] > 2 || counter_hm["E"] > 2{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("B"){
+                *value += 1;
+            }
+            if let Some(value) = counter_hm.get_mut("E"){
+                *value += 1;
+            }
+        }
+    } else if str_ref == "CC" {
+        if counter_hm["C"] > 1{
+            log::trace!("CC Return true");
+            log::trace!("Counter_hm exit: {:?}", counter_hm);
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("C"){
+                *value += 2;
+            }
+        }
+    } else if str_ref == "CD" {
+        if counter_hm["C"] > 2 || counter_hm["D"] > 2{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("C"){
+                *value += 1;
+            }
+            if let Some(value) = counter_hm.get_mut("D"){
+                *value += 1;
+            }
+        }
+    } else if str_ref == "CE" {
+        if counter_hm["C"] > 2 || counter_hm["E"] > 2{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("C"){
+                *value += 1;
+            }
+            if let Some(value) = counter_hm.get_mut("E"){
+                *value += 1;
+            }
+        }
+    } else if str_ref == "DD" {
+        if counter_hm["D"] > 1{
+            log::trace!("DD Return true");
+            log::trace!("Counter_hm exit: {:?}", counter_hm);
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("D"){
+                *value += 2;
+            }
+        }
+    } else if str_ref == "DE" {
+        if counter_hm["D"] > 2 || counter_hm["E"] > 2{
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("D"){
+                *value += 1;
+            }
+            if let Some(value) = counter_hm.get_mut("E"){
+                *value += 1;
+            }
+        }
+    } else if str_ref == "EE" {
+        if counter_hm["E"] > 1{
+            log::trace!("EE Return true");
+            log::trace!("Counter_hm exit: {:?}", counter_hm);
+            return true;
+        } else {
+            if let Some(value) = counter_hm.get_mut("E"){
+                *value += 2;
+            }
+        }
+    }
+    log::trace!("counter_hm End: {:?}", counter_hm);
+    false
+}
+pub fn decrement(str_ref: &str, counter_hm: &mut HashMap<&str, usize> ) -> bool {
+    log::trace!("Decrement str_ref: {str_ref}");
+    log::trace!("Decrement Start: {:?}", counter_hm);
+    if str_ref == "AA" {
+        if let Some(value) = counter_hm.get_mut("A"){
+            *value -= 2;
+        }
+    } else if str_ref == "AB" {
+        if let Some(value) = counter_hm.get_mut("A"){
+            *value -= 1;
+        }
+        if let Some(value) = counter_hm.get_mut("B"){
+            *value -= 1;
+        }
+    } else if str_ref == "AC" {
+        if let Some(value) = counter_hm.get_mut("A"){
+            *value -= 1;
+        }
+        if let Some(value) = counter_hm.get_mut("C"){
+            *value -= 1;
+        }
+    } else if str_ref == "AD" {
+        if let Some(value) = counter_hm.get_mut("A"){
+            *value -= 1;
+        }
+        if let Some(value) = counter_hm.get_mut("D"){
+            *value -= 1;
+        }
+    } else if str_ref == "AE" {
+        if let Some(value) = counter_hm.get_mut("A"){
+            *value -= 1;
+        }
+        if let Some(value) = counter_hm.get_mut("E"){
+            *value -= 1;
+        }
+    } else if str_ref == "BB" { 
+        if let Some(value) = counter_hm.get_mut("B"){
+            *value -= 2;
+        }
+    } else if str_ref == "BC" { 
+        if let Some(value) = counter_hm.get_mut("B"){
+            *value -= 1;
+        }
+        if let Some(value) = counter_hm.get_mut("C"){
+            *value -= 1;
+        }
+    } else if str_ref == "BD" { 
+        if let Some(value) = counter_hm.get_mut("B"){
+            *value -= 1;
+        }
+        if let Some(value) = counter_hm.get_mut("D"){
+            *value -= 1;
+        }
+    } else if str_ref == "BE" { 
+        if let Some(value) = counter_hm.get_mut("B"){
+            *value -= 1;
+        }
+        if let Some(value) = counter_hm.get_mut("E"){
+            *value -= 1;
+        }
+    } else if str_ref == "CC" {
+        if let Some(value) = counter_hm.get_mut("C"){
+            *value -= 2;
+        }
+    } else if str_ref == "CD" {
+        if let Some(value) = counter_hm.get_mut("C"){
+            *value -= 1;
+        }
+        if let Some(value) = counter_hm.get_mut("D"){
+            *value -= 1;
+        }
+    } else if str_ref == "CE" {
+        if let Some(value) = counter_hm.get_mut("C"){
+            *value -= 1;
+        }
+        if let Some(value) = counter_hm.get_mut("E"){
+            *value -= 1;
+        }
+    } else if str_ref == "DD" {
+        if let Some(value) = counter_hm.get_mut("D"){
+            *value -= 2;
+        }
+    } else if str_ref == "DE" {
+        if let Some(value) = counter_hm.get_mut("D"){
+            *value -= 1;
+        }
+        if let Some(value) = counter_hm.get_mut("E"){
+            *value -= 1;
+        }
+    } else if str_ref == "EE" {
+        if let Some(value) = counter_hm.get_mut("E"){
+            *value -= 2;
+        }
+    }
+    log::trace!("Decrement End: {:?}", counter_hm);
+    false
 }
 
 pub fn test_satis(){
@@ -338,6 +816,16 @@ pub fn test_satis(){
     log::trace!("Brute: {}", brute_output);
     prob.filter_state_simple_test(&colcon);
     prob.log_calc_state();
+    let start_time = Instant::now();
+    colcon.add_raw_public_constraint(1, Card::Assassin);
+    let construct_output: Option<String> = constructor(&colcon);
+    let elapsed_time = start_time.elapsed();
+    println!("Construct Time: {:?}", elapsed_time);
+    if !construct_output.is_none() {
+        println!("Test 7 Construct: Legal");
+    } else {
+        println!("Test 7 Construct: Illegal");
+    }
     if output {
         println!("Test 7 Legal Correct");
     } else {
@@ -371,6 +859,16 @@ pub fn test_satis(){
     log::trace!("Brute: {}", brute_output);
     prob.filter_state_simple_test(&colcon);
     prob.log_calc_state();
+    let start_time = Instant::now();
+    colcon.add_raw_public_constraint(2, Card::Ambassador);
+    let construct_output: Option<String> = constructor(&colcon);
+    let elapsed_time = start_time.elapsed();
+    println!("Construct Time: {:?}", elapsed_time);
+    if !construct_output.is_none() {
+        println!("Test 8 Construct: Legal");
+    } else {
+        println!("Test 8 Construct: Illegal");
+    }
     if output {
         println!("Test 8 Legal Wrong");
     } else {
@@ -399,10 +897,20 @@ pub fn test_satis(){
     colcon.printlog();
 
     let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 5, &Card::Contessa);
-    let brute_output: bool = !prob.can_player_have_card_test(&colcon, 1, &Card::Assassin).is_none();
+    let brute_output: bool = !prob.can_player_have_card_test(&colcon, 5, &Card::Contessa).is_none();
     log::trace!("Brute: {}", brute_output);
     prob.filter_state_simple_test(&colcon);
     prob.log_calc_state();
+    let start_time = Instant::now();
+    colcon.add_raw_public_constraint(5, Card::Contessa);
+    let construct_output: Option<String> = constructor(&colcon);
+    let elapsed_time = start_time.elapsed();
+    println!("Construct Time: {:?}", elapsed_time);
+    if !construct_output.is_none() {
+        println!("Test 9 Construct: Legal");
+    } else {
+        println!("Test 9 Construct: Illegal");
+    }
     if output {
         println!("Test 9 Legal Correct");
     } else {
@@ -433,6 +941,16 @@ pub fn test_satis(){
     log::trace!("Brute: {}", brute_output);
     prob.filter_state_simple_test(&colcon);
     prob.log_calc_state();
+    let start_time = Instant::now();
+    colcon.add_raw_public_constraint(1, Card::Assassin);
+    let construct_output: Option<String> = constructor(&colcon);
+    let elapsed_time = start_time.elapsed();
+    println!("Construct Time: {:?}", elapsed_time);
+    if !construct_output.is_none() {
+        println!("Test 10 Construct: Legal");
+    } else {
+        println!("Test 10 Construct: Illegal");
+    }
     if output {
         println!("Test 10 Legal Correct");
     } else {
@@ -853,7 +1371,10 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                 log::info!("{}", format!("Choice: {:?}", output));
                 if output.name() == AOName::Discard{
                     if output.no_cards() == 1 {
+                        // let start_time = Instant::now();
                         let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.cards()[0]);
+                        // let elapsed_time = start_time.elapsed();
+                        // println!("Time: {:?}", elapsed_time);
                         let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.cards()[0]);
                         if set_legality{
                             log::trace!("Set: Legal Move");

@@ -262,6 +262,15 @@ impl CollectiveConstraint{
             false
         }
     }
+    pub fn jc_hm(&self) -> &HashMap<usize, Vec<Card>> {
+        &self.jc_hm
+    }
+    pub fn pc_hm(&self) -> &HashMap<usize, Card> {
+        &self.pc_hm
+    }
+    pub fn gc_vec(&self) -> &Vec<GroupConstraint>{
+        &self.gc_vec
+    }
     pub fn add_raw_public_constraint(&mut self, player_id: usize, card: Card){
         // This is useful for testing whether a player can have a particular card
         // This does not prune groups 
