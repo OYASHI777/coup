@@ -115,10 +115,10 @@ use std::sync::Mutex;
 fn main() {
 
     // game_rnd(1000, true);
-    // test_satis();
+    test_satis();
     // game_rnd_constraint(100000, true);
     // error_farmer(1000000, true);
-    find_overflow(500000, 100);
+    // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
     // test_impossible_state(10000, true);
     // test_belief(20000000);
@@ -436,8 +436,8 @@ pub fn test_satis(){
     log::trace!("Brute: {}", brute_output);
     prob.filter_state_simple_test(&colcon);
     prob.log_calc_state();
-    let start_time = Instant::now();
     colcon.add_raw_public_constraint(5, Card::Contessa);
+    let start_time = Instant::now();
     let construct_output: Option<String> = colcon.par_constructor(&colcon);
     let elapsed_time = start_time.elapsed();
     println!("Construct Time: {:?}", elapsed_time);
@@ -476,8 +476,8 @@ pub fn test_satis(){
     log::trace!("Brute: {}", brute_output);
     prob.filter_state_simple_test(&colcon);
     prob.log_calc_state();
-    let start_time = Instant::now();
     colcon.add_raw_public_constraint(1, Card::Assassin);
+    let start_time = Instant::now();
     let construct_output: Option<String> = colcon.par_constructor(&colcon);
     let elapsed_time = start_time.elapsed();
     println!("Construct Time: {:?}", elapsed_time);
@@ -567,6 +567,47 @@ pub fn test_satis(){
         println!("Test 12 Legal Wrong");
     } else {
         println!("Test 12 Illegal Correct");
+    }
+    let mut colcon = CollectiveConstraint::new();
+
+
+    colcon.add_public_constraint(5, Card::Assassin);
+    colcon.add_public_constraint(0, Card::Duke);
+    colcon.add_public_constraint(1, Card::Ambassador);
+    colcon.add_public_constraint(3, Card::Duke);
+    colcon.add_public_constraint(3, Card::Contessa);
+    colcon.add_public_constraint(3, Card::Ambassador);
+    colcon.add_public_constraint(3, Card::Contessa);
+    
+    let group1: GroupConstraint = GroupConstraint::new_list([1, 1, 0, 0, 1, 0, 1], Card::Captain, 0, 3);
+    let group2: GroupConstraint = GroupConstraint::new_list([1, 0, 0, 0, 0, 0, 1], Card::Ambassador, 0, 1 );
+    let group3: GroupConstraint = GroupConstraint::new_list([1, 0, 0, 0, 1, 0, 1], Card::Captain, 0, 1);
+    let group4: GroupConstraint = GroupConstraint::new_list([1, 0, 0, 0, 0, 0, 1], Card::Duke, 1, 1);
+    let group5: GroupConstraint = GroupConstraint::new_list([1, 0, 0, 0, 0, 0, 1], Card::Assassin, 0, 2);
+    
+    colcon.add_raw_group(group1);
+    colcon.add_raw_group(group2);
+    colcon.add_raw_group(group3);
+    colcon.add_raw_group(group4);
+    colcon.add_raw_group(group5);
+
+
+    log::info!(" === Test Stack Overflow === ");
+    // This illegal wrong this is no reproducible 2 times
+    colcon.printlog();
+
+    println!("Before canhavecard");
+    let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 0, &Card::Duke);
+    println!("Before canhavetest");
+    let brute_output: bool = !prob.can_player_have_card_test(&colcon, 0, &Card::Duke).is_none();
+    log::trace!("Brute: {}", brute_output);
+    prob.filter_state_simple_test(&colcon);
+    prob.log_calc_state();
+
+    if output {
+        println!("Test Stack Overflow Legal Wrong");
+    } else {
+        println!("Test Stack Overflow Illegal Correct");
     }
 }
 pub fn test_shuffle(iterations: usize){
@@ -1924,6 +1965,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
         // log::info!("");
         prob.reset();
         game += 1;
+
     }
     log::info!("Most Steps: {}", max_steps);
     println!("Most Steps: {}", max_steps);
@@ -2257,7 +2299,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
         // log::info!("");
         prob.reset();
         game += 1;
-        if game % 5000 == 1 {
+        if game % 1000 == 1 {
             let smth = clear_logs();
         }
     }
@@ -2400,7 +2442,7 @@ pub fn logger(){
         })
         // Set log level filter; this line is optional if using default_filter_or in from_env
         // .filter(None, LevelFilter::Trace) // Adjust the log level as needed
-        .filter(None, LevelFilter::Info) // Adjust the log level as needed
+        .filter(None, LevelFilter::Trace) // Adjust the log level as needed
         // Direct logs to the file
         .target(Target::Pipe(Box::new(log_file)))
         // Apply the configuration

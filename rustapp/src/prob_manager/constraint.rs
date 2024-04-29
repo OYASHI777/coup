@@ -995,8 +995,8 @@ impl CollectiveConstraint{
         // Returns true if player can have a card in his hand that is alive
         // TODO: If this works, modify others to not clone before adding as input?
         let mut constraint: CollectiveConstraint = input_constraint.clone();
-        // constraint.printlog();
-        // log::info!("Entered Recursion");
+        log::info!("Entered Recursion");
+        constraint.printlog();
 
         // log::trace!("legality dead_card_count: {:?}", constraint.dead_card_count);
         if constraint.dead_card_count[card] == 3 {
@@ -1682,6 +1682,8 @@ impl CollectiveConstraint{
                                                     }
                                                 } 
                                             }
+
+                                            log::trace!("Entering Section Subset 2P Recurse A");
                                             if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
                                                 log::trace!("Section Subset 2P Recurse A False");
                                                 return false;
@@ -1706,6 +1708,10 @@ impl CollectiveConstraint{
                                             }
                                         }
                                         if total_lives == 2 {
+                                            log::trace!("total_lives == 2");
+                                            log::trace!("player_i_possible_cards: {:?}", player_i_possible_cards);
+                                            log::trace!("2 case players_left: {:?}", players_left);
+                                            constraint.printlog();
                                             let mut new_constraint: CollectiveConstraint = constraint.clone();
                                             for (id, indicator) in players_left.iter().enumerate() { 
                                                 // 1 unique card 3 total cards 2 players -> if players have 3 lives collectively, all their empty cards are the card
@@ -1718,10 +1724,22 @@ impl CollectiveConstraint{
                                                                 return false;
                                                             }
                                                         }
+                                                        log::trace!("Added raw constraint!");
                                                         new_constraint.add_raw_public_constraint(id, *vcard);
-                                                    } 
+                                                    } else if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                        if id == player_id {
+                                                            if *card == *vcard{
+                                                                return true;
+                                                            } else {
+                                                                return false;
+                                                            }
+                                                        }
+                                                        new_constraint.add_raw_public_constraint(id, *vcard);
+                                                        new_constraint.add_raw_public_constraint(id, *vcard);
+                                                    }
                                                 } 
                                             }
+                                            log::trace!("Entering Section Subset 2P Recurse B");
                                             if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
                                                 log::trace!("Section Subset 2P Recurse B False");
                                                 return false;
@@ -1765,8 +1783,9 @@ impl CollectiveConstraint{
                                                     } 
                                                 } 
                                             }
+                                            log::trace!("Entering Section Subset 2P Recurse C");
                                             if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
-                                                log::trace!("Section Subset 2P Recurse B False");
+                                                log::trace!("Section Subset 2P Recurse C False");
                                                 return false;
                                             } else {
                                                 return true;
@@ -1810,8 +1829,9 @@ impl CollectiveConstraint{
                                                     }
                                                 } 
                                             }
+                                            log::trace!("Entering Section Subset 2P Recurse D");
                                             if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
-                                                log::trace!("Section Subset 2P Recurse B False");
+                                                log::trace!("Section Subset 2P Recurse D False");
                                                 return false;
                                             } else {
                                                 return true;
@@ -1848,8 +1868,9 @@ impl CollectiveConstraint{
                                                 new_constraint.add_raw_public_constraint(id, *vcard);
                                             } 
                                         }
+                                        log::trace!("Entering Section Subset 2P Recurse E");
                                         if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
-                                            log::trace!("Section Subset 2P Recurse B False");
+                                            log::trace!("Section Subset 2P Recurse E False");
                                             return false;
                                         } else {
                                             return true;

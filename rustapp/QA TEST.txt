@@ -5,3 +5,25 @@
 2024-04-29T15:10:51 [INFO] - Verdict: Illegal Wrong
 2024-04-29T15:10:51 [INFO] - 
 2024-04-29T15:10:51 [INFO] - Calculated_State: ["BEDEBCAABCCDADE", "BEAEBCAABCCDDDE", "BEEEBCAABCCDADD"]
+
+2024-04-29T20:34:09 [INFO] - Public Constraint HM: {5: Captain}
+2024-04-29T20:34:09 [INFO] - Joint Constraint HM: {0: [Duke, Duke], 4: [Assassin, Assassin]}
+2024-04-29T20:34:09 [INFO] - Group Constraint VEC: [GroupConstraint { participation_list: [0, 1, 1, 1, 0, 0, 1], card: Captain, count_dead: 0, count_alive: 2, count: 2 }, GroupConstraint { participation_list: [0, 0, 1, 1, 0, 0, 1], card: Ambassador, count_dead: 0, count_alive: 3, count: 3 }, GroupConstraint { participation_list: [0, 0, 1, 0, 0, 0, 1], card: Duke, count_dead: 0, count_alive: 1, count: 1 }, GroupConstraint { participation_list: [0, 0, 1, 1, 0, 0, 1], card: Assassin, count_dead: 0, count_alive: 1, count: 1 }, GroupConstraint { participation_list: [0, 0, 1, 0, 0, 1, 1], card: Contessa, count_dead: 0, count_alive: 2, count: 2 }]
+2024-04-29T20:34:09 [INFO] - Choice: Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }
+2024-04-29T20:34:09 [INFO] - Verdict: Illegal Wrong
+2024-04-29T20:34:09 [INFO] - 
+2024-04-29T20:34:09 [INFO] - Calculated_State: ["DDCCAEAABBCEBDE", "DDCCAABEBBCEADE", "DDCEBEAABBCEACD", "DDCCAEAEBBCEABD", "DDCEADAABBCEBCE", "DDCECDAABBCEABE", "DDCEDEAABBCEABC", "DDCEADBCBBCEAAE", "DDCECEABBBCEAAD", "DDCCEEABBBCEAAD", "DDCECEAABBCEABD", "DDCEBDACBBCEAAE", "DDCEAEABBBCEACD", "DDCEACABBBCEADE", "DDCEBEACBBCEAAD", "DDCEACAABBCEBDE", "DDCEADABBBCEACE", "DDCEBCAABBCEADE", "DDCCDEAEBBCEAAB", "DDCCEEAABBCEABD", "DDCCADAEBBCEABE", "DDCEAABCBBCEADE", "DDCCDEABBBCEAAE", "DDCEAEACBBCEABD", "DDCCAAAEBBCEBDE", "DDCECDABBBCEAAE", "DDCEAAACBBCEBDE", "DDCCADABBBCEAEE", "DDCCADAABBCEBEE", "DDCEDEABBBCEAAC", "DDCEABAABBCECDE", "DDCCABAABBCEDEE", "DDCCBEAEBBCEAAD", "DDCCAAABBBCEDEE", "DDCCDEAABBCEABE", "DDCEBDAABBCEACE", "DDCEABACBBCEADE", "DDCEADACBBCEABE", "DDCCABAEBBCEADE", "DDCEAAABBBCECDE", "DDCCDEBEBBCEAAA", "DDCCAEBEBBCEAAD", "DDCCBEAABBCEADE", "DDCCBDAABBCEAEE", "DDCCADBEBBCEAAE", "DDCCAEABBBCEADE", "DDCEAEBCBBCEAAD", "DDCEAEAABBCEBCD", "DDCCBDAEBBCEAAE", "DDCEDEACBBCEAAB", "DDCEDEBCBBCEAAA"]
+
+2024-04-29T20:45:01 [INFO] - Public Constraint HM: {1: Ambassador, 2: Contessa, 3: Assassin}
+2024-04-29T20:45:01 [INFO] - Joint Constraint HM: {0: [Assassin, Duke], 4: [Assassin, Captain]}
+2024-04-29T20:45:01 [INFO] - Group Constraint VEC: [GroupConstraint { participation_list: [0, 1, 1, 0, 0, 0, 1], card: Captain, count_dead: 0, count_alive: 2, count: 2 }, GroupConstraint { participation_list: [0, 0, 0, 0, 0, 0, 1], card: Duke, count_dead: 0, count_alive: 1, count: 1 }, GroupConstraint { participation_list: [0, 0, 1, 1, 0, 0, 1], card: Ambassador, count_dead: 0, count_alive: 2, count: 2 }, GroupConstraint { participation_list: [0, 0, 0, 1, 0, 0, 1], card: Ambassador, count_dead: 0, count_alive: 1, count: 1 }, GroupConstraint { participation_list: [0, 0, 0, 1, 0, 0, 1], card: Contessa, count_dead: 0, count_alive: 1, count: 1 }]
+2024-04-29T20:45:01 [INFO] - Choice: Discard { player_id: 2, card: [Duke, Duke], no_cards: 1 }
+2024-04-29T20:45:01 [INFO] - Verdict: Legal Wrong
+2024-04-29T20:45:01 [INFO] - 
+2024-04-29T20:45:01 [INFO] - Calculated_State: ["BDACCEBEBCDEAAD", "BDACAEABBCDECDE", "BDACAEBEBCDEACD", "BDACCEABBCDEADE"]
+
+2024-04-29T21:08:39 [INFO] - Public Constraint HM: {5: Assassin, 0: Duke, 1: Ambassador}
+2024-04-29T21:08:39 [INFO] - Joint Constraint HM: {3: [Duke, Contessa], 2: [Ambassador, Contessa]}
+2024-04-29T21:08:39 [INFO] - Group Constraint VEC: [GroupConstraint { participation_list: [1, 1, 0, 0, 1, 0, 1], card: Captain, count_dead: 0, count_alive: 3, count: 3 }, GroupConstraint { participation_list: [1, 0, 0, 0, 0, 0, 1], card: Ambassador, count_dead: 0, count_alive: 1, count: 1 }, GroupConstraint { participation_list: [1, 0, 0, 0, 1, 0, 1], card: Captain, count_dead: 0, count_alive: 1, count: 1 }, GroupConstraint { participation_list: [1, 0, 0, 0, 0, 0, 1], card: Duke, count_dead: 1, count_alive: 1, count: 2 }, GroupConstraint { participation_list: [1, 0, 0, 0, 0, 0, 1], card: Assassin, count_dead: 0, count_alive: 2, count: 2 }]
+2024-04-29T21:08:39 [INFO] - Choice: Discard { player_id: 0, card: [Duke, Duke], no_cards: 1 }
+OVERFLOWED STACK
