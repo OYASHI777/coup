@@ -1351,11 +1351,14 @@ impl<'a> NaiveProb<'a> {
 
     pub fn player_can_have_card(&self, player_id: usize, card: &Card) -> bool {
         // This is the ideal set theory version
+        // ~20µs
+        // never more than 50µs
         let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
         latest_constraint.player_can_have_active_card(player_id, card)
     }
     pub fn player_can_have_card_constructor(&mut self, player_id: usize, card: &Card) -> bool {
         // This is the ideal constructed version
+        // > 20µs up to 500µs
         let mut latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
         latest_constraint.add_raw_public_constraint(player_id, *card);
         if self.naive_sampler.par_constructor(&latest_constraint).is_none(){
@@ -1366,16 +1369,25 @@ impl<'a> NaiveProb<'a> {
     }
     pub fn sample_random_state(&mut self) -> Option<String> {
         // This is the ideal constructed Sampler
+        // MEDIAN: 200µs
+        // MEAN: 1.5 ms
+        // Much 100-500x faster than Brute
         self.naive_sampler.par_constructor(&self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap())
     }
     pub fn player_can_have_cards(&self, player_id: usize, cards: &[Card; 2]) -> bool {
         // This is the ideal set theory version
         // Does not work for player_id == 6
+        // MEDIAN: 22µs
+        // MEAN: 22µs
+        // MAX: 65.8µs (600 cases)
         let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
         latest_constraint.player_can_have_active_cards(player_id, cards)
     }
     pub fn player_can_have_cards_constructor(&mut self, player_id: usize, cards: &[Card; 2]) -> bool {
         // This is the ideal constructed version
+        // MEDIAN: 25µs
+        // MEAN: 32µs
+        // MAX: 519.8µs (600 cases)
         let mut latest_constraint: CollectiveConstraint = self.latest_constraint();
         if player_id == 6 {
             if cards[0] == cards[1] {

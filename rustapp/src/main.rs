@@ -117,7 +117,7 @@ fn main() {
     // game_rnd(1000, true);
     // test_satis();
     // game_rnd_constraint(1000, true);
-    error_farmer(10000000, false);
+    error_farmer(10000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
     // test_impossible_state(10000, true);
@@ -1783,8 +1783,14 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                             prob.push_ao(&output);
                         }
                     } else {
+                        let start_time = Instant::now();
                         let set_legality: bool = prob.player_can_have_cards(output.player_id(), output.cards());
+                        let elapsed_time = start_time.elapsed();
+                        // log::info!("Set2: {:?}", elapsed_time);
+                        let start_time = Instant::now();
                         let legality: bool = prob.player_can_have_cards_constructor(output.player_id(), output.cards());
+                        let elapsed_time = start_time.elapsed();
+                        log::info!("Con2: {:?}", elapsed_time);
                         if set_legality{
                             // log::trace!("Set: Legal Move");
                             total_legal_discard_2 += 1;
@@ -1892,7 +1898,10 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                     }
                 } else if output.name() == AOName::ExchangeDraw {
                     let set_legality: bool = prob.player_can_have_cards(6, output.cards());
+                    let start_time = Instant::now();
                     let legality: bool = prob.player_can_have_cards_constructor(6, output.cards());
+                    let elapsed_time = start_time.elapsed();
+                    // log::info!("ED2: {:?}", elapsed_time);
                     if set_legality{
                         // log::trace!("Set: Legal Move");
                         total_legal_exchangedraw += 1;
