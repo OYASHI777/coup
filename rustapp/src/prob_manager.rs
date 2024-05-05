@@ -4,6 +4,7 @@ pub mod naive_prob;
 pub mod constraint;
 pub mod loader;
 mod coup_const;
+pub mod naive_sampler;
 
 // replay struct for Turn, Player, Action
 // vector of ProbStates

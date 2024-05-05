@@ -8,6 +8,7 @@ use crate::history_public::{Card, AOName, ActionObservation};
 use super::permutation_generator::{gen_table_combinations, gen_bag_combinations};
 use super::coup_const::{BAG_SIZES, TOKENS, MAX_PERM_STATES};
 use super::constraint::{GroupConstraint, CollectiveConstraint};
+use super::naive_sampler::{self, NaiveSampler};
 use std::collections::{HashMap, HashSet};
 // use core::hash::Hasher;
 use std::hash::{Hash, Hasher};
@@ -24,7 +25,7 @@ use rand::prelude::SliceRandom;
 use std::sync::Mutex;
 use core::sync::atomic::AtomicBool;
 
-pub struct NaiveProb {
+pub struct NaiveProb<'a> {
     // a vec of constraints to push and pop
     // dead cards to push or pop
     // Will not locally store game history, jsut the constraint history
@@ -40,14 +41,16 @@ pub struct NaiveProb {
     belief_hm: HashMap<String, Vec<f64>>,
     unique_2p_hands: Vec<String>,
     unique_3p_hands: Vec<String>,
+    naive_sampler: NaiveSampler<'a>,
 }
-impl NaiveProb {
+impl<'a> NaiveProb<'a> {
     pub fn new() -> Self {
         let unique_2p_hands: Vec<String> = gen_bag_combinations(TOKENS, &2);
         let unique_3p_hands: Vec<String> = gen_bag_combinations(TOKENS, &3);
         let mut all_states: Vec<String> = gen_table_combinations(TOKENS, &BAG_SIZES);
         let mut rng = rand::thread_rng();
         all_states.shuffle(&mut rng); // Shuffle in place
+        let naive_sampler: NaiveSampler = NaiveSampler::new();
         NaiveProb{
             constraint_history: Vec::with_capacity(1500),
             all_states,
@@ -60,6 +63,7 @@ impl NaiveProb {
             belief_hm: HashMap::new(),
             unique_2p_hands,
             unique_3p_hands,
+            naive_sampler,
         }
     }
     pub fn reset(&mut self) {
@@ -1350,9 +1354,45 @@ impl NaiveProb {
         let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
         latest_constraint.player_can_have_active_card(player_id, card)
     }
+    pub fn player_can_have_card_constructor(&mut self, player_id: usize, card: &Card) -> bool {
+        // This is the ideal constructed version
+        let mut latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+        latest_constraint.add_raw_public_constraint(player_id, *card);
+        if self.naive_sampler.par_constructor(&latest_constraint).is_none(){
+            return false
+        } else {
+            return true
+        }
+    }
+    pub fn sample_random_state(&mut self) -> Option<String> {
+        // This is the ideal constructed Sampler
+        self.naive_sampler.par_constructor(&self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap())
+    }
     pub fn player_can_have_cards(&self, player_id: usize, cards: &[Card; 2]) -> bool {
+        // This is the ideal set theory version
+        // Does not work for player_id == 6
         let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
         latest_constraint.player_can_have_active_cards(player_id, cards)
+    }
+    pub fn player_can_have_cards_constructor(&mut self, player_id: usize, cards: &[Card; 2]) -> bool {
+        // This is the ideal constructed version
+        let mut latest_constraint: CollectiveConstraint = self.latest_constraint();
+        if player_id == 6 {
+            if cards[0] == cards[1] {
+                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 0, 2));
+            } else {
+                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 0, 1));
+                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[1], 0, 1));
+            }
+        } else {
+            latest_constraint.add_raw_public_constraint(player_id, cards[0]);
+            latest_constraint.add_raw_public_constraint(player_id, cards[1]);
+        }
+        if self.naive_sampler.par_constructor(&latest_constraint).is_none(){
+            return false
+        } else {
+            return true
+        }
     }
     pub fn filter_player_can_have_card(&mut self, player_id: usize, card: &Card){
         let mut latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();

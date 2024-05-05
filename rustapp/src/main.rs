@@ -1432,12 +1432,8 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     if output.no_cards() == 1 {
                         // let start_time = Instant::now();
                         let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.cards()[0]);
-                        // let elapsed_time = start_time.elapsed();
-                        // println!("Time: {:?}", elapsed_time);
-                        // let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.cards()[0]);
-                        let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[0]);
-                        let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+
+                        let legality: bool = prob.player_can_have_card_constructor(output.player_id(), &output.cards()[0]);
                         if set_legality{
                             log::trace!("Set: Legal Move");
                             total_legal_discard_1 += 1;
@@ -1445,7 +1441,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             log::trace!("Set: Illegal Move");
                             total_illegal_discard_1 += 1;
                         }
-                        if legality.is_none(){
+                        if !legality{
                             log::trace!("Actual: Illegal Move");
                             if set_legality {
                                 log::trace!("Verdict: Legal Wrong");
@@ -1475,7 +1471,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             }
                         }
                         total_tries += 1;
-                        if !set_legality || legality.is_none(){
+                        if !set_legality || !legality{
                             break    
                         } else {
                             hh.push_ao(output);
@@ -1484,10 +1480,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     } else {
                         let set_legality: bool = prob.player_can_have_cards(output.player_id(), output.cards());
                         // let legality: Option<String> = prob.can_player_have_cards(output.player_id(), output.cards());
-                        let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[0]);
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[1]);
-                        let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+                        let legality: bool = prob.player_can_have_cards_constructor(output.player_id(), output.cards());
                         if set_legality{
                             log::trace!("Set: Legal Move");
                             total_legal_discard_2 += 1;
@@ -1495,7 +1488,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             log::trace!("Set: Illegal Move");
                             total_illegal_discard_2 += 1;
                         }
-                        if legality.is_none(){
+                        if !legality{
                             log::trace!("Actual: Illegal Move");
                             if set_legality {
                                 log::trace!("Verdict: Legal Wrong");
@@ -1525,7 +1518,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             }
                         }
                         total_tries += 1;
-                        if !set_legality || legality.is_none(){
+                        if !set_legality || !legality{
                             break    
                         } else {
                             hh.push_ao(output);
@@ -1541,32 +1534,8 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         log::trace!("Set: Illegal Move");
                         total_illegal_reveal_redraw += 1;
                     }
-                    // let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.card());
-                    let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                    latest_constraint.add_raw_public_constraint(output.player_id(), output.card());
-                    let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
-                    // prob.filter_player_can_have_card(output.player_id(), &output.card());
-                    // let proper: usize = prob.calc_state_len();
-                    // if proper == 0 {
-                    //     log::trace!("Actual Proper: Illegal Move");
-                    //     if set_legality {
-                    //         log::trace!("Verdict Proper: Legal Wrong");
-                    //         total_wrong_legal_proper += 1;
-                    //         prob.log_calc_state();
-                    //         prob.log_calc_state_len();
-                    //         hh.log_state();
-                    //     }
-                    // } else {
-                    //     log::trace!("Actual Proper: Legal Move");
-                    //     if !set_legality {
-                    //         log::trace!("Verdict Proper: Illegal Wrong");
-                    //         total_wrong_illegal_proper += 1;
-                    //         prob.log_calc_state();
-                    //         prob.log_calc_state_len();
-                    //         hh.log_state();
-                    //     }
-                    // }
-                    if legality.is_none(){
+                    let legality: bool = prob.player_can_have_card_constructor(output.player_id(), &output.card());
+                    if !legality{
                         log::trace!("Actual: Illegal Move");
                         if set_legality {
                             log::trace!("Verdict: Legal Wrong");
@@ -1603,7 +1572,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     //     total_same += 1;
                     // }
                     total_tries += 1;
-                    if !set_legality || legality.is_none(){
+                    if !set_legality || !legality{
                         break    
                     } else {
                         hh.push_ao(output);
@@ -1611,15 +1580,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     }
                 } else if output.name() == AOName::ExchangeDraw {
                     let set_legality: bool = prob.player_can_have_cards(6, output.cards());
-                    // let legality: Option<String> = prob.can_player_have_cards(6, output.cards());
-                    let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                    if output.cards()[0] == output.cards()[1] {
-                        latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], output.cards()[0], 0, 2));
-                    } else {
-                        latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], output.cards()[0], 0, 1));
-                        latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], output.cards()[1], 0, 1));
-                    }
-                    let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+                    let legality: bool = prob.player_can_have_cards_constructor(6, output.cards());
                     if set_legality{
                         log::trace!("Set: Legal Move");
                         total_legal_exchangedraw += 1;
@@ -1627,7 +1588,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         log::trace!("Set: Illegal Move");
                         total_illegal_exchangedraw += 1;
                     }
-                    if legality.is_none(){
+                    if !legality{
                         log::trace!("Actual: Illegal Move");
                         if set_legality {
                             log::trace!("Verdict: Legal Wrong");
@@ -1663,7 +1624,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         }
                     }
                     total_tries += 1;
-                    if !set_legality || legality.is_none() {
+                    if !set_legality || !legality {
                         break    
                     } else {
                         hh.push_ao(output);
@@ -1708,354 +1669,8 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     println!("Total Same Card Exchange Draw Wrong: {}", total_wrong_same_cards_exchangedraw);
     println!("Total Tries: {}", total_tries);
 }
-pub fn test_par_constructor(game_no: usize, log_bool: bool){
-    if log_bool{
-        logger();
-    }
-    let mut game: usize = 0;
-    let mut max_steps: usize = 0;
-    let mut prob = NaiveProb::new();
-    let mut total_wrong_legal: usize = 0;
-    let mut total_wrong_illegal: usize = 0;
-    let mut total_wrong_legal_discard_1: usize = 0;
-    let mut total_wrong_illegal_discard_1: usize = 0;
-    let mut total_wrong_legal_discard_2: usize = 0;
-    let mut total_wrong_illegal_discard_2: usize = 0;
-    let mut total_wrong_legal_reveal_redraw: usize = 0;
-    let mut total_wrong_illegal_reveal_redraw: usize = 0;
-    let mut total_wrong_legal_exchangedraw: usize = 0;
-    let mut total_wrong_illegal_exchangedraw: usize = 0;
-    let mut total_legal_discard_1: usize = 0;
-    let mut total_illegal_discard_1: usize = 0;
-    let mut total_legal_discard_2: usize = 0;
-    let mut total_illegal_discard_2: usize = 0;
-    let mut total_legal_reveal_redraw: usize = 0;
-    let mut total_illegal_reveal_redraw: usize = 0;
-    let mut total_legal_exchangedraw: usize = 0;
-    let mut total_illegal_exchangedraw: usize = 0;
-    let mut total_wrong_same_cards_exchangedraw: usize = 0;
-    let mut total_already_illegal: usize = 0;
-    let mut total_wrong_legal_proper: usize = 0;
-    let mut total_wrong_illegal_proper: usize = 0;
-    let mut total_same: usize = 0;
-    let mut total_tries: usize = 0;
-    while game < game_no {
-        log::info!("Game : {}", game);
-        let mut hh = History::new(0);
-        let mut step: usize = 0;
-        let mut new_moves: Vec<ActionObservation>;
-        // if game % (game_no / 10) == 0 {
-        if game % (100) == 0 {
-            println!("Game: {}", game);
-            println!("Total already illegal Wrong: {}/{}", total_already_illegal, total_tries);
-            println!("Total (Discard 1) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_1, total_legal_discard_1);
-            println!("Total (Discard 1) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_1, total_illegal_discard_1);
-            println!("Total (Discard 2) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_2, total_legal_discard_2);
-            println!("Total (Discard 2) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_2, total_illegal_discard_2);
-            println!("Total (RevealRedraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_reveal_redraw, total_legal_reveal_redraw);
-            println!("Total (RevealRedraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_reveal_redraw, total_illegal_reveal_redraw);
-            println!("Total (ExchangeDraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_exchangedraw, total_legal_exchangedraw);
-            println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_exchangedraw, total_illegal_exchangedraw);
-            println!("Total Same Card Exchange Draw Wrong: {}", total_wrong_same_cards_exchangedraw);
-            println!("Total Tries: {}", total_tries);
-        }
-        log::trace!("Game Made:");
-        while !hh.game_won() {
-            
-            log::trace!("Game Made:");
-            // log::info!("{}", format!("Step : {:?}",step));
-            hh.log_state();
-            prob.printlog();
-            // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
-            // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-            new_moves = hh.generate_legal_moves();
-            if new_moves[0].name() != AOName::CollectiveChallenge {
-                log::info!("{}", format!("Legal Moves: {:?}", new_moves));
-            } else {
-                // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
-                log::info!("{}", format!("Legal Moves: CollectiveChallenge"));
-            }
-            
-            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
-                log::info!("{}", format!("Choice: {:?}", output));
-                if output.name() == AOName::Discard{
-                    if output.no_cards() == 1 {
-                        // let start_time = Instant::now();
-                        let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[0]);
-                        let set_legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
-                        // let elapsed_time = start_time.elapsed();
-                        // println!("Time: {:?}", elapsed_time);
-                        let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.cards()[0]);
-                        if !set_legality.is_none(){
-                            log::trace!("Set: Legal Move");
-                            total_legal_discard_1 += 1;
-                        } else {
-                            log::trace!("Set: Illegal Move");
-                            total_illegal_discard_1 += 1;
-                        }
-                        if legality.is_none(){
-                            log::trace!("Actual: Illegal Move");
-                            if !set_legality.is_none() {
-                                log::trace!("Verdict: Legal Wrong");
-                                prob.filter_state_simple();
-                                if prob.calc_state_len() == 0 {
-                                    total_already_illegal += 1;
-                                } else {
-                                    total_wrong_legal_discard_1 += 1;
-                                }
-                                if log_bool {
-                                    prob.log_calc_state();
-                                }
-                            }
-                        } else {
-                            log::trace!("Actual: Legal Move");
-                            if set_legality.is_none() {
-                                log::trace!("Verdict: Illegal Wrong");
-                                prob.filter_state_simple();
-                                if prob.calc_state_len() == 0 {
-                                    total_already_illegal += 1;
-                                } else {
-                                    total_wrong_illegal_discard_1 += 1;
-                                }
-                                if log_bool {
-                                    prob.log_calc_state();
-                                }
-                            }
-                        }
-                        total_tries += 1;
-                        if set_legality.is_none() || legality.is_none(){
-                            break    
-                        } else {
-                            hh.push_ao(output);
-                            prob.push_ao(&output);
-                        }
-                    } else {
-                        let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[0]);
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[1]);
-                        let set_legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
-                        let legality: Option<String> = prob.can_player_have_cards(output.player_id(), output.cards());
-                        if !set_legality.is_none(){
-                            log::trace!("Set: Legal Move");
-                            total_legal_discard_2 += 1;
-                        } else {
-                            log::trace!("Set: Illegal Move");
-                            total_illegal_discard_2 += 1;
-                        }
-                        if legality.is_none(){
-                            log::trace!("Actual: Illegal Move");
-                            if !set_legality.is_none() {
-                                log::trace!("Verdict: Legal Wrong");
-                                prob.filter_state_simple();
-                                if prob.calc_state_len() == 0 {
-                                    total_already_illegal += 1;
-                                } else {
-                                    total_wrong_legal_discard_2 += 1;
-                                }
-                                if log_bool {
-                                    prob.log_calc_state();
-                                }
-                            }
-                        } else {
-                            log::trace!("Actual: Legal Move");
-                            if set_legality.is_none() {
-                                log::trace!("Verdict: Illegal Wrong");
-                                prob.filter_state_simple();
-                                if prob.calc_state_len() == 0 {
-                                    total_already_illegal += 1;
-                                } else {
-                                    total_wrong_illegal_discard_2 += 1;
-                                }
-                                if log_bool {
-                                    prob.log_calc_state();
-                                }
-                            }
-                        }
-                        total_tries += 1;
-                        if set_legality.is_none() || legality.is_none(){
-                            break    
-                        } else {
-                            hh.push_ao(output);
-                            prob.push_ao(&output);
-                        }
-                    }
-                } else if output.name() == AOName::RevealRedraw {
-                    let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                    latest_constraint.add_raw_public_constraint(output.player_id(), output.card());
-                    let set_legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
-                    if !set_legality.is_none(){
-                        log::trace!("Set: Legal Move");
-                        total_legal_reveal_redraw += 1;
-                    } else {
-                        log::trace!("Set: Illegal Move");
-                        total_illegal_reveal_redraw += 1;
-                    }
-                    let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.card());
-                    // prob.filter_player_can_have_card(output.player_id(), &output.card());
-                    // let proper: usize = prob.calc_state_len();
-                    // if proper == 0 {
-                    //     log::trace!("Actual Proper: Illegal Move");
-                    //     if set_legality {
-                    //         log::trace!("Verdict Proper: Legal Wrong");
-                    //         total_wrong_legal_proper += 1;
-                    //         prob.log_calc_state();
-                    //         prob.log_calc_state_len();
-                    //         hh.log_state();
-                    //     }
-                    // } else {
-                    //     log::trace!("Actual Proper: Legal Move");
-                    //     if !set_legality {
-                    //         log::trace!("Verdict Proper: Illegal Wrong");
-                    //         total_wrong_illegal_proper += 1;
-                    //         prob.log_calc_state();
-                    //         prob.log_calc_state_len();
-                    //         hh.log_state();
-                    //     }
-                    // }
-                    if legality.is_none(){
-                        log::trace!("Actual: Illegal Move");
-                        if !set_legality.is_none() {
-                            log::trace!("Verdict: Legal Wrong");
-                            prob.filter_state_simple();
-                            if prob.calc_state_len() == 0 {
-                                total_already_illegal += 1;
-                            } else {
-                                total_wrong_legal_reveal_redraw += 1;
-                            }
-                            if log_bool {
-                                prob.log_calc_state();
-                            }
-                        }
-                    } else {
-                        log::trace!("Actual: Legal Move");
-                        if set_legality.is_none() {
-                            log::trace!("Verdict: Illegal Wrong");
-                            prob.filter_state_simple();
-                            if prob.calc_state_len() == 0 {
-                                total_already_illegal += 1;
-                            } else {
-                                total_wrong_illegal_reveal_redraw += 1;
-                            }
-                            if log_bool {
-                                prob.log_calc_state();
-                            }
-                            log::trace!("Pringing another log for reproducibility");
-                            prob.printlog();
-                        }
-                    }
-                    // if proper == 0 && legality.is_none(){
-                    //     total_same += 1;
-                    // } else if proper > 0 && !legality.is_none() {
-                    //     total_same += 1;
-                    // }
-                    total_tries += 1;
-                    if set_legality.is_none() || legality.is_none(){
-                        break    
-                    } else {
-                        hh.push_ao(output);
-                        prob.push_ao(&output);
-                    }
-                } else if output.name() == AOName::ExchangeDraw {
-                    let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                    let mut dummy_arr_1: [u8; 7] = [0, 0, 0, 0, 0, 0, 1];
-                    let mut dummy_arr_2: [u8; 7] = [0, 0, 0, 0, 0, 0, 1];
-                    if output.cards()[0] == output.cards()[1]{
-                        latest_constraint.add_raw_group(GroupConstraint::new_list(dummy_arr_1, output.cards()[0], 0, 2));
-                    } else {
-                        latest_constraint.add_raw_group(GroupConstraint::new_list(dummy_arr_1, output.cards()[0], 0, 1));
-                        latest_constraint.add_raw_group(GroupConstraint::new_list(dummy_arr_2, output.cards()[1], 0, 1));
-                    }
-                    let set_legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
-                    let legality: Option<String> = prob.can_player_have_cards(6, output.cards());
-                    if !set_legality.is_none(){
-                        log::trace!("Set: Legal Move");
-                        total_legal_exchangedraw += 1;
-                    } else {
-                        log::trace!("Set: Illegal Move");
-                        total_illegal_exchangedraw += 1;
-                    }
-                    if legality.is_none(){
-                        log::trace!("Actual: Illegal Move");
-                        if !set_legality.is_none() {
-                            log::trace!("Verdict: Legal Wrong");
-                            prob.filter_state_simple();
-                            if prob.calc_state_len() == 0 {
-                                total_already_illegal += 1;
-                            } else {
-                                total_wrong_legal_exchangedraw += 1;
-                                if output.cards()[0] == output.cards()[1] {
-                                    total_wrong_same_cards_exchangedraw += 1;
-                                }
-                            }
-                            if log_bool {
-                                prob.log_calc_state();
-                            }
-                        }
-                    } else {
-                        log::trace!("Actual: Legal Move");
-                        if set_legality.is_none() {
-                            log::trace!("Verdict: Illegal Wrong");
-                            prob.filter_state_simple();
-                            if prob.calc_state_len() == 0 {
-                                total_already_illegal += 1;
-                            } else {
-                                total_wrong_illegal_exchangedraw += 1;
-                                if output.cards()[0] == output.cards()[1] {
-                                    total_wrong_same_cards_exchangedraw += 1;
-                                }
-                            }
-                            if log_bool {
-                                prob.log_calc_state();
-                            }
-                        }
-                    }
-                    total_tries += 1;
-                    if set_legality.is_none() || legality.is_none() {
-                        break    
-                    } else {
-                        hh.push_ao(output);
-                        prob.push_ao(&output);
-                    }
-                } else {
-                    hh.push_ao(output);
-                    prob.push_ao(&output);
-                }
-            } else {
-                log::trace!("Pushed bad move!");
-                break;
-            }
-            step += 1;
-            if step > 1000 {
-                break;
-            }
-            log::info!("");
-        }
-        if step > max_steps {
-            max_steps = step;
-        }
-        log::info!("{}", format!("Game Won : {:?}",step));
-        hh.log_state();
-        // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
-        // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-        log::info!("");
-        prob.reset();
-        game += 1;
-    }
-    log::info!("Most Steps: {}", max_steps);
-    println!("Most Steps: {}", max_steps);
-    println!("Total already illegal Wrong: {}/{}", total_already_illegal, total_tries);
-    println!("Total (Discard 1) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_1, total_legal_discard_1);
-    println!("Total (Discard 1) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_1, total_illegal_discard_1);
-    println!("Total (Discard 2) Legal Predictions Wrong: {}/{}", total_wrong_legal_discard_2, total_legal_discard_2);
-    println!("Total (Discard 2) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_discard_2, total_illegal_discard_2);
-    println!("Total (RevealRedraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_reveal_redraw, total_legal_reveal_redraw);
-    println!("Total (RevealRedraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_reveal_redraw, total_illegal_reveal_redraw);
-    println!("Total (ExchangeDraw) Legal Predictions Wrong: {}/{}", total_wrong_legal_exchangedraw, total_legal_exchangedraw);
-    println!("Total (ExchangeDraw) Illegal Predictions Wrong: {}/{}", total_wrong_illegal_exchangedraw, total_illegal_exchangedraw);
-    println!("Total Same Card Exchange Draw Wrong: {}", total_wrong_same_cards_exchangedraw);
-    println!("Total Tries: {}", total_tries);
-}
+
+
 pub fn error_farmer(game_no: usize, log_bool: bool){
     if log_bool{
         logger();
@@ -2117,10 +1732,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                 if output.name() == AOName::Discard{
                     if output.no_cards() == 1 {
                         let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.cards()[0]);
-                        // let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.cards()[0]);
-                        let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[0]);
-                        let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+                        let legality: bool = prob.player_can_have_card_constructor(output.player_id(), &output.cards()[0]);
                         if set_legality{
                             // log::trace!("Set: Legal Move");
                             total_legal_discard_1 += 1;
@@ -2128,7 +1740,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                             // log::trace!("Set: Illegal Move");
                             total_illegal_discard_1 += 1;
                         }
-                        if legality.is_none(){
+                        if !legality{
                             // log::trace!("Actual: Illegal Move");
                             if set_legality {
                                 prob.printlog();
@@ -2164,7 +1776,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                             }
                         }
                         total_tries += 1;
-                        if !set_legality || legality.is_none(){
+                        if !set_legality || !legality{
                             break    
                         } else {
                             hh.push_ao(output);
@@ -2172,11 +1784,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                         }
                     } else {
                         let set_legality: bool = prob.player_can_have_cards(output.player_id(), output.cards());
-                        // let legality: Option<String> = prob.can_player_have_cards(output.player_id(), output.cards());
-                        let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[0]);
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[1]);
-                        let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+                        let legality: bool = prob.player_can_have_cards_constructor(output.player_id(), output.cards());
                         if set_legality{
                             // log::trace!("Set: Legal Move");
                             total_legal_discard_2 += 1;
@@ -2184,7 +1792,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                             // log::trace!("Set: Illegal Move");
                             total_illegal_discard_2 += 1;
                         }
-                        if legality.is_none(){
+                        if !legality{
                             // log::trace!("Actual: Illegal Move");
                             if set_legality {
                                 prob.printlog();
@@ -2220,7 +1828,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                             }
                         }
                         total_tries += 1;
-                        if !set_legality || legality.is_none(){
+                        if !set_legality || !legality{
                             break    
                         } else {
                             hh.push_ao(output);
@@ -2236,11 +1844,9 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                         // log::trace!("Set: Illegal Move");
                         total_illegal_reveal_redraw += 1;
                     }
-                    let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                    latest_constraint.add_raw_public_constraint(output.player_id(), output.card());
-                    let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+                    let legality: bool = prob.player_can_have_card_constructor(output.player_id(), &output.card());
 
-                    if legality.is_none(){
+                    if !legality{
                         // log::trace!("Actual: Illegal Move");
                         if set_legality {
                             prob.printlog();
@@ -2278,7 +1884,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                         }
                     }
                     total_tries += 1;
-                    if !set_legality || legality.is_none(){
+                    if !set_legality || !legality{
                         break    
                     } else {
                         hh.push_ao(output);
@@ -2286,14 +1892,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                     }
                 } else if output.name() == AOName::ExchangeDraw {
                     let set_legality: bool = prob.player_can_have_cards(6, output.cards());
-                    let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                    if output.cards()[0] == output.cards()[1] {
-                        latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], output.cards()[0], 0, 2));
-                    } else {
-                        latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], output.cards()[0], 0, 1));
-                        latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], output.cards()[1], 0, 1));
-                    }
-                    let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+                    let legality: bool = prob.player_can_have_cards_constructor(6, output.cards());
                     if set_legality{
                         // log::trace!("Set: Legal Move");
                         total_legal_exchangedraw += 1;
@@ -2301,7 +1900,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                         // log::trace!("Set: Illegal Move");
                         total_illegal_exchangedraw += 1;
                     }
-                    if legality.is_none(){
+                    if !legality{
                         // log::trace!("Actual: Illegal Move");
                         if set_legality {
                             // prob.printlog();
@@ -2341,7 +1940,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                         }
                     }
                     total_tries += 1;
-                    if !set_legality || legality.is_none() {
+                    if !set_legality || !legality {
                         break    
                     } else {
                         hh.push_ao(output);
@@ -2451,10 +2050,8 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                     if output.no_cards() == 1 {
                         let set_legality: bool = prob.player_can_have_card(output.player_id(), &output.cards()[0]);
                         // let legality: Option<String> = prob.can_player_have_card(output.player_id(), &output.cards()[0]);
-                        let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[0]);
-                        // let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
-                        let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+
+                        let legality: bool = prob.player_can_have_card_constructor(output.player_id(), &output.cards()[0]);
                         if set_legality{
                             // log::trace!("Set: Legal Move");
                             total_legal_discard_1 += 1;
@@ -2462,7 +2059,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                             // log::trace!("Set: Illegal Move");
                             total_illegal_discard_1 += 1;
                         }
-                        if legality.is_none(){
+                        if !legality{
                             // log::trace!("Actual: Illegal Move");
                             if set_legality {
                                 prob.printlog();
@@ -2497,7 +2094,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                             }
                         }
                         total_tries += 1;
-                        if !set_legality || legality.is_none(){
+                        if !set_legality || !legality {
                             break    
                         } else {
                             hh.push_ao(output);
@@ -2506,10 +2103,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                     } else {
                         let set_legality: bool = prob.player_can_have_cards(output.player_id(), output.cards());
                         // let legality: Option<String> = prob.can_player_have_cards(output.player_id(), output.cards());
-                        let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[0]);
-                        latest_constraint.add_raw_public_constraint(output.player_id(), output.cards()[1]);
-                        let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+                        let legality: bool = prob.player_can_have_cards_constructor(output.player_id(), output.cards());
                         if set_legality{
                             // log::trace!("Set: Legal Move");
                             total_legal_discard_2 += 1;
@@ -2517,7 +2111,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                             // log::trace!("Set: Illegal Move");
                             total_illegal_discard_2 += 1;
                         }
-                        if legality.is_none(){
+                        if !legality{
                             // log::trace!("Actual: Illegal Move");
                             if set_legality {
                                 prob.printlog();
@@ -2553,7 +2147,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                             }
                         }
                         total_tries += 1;
-                        if !set_legality || legality.is_none(){
+                        if !set_legality || !legality{
                             break    
                         } else {
                             hh.push_ao(output);
@@ -2570,11 +2164,9 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                         // log::trace!("Set: Illegal Move");
                         total_illegal_reveal_redraw += 1;
                     }
-                    let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                    latest_constraint.add_raw_public_constraint(output.player_id(), output.card());
-                    let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+                    let legality: bool = prob.player_can_have_card_constructor(output.player_id(), &output.card());
 
-                    if legality.is_none(){
+                    if !legality{
                         // log::trace!("Actual: Illegal Move");
                         if set_legality {
                             prob.printlog();
@@ -2612,7 +2204,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                         }
                     }
                     total_tries += 1;
-                    if !set_legality || legality.is_none(){
+                    if !set_legality || !legality{
                         break    
                     } else {
                         hh.push_ao(output);
@@ -2621,14 +2213,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                 } else if output.name() == AOName::ExchangeDraw {
                     log::info!("{}", format!("Choice: {:?}", output));
                     let set_legality: bool = prob.player_can_have_cards(6, output.cards());
-                    let mut latest_constraint: CollectiveConstraint = prob.latest_constraint();
-                    if output.cards()[0] == output.cards()[1] {
-                        latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], output.cards()[0], 0, 2));
-                    } else {
-                        latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], output.cards()[0], 0, 1));
-                        latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], output.cards()[1], 0, 1));
-                    }
-                    let legality: Option<String> = latest_constraint.par_constructor(&latest_constraint);
+                    let legality: bool = prob.player_can_have_cards_constructor(6, output.cards());
                     if set_legality{
                         // log::trace!("Set: Legal Move");
                         total_legal_exchangedraw += 1;
@@ -2636,7 +2221,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                         // log::trace!("Set: Illegal Move");
                         total_illegal_exchangedraw += 1;
                     }
-                    if legality.is_none(){
+                    if !legality {
                         // log::trace!("Actual: Illegal Move");
                         if set_legality {
                             // prob.printlog();
@@ -2676,7 +2261,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                         }
                     }
                     total_tries += 1;
-                    if !set_legality || legality.is_none() {
+                    if !set_legality || !legality {
                         break    
                     } else {
                         hh.push_ao(output);
@@ -2848,8 +2433,8 @@ pub fn logger(){
             )
         })
         // Set log level filter; this line is optional if using default_filter_or in from_env
-        .filter(None, LevelFilter::Trace) // Adjust the log level as needed
-        // .filter(None, LevelFilter::Info) // Adjust the log level as needed
+        // .filter(None, LevelFilter::Trace) // Adjust the log level as needed
+        .filter(None, LevelFilter::Info) // Adjust the log level as needed
         // Direct logs to the file
         .target(Target::Pipe(Box::new(log_file)))
         // Apply the configuration
