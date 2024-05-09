@@ -114,10 +114,10 @@ use std::sync::Mutex;
 // 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
 fn main() {
 
-    // game_rnd(1000, true);
+    game_rnd(1000, true);
     // test_satis();
     // game_rnd_constraint(1000, true);
-    error_farmer(10000000, true);
+    // error_farmer(10000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
     // test_impossible_state(10000, true);
@@ -1327,10 +1327,10 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
                 log::info!("{}", format!("Choice: {:?}", output));
                 hh.push_ao(output);
                 prob.push_ao(&output);
-                let start_time = Instant::now();
-                let output: Option<String> = prob.chance_sample_exit();
-                let elapsed_time = start_time.elapsed();
-                println!("Test Time: {:?}", elapsed_time);
+                // let start_time = Instant::now();
+                // let output: Option<String> = prob.chance_sample_exit();
+                // let elapsed_time = start_time.elapsed();
+                // println!("Test Time: {:?}", elapsed_time);
             } else {
                 log::trace!("Pushed bad move!");
                 break;
