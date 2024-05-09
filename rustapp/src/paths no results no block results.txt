@@ -1,0 +1,69 @@
+// I1 1
+// Income [Update] => Next Turn
+// FA1 1
+// ForeignAid => CollectiveBlock (No Block) [Update] => Next Turn
+// FA2 5
+// ForeignAid => CollectiveBlock (Block) => Challenge Duke => Next Turn
+// FA3 5x5x5x5 = 625
+// ForeignAid => CollectiveBlock (Block) => Challenge Duke => RevealRedraw (Challenged) => Discard (Challenger) => Next Turn
+// FA4 5x5x5 = 125
+// ForeignAid => CollectiveBlock (Block) => Challenge Duke => Discard (Blocker) [Update] => Next Turn
+// COUP1 5
+// Coup [Update] => Discard => Next Turn
+// A1 15 = 15
+// Exchange => Collective Challenge => ExchangeChoice => Next Turn
+// A2 5x5 = 25
+// Exchange => Collective Challenge => Discard (Player) => Next Turn
+// A3 5x5x5x15 = 1875
+// Exchange => Collective Challenge => RevealRedraw (player) => Discard (Opposer) => ExchangeChoice => Next Turn
+// B1 5x5 = 25
+// Assassinate [Update] => Challenge Assassinate (Pass)=> BlockAssassinate (Pass) => Discard (Victim) => Next Turn
+// B2 5
+// Assassinate [Update] => Challenge Assassinate (Pass)=> BlockAssassinate => ChallengeBlock => Next Turn
+// B3 5x5x5
+// Assassinate [Update] => Challenge Assassinate (Pass)=> BlockAssassinate => ChallengeBlock => Discard (Victim) x1 Cards (dead) => Next Turn
+// B4 5x5x5
+// Assassinate [Update] => Challenge Assassinate (Pass)=> BlockAssassinate => ChallengeBlock => Discard (Victim) x2 Cards => Next Turn
+// B5 5x5x5 = 125
+// Assassinate [Update] => Challenge Assassinate (Pass)=> BlockAssassinate => ChallengeBlock => RevealRedraw (Victim) => Discard (Challenger) => Next Turn
+// B6 5x5x5x5 = 625
+// Assassinate [Update] => Challenge Assassinate => Discard (Player) => Next Turn
+// B7 5x5x5x5 = 625
+// Assassinate [Update] => Challenge Assassinate => RevealRedraw (Player) => Discard (Challenger == Victim) (dead)  => Next Turn
+// B8 5x5x5x5 = 625
+// Assassinate [Update] => Challenge Assassinate => RevealRedraw (Player) => Discard (Challenger != Victim) (alive) => BlockAssassinate (Pass) => Discard (Victim) => Next Turn
+// B9 5x5x5x5x5x5 = 15625 
+// Assassinate [Update] => Challenge Assassinate => RevealRedraw (Player) => Discard (Challenger != Victim) (alive) => BlockAssassinate => ChallengeBlock => Next Turn
+// B10 5x5x5x5x5 = 3125
+// Assassinate [Update] => Challenge Assassinate => RevealRedraw (Player) => Discard (Challenger != Victim) (alive) => BlockAssassinate => ChallengeBlock => Discard (Victim) x1 Cards(dead) => Next Turn
+// B11 
+// Assassinate [Update] => Challenge Assassinate => RevealRedraw (Player) => Discard (Challenger != Victim) (alive) => BlockAssassinate => ChallengeBlock => Discard (Victim) x2 Cards => Next Turn
+// B12
+// Assassinate [Update] => Challenge Assassinate => RevealRedraw (Player) => Discard (Challenger != Victim) (alive) => BlockAssassinate => ChallengeBlock => RevealRedraw (Victim) => Discard (Challenger) => Next Turn
+// C1
+// Steal => Challenge Captain (Pass) => BlockSteal (Pass) [Update] => Next Turn
+// C2
+// Steal => Challenge Captain (Pass) => BlockSteal => ChallengeBlock => Next Turn
+// C3
+// Steal => Challenge Captain (Pass) => BlockSteal => ChallengeBlock => Discard (Victim) [Update] => Next Turn
+// C4
+// Steal => Challenge Captain (Pass) => BlockSteal => ChallengeBlock => RevealRedraw (Victim) => Discard (Challenger) => Next Turn
+// C5
+// Steal => Challenge Captain (Pass) => Discard (Player) => Next Turn
+// C6
+// Steal => Challenge Captain => RevealRedraw (Player) => Discard (Opposer) [Update if blocker dead]=> BlockSteal (if alive) (Pass) [Update]=> Next Turn
+// C7
+// Steal => Challenge Captain => RevealRedraw (Player) => Discard (Opposer) [Update if blocker dead]=> BlockSteal (if alive) => ChallengeBlock => Next Turn
+// C8
+// Steal => Challenge Captain => RevealRedraw (Player) => Discard (Opposer) [Update if blocker dead]=> BlockSteal (if alive) => ChallengeBlock => Discard (Victim) [Update] => Next Turn
+// C9
+// Steal => Challenge Captain => RevealRedraw (Player) => Discard (Opposer) [Update if blocker dead] => BlockSteal (if alive) => ChallengeBlock => RevealRedraw (Victim) => Discard (Challenger) => Next Turn
+// D1
+// Tax => Challenge Duke [Update] => Next Turn
+// D2
+// Tax => Challenge Duke => Discard (Player) => Next Turn
+// D3
+// Tax => Challenge Duke => RevealRedraw (Player) [Update] => Discard (Opposer) => Next Turn
+
+
+// Eval(Failure) removed to merge with Eval(Success)

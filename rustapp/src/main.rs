@@ -114,9 +114,9 @@ use std::sync::Mutex;
 // 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
 fn main() {
 
-    game_rnd(1000, true);
+    // game_rnd(1000, true);
     // test_satis();
-    // game_rnd_constraint(1000, true);
+    game_rnd_constraint(5000, true);
     // error_farmer(10000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
@@ -1311,7 +1311,7 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
             log::trace!("Game Made:");
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
-
+            prob.printlog();
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
             new_moves = hh.generate_legal_moves();
@@ -1472,6 +1472,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         }
                         total_tries += 1;
                         if !set_legality || !legality{
+                            log::info!("Illegal Move, Ending Game");
                             break    
                         } else {
                             hh.push_ao(output);
@@ -1519,6 +1520,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         }
                         total_tries += 1;
                         if !set_legality || !legality{
+                            log::info!("Illegal Move, Ending Game");
                             break    
                         } else {
                             hh.push_ao(output);
@@ -1573,6 +1575,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     // }
                     total_tries += 1;
                     if !set_legality || !legality{
+                        log::info!("Illegal Move, Ending Game");
                         break    
                     } else {
                         hh.push_ao(output);
@@ -1625,6 +1628,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     }
                     total_tries += 1;
                     if !set_legality || !legality {
+                        log::info!("Illegal Move, Ending Game");
                         break    
                     } else {
                         hh.push_ao(output);
