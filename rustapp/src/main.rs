@@ -117,7 +117,7 @@ fn main() {
     // game_rnd(1000, true);
     // test_satis();
     // game_rnd_constraint(1000, true);
-    error_farmer(10000000, true);
+    error_farmer(10000000, false);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
     // test_impossible_state(10000, true);
