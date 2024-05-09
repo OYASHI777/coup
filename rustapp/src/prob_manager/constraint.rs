@@ -2339,7 +2339,7 @@ impl CollectiveConstraint{
                             for vcard in card_vec.iter(){
                                 if let Some(vcount) = remaining_card_count_alive.get_mut(vcard){
                                     *vcount -= 1;
-                                    temp_life_counter -= 2;
+                                    temp_life_counter -= 1;
                                 }
                             }
                         }
