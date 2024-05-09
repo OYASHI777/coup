@@ -583,6 +583,8 @@ impl History {
 
                 } else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Tax {
                     // Case D1
+                    //  === Obsolete ===
+                    log::info!("Obsolete Push_AO");
                     let tax_id:usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
                     self.add_coins(tax_id, 3);
                 } 
@@ -595,6 +597,16 @@ impl History {
             self.push(ao, false);
             let fa_id:usize = ao.opposing_player_id();
             self.add_coins(fa_id, 2);
+        } else if ao.name() == AOName::CollectiveChallenge {
+            self.push(ao, false);
+            if self.store[self.store_len - 1].name() == AOName::Tax {
+                // Case D1
+                if ao.opposing_player_id() == ao.final_actioner() {
+                    // Case D1 Nobody Challenges
+                    let tax_id:usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
+                    self.add_coins(tax_id, 3);
+                }
+            } 
         } else {
             // All other cases
             self.push(ao, false);
@@ -841,6 +853,7 @@ impl History {
                     changed_vec.push(ActionObservation::EvalResult { result: AOResult::Pass }); 
                     // (Collective Block) does not need Eval   
                 } else if self.store[self.store_len - 1].name() == AOName::CollectiveChallenge {
+                    log::info!("Obsolete add_moves");
                     // Challenges
                     if self.store[self.store_len - 1].final_actioner() == self.store[self.store_len - 1].opposing_player_id(){
                         // Nobody Challenges 
@@ -907,8 +920,8 @@ impl History {
                 let num_dead_cpt: u8 =  self.get_public_card_count(&Card::Captain);
                 let num_dead_duk: u8 =  self.get_public_card_count(&Card::Duke);
                 let num_dead_con: u8 =  self.get_public_card_count(&Card::Contessa);
-                if self.store_len >= 3 {
-                    if self.store[self.store_len - 3].name() == AOName::Assassinate {
+                if self.store_len >= 2 {
+                    if self.store[self.store_len - 2].name() == AOName::Assassinate {
                         // B5 - B11
                         // Its nested cause if you dont, the debug_assert will trigger, and i want the check to work like that
                         // Spaghetti code i know
@@ -927,7 +940,7 @@ impl History {
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::Discard { player_id: player_id, card: [Card::Contessa, Card::Contessa], no_cards: 1});
                         }
-                    } else if self.store[self.store_len - 3].name() == AOName::Steal {
+                    } else if self.store[self.store_len - 2].name() == AOName::Steal {
                         // C8 - C12
                         if num_dead_cpt < 3 {
                             changed_vec.push(ActionObservation::RevealRedraw { player_id: player_id, card: Card::Captain });
@@ -944,7 +957,7 @@ impl History {
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::Discard { player_id: player_id, card: [Card::Contessa, Card::Contessa], no_cards: 1});
                         }
-                    } else if self.store[self.store_len - 3].name() == AOName::Tax {
+                    } else if self.store[self.store_len - 2].name() == AOName::Tax {
                         // D3
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::RevealRedraw { player_id: player_id, card: Card::Duke });
@@ -961,7 +974,7 @@ impl History {
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::Discard { player_id: player_id, card: [Card::Contessa, Card::Contessa], no_cards: 1});
                         }
-                    } else if self.store[self.store_len - 3].name() == AOName::Exchange {
+                    } else if self.store[self.store_len - 2].name() == AOName::Exchange {
                         // A3
                         if num_dead_amb < 3 {
                             changed_vec.push(ActionObservation::RevealRedraw { player_id: player_id, card: Card::Ambassador });
@@ -978,7 +991,7 @@ impl History {
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::Discard { player_id: player_id, card: [Card::Contessa, Card::Contessa], no_cards: 1});
                         }
-                    } else if self.store[self.store_len - 4].name() == AOName::BlockAssassinate {
+                    } else if self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::BlockAssassinate {
                         if num_dead_con < 3 {
                             // B4 B11
                             // Special Assassinate Case
@@ -1036,9 +1049,9 @@ impl History {
                                 }
                             }
                         }
-                    } else if self.store[self.store_len - 4].name() == AOName::BlockSteal {
+                    } else if self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::BlockSteal {
                         // 
-                        if self.store[self.store_len - 4].card() == Card::Ambassador {
+                        if self.store[self.store_len - 3].card() == Card::Ambassador {
                             if num_dead_amb < 3 {
                                 changed_vec.push(ActionObservation::RevealRedraw { player_id: player_id, card: Card::Ambassador });
                             }
@@ -1054,7 +1067,7 @@ impl History {
                             if num_dead_con < 3 {
                                 changed_vec.push(ActionObservation::Discard { player_id: player_id, card: [Card::Contessa, Card::Contessa], no_cards: 1});
                             }
-                        } else if self.store[self.store_len - 4].card() == Card::Captain {
+                        } else if self.store[self.store_len - 3].card() == Card::Captain {
                             if num_dead_cpt < 3 {
                                 changed_vec.push(ActionObservation::RevealRedraw { player_id: player_id, card: Card::Captain });
                             }
@@ -1073,7 +1086,7 @@ impl History {
                         } else  {
                             debug_assert!(false, "Card in BlockSteal Seems to be wrong, so RevealRedraw add_move does not work well");
                         }
-                    } else if self.store[self.store_len - 4].name() == AOName::ForeignAid {
+                    } else if self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::ForeignAid {
                         // FA3
                         if num_dead_duk < 3{
                             changed_vec.push(ActionObservation::RevealRedraw { player_id: player_id, card: Card::Duke });
@@ -1093,8 +1106,9 @@ impl History {
                     } else {
                         debug_assert!(false, "unintended state reached in add_moves revealredraw");
                     }
-                } else if self.store_len >= 4 {
-                    if self.store[self.store_len - 4].name() == AOName::BlockAssassinate {
+                } else if self.store_len >= 3 {
+                    log::info!("This should never run!");
+                    if self.store_len >= 4 && self.store[self.store_len - 4].name() == AOName::BlockAssassinate {
                         // B4 B11
                         if num_dead_con < 3{
                             changed_vec.push(ActionObservation::RevealRedraw { player_id: player_id, card: Card::Contessa });
@@ -1151,9 +1165,9 @@ impl History {
                                 }
                             }
                         }
-                    } else if self.store[self.store_len - 4].name() == AOName::BlockSteal {
+                    } else if self.store[self.store_len - 3].name() == AOName::BlockSteal {
                         // 
-                        if self.store[self.store_len - 4].card() == Card::Ambassador {
+                        if self.store[self.store_len - 3].card() == Card::Ambassador {
                             if num_dead_amb < 3 {
                                 changed_vec.push(ActionObservation::RevealRedraw { player_id: player_id, card: Card::Ambassador });
                             }
@@ -1169,7 +1183,7 @@ impl History {
                             if num_dead_con < 3 {
                                 changed_vec.push(ActionObservation::Discard { player_id: player_id, card: [Card::Contessa, Card::Contessa], no_cards: 1});
                             }
-                        } else if self.store[self.store_len - 4].card() == Card::Captain {
+                        } else if self.store[self.store_len - 3].card() == Card::Captain {
                             if num_dead_cpt < 3 {
                                 changed_vec.push(ActionObservation::RevealRedraw { player_id: player_id, card: Card::Captain });
                             }
@@ -1188,7 +1202,7 @@ impl History {
                         } else  {
                             debug_assert!(false, "Card in BlockSteal Seems to be wrong, so RevealRedraw add_move does not work well");
                         }
-                    } else if self.store[self.store_len - 4].name() == AOName::ForeignAid {
+                    } else if self.store[self.store_len - 3].name() == AOName::ForeignAid {
                         // FA3
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::RevealRedraw { player_id: player_id, card: Card::Duke });
@@ -1351,8 +1365,48 @@ impl History {
             AOName::CollectiveChallenge => {
                 // Case Checked
                 // last_player here is a dummy an unused inside
-                let last_player: usize = self.store[self.store_len - 1].player_id();
-                self.add_moves(&mut output, last_player, AOName::EvalResult);
+                // let last_player: usize = self.store[self.store_len - 1].player_id();
+                // self.add_moves(&mut output, last_player, AOName::EvalResult);
+                if self.store[self.store_len - 1].opposing_player_id() == self.store[self.store_len - 1].final_actioner() {
+                    // Pass
+                    // FA2
+                    if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::ForeignAid ||
+                    // B2 B9 
+                    self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::BlockAssassinate ||
+                    // C2 C7
+                    self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::BlockSteal ||
+                    // D1
+                    self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Tax {
+                        let next_player_id: usize = self.next_player(self.current_player_turn);
+                        if self.latest_coins()[next_player_id] >= 10 {
+                            self.add_moves(&mut output, next_player_id, AOName::Coup);
+                        } else {
+                            self.add_moves(&mut output, next_player_id, AOName::Income);
+                            self.add_moves(&mut output, next_player_id, AOName::ForeignAid);
+                            self.add_moves(&mut output, next_player_id, AOName::Tax);
+                            self.add_moves(&mut output, next_player_id, AOName::Exchange);
+                            self.add_moves(&mut output, next_player_id, AOName::Steal);
+                            self.add_moves(&mut output, next_player_id, AOName::Assassinate);
+                            self.add_moves(&mut output, next_player_id, AOName::Coup);
+                        }
+                    } else if self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::Steal {
+                        // In Cases: C1 C2 C3 C4 => BlockSteal
+                        let victim_id: usize = self.store[self.store_len - 2].opposing_player_id();
+                        self.add_moves(&mut output, victim_id, AOName::BlockSteal);
+                    } else if self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::Assassinate {
+                        // In Cases: B1 B2 B3 B4 B5 => BlockAssassinate
+                        let victim_id: usize = self.store[self.store_len - 2].opposing_player_id();
+                        self.add_moves(&mut output, victim_id, AOName::BlockAssassinate);
+                    } else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Exchange {
+                        // In Cases: A1 => ExchangeDraw
+                        let exchanger_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
+                        self.add_moves(&mut output, exchanger_id, AOName::ExchangeDraw);
+                    }
+                } else {
+                    // Success Case
+                    let challenged_id: usize = self.store[self.store_len - 1].opposing_player_id();
+                    self.add_moves(&mut output, challenged_id, AOName::RevealRedraw);
+                }
             },
             AOName::CollectiveBlock => {
                 // Case Checked
@@ -1381,19 +1435,20 @@ impl History {
             AOName::EvalResult => {
                 // Please refer to paths.txt for Cases
                 //TODO store_len check
+                // Moved some to CollectiveChallenge
                 if self.store[self.store_len - 1].result() == AOResult::Pass {
                     // FA2
-                    if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::ForeignAid ||
+                    // if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::ForeignAid ||
                     // B2 B9 
-                    self.store_len >= 4 && self.store[self.store_len - 4].name() == AOName::BlockAssassinate ||
+                    // if self.store_len >= 4 && self.store[self.store_len - 4].name() == AOName::BlockAssassinate ||
                     // C6
-                    self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::BlockSteal ||
+                    if self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::BlockSteal ||
                     // C2 C7
-                    self.store_len >= 4 && self.store[self.store_len - 4].name() == AOName::BlockSteal ||
+                    // self.store_len >= 4 && self.store[self.store_len - 4].name() == AOName::BlockSteal ||
                     // C1
-                    self.store[self.store_len - 1].name() == AOName::BlockSteal ||
+                    self.store[self.store_len - 1].name() == AOName::BlockSteal {
                     // D1
-                    self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Tax {
+                    // self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Tax {
                         // In Cases: FA2 B2 B9 C1 C2 C6 C7 D1 => Next Turn
                         let next_player_id: usize = self.next_player(self.current_player_turn);
                         if self.latest_coins()[next_player_id] >= 10 {
@@ -1407,24 +1462,24 @@ impl History {
                             self.add_moves(&mut output, next_player_id, AOName::Assassinate);
                             self.add_moves(&mut output, next_player_id, AOName::Coup);
                         }
-                    } else if self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::Steal {
-                        // In Cases: C1 C2 C3 C4 => BlockSteal
-                        let victim_id: usize = self.store[self.store_len - 3].opposing_player_id();
-                        self.add_moves(&mut output, victim_id, AOName::BlockSteal);
-                    } else if self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::Assassinate {
-                        // In Cases: B1 B2 B3 B4 B5 => BlockAssassinate
-                        let victim_id: usize = self.store[self.store_len - 3].opposing_player_id();
-                        self.add_moves(&mut output, victim_id, AOName::BlockAssassinate);
+                    // } else if self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::Steal {
+                    //     // In Cases: C1 C2 C3 C4 => BlockSteal
+                    //     let victim_id: usize = self.store[self.store_len - 3].opposing_player_id();
+                    //     self.add_moves(&mut output, victim_id, AOName::BlockSteal);
+                    // } else if self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::Assassinate {
+                    //     // In Cases: B1 B2 B3 B4 B5 => BlockAssassinate
+                    //     let victim_id: usize = self.store[self.store_len - 3].opposing_player_id();
+                    //     self.add_moves(&mut output, victim_id, AOName::BlockAssassinate);
                         
-                    }else if self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::BlockAssassinate {
+                    } else if self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::BlockAssassinate {
                         // In Cases: B1 B8 => Discard (Victim)
                         let victim_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].opposing_player_id();
                         self.add_moves(&mut output, victim_id, AOName::Discard);
                         
-                    }else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Exchange {
-                        // In Cases: A1 => ExchangeDraw
-                        let exchanger_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-                        self.add_moves(&mut output, exchanger_id, AOName::ExchangeDraw);
+                    // }else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Exchange {
+                    //     // In Cases: A1 => ExchangeDraw
+                    //     let exchanger_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
+                    //     self.add_moves(&mut output, exchanger_id, AOName::ExchangeDraw);
                     } else {
                         debug_assert!(false, "Unintended End point for EvalResult Pass");
                     }
@@ -1435,6 +1490,7 @@ impl History {
                     // B3 B9 B10 C3 C10 => Discard Victim
                     if self.store_len >= 2 {
                         if self.store[self.store_len - 2].name() == AOName::CollectiveChallenge {
+                            log::info!("Obsolete case in gen_legal_moves");
                             // FA4 A2 B3 B4 B6 B10 B11 C3 C5 C8 D2=> Discard by challenged person
                             let challenged_id: usize = self.store[self.store_len - 2].opposing_player_id();
                             // self.add_moves(&mut output, challenged_id, AOName::Discard);
@@ -1485,9 +1541,9 @@ impl History {
                         // A3 => Exchange Choice
                         let exchange_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
                         self.add_moves(&mut output, exchange_id, AOName::ExchangeDraw);
-                    } else if self.store[self.store_len - 2].name() == AOName::EvalResult {
+                    } else if self.store[self.store_len - 2].name() == AOName::CollectiveChallenge {
                         // A2 => Next Turn
-                        debug_assert!(self.store[self.store_len - 2].result() == AOResult::Success, "Bad AOResult in generate_legal_moves Discard Ambassador");
+                        debug_assert!(self.store[self.store_len - 2].opposing_player_id() != self.store[self.store_len - 2].final_actioner(), "Bad AOResult in generate_legal_moves Discard Ambassador");
                         let next_player_id: usize = self.next_player(self.current_player_turn);
                         if self.latest_coins()[next_player_id] >= 10 {
                             self.add_moves(&mut output, next_player_id, AOName::Coup);
@@ -1504,9 +1560,9 @@ impl History {
                         debug_assert!(false, "unintended state reached in generate_legal_moves Discard Ambassador");
                     }
                 } else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Assassinate {
-                    if self.store[self.store_len - 5].name() == AOName::Assassinate{
+                    if self.store[self.store_len - 4].name() == AOName::Assassinate{
                         // B8 B9 B9 B10 B11 B12 => Block Assassinate
-                        let blocker_id: usize = self.store[self.store_len - 5].opposing_player_id();
+                        let blocker_id: usize = self.store[self.store_len - 4].opposing_player_id();
                         if self.latest_influence()[blocker_id] > 0 {
                             self.add_moves(&mut output, blocker_id, AOName::BlockAssassinate);
                         } else {
@@ -1539,7 +1595,7 @@ impl History {
                         }
                     }
                 } else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Steal {
-                    if self.store_len >= 5 && self.store[self.store_len - 5].name() == AOName::Steal{
+                    if self.store_len >= 4 && self.store[self.store_len - 4].name() == AOName::Steal{
                        // In Cases: C6 C7 C8 C9 | => BlockSteal
                         let blocker_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].opposing_player_id();
                         if self.latest_influence()[blocker_id] > 0 {
@@ -1583,8 +1639,14 @@ impl History {
                 // Case Checked
                 // In all cases: -3 is a challenge -2 is AOResult::Failure and the next move is discard
                 // Challenge failed, initiator of challenge loses and discards
-                let discard_id: usize = self.store[self.store_len - 3].player_id();
-                self.add_moves(&mut output, discard_id, AOName::Discard);
+                //temp eventually all -2
+                if self.store[self.store_len - 2].name() == AOName::CollectiveChallenge {
+                    let discard_id: usize = self.store[self.store_len - 2].player_id();
+                    self.add_moves(&mut output, discard_id, AOName::Discard);
+                } else {
+                    let discard_id: usize = self.store[self.store_len - 3].player_id();
+                    self.add_moves(&mut output, discard_id, AOName::Discard);
+                }
             },
             AOName::ExchangeDraw => {
                 // ID from ExchangeDraw
