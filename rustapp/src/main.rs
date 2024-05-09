@@ -115,8 +115,8 @@ use std::sync::Mutex;
 fn main() {
 
     // game_rnd(1000, true);
-    // test_satis();
-    game_rnd_constraint(5000, true);
+    test_satis();
+    // game_rnd_constraint(5000, true);
     // error_farmer(10000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
@@ -1015,6 +1015,39 @@ pub fn test_satis(){
     } else {
         println!("Test 27 Illegal Correct");
     }
+    let mut colcon = CollectiveConstraint::new();
+
+    colcon.add_public_constraint(4, Card::Ambassador);
+    colcon.add_public_constraint(2, Card::Assassin);
+    colcon.add_public_constraint(5, Card::Captain);
+
+   
+    
+    let group1: GroupConstraint = GroupConstraint::new_list([1, 1, 0, 0, 1, 0, 1], Card::Ambassador, 1, 2);
+    let group2: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Ambassador, 1, 1);
+    let group3: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Duke, 0, 2);
+    let group4: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Assassin, 0, 1);
+    let group5: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 1, 1], Card::Contessa, 0, 2);
+    let group6: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Captain, 0, 1);
+    
+    colcon.add_raw_group(group1);
+    colcon.add_raw_group(group2);
+    colcon.add_raw_group(group3);
+    colcon.add_raw_group(group4);
+    colcon.add_raw_group(group5);
+    colcon.add_raw_group(group6);
+
+    log::info!(" === Test 28 === ");
+    // This illegal wrong this is no reproducible 2 times
+    colcon.printlog();
+
+    let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 4, &Card::Contessa);
+
+    if output {
+        println!("Test 28 Inferred Group needed Legal Wrong");
+    } else {
+        println!("Test 28 Inferred Group needed Illegal Correct");
+    }
 }
 pub fn test_shuffle(iterations: usize){
     logger();
@@ -1787,14 +1820,8 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                             prob.push_ao(&output);
                         }
                     } else {
-                        let start_time = Instant::now();
                         let set_legality: bool = prob.player_can_have_cards(output.player_id(), output.cards());
-                        let elapsed_time = start_time.elapsed();
-                        // log::info!("Set2: {:?}", elapsed_time);
-                        let start_time = Instant::now();
                         let legality: bool = prob.player_can_have_cards_constructor(output.player_id(), output.cards());
-                        let elapsed_time = start_time.elapsed();
-                        log::info!("Con2: {:?}", elapsed_time);
                         if set_legality{
                             // log::trace!("Set: Legal Move");
                             total_legal_discard_2 += 1;
@@ -1902,10 +1929,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                     }
                 } else if output.name() == AOName::ExchangeDraw {
                     let set_legality: bool = prob.player_can_have_cards(6, output.cards());
-                    let start_time = Instant::now();
                     let legality: bool = prob.player_can_have_cards_constructor(6, output.cards());
-                    let elapsed_time = start_time.elapsed();
-                    // log::info!("ED2: {:?}", elapsed_time);
                     if set_legality{
                         // log::trace!("Set: Legal Move");
                         total_legal_exchangedraw += 1;
@@ -1983,7 +2007,6 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
         // log::info!("");
         prob.reset();
         game += 1;
-
     }
     log::info!("Most Steps: {}", max_steps);
     println!("Most Steps: {}", max_steps);

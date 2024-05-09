@@ -678,6 +678,7 @@ impl CollectiveConstraint{
                         // group.count_add(new_count - group.count());
                         // }
                     debug_assert!(group.count() < 4, "GROUP COUNT IN EXCHANGEDRAW TOO HIGH");
+                    // This can sometimes trigger if an illegal move was made before leading to a >4 count
                 } 
             } else {
                 if group.get_list()[6] == 1{
@@ -730,9 +731,7 @@ impl CollectiveConstraint{
         // Duke [0 0 0 0 0 0 1] : count = 1
         // This functions adds all possible of such groups in!
         let mut index: usize = 0;
-        let mut union_part_list_checked: Vec<[u8; 7]> = Vec::new();
-        let mut union_group_counts: HashMap<Card, usize> = HashMap::new();
-        let mut union_group_card_sets: HashMap<Card, [u8; 7]> = HashMap::new();
+
         while index < self.gc_vec.len() {
             let group_count: usize = self.gc_vec[index].count();
             let group_list: [u8; 7] = self.gc_vec[index].get_list().clone();
@@ -787,6 +786,9 @@ impl CollectiveConstraint{
             // This second part adds:
             // Adding discovery of sets via subsets
             // Checking if subset has been checked already
+            // let mut union_part_list_checked: Vec<[u8; 7]> = Vec::new();
+            // let mut union_group_counts: HashMap<Card, usize> = HashMap::new();
+            // let mut union_group_card_sets: HashMap<Card, [u8; 7]> = HashMap::new();
             // if union_part_list_checked.contains(self.gc_vec[index].get_list()) {
             //     index += 1;
             //     continue;
@@ -991,7 +993,9 @@ impl CollectiveConstraint{
     pub fn player_can_have_active_card_pub(input_constraint: &CollectiveConstraint, player_id: usize, card: &Card) -> bool {
         // Returns true if player can have a card in his hand that is alive
         // TODO: If this works, modify others to not clone before adding as input?
-        let constraint: CollectiveConstraint = input_constraint.clone();
+        let mut constraint: CollectiveConstraint = input_constraint.clone();
+        //[TESTING]
+        constraint.add_inferred_groups();
 
         if constraint.dead_card_count[card] == 3 {
             return false;
