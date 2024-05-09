@@ -115,8 +115,8 @@ use std::sync::Mutex;
 fn main() {
 
     // game_rnd(1000, true);
-    test_satis();
-    // game_rnd_constraint(1000, true);
+    // test_satis();
+    game_rnd_constraint(5000, true);
     // error_farmer(10000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
@@ -1472,6 +1472,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         }
                         total_tries += 1;
                         if !set_legality || !legality{
+                            log::info!("Illegal Move, Ending Game");
                             break    
                         } else {
                             hh.push_ao(output);
@@ -1519,6 +1520,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         }
                         total_tries += 1;
                         if !set_legality || !legality{
+                            log::info!("Illegal Move, Ending Game");
                             break    
                         } else {
                             hh.push_ao(output);
@@ -1573,6 +1575,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     // }
                     total_tries += 1;
                     if !set_legality || !legality{
+                        log::info!("Illegal Move, Ending Game");
                         break    
                     } else {
                         hh.push_ao(output);
@@ -1625,6 +1628,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                     }
                     total_tries += 1;
                     if !set_legality || !legality {
+                        log::info!("Illegal Move, Ending Game");
                         break    
                     } else {
                         hh.push_ao(output);
