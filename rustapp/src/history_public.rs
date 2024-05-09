@@ -50,7 +50,6 @@ pub enum AOName {
     CollectiveBlock,
     BlockSteal,
     BlockAssassinate,
-    // EvalResult,
     Discard,
     RevealRedraw,
     Exchange,
@@ -110,10 +109,6 @@ pub enum ActionObservation {
         player_id: usize,
         opposing_player_id: usize, // if == player_id, then the player passes on the block
     },
-    // For Eval Result of a Block, it means that a Block was Attempted You only ever Succeed or Pass a Block, not fail
-    // EvalResult {
-    //     result: AOResult,
-    // },
     Discard {
         player_id: usize,
         card: [Card; 2],
@@ -161,7 +156,6 @@ impl ActionObservation {
             CollectiveBlock { .. } => AOName::CollectiveBlock,
             BlockSteal { .. } => AOName::BlockSteal,
             BlockAssassinate { .. } => AOName::BlockAssassinate,
-            // EvalResult { .. } => AOName::EvalResult,
             Discard { .. } => AOName::Discard,
             RevealRedraw { .. } => AOName::RevealRedraw,
             Exchange { .. } => AOName::Exchange,
@@ -206,13 +200,6 @@ impl ActionObservation {
             _ => panic!("This ActionObservation variant does not contain an opposing_player_id"),
         }
     }
-    // pub fn result(&self) -> AOResult {
-    //     match self {
-    //         ActionObservation::EvalResult { result } => result.clone(), // Assuming AOResult implements Clone.
-    //         // Include other cases if there are more variants holding a result field
-    //         _ => panic!("This ActionObservation variant does not contain a result"),
-    //     }
-    // }
     pub fn card(&self) -> Card {
         match self {
             ActionObservation::BlockSteal { card, .. } => *card, 
@@ -266,7 +253,6 @@ impl ActionObservation {
             format!("BT{}{}{}", opposing_player_id, participants.iter().map(|&b| if b { '1' } else { '0' }).collect::<String>(), final_actioner),
             ActionObservation::BlockSteal { player_id, opposing_player_id, card } => format!("BS{}P{}P{}",if *card == Card::Captain {"C"} else {"A"}, player_id, opposing_player_id ),
             ActionObservation::BlockAssassinate { player_id, opposing_player_id, ..  } => format!("BAP{}P{}", player_id, opposing_player_id),
-            // ActionObservation::EvalResult { result } => format!("ER{}", if *result == AOResult::Success {"S"} else if *result == AOResult::Failure {"F"} else {"P"}),
             ActionObservation::Discard { player_id, card, no_cards } => {
                 match no_cards {
                     1 => format!("DCP{}{}", player_id, card[0].card_to_string()),
@@ -584,31 +570,7 @@ impl History {
                     }
                 }
             }
-        // } else if ao.name() == AOName::EvalResult {
-        //     // === TO BE DELETED ===
-        //     // Case Checked
-        //     // Always push
-        //     debug_assert!(true, "EvalResult used!");
-        //     self.push(ao, false);
-        //     if ao.result() == AOResult::Pass {
-        //         if self.store[self.store_len - 2].name() == AOName::BlockSteal {
-        //             // Cases C1 C6 update too
-        //             log::info!("Obsolete BlockSteal Push_AO");
-        //             let stealer_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-        //             let stolen_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].opposing_player_id();
-        //             let amount: u8 = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].amount();
-        //             self.add_coins(stealer_id, amount);
-        //             self.subtract_coins(stolen_id, amount);
-
-        //         } else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Tax {
-        //             // Case D1
-        //             //  === Obsolete ===
-        //             log::info!("Obsolete Tax Push_AO");
-        //             let tax_id:usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-        //             self.add_coins(tax_id, 3);
-        //         } 
-        //     }
-            
+        
         } else if ao.name() == AOName::CollectiveBlock && ao.final_actioner() == ao.opposing_player_id() {
             // Case when nobody blocks
             // Case FA1
@@ -647,66 +609,6 @@ impl History {
         // Always pop after reversing the statuses
         let last_name: AOName = self.store[self.store_len - 1].name();
         let ao: ActionObservation = self.store[self.store_len - 1];
-        // if last_name == AOName::Income {
-        //     self.subtract_coins(self.store[self.store_len - 1].player_id(), 1);
-        // } else if last_name == AOName::Coup{
-        //     self.add_coins(self.store[self.store_len - 1].player_id(), 7);
-        // } else if last_name == AOName::Assassinate {
-        //     self.add_coins(self.store[self.store_len - 1].player_id(), 3);
-        // } else if [AOName::Steal, AOName::Exchange, AOName::ForeignAid, AOName::Tax, AOName::Assassinate].contains(&last_name){
-        // }else if last_name == AOName::Discard {
-        //     // Cases FA4 C3 C8 D3
-        //     if self.store_len >= 5 {
-        //         if self.store[self.store_len - 5].name() == AOName::BlockSteal{
-        //             let stealer_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-        //             let stolen_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].opposing_player_id();
-        //             let amount: u8 = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].amount();
-        //             self.add_coins(stolen_id, amount);
-        //             self.subtract_coins(stealer_id, amount);
-        //         } else if self.store[self.store_len - 5].name() == AOName::Tax {
-        //             let tax_id: usize = self.store[self.store_len - 5].player_id();
-        //             self.add_coins(tax_id, 3);
-        //         } else if self.store[self.store_len - 5].name() == AOName::ForeignAid {
-        //             let fa_id: usize = self.store[self.store_len - 5].player_id();
-        //             self.add_coins(fa_id, 2);
-        //         } else if self.store[self.store_len - 5].name() == AOName::Steal{
-        //             // if blocker died
-        //             // Case C6 C7 C8 C9
-        //             if self.latest_influence()[self.store[self.store_len - 5].opposing_player_id()] == 0 {
-        //                 let stealer_id: usize = self.store[self.store_len - 5].player_id();
-        //                 let stolen_id: usize = self.store[self.store_len - 5].opposing_player_id();
-        //                 let amount: u8 = self.store[self.store_len - 5].amount();
-        //                 self.add_coins(stolen_id, amount);
-        //                 self.subtract_coins(stealer_id, amount);
-        //             }
-        //         }
-        //     }
-        //     // Always add influence
-        //     debug_assert!(self.store[self.store_len - 1].no_cards() == 1 || self.store[self.store_len - 1].no_cards() == 2, "Discard with non 1 or 2 value found!");
-        //     self.add_influence(self.store[self.store_len - 1].player_id(), self.store[self.store_len - 1].no_cards() as u8);
-        // } else if last_name == AOName::EvalResult {
-        //     // Case Checked
-        //     if self.store[self.store_len - 1].result() == AOResult::Pass {
-        //         if self.store[self.store_len - 2].name() == AOName::BlockSteal {
-        //             // Cases C1 C6 update too
-        //             let stealer_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-        //             let stolen_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].opposing_player_id();
-        //             let amount: u8 = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].amount();
-        //             self.add_coins(stolen_id, amount);
-        //             self.subtract_coins(stealer_id, amount);
-                    
-        //         } else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Tax {
-        //             // Case D1
-        //             let tax_id:usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-        //             self.subtract_coins(tax_id, 3);
-        //         } 
-        //     }
-        // } else if last_name == AOName::CollectiveBlock && self.store[self.store_len - 1].final_actioner() == self.store[self.store_len - 1].opposing_player_id(){
-        //     // Case when nobody blocks
-        //     // Case FA1
-        //     let fa_id: usize = self.store[self.store_len - 1].opposing_player_id();
-        //     self.subtract_coins(fa_id, 2);
-        // } 
         // Always Pop
         // public_card_count is not a history so we have to update it
         if last_name == AOName::Discard{
@@ -879,49 +781,7 @@ impl History {
                 changed_vec.push(ActionObservation::BlockAssassinate { player_id: player_id, opposing_player_id: player_id});
 
             },
-            // AOName::EvalResult => {
-            //     debug_assert!(true, "EvalResult used!");
-            //     if self.store[self.store_len - 1].name() == AOName::BlockSteal || self.store[self.store_len - 1].name() == AOName::BlockAssassinate{
-            //         // Either block or pass on the block for steal or assassinate blocks
-            //         changed_vec.push(ActionObservation::EvalResult { result: AOResult::Success });    
-            //         changed_vec.push(ActionObservation::EvalResult { result: AOResult::Pass }); 
-            //         // (Collective Block) does not need Eval   
-            //     } else if self.store[self.store_len - 1].name() == AOName::CollectiveChallenge {
-            //         log::info!("Obsolete add_moves");
-            //         // Challenges
-            //         if self.store[self.store_len - 1].final_actioner() == self.store[self.store_len - 1].opposing_player_id(){
-            //             // Nobody Challenges 
-            //             changed_vec.push(ActionObservation::EvalResult { result: AOResult::Pass });
-            //         } else {
-            //             // Challenger wins
-            //             changed_vec.push(ActionObservation::EvalResult { result: AOResult::Success });
-            //             // Challenger loses
-            //             // In Some Cases where say 3 contessas have been revealed, you know they cant reveal another contessa
-            //             // === Obsolete ===
-            //             // let num_dead_amb: u8 =  self.get_public_card_count(&Card::Ambassador);
-            //             // let num_dead_ass: u8 =  self.get_public_card_count(&Card::Assassin);
-            //             // let num_dead_cpt: u8 =  self.get_public_card_count(&Card::Captain);
-            //             // let num_dead_duk: u8 =  self.get_public_card_count(&Card::Duke);
-            //             // let num_dead_con: u8 =  self.get_public_card_count(&Card::Contessa);
-            //             // if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::ForeignAid && num_dead_duk < 3 ||
-            //             // self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Exchange && num_dead_amb < 3 ||
-            //             // self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Tax && num_dead_duk < 3 ||
-            //             // self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::BlockAssassinate && num_dead_con < 3 ||
-            //             // self.store[self.store_len - 2].name() == AOName::Assassinate && num_dead_ass < 3 ||
-            //             // self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::BlockSteal &&
-            //             //     (self.store[self.store_len - 3].card() == Card::Ambassador && num_dead_amb < 3 || self.store[self.store_len - 3].card() == Card::Captain && num_dead_cpt < 3 ) ||
-            //             // self.store[self.store_len - 2].name() == AOName::Steal && num_dead_cpt < 3
-            //             // {
-            //             //     // Case FA3 A3 D3 
-            //             //     // Block B5 B12
-            //             //     // B7-B12
-            //             //     // Block C4 C9
-            //             //     // C6-C9
-            //             //     changed_vec.push(ActionObservation::EvalResult { result: AOResult::Failure });
-            //             // } 
-            //         }
-            //     }
-            // },
+            
             AOName::Discard => {
                 let num_dead_amb: u8 =  self.get_public_card_count(&Card::Ambassador);
                 let num_dead_ass: u8 =  self.get_public_card_count(&Card::Assassin);
@@ -1334,8 +1194,6 @@ impl History {
             AOName::CollectiveChallenge => {
                 // Case Checked
                 // last_player here is a dummy an unused inside
-                // let last_player: usize = self.store[self.store_len - 1].player_id();
-                // self.add_moves(&mut output, last_player, AOName::EvalResult);
                 if self.store[self.store_len - 1].opposing_player_id() == self.store[self.store_len - 1].final_actioner() {
                     // Pass
                     // FA2
@@ -1401,87 +1259,6 @@ impl History {
                     self.add_moves(&mut output, blocker_id, AOName::CollectiveChallenge);
                 }
             },
-            // AOName::EvalResult => {
-            //     // Please refer to paths.txt for Cases
-            //     //TODO store_len check
-            //     // Moved some to CollectiveChallenge
-            //     debug_assert!(true, "EvalResult used!");
-            //     if self.store[self.store_len - 1].result() == AOResult::Pass {
-            //         log::info!("Obsolete! gen_legal Pass");
-            //         // FA2
-            //         // if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::ForeignAid ||
-            //         // B2 B9 
-            //         // if self.store_len >= 4 && self.store[self.store_len - 4].name() == AOName::BlockAssassinate ||
-            //         // C6
-            //         if self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::BlockSteal ||
-            //         // C2 C7
-            //         // self.store_len >= 4 && self.store[self.store_len - 4].name() == AOName::BlockSteal ||
-            //         // C1
-            //         self.store[self.store_len - 1].name() == AOName::BlockSteal {
-            //         // D1
-            //         // self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Tax {
-            //             // In Cases: FA2 B2 B9 C1 C2 C6 C7 D1 => Next Turn
-            //             let next_player_id: usize = self.next_player(self.current_player_turn);
-            //             if self.latest_coins()[next_player_id] >= 10 {
-            //                 self.add_moves(&mut output, next_player_id, AOName::Coup);
-            //             } else {
-            //                 self.add_moves(&mut output, next_player_id, AOName::Income);
-            //                 self.add_moves(&mut output, next_player_id, AOName::ForeignAid);
-            //                 self.add_moves(&mut output, next_player_id, AOName::Tax);
-            //                 self.add_moves(&mut output, next_player_id, AOName::Exchange);
-            //                 self.add_moves(&mut output, next_player_id, AOName::Steal);
-            //                 self.add_moves(&mut output, next_player_id, AOName::Assassinate);
-            //                 self.add_moves(&mut output, next_player_id, AOName::Coup);
-            //             }
-            //         // } else if self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::Steal {
-            //         //     // In Cases: C1 C2 C3 C4 => BlockSteal
-            //         //     let victim_id: usize = self.store[self.store_len - 3].opposing_player_id();
-            //         //     self.add_moves(&mut output, victim_id, AOName::BlockSteal);
-            //         // } else if self.store_len >= 3 && self.store[self.store_len - 3].name() == AOName::Assassinate {
-            //         //     // In Cases: B1 B2 B3 B4 B5 => BlockAssassinate
-            //         //     let victim_id: usize = self.store[self.store_len - 3].opposing_player_id();
-            //         //     self.add_moves(&mut output, victim_id, AOName::BlockAssassinate);
-                        
-            //         } else if self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::BlockAssassinate {
-            //             // In Cases: B1 B8 => Discard (Victim)
-            //             let victim_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].opposing_player_id();
-            //             self.add_moves(&mut output, victim_id, AOName::Discard);
-                        
-            //         // }else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Exchange {
-            //         //     // In Cases: A1 => ExchangeDraw
-            //         //     let exchanger_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-            //         //     self.add_moves(&mut output, exchanger_id, AOName::ExchangeDraw);
-            //         } else {
-            //             debug_assert!(false, "Unintended End point for EvalResult Pass");
-            //         }
-            //         // Back to normal game flow
-            //     } else if self.store[self.store_len - 1].result() == AOResult::Success {
-            //         // In Cases FA4 A2 B2 B3 B4 B5 B6 B9 B10 B11 B12 C2 C3 C4 C5 C7 C8 C9 D2
-            //         // A2 B5 C5 C6 C7 D2 => Discard Player
-            //         // B3 B9 B10 C3 C10 => Discard Victim
-            //         if self.store_len >= 2 {
-            //             if self.store[self.store_len - 2].name() == AOName::CollectiveChallenge {
-            //                 log::info!("Obsolete case in gen_legal_moves");
-            //                 // FA4 A2 B3 B4 B6 B10 B11 C3 C5 C8 D2=> Discard by challenged person
-            //                 let challenged_id: usize = self.store[self.store_len - 2].opposing_player_id();
-            //                 // self.add_moves(&mut output, challenged_id, AOName::Discard);
-            //                 self.add_moves(&mut output, challenged_id, AOName::RevealRedraw);
-            //             } else if self.store[self.store_len - 2].name() == AOName::BlockAssassinate ||
-            //             self.store[self.store_len - 2].name() == AOName::BlockSteal {
-            //                 // B2 B3 B4 B5 B9 B10 B11 B12 C2 C3 C4 C7 C8 C9 => CollectiveChallenge
-            //                 let challenged_id: usize = self.store[self.store_len - 2].player_id();
-            //                 self.add_moves(&mut output, challenged_id, AOName::CollectiveChallenge);
-            //             } else {
-            //                 debug_assert!(false, "Unintended End point for EvalResult Success");
-            //             }
-            //         }
-            //     } else {
-            //         debug_assert!(false, "Obsolete Case Reached!");
-            //         //AOResult::Failure is always RevealRedraw After
-            //         let challenged_id: usize = self.store[self.store_len - 2].opposing_player_id();
-            //         self.add_moves(&mut output, challenged_id, AOName::RevealRedraw);
-            //     }           
-            // },
             AOName::Discard => {
                 //TODO: store_len check
                 // In Cases: FA3 FA4 COUP1 A2 B1 B3 B4 B5 B6 B6 B7 B8 B10 B11 B12 C3 C4 C5 C8 C9 D2 D3| => Next Turn
