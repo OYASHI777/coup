@@ -433,6 +433,8 @@ impl CollectiveConstraint{
                 group.count_dead_add(count);
                 group.count_alive_subtract(count);
                 index += 1;
+            } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
+                self.gc_vec.swap_remove(index);
             } else {
                 index += 1;
             }
@@ -934,6 +936,13 @@ impl CollectiveConstraint{
                 if group.get_list()[player_id] == 0 {
                     group.group_add(player_id);
                     // Test to see if redundant
+                    if let Some(vcard) = self.pc_hm.get(&player_id) {
+                        // If adding the player has a dead card
+                        // Including into group includes adding dead counts from that player in
+                        if vcard == group.card() {
+                            group.count_dead_add(1);
+                        }
+                    }
                 }
                 if group.all_in() {
                     // [FULL PRUNE] because group constraint just means there could be a Duke anywhere (anyone or the pile might have it)

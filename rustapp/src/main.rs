@@ -115,9 +115,9 @@ use std::sync::Mutex;
 fn main() {
 
     // game_rnd(1000, true);
-    test_satis();
+    // test_satis();
     // game_rnd_constraint(5000, true);
-    // error_farmer(10000000, true);
+    error_farmer(1000000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
     // test_impossible_state(10000, true);
@@ -1069,7 +1069,7 @@ pub fn test_shuffle(iterations: usize){
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 hh.push_ao(output);
-                prob.push_ao(&output);
+                prob.push_ao(&output, false);
             } else {
                 break;
             }
@@ -1359,7 +1359,7 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 log::info!("{}", format!("Choice: {:?}", output));
                 hh.push_ao(output);
-                prob.push_ao(&output);
+                prob.push_ao(&output, false);
                 // let start_time = Instant::now();
                 // let output: Option<String> = prob.chance_sample_exit();
                 // let elapsed_time = start_time.elapsed();
@@ -1422,6 +1422,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     let mut total_wrong_illegal_proper: usize = 0;
     let mut total_same: usize = 0;
     let mut total_tries: usize = 0;
+    let bool_know_priv_info: bool = true;
     while game < game_no {
         log::info!("Game : {}", game);
         let mut hh = History::new(0);
@@ -1509,7 +1510,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             break    
                         } else {
                             hh.push_ao(output);
-                            prob.push_ao(&output);
+                            prob.push_ao(&output, bool_know_priv_info);
                         }
                     } else {
                         let set_legality: bool = prob.player_can_have_cards(output.player_id(), output.cards());
@@ -1557,7 +1558,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                             break    
                         } else {
                             hh.push_ao(output);
-                            prob.push_ao(&output);
+                            prob.push_ao(&output, bool_know_priv_info);
                         }
                     }
                 } else if output.name() == AOName::RevealRedraw {
@@ -1612,7 +1613,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         break    
                     } else {
                         hh.push_ao(output);
-                        prob.push_ao(&output);
+                        prob.push_ao(&output, false);
                     }
                 } else if output.name() == AOName::ExchangeDraw {
                     let set_legality: bool = prob.player_can_have_cards(6, output.cards());
@@ -1665,11 +1666,11 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         break    
                     } else {
                         hh.push_ao(output);
-                        prob.push_ao(&output);
+                        prob.push_ao(&output, bool_know_priv_info);
                     }
                 } else {
                     hh.push_ao(output);
-                    prob.push_ao(&output);
+                    prob.push_ao(&output, bool_know_priv_info);
                 }
             } else {
                 log::trace!("Pushed bad move!");
@@ -1739,6 +1740,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
     let mut total_wrong_illegal_proper: usize = 0;
     let mut total_same: usize = 0;
     let mut total_tries: usize = 0;
+    let bool_know_priv_info: bool = false;
     while game < game_no {
         // log::info!("Game : {}", game);
         let mut hh = History::new(0);
@@ -1817,7 +1819,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                             break    
                         } else {
                             hh.push_ao(output);
-                            prob.push_ao(&output);
+                            prob.push_ao(&output, bool_know_priv_info);
                         }
                     } else {
                         let set_legality: bool = prob.player_can_have_cards(output.player_id(), output.cards());
@@ -1869,7 +1871,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                             break    
                         } else {
                             hh.push_ao(output);
-                            prob.push_ao(&output);
+                            prob.push_ao(&output, bool_know_priv_info);
                         }
                     }
                 } else if output.name() == AOName::RevealRedraw {
@@ -1925,7 +1927,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                         break    
                     } else {
                         hh.push_ao(output);
-                        prob.push_ao(&output);
+                        prob.push_ao(&output, bool_know_priv_info);
                     }
                 } else if output.name() == AOName::ExchangeDraw {
                     let set_legality: bool = prob.player_can_have_cards(6, output.cards());
@@ -1981,11 +1983,11 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
                         break    
                     } else {
                         hh.push_ao(output);
-                        prob.push_ao(&output);
+                        prob.push_ao(&output, bool_know_priv_info);
                     }
                 } else {
                     hh.push_ao(output);
-                    prob.push_ao(&output);
+                    prob.push_ao(&output, bool_know_priv_info);
                 }
             } else {
                 // log::trace!("Pushed bad move!");
@@ -2053,6 +2055,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
     let mut total_wrong_illegal_proper: usize = 0;
     let mut total_same: usize = 0;
     let mut total_tries: usize = 0;
+    let bool_know_priv_info: bool = true;
     while game < game_no {
         // log::info!("Game : {}", game);
         let mut hh = History::new(0);
@@ -2134,7 +2137,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                             break    
                         } else {
                             hh.push_ao(output);
-                            prob.push_ao(&output);
+                            prob.push_ao(&output, bool_know_priv_info);
                         }
                     } else {
                         let set_legality: bool = prob.player_can_have_cards(output.player_id(), output.cards());
@@ -2187,7 +2190,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                             break    
                         } else {
                             hh.push_ao(output);
-                            prob.push_ao(&output);
+                            prob.push_ao(&output, bool_know_priv_info);
                         }
                     }
                 } else if output.name() == AOName::RevealRedraw {
@@ -2244,7 +2247,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                         break    
                     } else {
                         hh.push_ao(output);
-                        prob.push_ao(&output);
+                        prob.push_ao(&output, bool_know_priv_info);
                     }
                 } else if output.name() == AOName::ExchangeDraw {
                     log::info!("{}", format!("Choice: {:?}", output));
@@ -2301,11 +2304,11 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
                         break    
                     } else {
                         hh.push_ao(output);
-                        prob.push_ao(&output);
+                        prob.push_ao(&output, bool_know_priv_info);
                     }
                 } else {
                     hh.push_ao(output);
-                    prob.push_ao(&output);
+                    prob.push_ao(&output, bool_know_priv_info);
                 }
             } else {
                 // log::trace!("Pushed bad move!");
@@ -2355,6 +2358,7 @@ pub fn test_impossible_state(game_no: usize, log_bool: bool){
     let mut total_steps: usize = 0;
     let mut prob = NaiveProb::new();
     let start_time = Instant::now();
+    let bool_know_priv_info: bool = true;
     while game < game_no {
         log::info!("Game : {}", game);
         let mut hh = History::new(0);
@@ -2413,7 +2417,7 @@ pub fn test_impossible_state(game_no: usize, log_bool: bool){
                     }
                 }
                 hh.push_ao(output);
-                prob.push_ao(&output);
+                prob.push_ao(&output, bool_know_priv_info);
                 if !prob.latest_constraint_is_empty(){
                     let legality: Option<String> = prob.chance_sample_exit();
                     if legality.is_none(){

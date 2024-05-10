@@ -192,7 +192,7 @@ impl<'a> NaiveProb<'a> {
     pub fn latest_constraint(&self) -> CollectiveConstraint {
         self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap()
     }
-    pub fn push_ao(&mut self, ao: &ActionObservation){
+    pub fn push_ao(&mut self, ao: &ActionObservation, bool_know_priv_info: bool){
         // log::trace!("{}", format!("Before Pushing AO {:?}", ao));
         // self.printlog();
         if ao.name() == AOName::Discard {
@@ -259,12 +259,17 @@ impl<'a> NaiveProb<'a> {
                     last_constraint.group_initial_prune(6, &ao.cards()[0], 1, false);
                     last_constraint.group_initial_prune(6, &ao.cards()[1], 1, false);
                 }
-
-                if ao.cards()[0] == ao.cards()[1] {
-                    last_constraint.add_group_constraint_exchange(ao.player_id(), &ao.cards()[0], 2);
+                if bool_know_priv_info {
+                    // Case where we want to store knowledge of cards drawn into constraints
+                    if ao.cards()[0] == ao.cards()[1] {
+                        last_constraint.add_group_constraint_exchange(ao.player_id(), &ao.cards()[0], 2);
+                    } else {
+                        last_constraint.add_group_constraint_exchange(ao.player_id(), &ao.cards()[0], 1);
+                        last_constraint.add_group_constraint_exchange(ao.player_id(), &ao.cards()[1], 1);
+                    }
                 } else {
-                    last_constraint.add_group_constraint_exchange(ao.player_id(), &ao.cards()[0], 1);
-                    last_constraint.add_group_constraint_exchange(ao.player_id(), &ao.cards()[1], 1);
+                    // Case where adding to past history and one does not know what card is drawn in exchange draw
+                    last_constraint.update_group_constraint(ao.player_id());
                 }
             } else {
                 debug_assert!(false, "constraint not stored at prev_index!");
@@ -277,16 +282,6 @@ impl<'a> NaiveProb<'a> {
                 let empty_collective_constraint: CollectiveConstraint = CollectiveConstraint::new();
                 self.constraint_history.push(Some(empty_collective_constraint));
             }
-            // Obsolete because it is handled in ExchangeDraw
-            // update_group_constraint will only be used for ExchangeDraw/ExchangeChoice when looking at past history and private information is not searched
-            // if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
-            //     // We update when cards a mixed with pile by player_id but no card is revealed
-            //     last_constraint.update_group_constraint(ao.player_id());
-            //     // last_constraint.update_group_constraint_hm(ao.player_id());
-            // } else {
-            //     // Handle the case where the last element is None or the vector is empty
-            //     debug_assert!(false, "constraint not stored at prev_index!");
-            // }
             self.dist_from_last.push(1);
         } else {
             // Add new case
