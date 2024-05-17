@@ -5,7 +5,9 @@ use rand::prelude::SliceRandom;
 use super::constraint::{GroupConstraint, CollectiveConstraint};
 use crate::history_public::Card;
 
+#[derive(Debug)]
 pub struct NaiveSampler<'a> {
+    // struct that randomly samples an action
     store: HashMap<&'a str, Vec<&'a str>>,
 }
 

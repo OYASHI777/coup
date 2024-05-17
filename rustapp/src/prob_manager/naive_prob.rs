@@ -190,7 +190,11 @@ impl<'a> NaiveProb<'a> {
     }
     // Push()
     pub fn latest_constraint(&self) -> CollectiveConstraint {
-        self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap()
+        if self.constraint_history.len() == 0 {
+            return CollectiveConstraint::new()
+        } else {
+            self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap()
+        }
     }
     pub fn push_ao(&mut self, ao: &ActionObservation, bool_know_priv_info: bool){
         // log::trace!("{}", format!("Before Pushing AO {:?}", ao));

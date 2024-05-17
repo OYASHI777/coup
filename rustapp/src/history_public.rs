@@ -362,6 +362,11 @@ impl History {
             public_card_count,
         }
     }
+    pub fn reset(&mut self) {
+        while self.store_len() > 0 {
+            self.remove_ao();
+        }
+    }
     pub fn push(&mut self, ao: ActionObservation, bool_new_turn: bool){
         // Increase store_len
         // Creates new gamestate 
@@ -387,6 +392,13 @@ impl History {
         log::info!("{}", format!("Coins: {:?}", self.latest_coins()));
         // log::info!("{}", format!("Store_len: {:?}", self.store_len));
         log::info!("{}", format!("Dead Cards: {:?}", self.public_card_count));
+    }
+    pub fn print_history(&self) {
+        if self.store_len == 0 {
+            println!("No History yet");
+        } else {
+            println!("History: {:?}", self.store[self.store_len - 1]);
+        }
     }
     pub fn log_history(&self){
         log::info!("{}", format!("Current_player_turn: {:?}", self.get_history(self.store_len)));
@@ -447,6 +459,13 @@ impl History {
             self.gamestate[self.store_len - 1].coins()
         }
     }
+    pub fn latest_move(&self) -> &ActionObservation {
+        if self.store_len == 0 {
+            &ActionObservation::EmptyAO
+        } else {
+            &self.store[self.store_len - 1]
+        }
+    }
     pub fn game_won(&self) -> bool {
         let mut count: usize = 0;
         for i in 0..6{
@@ -466,6 +485,19 @@ impl History {
     pub fn get_history(&self, len: usize) -> Vec<ActionObservation> {
         debug_assert!(len <= 5000, "Use a proper len in get_history!");
         self.store[..len].to_vec()
+    }
+    pub fn store_len(&self) -> usize {
+        self.store_len
+    }
+    pub fn dist_from_turn(&self) -> usize {
+        if self.store_len() == 0 {
+            0
+        } else {
+            self.dist_from_turn[self.store_len() - 1]
+        }
+    }
+    pub fn store_at(&self, index: usize) -> &ActionObservation {
+        &self.store[index]
     }
     pub fn get_dist_from_turn(&self, len: usize) -> Vec<usize> {
         debug_assert!(len <= 5000, "Use a proper len in get_dist_from_turn!");

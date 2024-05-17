@@ -22,6 +22,7 @@ use prob_manager::constraint::{GroupConstraint, CollectiveConstraint};
 use std::time::Instant;
 use rand::prelude::IteratorRandom;
 use std::sync::Mutex;
+use prob_manager::explorer::{cfr_test, cfr_prune_test, mccfr_prune_test};
 // QUICK TEMP: Exchange Draw showing 2 cards should prune the other groups? because they found out the pile has 2 cards
 //              Make Func to initialise past constraint history based on player perspective in naive_prob
 //              Integrate this by having an initial constraint history that can be loaded in
@@ -117,7 +118,10 @@ fn main() {
     // game_rnd(1000, true);
     // test_satis();
     // game_rnd_constraint(5000, true);
-    error_farmer(1000000000, true);
+    // cfr_test();
+    // cfr_prune_test();
+    mccfr_prune_test();
+    // error_farmer(1000000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
     // test_impossible_state(10000, true);
