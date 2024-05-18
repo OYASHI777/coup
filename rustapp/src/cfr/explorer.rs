@@ -4,10 +4,13 @@ use crate::prob_manager::naive_prob::NaiveProb;
 use crate::prob_manager::naive_sampler::NaiveSampler;
 use crate::history_public::{AOName, ActionObservation, Card, History};
 use crate::prob_manager::constraint::CollectiveConstraint;
+use super::action_serialiser::{DefaultEmbedding, ActionEmbedding};
 // use super::best_response_policy::BRKey;
 use std::collections::HashMap;
 struct Explorer<'a> {
     // This is a struct used to conduct Pure Monte Carlo CounterFactual Regret Minimization (PMCCFR)
+    path: String,
+    action_embedder: Box<dyn ActionEmbedding>,
     history: History,
     prob: NaiveProb<'a>,
     chance_sampler: NaiveSampler<'a>,
@@ -21,8 +24,11 @@ struct Explorer<'a> {
 
 impl <'a> Explorer<'a> {
     pub fn new(max_depth: usize) -> Self {
+        // make this into config HashMap when done
         Explorer{
             // temporarily the starting_player is 0
+            path: "root".to_string(),
+            action_embedder: Box::new(DefaultEmbedding),
             history: History::new(0),
             prob: NaiveProb::new(),
             chance_sampler: NaiveSampler::new(),
@@ -35,6 +41,7 @@ impl <'a> Explorer<'a> {
     }
 
     pub fn reset(&mut self) {
+        self.path = "root".to_string();
         self.history.reset();
         self.prob.reset();
         self.node_counter = 0;
@@ -54,11 +61,13 @@ impl <'a> Explorer<'a> {
         // true if simulating future history
         self.history.push_ao(action);
         self.prob.push_ao(&action, bool_know_priv_info);
+        self.path = self.action_embedder.add_action(&self.path, &action);
     }
 
     pub fn drop_node(&mut self) {
         self.history.remove_ao();
         self.prob.pop();
+        self.path = self.action_embedder.remove_action(&self.path);
     }
 
     pub fn is_chance_node(&self) -> bool {
@@ -305,6 +314,7 @@ impl <'a> Explorer<'a> {
             if self.is_chance_node() {
                 if let Some(action) = possible_outcomes.choose(&mut thread_rng()).cloned() {
                     self.add_node(action, bool_know_priv_info);
+                    // TODO: forward pass
                     self.explore_recurse_mc_naive_prune(depth_counter + 1);
                     // TODO: backpropogate
                     self.drop_node();
@@ -315,6 +325,7 @@ impl <'a> Explorer<'a> {
                     if action.name() == AOName::ExchangeDraw {
                         if let Some(sampled_action) = self.naive_sample_exchange_draw(action.player_id()) {
                             self.add_node(sampled_action, bool_know_priv_info);
+                            // TODO: forward pass
                             self.explore_recurse_mc_naive_prune(depth_counter + 1);
                             // TODO: backpropogate
                             self.drop_node();
@@ -323,6 +334,7 @@ impl <'a> Explorer<'a> {
                         }
                     } else if !self.naive_prune(&action) {
                         self.add_node(action, bool_know_priv_info);
+                        // TODO: forward pass
                         self.explore_recurse_mc_naive_prune(depth_counter + 1);
                         // TODO: backpropogate
                         self.drop_node();
@@ -380,7 +392,7 @@ pub fn cfr_prune_test(){
 
     use std::time::Instant;
     let max_test_depth: usize = 20;
-    for max_depth in 1..max_test_depth {
+    for max_depth in 10..max_test_depth {
         let mut pmccfr: Explorer = Explorer::new(max_depth);
         let start_time = Instant::now();
         pmccfr.explore_recurse_naive_prune(0);
@@ -457,7 +469,7 @@ pub fn mccfr_prune_test(){
     let max_test_depth: usize = 200;
     let max_iterations: usize = 1000;
     let mut pmccfr: Explorer = Explorer::new(0);
-    for max_depth in 1..max_test_depth {
+    for max_depth in 10..max_test_depth {
         let mut max_nodes_traversed: u128 = 0;
         let mut max_nodes_reached: u128 = 0;
         pmccfr.set_depth(max_depth);

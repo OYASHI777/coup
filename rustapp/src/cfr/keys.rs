@@ -1,21 +1,25 @@
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+use std::hash::Hasher;
+use std::hash::Hash;
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct BRKey {
     player_id: usize,
-    state_index: usize,
+    infostate: String,
 }
 pub const MAX_NUM_BRKEY: usize = 6 * 15; 
+pub const INFOSTATES: [&str; 15] = ["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE", "EE"];
 impl BRKey {
-    pub fn new(player_id: usize, state_index: usize) -> Self {
+    pub fn new(player_id: usize, infostate: String) -> Self {
         debug_assert!(player_id > 0, "Invalid player_id");
         debug_assert!(player_id < 6, "Invalid player_id");
         BRKey {
             player_id,
-            state_index,
+            infostate,
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MSKey {
     player_id: usize,
     path: String,
@@ -29,5 +33,15 @@ impl MSKey {
             player_id,
             path: path.to_string(),
         }
+    }
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+}
+
+impl Hash for MSKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.player_id.hash(state);
+        self.path.hash(state);
     }
 }
