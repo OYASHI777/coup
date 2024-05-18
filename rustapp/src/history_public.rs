@@ -36,6 +36,16 @@ impl Card {
             Card::Contessa => 'E',
         }
     }
+    pub fn char_to_card(card_char: char) -> Card {
+        match card_char {
+            'A' => Card::Ambassador,
+            'B' => Card::Assassin,
+            'C' => Card::Captain,
+            'D' => Card::Duke,
+            'E' => Card::Contessa,
+            _ => panic!("Invalid input provided!"),
+        }
+    }
 }
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum AOName {
@@ -235,36 +245,6 @@ impl ActionObservation {
             ActionObservation::CollectiveBlock { final_actioner , .. } => *final_actioner,
             ActionObservation::CollectiveChallenge { final_actioner , .. } => *final_actioner,
             _ => panic!("This ActionObservation variant does not contain amount!"),
-        }
-    }
-    pub fn serialise_name_key(&self) -> String {
-        // Public moves only!
-        match self {
-            ActionObservation::EmptyAO => panic!("bad kind"),
-            ActionObservation::Income { player_id } => format!("ICP{}", player_id),
-            ActionObservation::ForeignAid { player_id } => format!("FAP{}", player_id),
-            ActionObservation::Tax { player_id } => format!("TXP{}", player_id),
-            ActionObservation::Steal { player_id, opposing_player_id, ..  } => format!("SLP{}P{}", player_id, opposing_player_id),
-            ActionObservation::Assassinate { player_id, opposing_player_id, ..  } => format!("ASP{}P{}", player_id, opposing_player_id),
-            ActionObservation::Coup { player_id, opposing_player_id, ..  } => format!("COP{}P{}", player_id, opposing_player_id),
-            ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => 
-                format!("CH{}{}{}", opposing_player_id, participants.iter().map(|&b| if b { '1' } else { '0' }).collect::<String>(), final_actioner),
-            ActionObservation::CollectiveBlock { participants, opposing_player_id, final_actioner } => 
-            format!("BT{}{}{}", opposing_player_id, participants.iter().map(|&b| if b { '1' } else { '0' }).collect::<String>(), final_actioner),
-            ActionObservation::BlockSteal { player_id, opposing_player_id, card } => format!("BS{}P{}P{}",if *card == Card::Captain {"C"} else {"A"}, player_id, opposing_player_id ),
-            ActionObservation::BlockAssassinate { player_id, opposing_player_id, ..  } => format!("BAP{}P{}", player_id, opposing_player_id),
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                match no_cards {
-                    1 => format!("DCP{}{}", player_id, card[0].card_to_string()),
-                    2 => format!("DCP{}{}{}", player_id, card[0].card_to_string(), card[1].card_to_string()),
-                    _ => panic!("Invalid number of cards"),
-                }
-            },
-            ActionObservation::RevealRedraw { player_id, card } => format!("RRP{}{}", player_id, card.card_to_string()),
-            ActionObservation::Exchange { player_id } => format!("EXP{}", player_id),
-            ActionObservation::ExchangeDraw { player_id , card } => format!("EXD{}{}{}", player_id, card[0].card_to_string(), card[1].card_to_string()),
-            ActionObservation::ExchangeChoice { player_id , no_cards, .. } => format!("EC{}P{}", no_cards, player_id),
-            _ => panic!("bad kind"),
         }
     }
 

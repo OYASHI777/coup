@@ -1405,6 +1405,25 @@ impl<'a> NaiveProb<'a> {
             return true
         }
     }
+    pub fn player_can_have_cards_constructor_state(&mut self, player_id: usize, cards: &[Card; 2]) -> Option<String> {
+        // This is the ideal constructed version
+        // MEDIAN: 25µs
+        // MEAN: 32µs
+        // MAX: 519.8µs (600 cases)
+        let mut latest_constraint: CollectiveConstraint = self.latest_constraint();
+        if player_id == 6 {
+            if cards[0] == cards[1] {
+                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 0, 2));
+            } else {
+                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 0, 1));
+                latest_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[1], 0, 1));
+            }
+        } else {
+            latest_constraint.add_raw_public_constraint(player_id, cards[0]);
+            latest_constraint.add_raw_public_constraint(player_id, cards[1]);
+        }
+        self.naive_sampler.par_constructor(&latest_constraint)
+    }
     pub fn filter_player_can_have_card(&mut self, player_id: usize, card: &Card){
         let mut latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
         // Use raw because we are wondering if player can have card and do not know if they actually have the card
