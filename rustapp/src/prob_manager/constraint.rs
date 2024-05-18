@@ -3230,4 +3230,31 @@ impl CollectiveConstraint{
             false
         }
     }
+    pub fn player_can_have_active_cards_str(&self, player_id: usize, cards: &str) -> bool {
+        assert!(cards.len() == 2, "Please only use len of 2");
+        let card0: &Card = &Card::char_to_card(cards.chars().nth(0).unwrap());
+        let card1: &Card = &Card::char_to_card(cards.chars().nth(1).unwrap());
+        if self.player_can_have_active_card(player_id, card0){
+            let mut new_constraint: CollectiveConstraint = self.clone();
+            if player_id == 6 {
+                // Add case for when both cards are the same!
+                // If both are the same it will return legal if 1 card works because I dont add [0, 0, 0, 0, 0, 0, 1] count: 2
+                if *card0 != *card1 {
+                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card0, 0, 1));
+                } else {
+                    // When they are same, we put both constraints and see if can have the card? I dont think this should work tho?
+                    // CURRENTLY NO PROPER FUNCTIONALITY IMPLEMENTED FOR TESTING IF PILE HAS 2 OF THE SAME CARD
+                    // ITS NOT NEEDED FOR ALGO SO THIS DISCLAIMER IS 
+                    // THIS IS A TEMP FIX THAT MAY WORK BUT LEADS TO USIZE OVERFLOW
+                    // new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], card0, 2));
+                    return true;
+                }
+            } else {
+                new_constraint.add_raw_public_constraint(player_id, *card0);
+            }
+            CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card1)
+        } else {
+            false
+        }
+    }
 }

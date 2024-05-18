@@ -46,6 +46,16 @@ impl Card {
             _ => panic!("Invalid input provided!"),
         }
     }
+    pub fn str_to_card(card_str: &str) -> Card {
+        match card_str {
+            "A" => Card::Ambassador,
+            "B" => Card::Assassin,
+            "C" => Card::Captain,
+            "D" => Card::Duke,
+            "E" => Card::Contessa,
+            _ => panic!("Invalid input provided!"),
+        }
+    }
 }
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum AOName {
@@ -73,7 +83,7 @@ pub enum AOResult {
     Failure,
     Pass,
 }
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ActionObservation {
     EmptyAO,
     Income {
