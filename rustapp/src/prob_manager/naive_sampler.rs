@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use rand::prelude::SliceRandom;
 use super::constraint::{GroupConstraint, CollectiveConstraint};
 use crate::history_public::Card;
+use std::time::Instant;
 
 #[derive(Debug)]
 pub struct NaiveSampler<'a> {
@@ -57,6 +58,8 @@ impl<'a> NaiveSampler<'a> {
     }
     pub fn par_constructor(&mut self, constraint: &CollectiveConstraint) -> Option<String> {
         // Returns None if impossible state, and a random String if its possible 
+        // mostly microseconds 3ms max
+        // let start_time = Instant::now();
 
         self.shuffle();
         // create 6 pointers 1 for each player, to point to the vector the player references
@@ -106,6 +109,8 @@ impl<'a> NaiveSampler<'a> {
         });
 
         let final_result: Option<String> = result.into_inner().unwrap();
+        // let duration = start_time.elapsed();
+        // println!("Duration = {:?}", duration);
         final_result
     }
 

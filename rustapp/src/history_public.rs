@@ -60,6 +60,8 @@ impl Card {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum AOName {
     EmptyAO,
+    ChallengeAccept,
+    ChallengeDeny,
     Income,
     ForeignAid,
     Tax,
@@ -86,6 +88,9 @@ pub enum AOResult {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ActionObservation {
     EmptyAO,
+    // Challenge Status before collation
+    ChallengeAccept,
+    ChallengeDeny,
     Income {
         player_id: usize,
     },
@@ -151,6 +156,7 @@ pub enum ActionObservation {
         player_id: usize,
         no_cards: usize,
     },
+    // TODO: Add ExchangeChoice Private, and generate possible moves based on history and exchangedraw choice
 }
 
 impl Default for ActionObservation{
@@ -166,6 +172,8 @@ impl ActionObservation {
         use ActionObservation::*;
         match self {
             EmptyAO => AOName::EmptyAO,
+            ChallengeAccept => AOName::ChallengeAccept,
+            ChallengeDeny => AOName::ChallengeDeny,
             Income { .. } => AOName::Income,
             ForeignAid { .. } => AOName::ForeignAid,
             Tax { .. } => AOName::Tax,
@@ -202,8 +210,17 @@ impl ActionObservation {
             | ActionObservation::ExchangeDraw { player_id, .. }
             | ActionObservation::ExchangeChoice { player_id, .. } => *player_id,
             // No player_id available in these variants, so we panic
-            ActionObservation::EmptyAO { .. } => {
-                panic!("This ActionObservation variant does not contain a player_id");
+            ActionObservation::ChallengeAccept => {
+                panic!("ChallengeAccept  does not contain a player_id");
+            },
+            ActionObservation::ChallengeDeny => {
+                panic!("ChallengeDeny  does not contain a player_id");
+            },
+            ActionObservation::EmptyAO => {
+                panic!("EmptyAO does not contain a player_id");
+            },
+            _ => {
+                panic!("This ActionObservation Variant does not contain a player_id");
             }
         }
     }
@@ -1432,7 +1449,8 @@ impl History {
                     self.add_moves(&mut output, next_player_id, AOName::Assassinate);
                     self.add_moves(&mut output, next_player_id, AOName::Coup);
                 }
-            }
+            },
+            _ => {}
         }
         output
     }

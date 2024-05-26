@@ -15,6 +15,20 @@ pub struct BestResponseIndVec {
 }
 pub const INFOSTATES: [&str; 15] = ["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE", "EE"];
 impl BestResponseIndVec {
+    pub fn new(max_size: usize) -> Self {
+        let mut root_hm: HashMap<BRKey, bool> = HashMap::with_capacity(MAX_NUM_BRKEY);
+        let constraint: CollectiveConstraint = CollectiveConstraint::new();
+        for player_id in 0..6 {
+            for infostate in INFOSTATES {
+                if constraint.player_can_have_active_cards_str(player_id, infostate) {
+                    let key: BRKey = BRKey::new(player_id, infostate);
+                    root_hm.insert(key, true);
+                }
+            }
+        }
+        let mut policies = Vec::with_capacity(max_size);
+        BestResponseIndVec { policies }
+    }
     pub fn create_root(constraint: &CollectiveConstraint, max_size: usize) -> Self {
         // [Placeholder]
         // check all infostate to see if player can have those cards
@@ -22,7 +36,7 @@ impl BestResponseIndVec {
         for player_id in 0..6 {
             for infostate in INFOSTATES {
                 if constraint.player_can_have_active_cards_str(player_id, infostate) {
-                    let key: BRKey = BRKey::new(player_id, infostate.to_string());
+                    let key: BRKey = BRKey::new(player_id, infostate);
                     root_hm.insert(key, true);
                 }
             }
@@ -30,6 +44,9 @@ impl BestResponseIndVec {
         let mut policies = Vec::with_capacity(max_size);
         policies.push(root_hm);
         BestResponseIndVec { policies }
+    }
+    pub fn reset(&mut self) {
+        self.policies.clear();
     }
     pub fn infostates_arr() -> [&'static str; 15] {
         INFOSTATES
