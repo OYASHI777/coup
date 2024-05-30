@@ -70,7 +70,58 @@ impl ReachProb {
             false_infostates_player5: Vec::with_capacity(total_infostates),
         }
     }
+    pub fn get_status(&self, player_id: usize, infostate: &str) -> Option<bool> {
+        match player_id {
+            // Add the rest
+            0 => {
+                if let Some(value) = self.reach_probs_player0.get(infostate){
+                    return Some(*value);
+                } else {
+                    return None;
+                }
+            },
+            1 => {
+                if let Some(value) = self.reach_probs_player1.get(infostate){
+                    return Some(*value);
+                } else {
+                    return None;
+                }
+            },
+            2 => {
+                if let Some(value) = self.reach_probs_player2.get(infostate){
+                    return Some(*value);
+                } else {
+                    return None;
+                }
+            },
+            3 => {
+                if let Some(value) = self.reach_probs_player3.get(infostate){
+                    return Some(*value);
+                } else {
+                    return None;
+                }
+            },
+            4 => {
+                if let Some(value) = self.reach_probs_player4.get(infostate){
+                    return Some(*value);
+                } else {
+                    return None;
+                }
+            },
+            5 => {
+                if let Some(value) = self.reach_probs_player5.get(infostate){
+                    return Some(*value);
+                } else {
+                    return None;
+                }
+            },
+            _ => {
+                panic!("Invalid player id provided!");
+            }
+        }
+    }
     pub fn set_status(&mut self, player_id: usize, infostate: &str, status: bool) {
+        // Add if not inside
         match player_id {
             0 => {
                 if let Some(value) = self.reach_probs_player0.get_mut(infostate){
@@ -87,6 +138,13 @@ impl ReachProb {
                                 self.false_infostates_player0.push(infostate.to_string());
                             }
                         }
+                    }
+                } else {
+                    self.reach_probs_player0.insert(infostate.to_string(), status);
+                    if status {
+                        self.true_infostates_player0.push(infostate.to_string());
+                    } else {
+                        self.false_infostates_player0.push(infostate.to_string());
                     }
                 }
             },
@@ -106,6 +164,13 @@ impl ReachProb {
                             }
                         }
                     }
+                } else {
+                    self.reach_probs_player1.insert(infostate.to_string(), status);
+                    if status {
+                        self.true_infostates_player1.push(infostate.to_string());
+                    } else {
+                        self.false_infostates_player1.push(infostate.to_string());
+                    }
                 }
             },
             2 => {
@@ -123,6 +188,13 @@ impl ReachProb {
                                 self.false_infostates_player2.push(infostate.to_string());
                             }
                         }
+                    }
+                } else {
+                    self.reach_probs_player2.insert(infostate.to_string(), status);
+                    if status {
+                        self.true_infostates_player2.push(infostate.to_string());
+                    } else {
+                        self.false_infostates_player2.push(infostate.to_string());
                     }
                 }
             },
@@ -142,6 +214,13 @@ impl ReachProb {
                             }
                         }
                     }
+                } else {
+                    self.reach_probs_player3.insert(infostate.to_string(), status);
+                    if status {
+                        self.true_infostates_player3.push(infostate.to_string());
+                    } else {
+                        self.false_infostates_player3.push(infostate.to_string());
+                    }
                 }
             },
             4 => {
@@ -159,6 +238,13 @@ impl ReachProb {
                                 self.false_infostates_player4.push(infostate.to_string());
                             }
                         }
+                    }
+                } else {
+                    self.reach_probs_player4.insert(infostate.to_string(), status);
+                    if status {
+                        self.true_infostates_player4.push(infostate.to_string());
+                    } else {
+                        self.false_infostates_player4.push(infostate.to_string());
                     }
                 }
             },
@@ -178,10 +264,109 @@ impl ReachProb {
                             }
                         }
                     }
+                } else {
+                    self.reach_probs_player5.insert(infostate.to_string(), status);
+                    if status {
+                        self.true_infostates_player5.push(infostate.to_string());
+                    } else {
+                        self.false_infostates_player5.push(infostate.to_string());
+                    }
                 }
             },
             _ => {
                 panic!("Invalid Player ID, please provide between 0 to 5 both inclusive");
+            }
+        }
+    }
+    pub fn remove(&mut self, player_id: usize, infostate: &str) {
+        // TODO: fill
+        match player_id {
+            0 => {
+                if self.reach_probs_player0.contains_key(infostate) {
+                    let status: Option<bool> = self.reach_probs_player0.remove(infostate);
+                    if let Some(value) = status {
+                        if value {
+                            self.true_infostates_player0.retain(|x| x != infostate);
+                        } else {
+                            self.false_infostates_player0.retain(|x| x != infostate);
+                        }
+                    } else {
+                        panic!("Infostate not inside!");
+                    }
+                }
+            },
+            1 => {
+                if self.reach_probs_player1.contains_key(infostate) {
+                    let status: Option<bool> = self.reach_probs_player1.remove(infostate);
+                    if let Some(value) = status {
+                        if value {
+                            self.true_infostates_player1.retain(|x| x != infostate);
+                        } else {
+                            self.false_infostates_player1.retain(|x| x != infostate);
+                        }
+                    } else {
+                        panic!("Infostate not inside!");
+                    }
+                }
+            },
+            2 => {
+                if self.reach_probs_player2.contains_key(infostate) {
+                    let status: Option<bool> = self.reach_probs_player2.remove(infostate);
+                    if let Some(value) = status {
+                        if value {
+                            self.true_infostates_player2.retain(|x| x != infostate);
+                        } else {
+                            self.false_infostates_player2.retain(|x| x != infostate);
+                        }
+                    } else {
+                        panic!("Infostate not inside!");
+                    }
+                }
+            },
+            3 => {
+                if self.reach_probs_player3.contains_key(infostate) {
+                    let status: Option<bool> = self.reach_probs_player3.remove(infostate);
+                    if let Some(value) = status {
+                        if value {
+                            self.true_infostates_player3.retain(|x| x != infostate);
+                        } else {
+                            self.false_infostates_player3.retain(|x| x != infostate);
+                        }
+                    } else {
+                        panic!("Infostate not inside!");
+                    }
+                }
+            },
+            4 => {
+                if self.reach_probs_player4.contains_key(infostate) {
+                    let status: Option<bool> = self.reach_probs_player4.remove(infostate);
+                    if let Some(value) = status {
+                        if value {
+                            self.true_infostates_player4.retain(|x| x != infostate);
+                        } else {
+                            self.false_infostates_player4.retain(|x| x != infostate);
+                        }
+                    } else {
+                        panic!("Infostate not inside!");
+                    }
+                }
+            },
+            5 => {
+                if self.reach_probs_player5.contains_key(infostate) {
+                    let status: Option<bool> = self.reach_probs_player5.remove(infostate);
+                    if let Some(value) = status {
+                        if value {
+                            self.true_infostates_player5.retain(|x| x != infostate);
+                        } else {
+                            self.false_infostates_player5.retain(|x| x != infostate);
+                        }
+                    } else {
+                        panic!("Infostate not inside!");
+                    }
+                }
+            },
+            _ => {
+                panic!("Please provide a player_id within 0 to 6 inclusive");
             }
         }
     }
