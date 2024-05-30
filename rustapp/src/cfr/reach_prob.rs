@@ -7,8 +7,11 @@ use super::keys::INFOSTATES;
 // use rayon::iter::IntoParallelIterator; 
 use rayon::prelude::*;
 use crossbeam::thread;
+use std::clone;
 use std::collections::HashMap;
+use std::collections::hash_map::Keys;
 
+#[derive(Clone)]
 pub struct ReachProb {
     reach_probs_player0: HashMap<String, bool>,
     reach_probs_player1: HashMap<String, bool>,
@@ -31,6 +34,7 @@ pub struct ReachProb {
     false_infostates_player4: Vec<String>,
     false_infostates_player5: Vec<String>,
 
+    len: usize,
 }
 
 impl ReachProb {
@@ -68,6 +72,18 @@ impl ReachProb {
             false_infostates_player3: Vec::with_capacity(total_infostates),
             false_infostates_player4: Vec::with_capacity(total_infostates),
             false_infostates_player5: Vec::with_capacity(total_infostates),
+            len: 90,
+        }
+    }
+    pub fn player_infostate_keys(&self, player_id: usize) -> Keys<'_, String, bool>{
+        match player_id {
+            0 => self.reach_probs_player0.keys(),
+            1 => self.reach_probs_player1.keys(),
+            2 => self.reach_probs_player2.keys(),
+            3 => self.reach_probs_player3.keys(),
+            4 => self.reach_probs_player4.keys(),
+            5 => self.reach_probs_player5.keys(),
+            _ => panic!("Invalid player_id please make sure its between 0 to 5 inclusive"),
         }
     }
     pub fn get_status(&self, player_id: usize, infostate: &str) -> Option<bool> {
@@ -146,6 +162,7 @@ impl ReachProb {
                     } else {
                         self.false_infostates_player0.push(infostate.to_string());
                     }
+                    self.len += 1;
                 }
             },
             1 => {
@@ -171,6 +188,7 @@ impl ReachProb {
                     } else {
                         self.false_infostates_player1.push(infostate.to_string());
                     }
+                    self.len += 1;
                 }
             },
             2 => {
@@ -196,6 +214,7 @@ impl ReachProb {
                     } else {
                         self.false_infostates_player2.push(infostate.to_string());
                     }
+                    self.len += 1;
                 }
             },
             3 => {
@@ -221,6 +240,7 @@ impl ReachProb {
                     } else {
                         self.false_infostates_player3.push(infostate.to_string());
                     }
+                    self.len += 1;
                 }
             },
             4 => {
@@ -246,6 +266,7 @@ impl ReachProb {
                     } else {
                         self.false_infostates_player4.push(infostate.to_string());
                     }
+                    self.len += 1;
                 }
             },
             5 => {
@@ -271,6 +292,7 @@ impl ReachProb {
                     } else {
                         self.false_infostates_player5.push(infostate.to_string());
                     }
+                    self.len += 1;
                 }
             },
             _ => {
@@ -290,6 +312,7 @@ impl ReachProb {
                         } else {
                             self.false_infostates_player0.retain(|x| x != infostate);
                         }
+                        self.len -= 1;
                     } else {
                         panic!("Infostate not inside!");
                     }
@@ -304,6 +327,7 @@ impl ReachProb {
                         } else {
                             self.false_infostates_player1.retain(|x| x != infostate);
                         }
+                        self.len -= 1;
                     } else {
                         panic!("Infostate not inside!");
                     }
@@ -318,6 +342,7 @@ impl ReachProb {
                         } else {
                             self.false_infostates_player2.retain(|x| x != infostate);
                         }
+                        self.len -= 1;
                     } else {
                         panic!("Infostate not inside!");
                     }
@@ -332,6 +357,7 @@ impl ReachProb {
                         } else {
                             self.false_infostates_player3.retain(|x| x != infostate);
                         }
+                        self.len -= 1;
                     } else {
                         panic!("Infostate not inside!");
                     }
@@ -346,6 +372,7 @@ impl ReachProb {
                         } else {
                             self.false_infostates_player4.retain(|x| x != infostate);
                         }
+                        self.len -= 1;
                     } else {
                         panic!("Infostate not inside!");
                     }
@@ -360,15 +387,19 @@ impl ReachProb {
                         } else {
                             self.false_infostates_player5.retain(|x| x != infostate);
                         }
+                        self.len -= 1;
                     } else {
                         panic!("Infostate not inside!");
                     }
                 }
             },
             _ => {
-                panic!("Please provide a player_id within 0 to 6 inclusive");
+                panic!("Please provide a player_id within 0 to 5 inclusive");
             }
         }
+    }
+    pub fn len(&self) -> usize {
+        self.len
     }
     fn sort_true_infostates_by_length(&self) -> Vec<&Vec<String>> {
         let mut true_vectors = vec![
