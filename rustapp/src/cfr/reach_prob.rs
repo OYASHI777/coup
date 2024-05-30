@@ -40,7 +40,7 @@ pub struct ReachProb {
 impl ReachProb {
     // Initialising to all true
     // cloning
-    // TODO: Write getters
+    // TODO: Write restrictors for Discard and 
     pub fn new() -> Self{
         let mut starter: HashMap<String, bool> = HashMap::with_capacity(15);
         for infostates in INFOSTATES.iter() {
@@ -456,7 +456,7 @@ impl ReachProb {
         let mut i4: usize = 0;
         let mut i5: usize = 0;
         let mut break_bool: bool;
-        while i0 < total_infostates {
+        'outer: while i0 < total_infostates {
             carrier_bool = false;
             break_bool = true;
             let infostate0: &str;
@@ -545,7 +545,8 @@ impl ReachProb {
                                 if break_bool {
                                     // Breaks if all infostates traversed are 0
                                     // As all subsequent will also all be 0
-                                    return true;
+                                    // return true;
+                                    continue 'outer;
                                 }
                                 if carrier_bool {
                                     // If there exists a legal gamestate where at least 1 infostate is true
