@@ -10,6 +10,7 @@ use crossbeam::thread;
 use std::clone;
 use std::collections::HashMap;
 use std::collections::hash_map::Keys;
+use std::time::Instant;
 
 #[derive(Clone)]
 pub struct ReachProb {
@@ -75,6 +76,34 @@ impl ReachProb {
             len: 90,
         }
     }
+    pub fn new_empty() -> Self {
+        let mut starter: HashMap<String, bool> = HashMap::with_capacity(15);
+        for infostates in INFOSTATES.iter() {
+            starter.insert(infostates.to_string(), true);
+        }
+        let total_infostates: usize = 15;
+        ReachProb{
+            reach_probs_player0: starter.clone(),
+            reach_probs_player1: starter.clone(),
+            reach_probs_player2: starter.clone(),
+            reach_probs_player3: starter.clone(),
+            reach_probs_player4: starter.clone(),
+            reach_probs_player5: starter.clone(),
+            true_infostates_player0: Vec::with_capacity(total_infostates),
+            true_infostates_player1: Vec::with_capacity(total_infostates),
+            true_infostates_player2: Vec::with_capacity(total_infostates),
+            true_infostates_player3: Vec::with_capacity(total_infostates),
+            true_infostates_player4: Vec::with_capacity(total_infostates),
+            true_infostates_player5: Vec::with_capacity(total_infostates),
+            false_infostates_player0: Vec::with_capacity(total_infostates),
+            false_infostates_player1: Vec::with_capacity(total_infostates),
+            false_infostates_player2: Vec::with_capacity(total_infostates),
+            false_infostates_player3: Vec::with_capacity(total_infostates),
+            false_infostates_player4: Vec::with_capacity(total_infostates),
+            false_infostates_player5: Vec::with_capacity(total_infostates),
+            len: 0,
+        }
+    }
     pub fn player_infostate_keys(&self, player_id: usize) -> Keys<'_, String, bool>{
         match player_id {
             0 => self.reach_probs_player0.keys(),
@@ -86,47 +115,97 @@ impl ReachProb {
             _ => panic!("Invalid player_id please make sure its between 0 to 5 inclusive"),
         }
     }
-    pub fn get_status(&self, player_id: usize, infostate: &str) -> Option<bool> {
+    pub fn get_status(&self, player_id: usize, infostate: &str) -> Option<&bool> {
         match player_id {
             // Add the rest
             0 => {
                 if let Some(value) = self.reach_probs_player0.get(infostate){
-                    return Some(*value);
+                    return Some(value);
                 } else {
                     return None;
                 }
             },
             1 => {
                 if let Some(value) = self.reach_probs_player1.get(infostate){
-                    return Some(*value);
+                    return Some(value);
                 } else {
                     return None;
                 }
             },
             2 => {
                 if let Some(value) = self.reach_probs_player2.get(infostate){
-                    return Some(*value);
+                    return Some(value);
                 } else {
                     return None;
                 }
             },
             3 => {
                 if let Some(value) = self.reach_probs_player3.get(infostate){
-                    return Some(*value);
+                    return Some(value);
                 } else {
                     return None;
                 }
             },
             4 => {
                 if let Some(value) = self.reach_probs_player4.get(infostate){
-                    return Some(*value);
+                    return Some(value);
                 } else {
                     return None;
                 }
             },
             5 => {
                 if let Some(value) = self.reach_probs_player5.get(infostate){
-                    return Some(*value);
+                    return Some(value);
+                } else {
+                    return None;
+                }
+            },
+            _ => {
+                panic!("Invalid player id provided!");
+            }
+        }
+    }
+    pub fn get_mut_status(&mut self, player_id: usize, infostate: &str) -> Option<&bool> {
+        match player_id {
+            // Add the rest
+            0 => {
+                if let Some(value) = self.reach_probs_player0.get_mut(infostate){
+                    return Some(value);
+                } else {
+                    return None;
+                }
+            },
+            1 => {
+                if let Some(value) = self.reach_probs_player1.get_mut(infostate){
+                    return Some(value);
+                } else {
+                    return None;
+                }
+            },
+            2 => {
+                if let Some(value) = self.reach_probs_player2.get_mut(infostate){
+                    return Some(value);
+                } else {
+                    return None;
+                }
+            },
+            3 => {
+                if let Some(value) = self.reach_probs_player3.get_mut(infostate){
+                    return Some(value);
+                } else {
+                    return None;
+                }
+            },
+            4 => {
+                if let Some(value) = self.reach_probs_player4.get_mut(infostate){
+                    return Some(value);
+                } else {
+                    return None;
+                }
+            },
+            5 => {
+                if let Some(value) = self.reach_probs_player5.get_mut(infostate){
+                    return Some(value);
                 } else {
                     return None;
                 }
@@ -437,8 +516,19 @@ impl ReachProb {
         false_vectors.sort_by(|a, b| b.1.cmp(&a.1));
         false_vectors.into_iter().map(|(vec, _)| vec).collect()
     }
-
+    pub fn should_prune(&self) -> bool {
+        let start_time = Instant::now();
+        let output: bool = self.should_pure_prune();
+        let elapsed_time = start_time.elapsed();
+        if output {
+            // println!("True Prune Time: {:?}", elapsed_time);
+        }
+        output
+    }
     pub fn should_pure_prune(&self) -> bool {
+        // 5 microseconds worst case... without checking if state is possible
+        // Returns true if reach prob indicates a state that should be pruned
+        // If there does not exist a gamestate where at least 1 infostate's indicator is 1 return true
         let total_infostates: usize = INFOSTATES.len();
         let pointers_true: Vec<&Vec<String>> = self.sort_true_infostates_by_length();
         let pointers_false: Vec<&Vec<String>> = self.sort_false_infostates_by_true_lengths();
@@ -456,7 +546,7 @@ impl ReachProb {
         let mut i4: usize = 0;
         let mut i5: usize = 0;
         let mut break_bool: bool;
-        'outer: while i0 < total_infostates {
+        'outer: while i0 < self.true_infostates_player0.len() + self.false_infostates_player0.len() {
             carrier_bool = false;
             break_bool = true;
             let infostate0: &str;
@@ -470,9 +560,10 @@ impl ReachProb {
                 infostate0 = &pointers_false[0][i0 - pointers_true[0].len()]; 
             }
             if self.increment_continue(&infostate0, &mut counter_hm) {
+                i0 += 1;
                 continue;
             }
-            while i1 < total_infostates {
+            while i1 < self.true_infostates_player1.len() + self.false_infostates_player1.len() {
                 let infostate1: &str;
                 if i1 < pointers_true[1].len(){
                     // index true_infostates
@@ -484,9 +575,10 @@ impl ReachProb {
                     infostate1 = &pointers_false[1][i1 - pointers_true[1].len()]; 
                 }
                 if self.increment_continue(&infostate1, &mut counter_hm) {
+                    i1 += 1;
                     continue;
                 }
-                while i2 < total_infostates {
+                while i2 < self.true_infostates_player2.len() + self.false_infostates_player2.len() {
                     let infostate2: &str;
                     if i2 < pointers_true[2].len(){
                         // index true_infostates
@@ -498,9 +590,10 @@ impl ReachProb {
                         infostate2 = &pointers_false[2][i2 - pointers_true[2].len()]; 
                     }
                     if self.increment_continue(&infostate2, &mut counter_hm) {
+                        i2 += 1;
                         continue;
                     }
-                    while i3 < total_infostates {
+                    while i3 < self.true_infostates_player3.len() + self.false_infostates_player3.len() {
                         let infostate3: &str;
                         if i3 < pointers_true[3].len(){
                             // index true_infostates
@@ -512,9 +605,10 @@ impl ReachProb {
                             infostate3 = &pointers_false[3][i3 - pointers_true[3].len()]; 
                         }
                         if self.increment_continue(&infostate3, &mut counter_hm) {
+                            i3 += 1;
                             continue;
                         }
-                        while i4 < total_infostates {
+                        while i4 < self.true_infostates_player4.len() + self.false_infostates_player4.len() {
                             let infostate4: &str;
                             if i4 < pointers_true[4].len(){
                                 // index true_infostates
@@ -526,9 +620,10 @@ impl ReachProb {
                                 infostate4 = &pointers_false[4][i4 - pointers_true[4].len()]; 
                             }
                             if self.increment_continue(&infostate4, &mut counter_hm) {
+                                i4 += 1;
                                 continue;
                             }
-                            while i5 < total_infostates {
+                            while i5 < self.true_infostates_player5.len() + self.false_infostates_player5.len() {
                                 let infostate5: &str;
                                 if i5 < pointers_true[5].len(){
                                     // index true_infostates
@@ -540,6 +635,7 @@ impl ReachProb {
                                     infostate5 = &pointers_false[5][i5 - pointers_true[5].len()]; 
                                 }
                                 if self.increment_continue(&infostate5, &mut counter_hm) {
+                                    i5 += 1;
                                     continue;
                                 }
                                 if break_bool {

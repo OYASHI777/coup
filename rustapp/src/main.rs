@@ -118,12 +118,12 @@ fn main() {
 
     // game_rnd(1000, true);
     // test_satis();
-    game_rnd_constraint(100, true);
+    // game_rnd_constraint(100, true);
     // cfr_test();
     // cfr_prune_test();
     // mccfr_test();
     // mccfr_prune_test();
-    // pmccfr_test();
+    pmccfr_test();
     // error_farmer(1000000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
