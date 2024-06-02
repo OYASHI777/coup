@@ -73,6 +73,7 @@ impl <'a> Explorer<'a> {
         self.mixed_strategy_policy_vec.reset();
         self.node_counter = 0;
         self.visit_counter = 0;
+        self.prune_counter = 0;
     }
 
     pub fn print(&self) {
@@ -1272,10 +1273,10 @@ pub fn pmccfr_test() {
     // 47 | 0 | 10783 | 57903818
     // 48 | 0 | 12085 | 59637335
     // 49 | 0 | 8857 | 61399814
-    let max_test_depth: usize = 50;
-    let max_iterations: usize = 1;
+    let max_test_depth: usize = 100;
+    let max_iterations: usize = 10000;
     let mut pmccfr: Explorer = Explorer::new(0);
-    for max_depth in 1..max_test_depth {
+    for max_depth in 45..max_test_depth {
         let mut i: usize = 0;
         let mut max_nodes_traversed: u128 = 0;
         let mut max_nodes_reached: u128 = 0;
