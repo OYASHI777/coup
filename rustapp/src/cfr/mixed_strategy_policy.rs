@@ -1,26 +1,26 @@
-use std::collections::HashMap;
 use rand::Rng;
 use rand::thread_rng;
+use ahash::AHashMap;
 
 use crate::history_public::ActionObservation;
 use super::keys::{BRKey, MSKey, Infostate, MAX_NUM_BRKEY};
 
 pub struct HeuristicMixedStrategyPolicy {
-    policies: HashMap<MSKey, HashMap<BRKey, Vec<f32>>>,
+    policies: AHashMap<MSKey, AHashMap<BRKey, Vec<f32>>>,
     // action_map is for possible moves made at MSKey path location | not included in path but are future moves
-    action_map: HashMap<MSKey, Vec<ActionObservation>>,
+    action_map: AHashMap<MSKey, Vec<ActionObservation>>,
 }
 pub trait MSInterface {
     fn reset(&mut self);
-    fn update(&mut self, key: &MSKey, possible_moves: &Vec<ActionObservation>, update_values: &HashMap<BRKey, Vec<f32>>);
+    fn update(&mut self, key: &MSKey, possible_moves: &Vec<ActionObservation>, update_values: &AHashMap<BRKey, Vec<f32>>);
     fn is_key_in_action_map(&self, key: &MSKey) -> bool;
     fn update_action_map(&mut self, key: &MSKey, possible_moves: &Vec<ActionObservation>);
     fn add_value(&mut self, key_ms: &MSKey, player_id: usize, infostate: &Infostate, index: usize, value: f32);
     fn policies_contains_key(&self, key: &MSKey) -> bool;
     fn action_map_contains_key(&self, key: &MSKey) -> bool;
-    fn policy_insert(&mut self, key: MSKey, value: HashMap<BRKey, Vec<f32>>);
+    fn policy_insert(&mut self, key: MSKey, value: AHashMap<BRKey, Vec<f32>>);
     fn action_map_insert(&mut self, key: MSKey, value: Vec<ActionObservation>);
-    fn policy_get_mut(&mut self, key: &MSKey) -> Option<&mut HashMap<BRKey, Vec<f32>>>;
+    fn policy_get_mut(&mut self, key: &MSKey) -> Option<&mut AHashMap<BRKey, Vec<f32>>>;
     fn get_best_response_index(&self, key: &MSKey, infostate: &Infostate) -> Option<usize>;
     fn get_best_response(&self, key: &MSKey, infostate: &Infostate) -> ActionObservation;
 }
@@ -32,8 +32,8 @@ impl HeuristicMixedStrategyPolicy {
 impl HeuristicMixedStrategyPolicy {
     pub fn new() -> Self {
         HeuristicMixedStrategyPolicy {
-            policies: HashMap::new(),
-            action_map: HashMap::new(),
+            policies: AHashMap::new(),
+            action_map: AHashMap::new(),
         }
     }
 
@@ -44,7 +44,7 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
         self.policies.clear();
         self.action_map.clear();
     }
-    fn update(&mut self, key: &MSKey, possible_moves: &Vec<ActionObservation>, update_values: &HashMap<BRKey, Vec<f32>>) {
+    fn update(&mut self, key: &MSKey, possible_moves: &Vec<ActionObservation>, update_values: &AHashMap<BRKey, Vec<f32>>) {
         self.update_action_map(key, possible_moves);
         if let Some(policy) = self.policies.get_mut(key) {
             for (infostate, old_values_vec) in policy.iter_mut() {
@@ -56,7 +56,7 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
             }
         } else {
             // TODO: Need a function to create new policies based on 
-            let mut policy: HashMap<BRKey, Vec<f32>> = HashMap::with_capacity(MAX_NUM_BRKEY);
+            let mut policy: AHashMap<BRKey, Vec<f32>> = AHashMap::with_capacity(MAX_NUM_BRKEY);
             for (infostate,  value) in update_values.iter() {
                 policy.insert(infostate.clone(), vec![0.0; possible_moves.len()]);
             }
@@ -97,13 +97,13 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
     fn action_map_contains_key(&self, key: &MSKey) -> bool {
         self.action_map.contains_key(key)
     }
-    fn policy_insert(&mut self, key: MSKey, value: HashMap<BRKey, Vec<f32>>) {
+    fn policy_insert(&mut self, key: MSKey, value: AHashMap<BRKey, Vec<f32>>) {
         self.policies.insert(key, value);
     }
     fn action_map_insert(&mut self, key: MSKey, value: Vec<ActionObservation>) {
         self.action_map.insert(key, value);
     }
-    fn policy_get_mut(&mut self, key: &MSKey) -> Option<&mut HashMap<BRKey, Vec<f32>>> {
+    fn policy_get_mut(&mut self, key: &MSKey) -> Option<&mut AHashMap<BRKey, Vec<f32>>> {
         self.policies.get_mut(key)
     }
     fn get_best_response_index(&self, key: &MSKey, infostate: &Infostate) -> Option<usize> {

@@ -23,7 +23,7 @@ struct Explorer<'a> {
     path: String,
     action_embedder: Box<dyn ActionEmbedding>,
     history: History,
-    best_response_policy_vec: BestResponseIndVec,
+    best_response_policy_vec: BestResponseIndVec, //Effectively obsolete
     mixed_strategy_policy_vec: Box<dyn MSInterface>,
     q_values: Box<dyn MSInterface>,
     rewards_evaluator: Box<dyn ValueEvaluation<u8>>,
@@ -623,7 +623,7 @@ impl <'a> Explorer<'a> {
     //     }
     // }
 
-    pub fn pmccfr(&mut self, depth_counter: usize, reach_prob: &ReachProb, back_transition: Option<HashMap<BRKey, Vec<BRKey>>>) -> HashMap<BRKey, f32> {
+    pub fn pmccfr(&mut self, depth_counter: usize, reach_prob: &ReachProb, back_transition: Option<HashMap<BRKey, Vec<BRKey>>>) -> AHashMap<BRKey, f32> {
         // TODO: move history out of self and into an input
         // TODO: Reorganise using backtransition for return as backtransition depends on action
         // Prunes not for next actions but for current action
@@ -635,8 +635,7 @@ impl <'a> Explorer<'a> {
         
         // INITIALISE REWARDS
         // TODO: abstract to a function
-        // let mut rewards: HashMap<BRKey, f32> = HashMap::with_capacity(MAX_NUM_BRKEY);
-        let mut rewards: HashMap<BRKey, f32> = HashMap::with_capacity(MAX_NUM_BRKEY);
+        let mut rewards: AHashMap<BRKey, f32> = AHashMap::with_capacity(MAX_NUM_BRKEY);
         if depth_counter >= self.max_depth || self.history.game_won(){
             // CASE WHEN LEAF NODE REACHED
             if self.history.game_won() {
@@ -654,10 +653,12 @@ impl <'a> Explorer<'a> {
         } else if reach_prob.should_prune(){
             self.prune_counter += 1;
             let start_time = Instant::now();
+            let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
             for player_id in 0..6 as usize {
+                key_br.set_player_id(player_id);
                 for infostate in reach_prob.player_infostate_keys(player_id) {
-                    let key_br = BRKey::new(player_id, infostate);
-                    rewards.insert(key_br, 0.0);
+                    key_br.set_infostate(infostate);
+                    rewards.insert(key_br.clone(), 0.0);
                 }
             }
             let elapsed_time = start_time.elapsed();
@@ -697,7 +698,7 @@ impl <'a> Explorer<'a> {
                 let start_time = Instant::now();
                 if !self.q_values.action_map_contains_key(&key_ms_t) {
                     self.q_values.update_action_map(&key_ms_t, &possible_outcomes);
-                    let mut new_policy: HashMap<BRKey, Vec<f32>> = HashMap::with_capacity(MAX_NUM_BRKEY);
+                    let mut new_policy: AHashMap<BRKey, Vec<f32>> = AHashMap::with_capacity(MAX_NUM_BRKEY);
                     // TOCHECK if this might be all players and not just player_id?
                     for infostate in reach_prob.player_infostate_keys(player_id) {
                         let key: BRKey = BRKey::new(player_id, infostate);
@@ -714,7 +715,7 @@ impl <'a> Explorer<'a> {
                     self.mixed_strategy_policy_vec.action_map_insert(key_ms_t.clone(), possible_outcomes.clone());
                 }
                 if !self.mixed_strategy_policy_vec.policies_contains_key(&key_ms_t) {
-                    let mut new_policy: HashMap<BRKey, Vec<f32>> = HashMap::with_capacity(MAX_NUM_BRKEY);
+                    let mut new_policy: AHashMap<BRKey, Vec<f32>> = AHashMap::with_capacity(MAX_NUM_BRKEY);
                     for infostate in reach_prob.player_infostate_keys(player_id) {
                         let key: BRKey = BRKey::new(player_id, infostate);
                         new_policy.insert(key, vec![0.0; possible_outcomes.len()]);
@@ -782,10 +783,12 @@ impl <'a> Explorer<'a> {
             } else {
                 // Initialise rewards to 0 for relevant infostates
                 let start_time = Instant::now();
+                let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
                 for player_id in 0..6 as usize {
+                    key_br.set_player_id(player_id);
                     for infostate in reach_prob.player_infostate_keys(player_id) {
-                        let key_br = BRKey::new(player_id, infostate);
-                        rewards.insert(key_br, 0.0);
+                        key_br.set_infostate(infostate);
+                        rewards.insert(key_br.clone(), 0.0);
                     }
                 }
                 let elapsed_time = start_time.elapsed();
@@ -868,7 +871,7 @@ impl <'a> Explorer<'a> {
                         // }
                         self.add_node(*action, bool_know_priv_info);
                         // Recurse and continue on an action
-                        let temp_reward: HashMap<BRKey, f32> = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
+                        let temp_reward: AHashMap<BRKey, f32> = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
                         
                         let move_player: usize = action.player_id();
                         
@@ -876,8 +879,9 @@ impl <'a> Explorer<'a> {
                         // TODO: Abstract this to a function
                         let start_time = Instant::now();
                         if let Some(q_value) = self.q_values.policy_get_mut(&key_ms_t) {
+                            let mut key_br: BRKey = BRKey::new(next_player_id, &Infostate::AA);
                             for infostate in INFOSTATES {
-                                let key_br: BRKey = BRKey::new(next_player_id, infostate);
+                                key_br.set_infostate(infostate);
                                 // TODO: update q_value 
                                 // TOCHECK: value updating
                                 if let Some(values_vec) = q_value.get_mut(&key_br) {
@@ -1017,15 +1021,16 @@ impl <'a> Explorer<'a> {
                         }
                         self.add_node(*action, bool_know_priv_info);
                         // RECURSING
-                        let temp_reward: HashMap<BRKey, f32> = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
+                        let temp_reward: AHashMap<BRKey, f32> = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
                         // Update the rewards SAME AS NORMAL MOVES
                         let move_player: usize = action.player_id();
                         
                         // UPDATE Q_VALUES BASED ON RETURNED REWARDS
                         // TODO: Abstract this to a function
+                        let mut key_br: BRKey = BRKey::new(move_player, &Infostate::AA);
                         if let Some(q_value) = self.q_values.policy_get_mut(&key_ms_t) {
                             for infostate in INFOSTATES {
-                                let key_br: BRKey = BRKey::new(move_player, infostate);
+                                key_br.set_infostate(infostate);
                                 // TODO: update q_value 
                                 // TOCHECK: value updating
                                 if let Some(values_vec) = q_value.get_mut(&key_br) {
@@ -1040,19 +1045,21 @@ impl <'a> Explorer<'a> {
                         // UPDATE REWARDS for now if reach_prob = 1 we update
                             // Ignore the distinction for when current player is playing BR cos its complicated for infostates
                         // TODO: Abstract this to a function
+                        let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
                         for player_id in 0..6 as usize {
+                            key_br.set_player_id(player_id);
                             for infostate in reach_prob.player_infostate_keys(player_id) {
                                 if let Some(indicator) = reach_prob.get_status(player_id, infostate) {
                                     if *indicator {
                                         let mut increment_val: f32 = 0.0;
-                                        let key_br: BRKey = BRKey::new(player_id, infostate);
+                                        key_br.set_infostate(infostate);
                                         if let Some(temp_reward_val) = temp_reward.get(&key_br) {
                                             increment_val = *temp_reward_val;
                                         } 
                                         if let Some(reward_val) = rewards.get_mut(&key_br){
                                             *reward_val += increment_val
                                         } else {
-                                            rewards.insert(key_br, increment_val);
+                                            rewards.insert(key_br.clone(), increment_val);
                                         }
                                     }
                                 }
@@ -1080,7 +1087,7 @@ impl <'a> Explorer<'a> {
         }
         // TODO: Backtransition here
         if let Some(transition_map) = back_transition {
-            let mut rewards_clone: HashMap<BRKey, f32> = HashMap::with_capacity(MAX_NUM_BRKEY);
+            let mut rewards_clone: AHashMap<BRKey, f32> = AHashMap::with_capacity(MAX_NUM_BRKEY);
             //  Temp
             for key_br in rewards.keys() {
                 rewards_clone.insert(key_br.clone(), 0.0);
