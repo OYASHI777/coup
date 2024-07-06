@@ -20,6 +20,7 @@ use ahash::AHashMap;
 use std::collections::HashMap;
 struct Explorer<'a> {
     // This is a struct used to conduct Pure Monte Carlo CounterFactual Regret Minimization (PMCCFR)
+    start_player: usize,
     path: String,
     action_embedder: Box<dyn ActionEmbedding>,
     history: History,
@@ -44,6 +45,7 @@ impl <'a> Explorer<'a> {
         // make this into config HashMap when done
         Explorer{
             // temporarily the starting_player is 0
+            start_player: 0,
             path: "root".to_string(),
             action_embedder: Box::new(DefaultEmbedding),
             history: History::new(0),
@@ -80,6 +82,16 @@ impl <'a> Explorer<'a> {
         self.visit_counter = 0;
         self.prune_counter = 0;
         self.won_counter = 0;
+    }
+
+    pub fn get_root_policy(&self) -> Option<& AHashMap<BRKey, Vec<f32>>>{
+        let key: MSKey = MSKey::new(self.start_player, "root");
+        self.mixed_strategy_policy_vec.policy_get(&key)
+    }
+    
+    pub fn get_root_action_map(&self) -> Option<&Vec<ActionObservation>>{
+        let key: MSKey = MSKey::new(self.start_player, "root");
+        self.mixed_strategy_policy_vec.action_map_get(&key)
     }
 
     pub fn reset_counters(&mut self) {
@@ -670,21 +682,33 @@ impl <'a> Explorer<'a> {
             if self.is_exchangedraw_node() {
                 // Dont need to initialise
             } else if self.is_collective_node() {
-                // FOR SPECIAL CASES => {Collective Challenge, CollectiveBlock, ExchangeDraw}
+                // FOR SPECIAL CASES => {Collective Challenge, CollectiveBlock}
                 // TODO: fix for ExchangeDraw case
                 // TODO: Free for all CollectiveChallenge and CollectiveBlock
                 let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
                 let mut key_ms_t: MSKey = MSKey::new(0, &self.path);
+                let possible_challenge_moves: Vec<ActionObservation> = vec![ActionObservation::ChallengeAccept, ActionObservation::ChallengeDeny];
                 for player_id in 0..6 as usize {
                     if latest_influence_time_t[player_id] > 0 {
                         key_ms_t.set_player_id(player_id);
                         // TODO: check if q_values has key_ms_t
                         if !self.q_values.action_map_contains_key(&key_ms_t) {
-                            self.q_values.update_action_map(&key_ms_t, &vec![ActionObservation::ChallengeAccept, ActionObservation::ChallengeDeny]);
+                            self.q_values.update_action_map(&key_ms_t, &possible_challenge_moves);
+                        }
+                        // TODO: Initialise mixed strategy policy
+                        if !self.mixed_strategy_policy_vec.action_map_contains_key(&key_ms_t){
+                            self.mixed_strategy_policy_vec.action_map_insert(key_ms_t.clone(), possible_challenge_moves.clone());
+                        }
+                        if !self.mixed_strategy_policy_vec.policies_contains_key(&key_ms_t) {
+                            let mut new_policy: AHashMap<BRKey, Vec<f32>> = AHashMap::with_capacity(MAX_NUM_BRKEY);
+                            for infostate in reach_prob.player_infostate_keys(player_id) {
+                                let key: BRKey = BRKey::new(player_id, infostate);
+                                new_policy.insert(key, vec![0.0; possible_challenge_moves.len()]);
+                            }
+                            self.mixed_strategy_policy_vec.policy_insert(key_ms_t.clone(), new_policy);
                         }
                     }
                 }
-                // TODO: Initialise mixed strategy policy
             } else {
                 // FOR NORMAL MOVES
                 let player_id: usize = possible_outcomes[0].player_id();
@@ -794,6 +818,7 @@ impl <'a> Explorer<'a> {
                             rewards = self.pmccfr(depth_counter + 1, reach_prob, None);
                             // TODO: backpropogate
                             self.drop_node();
+                            // TODO: UPDATE REWARDS?
                         } 
                     } else if action.name() == AOName::ExchangeChoice {
                         // TODO: Change to the actual code randomly sample from each player's mixed_strategy
@@ -804,6 +829,7 @@ impl <'a> Explorer<'a> {
                         // rewards should be temp-rewards
                         rewards = self.pmccfr(depth_counter + 1, reach_prob, None);
                         self.drop_node();
+                        // TODO: UPDATE REWARDS?
                         // Player chooses "AB"
                         // Need to know exchangeDraw
                         // reward should update to all states that can choose AB
@@ -1041,9 +1067,22 @@ impl <'a> Explorer<'a> {
                     action_index += 1;
                 }
                 // UPDATED MIXED STRATEGY POLICY based on action with highest Q value
-                // Abstract to a function
-                if self.is_chance_node() {
-                    // CASE WHEN action == CollectiveChallenge or CollectiveBlock or ExchangeDraw
+                // Abstract to a 
+                if self.is_collective_node() {
+                    // CASE WHEN action == CollectiveChallenge or CollectiveBlock
+                    // TODO: Check
+                    let mut mskey_t: MSKey = MSKey::new(0, &path_t);
+                    for player_id in 0..6 {
+                        mskey_t.set_player_id(player_id);
+                        for infostate in INFOSTATES {
+                            if let Some(best_move_index) = self.q_values.get_best_response_index(&mskey_t, infostate) {
+                                self.mixed_strategy_policy_vec.add_value(&mskey_t, player_id, infostate, best_move_index, 1.0);
+                            }
+                        }
+                    }
+                }
+                else if self.is_chance_node() {
+                    // CASE WHEN action == ExchangeDraw
                 } else {
                     // MIXED STRATEGY POLICY should have been initialised earlier
                     let current_player: usize = possible_outcomes[0].player_id();
@@ -1345,6 +1384,16 @@ pub fn pmccfr_test(start_test_depth: usize, max_test_depth: usize, max_iteration
         let avg_nodes_traversed: f32 = total_nodes_traversed as f32 / max_iterations as f32;
         // println!("{} | {} | {} | {} | {} | {}", max_depth, max_nodes_won, max_nodes_reached, max_nodes_traversed, min_nodes_pruned, no_depth_pos);
         println!("{} | {} | {:.0} | {:.0} | {:.0} | {}", max_depth, total_nodes_won, avg_nodes_reached, avg_nodes_traversed, avg_nodes_pruned, no_depth_pos);
+        if let Some(policy) = pmccfr.get_root_policy() {
+            println!("policy: {:?}", policy);
+        } else {
+            println!("policy returned None");
+        }
+        if let Some(action_map) = pmccfr.get_root_action_map() {
+            println!("action_map: {:?}", action_map);
+        } else {
+            println!("action_map returned None");
+        }
         pmccfr.reset();
     }
 }

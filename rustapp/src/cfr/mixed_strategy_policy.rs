@@ -17,10 +17,12 @@ pub trait MSInterface {
     fn update_action_map(&mut self, key: &MSKey, possible_moves: &Vec<ActionObservation>);
     fn add_value(&mut self, key_ms: &MSKey, player_id: usize, infostate: &Infostate, index: usize, value: f32);
     fn policies_contains_key(&self, key: &MSKey) -> bool;
+    fn action_map_get(&self, key: &MSKey) -> Option<&Vec<ActionObservation>>;
     fn action_map_contains_key(&self, key: &MSKey) -> bool;
     fn policy_insert(&mut self, key: MSKey, value: AHashMap<BRKey, Vec<f32>>);
     fn action_map_insert(&mut self, key: MSKey, value: Vec<ActionObservation>);
     fn policy_get_mut(&mut self, key: &MSKey) -> Option<&mut AHashMap<BRKey, Vec<f32>>>;
+    fn policy_get(&self, key: &MSKey) -> Option<& AHashMap<BRKey, Vec<f32>>>;
     fn get_best_response_index(&self, key: &MSKey, infostate: &Infostate) -> Option<usize>;
     fn get_best_response(&self, key: &MSKey, infostate: &Infostate) -> ActionObservation;
 }
@@ -103,8 +105,14 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
     fn action_map_insert(&mut self, key: MSKey, value: Vec<ActionObservation>) {
         self.action_map.insert(key, value);
     }
+    fn action_map_get(&self, key: &MSKey) -> Option<&Vec<ActionObservation>> {
+        self.action_map.get(key)
+    }
     fn policy_get_mut(&mut self, key: &MSKey) -> Option<&mut AHashMap<BRKey, Vec<f32>>> {
         self.policies.get_mut(key)
+    }
+    fn policy_get(&self, key: &MSKey) -> Option<&AHashMap<BRKey, Vec<f32>>> {
+        self.policies.get(key)
     }
     fn get_best_response_index(&self, key: &MSKey, infostate: &Infostate) -> Option<usize> {
         // Returns index of highest value
