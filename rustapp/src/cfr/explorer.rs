@@ -652,7 +652,6 @@ impl <'a> Explorer<'a> {
         // } else if self.policy_handler.should_prune_current(reach_prob){
         } else if reach_prob.should_prune(){
             self.prune_counter += 1;
-            let start_time = Instant::now();
             let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
             for player_id in 0..6 as usize {
                 key_br.set_player_id(player_id);
@@ -661,8 +660,6 @@ impl <'a> Explorer<'a> {
                     rewards.insert(key_br.clone(), 0.0);
                 }
             }
-            let elapsed_time = start_time.elapsed();
-            log::info!("prune|rewards|insert time :{:?}", elapsed_time);
         } else {
             // Always false for simulations
             let bool_know_priv_info: bool = false; 
@@ -676,7 +673,6 @@ impl <'a> Explorer<'a> {
                 // FOR SPECIAL CASES => {Collective Challenge, CollectiveBlock, ExchangeDraw}
                 // TODO: fix for ExchangeDraw case
                 // TODO: Free for all CollectiveChallenge and CollectiveBlock
-                let start_time = Instant::now();
                 let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
                 let mut key_ms_t: MSKey = MSKey::new(0, &self.path);
                 for player_id in 0..6 as usize {
@@ -688,15 +684,12 @@ impl <'a> Explorer<'a> {
                         }
                     }
                 }
-                let elapsed_time = start_time.elapsed();
-                log::info!("special case|q_value| update action map time: {:?}", elapsed_time);
                 // TODO: Initialise mixed strategy policy
             } else {
                 // FOR NORMAL MOVES
                 let player_id: usize = possible_outcomes[0].player_id();
                 let key_ms_t: MSKey = MSKey::new(player_id, &self.path);
                 // INITIALISING Q VALUES
-                let start_time = Instant::now();
                 if !self.q_values.action_map_contains_key(&key_ms_t) {
                     self.q_values.update_action_map(&key_ms_t, &possible_outcomes);
                     let mut new_policy: AHashMap<BRKey, Vec<f32>> = AHashMap::with_capacity(MAX_NUM_BRKEY);
@@ -707,11 +700,8 @@ impl <'a> Explorer<'a> {
                     }
                     self.q_values.policy_insert(key_ms_t.clone(), new_policy);
                 }
-                let elapsed_time = start_time.elapsed();
-                log::info!("q_value|initialise q_values|insert time: {:?}", elapsed_time);
                 // TODO: check if q_values has key_ms_t
                 // INITIALISING MIXED STRATEGY POLICY
-                let start_time = Instant::now();
                 if !self.mixed_strategy_policy_vec.action_map_contains_key(&key_ms_t) {
                     self.mixed_strategy_policy_vec.action_map_insert(key_ms_t.clone(), possible_outcomes.clone());
                 }
@@ -723,8 +713,6 @@ impl <'a> Explorer<'a> {
                     }
                     self.mixed_strategy_policy_vec.policy_insert(key_ms_t.clone(), new_policy);
                 }
-                let elapsed_time = start_time.elapsed();
-                log::info!("mixed policy|initialise mixed policy|insert time: {:?}", elapsed_time);
             }
             // RECURSIONS
             // Test if depth < 6 whether can random sample
@@ -742,10 +730,7 @@ impl <'a> Explorer<'a> {
                     // fwd pass needs mixed strategy policy working
                     // mix_strat_policy_time_t is a variable
                     // self.policy_handler.forward_pass_best_response_policy(&self.path, latest_influence_time_t, &self.history, &mut self.best_response_policy_vec, mix_strat_policy_time_t);
-                    let start_time = Instant::now();
                     let mut next_reach_prob: ReachProb = reach_prob.clone();
-                    let elapsed_time = start_time.elapsed();
-                    log::info!("collective|reach_prob|clone time: {:?}", elapsed_time);
 
                     // TODO: Link mixed strategy
                     // This is a temp to see how many nodes will be visited
@@ -783,7 +768,6 @@ impl <'a> Explorer<'a> {
                 }
             } else {
                 // Initialise rewards to 0 for relevant infostates
-                let start_time = Instant::now();
                 let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
                 for player_id in 0..6 as usize {
                     key_br.set_player_id(player_id);
@@ -792,8 +776,6 @@ impl <'a> Explorer<'a> {
                         rewards.insert(key_br.clone(), 0.0);
                     }
                 }
-                let elapsed_time = start_time.elapsed();
-                log::info!("normal|initialise rewards|insert time: {:?}", elapsed_time);
 
                 let mut action_index: usize = 0;
                 // LOOP THROUGH ALL ACTIONS AND RECURSE
@@ -840,16 +822,12 @@ impl <'a> Explorer<'a> {
                         
                         // INITIALISING next_reach_prob based on action sampled to be passed into recursion
                         // TODO: Abstract this to a function
-                        let start_time = Instant::now();
                         let mut next_reach_prob: ReachProb = reach_prob.clone();
-                        let elapsed_time = start_time.elapsed();
-                        log::info!("normal|reach_prob|clone time: {:?}", elapsed_time);
                         // Filling next reach prob based on input reachprob and action for pmccfr function
                         //      If indicator == 1 and action is best response => 1
                         //      If indicator == 1 and action is not best response => 0
                         //      If indicator == 0 => 0
                         // TOCHECK: next player?
-                        let start_time = Instant::now();
                         for infostate in reach_prob.player_infostate_keys(next_player_id) {
                             if let Some(old_indicator) = reach_prob.get_status(next_player_id, infostate) {
                                 if *old_indicator {
@@ -861,8 +839,6 @@ impl <'a> Explorer<'a> {
                                 }
                             }
                         }
-                        let elapsed_time = start_time.elapsed();
-                        log::info!("normal|fill next reach prob| set status time: {:?}", elapsed_time);
                         // Filling transition hashmap for pmccfr function 1 to 1
                         // TODO: Abstract this to a function
                         // let mut transition_map: HashMap<String, Vec<String>> = HashMap::with_capacity(MAX_NUM_BRKEY);
@@ -878,7 +854,6 @@ impl <'a> Explorer<'a> {
                         
                         // UPDATE Q_VALUES BASED ON RETURNED REWARDS
                         // TODO: Abstract this to a function
-                        let start_time = Instant::now();
                         if let Some(q_value) = self.q_values.policy_get_mut(&key_ms_t) {
                             let mut key_br: BRKey = BRKey::new(next_player_id, &Infostate::AA);
                             for infostate in INFOSTATES {
@@ -894,12 +869,9 @@ impl <'a> Explorer<'a> {
                         } else {
                             panic!("q_values should have been initialised earlier!");
                         }
-                        let elapsed_time = start_time.elapsed();
-                        log::info!("normal|q_value update|+= time: {:?}", elapsed_time);
                         // UPDATE REWARDS for now if reach_prob = 1 we update
                             // Ignore the distinction for when current player is playing BR cos its complicated for infostates
                         // TODO: Abstract this to a function
-                        let start_time = Instant::now();
                         let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
                         for player_id in 0..6 as usize {
                             key_br.set_player_id(player_id);
@@ -922,8 +894,6 @@ impl <'a> Explorer<'a> {
                                 }
                             }
                         }
-                        let elapsed_time = start_time.elapsed();
-                        log::info!("normal|update rewards| new & insert time: {:?}", elapsed_time);
                         // IMPROVE: Do like some rayon shit
                         // Drop node we added before recursing
                         self.drop_node();                      
