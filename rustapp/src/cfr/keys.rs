@@ -55,6 +55,12 @@ impl MSKey {
     pub fn player_id(&self) -> usize {
         self.player_id
     }
+    pub fn set_path(&mut self, new_path: &str) {
+        self.path = new_path.to_string();
+    }
+    pub fn set_player_id(&mut self, new_player_id: usize) {
+        self.player_id = new_player_id;
+    }
 }
 
 impl Hash for MSKey {

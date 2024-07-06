@@ -8,7 +8,6 @@ use super::keys::Infostate::*;
 // use rayon::iter::IntoParallelIterator; 
 use rayon::prelude::*;
 use crossbeam::thread;
-use std::collections::HashMap;
 use std::collections::hash_map::Keys;
 use std::time::Instant;
 use ahash::AHashMap;
@@ -613,7 +612,7 @@ impl ReachProb {
         let pointers_true: Vec<&Vec<Infostate>> = self.sort_true_infostates_by_length();
         let pointers_false: Vec<&Vec<Infostate>> = self.sort_false_infostates_by_true_lengths();
         let mut carrier_bool: bool;
-        let mut counter_hm: HashMap<&str, usize> = HashMap::with_capacity(5);
+        let mut counter_hm: AHashMap<&str, usize> = AHashMap::with_capacity(5);
         counter_hm.insert("A", 0);
         counter_hm.insert("B", 0);
         counter_hm.insert("C", 0);
@@ -756,8 +755,7 @@ impl ReachProb {
         let total_infostates: usize = INFOSTATES.len();
         let pointers_true: Vec<&Vec<Infostate>> = self.sort_true_infostates_by_length();
         let pointers_false: Vec<&Vec<Infostate>> = self.sort_false_infostates_by_true_lengths();
-        let mut carrier_bool: bool;
-        let mut counter_hm_base: HashMap<&str, usize> = HashMap::with_capacity(5);
+        let mut counter_hm_base: AHashMap<&str, usize> = AHashMap::with_capacity(5);
         counter_hm_base.insert("A", 0);
         counter_hm_base.insert("B", 0);
         counter_hm_base.insert("C", 0);
@@ -773,7 +771,7 @@ impl ReachProb {
                 let mut i5: usize = 0;
                 let mut carrier_bool: bool = false;
                 let mut break_bool: bool = true;
-                let mut counter_hm: HashMap<&str, usize> = counter_hm_base.clone();
+                let mut counter_hm: AHashMap<&str, usize> = counter_hm_base.clone();
                 let infostate0: &Infostate;
                 if i0 < pointers_true[0].len(){
                     // index true_infostates
@@ -887,7 +885,7 @@ impl ReachProb {
         }); 
         prune_result.unwrap_or(false)
     }
-    fn increment_continue(&self, str_ref: &Infostate, counter_hm: &mut HashMap<&str, usize> ) -> bool {
+    fn increment_continue(&self, str_ref: &Infostate, counter_hm: &mut AHashMap<&str, usize> ) -> bool {
         // Takes a hashmap and increments according to str_ref value
         // Returns true if should continue because an impossible gamestate is reached!
         // If an impossible str_ref value is given, true is returned and nothing is incremented
@@ -1044,7 +1042,7 @@ impl ReachProb {
         }
         false
     }
-    fn decrement(&self, str_ref: &Infostate, counter_hm: &mut HashMap<&str, usize> ) {
+    fn decrement(&self, str_ref: &Infostate, counter_hm: &mut AHashMap<&str, usize> ) {
         // Takes a HashMap and decrements according to str_ref value
         if *str_ref == AA {
             if let Some(value) = counter_hm.get_mut("A"){

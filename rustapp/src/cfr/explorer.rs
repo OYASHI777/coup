@@ -678,9 +678,10 @@ impl <'a> Explorer<'a> {
                 // TODO: Free for all CollectiveChallenge and CollectiveBlock
                 let start_time = Instant::now();
                 let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
+                let mut key_ms_t: MSKey = MSKey::new(0, &self.path);
                 for player_id in 0..6 as usize {
                     if latest_influence_time_t[player_id] > 0 {
-                        let key_ms_t: MSKey = MSKey::new(player_id, &self.path);
+                        key_ms_t.set_player_id(player_id);
                         // TODO: check if q_values has key_ms_t
                         if !self.q_values.action_map_contains_key(&key_ms_t) {
                             self.q_values.update_action_map(&key_ms_t, &vec![ActionObservation::ChallengeAccept, ActionObservation::ChallengeDeny]);
@@ -720,7 +721,7 @@ impl <'a> Explorer<'a> {
                         let key: BRKey = BRKey::new(player_id, infostate);
                         new_policy.insert(key, vec![0.0; possible_outcomes.len()]);
                     }
-                    self.mixed_strategy_policy_vec.policy_insert(key_ms_t.clone(), new_policy)
+                    self.mixed_strategy_policy_vec.policy_insert(key_ms_t.clone(), new_policy);
                 }
                 let elapsed_time = start_time.elapsed();
                 log::info!("mixed policy|initialise mixed policy|insert time: {:?}", elapsed_time);
