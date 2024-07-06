@@ -1,7 +1,7 @@
 use crate::history_public::{AOName, History, ActionObservation};
-use super::best_response_policy::{BestResponseIndVec, INFOSTATES};
+use super::best_response_policy::{BestResponseIndVec};
 use super::mixed_strategy_policy::{self, MSInterface};
-use super::keys::{BRKey, MSKey, MAX_NUM_BRKEY};
+use super::keys::{BRKey, MSKey, MAX_NUM_BRKEY, INFOSTATES};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -108,244 +108,244 @@ impl PolicyUpdate for PolicyHandler {
 }
 
 pub trait Pruner {
-    fn should_prune_current(&self, indicator: &HashMap<BRKey, bool>) -> bool;
+    // fn should_prune_current(&self, indicator: &HashMap<BRKey, bool>) -> bool;
     // fn player_0_others_1(&self, indicator: HashMap<BRKey, bool>) -> bool;
     fn player_all_0(&self, indicator: HashMap<BRKey, bool>, player_id: usize) -> bool;
 }
 
 impl Pruner for PolicyHandler {
-    fn should_prune_current(&self, indicator: &HashMap<BRKey, bool>) -> bool {
-        let start_time = Instant::now();
-        // If some combination that is a valid gamestate exists, that sums to more than 0
-        // return false
-        // else return true
-        let mut counter_hm: HashMap<char, usize> = HashMap::with_capacity(5);
-        counter_hm.insert('A', 0);
-        counter_hm.insert('B', 0);
-        counter_hm.insert('C', 0);
-        counter_hm.insert('D', 0);
-        counter_hm.insert('E', 0);
+    // fn should_prune_current(&self, indicator: &HashMap<BRKey, bool>) -> bool {
+    //     let start_time = Instant::now();
+    //     // If some combination that is a valid gamestate exists, that sums to more than 0
+    //     // return false
+    //     // else return true
+    //     let mut counter_hm: HashMap<&str, usize> = HashMap::with_capacity(5);
+    //     counter_hm.insert("A", 0);
+    //     counter_hm.insert("B", 0);
+    //     counter_hm.insert("C", 0);
+    //     counter_hm.insert("D", 0);
+    //     counter_hm.insert("E", 0);
 
-        let mut counter_ind: usize = 0;
+    //     let mut counter_ind: usize = 0;
 
-        let mut key: BRKey = BRKey::new(0, "");
-        for infostate0 in INFOSTATES {
-            // player 0
-            key.set_player_id(0);
-            key.set_infostate(infostate0);
-            if let Some(ind_value) = indicator.get(&key) {
-                if *ind_value {
-                    let duration = start_time.elapsed();
-                    println!("Time for prune check False: {:?}", duration);
-                    return false;
-                }
-            } else {
-                continue;
-            }
-            if infostate0.chars().nth(0).unwrap() == infostate0.chars().nth(1).unwrap() {
-                if counter_hm[&infostate0.chars().nth(0).unwrap()] > 1 {
-                    continue;
-                } else {
-                    counter_hm.insert(infostate0.chars().nth(0).unwrap(), counter_hm[&infostate0.chars().nth(0).unwrap()] + 2);
-                }
-            } else {
-                if counter_hm[&infostate0.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate0.chars().nth(1).unwrap()] > 2 {
-                    continue;
-                } else {
-                    counter_hm.insert(infostate0.chars().nth(0).unwrap(), counter_hm[&infostate0.chars().nth(0).unwrap()] +1);
-                    counter_hm.insert(infostate0.chars().nth(1).unwrap(), counter_hm[&infostate0.chars().nth(1).unwrap()] + 1);
-                }
-            }
+    //     let mut key: BRKey = BRKey::new(0, "");
+    //     for infostate0 in INFOSTATES {
+    //         // player 0
+    //         key.set_player_id(0);
+    //         key.set_infostate(infostate0);
+    //         if let Some(ind_value) = indicator.get(&key) {
+    //             if *ind_value {
+    //                 let duration = start_time.elapsed();
+    //                 println!("Time for prune check False: {:?}", duration);
+    //                 return false;
+    //             }
+    //         } else {
+    //             continue;
+    //         }
+    //         if infostate0[0] == infostate0[1] {
+    //             if counter_hm[&infostate0[0]] > 1 {
+    //                 continue;
+    //             } else {
+    //                 counter_hm.insert(&infostate0[0], counter_hm[&infostate0[0]] + 2);
+    //             }
+    //         } else {
+    //             if counter_hm[&infostate0[0]] > 2 || counter_hm[&infostate0[1]] > 2 {
+    //                 continue;
+    //             } else {
+    //                 counter_hm.insert(&infostate0[0], counter_hm[&infostate0[0]] +1);
+    //                 counter_hm.insert(&infostate0[1], counter_hm[&infostate0[1]] + 1);
+    //             }
+    //         }
             
-            // Check if adding to counter_hm exceeds count, break if true
-            for infostate1 in INFOSTATES {
-                key.set_player_id(1);
-                key.set_infostate(infostate1);
-                if let Some(ind_value) = indicator.get(&key) {
-                    if *ind_value {
-                        let duration = start_time.elapsed();
-                        println!("Time for prune check False: {:?}", duration);
-                        return false;
-                    }
-                } else {
-                    continue;
-                }
-                if infostate1.chars().nth(0).unwrap() == infostate1.chars().nth(1).unwrap() {
-                    if counter_hm[&infostate1.chars().nth(0).unwrap()] > 1 {
-                        continue;
-                    } else {
-                        counter_hm.insert(infostate1.chars().nth(0).unwrap(), counter_hm[&infostate1.chars().nth(0).unwrap()] + 2);
-                    }
-                } else {
-                    if counter_hm[&infostate1.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate1.chars().nth(1).unwrap()] > 2 {
-                        continue;
-                    } else {
-                        counter_hm.insert(infostate1.chars().nth(0).unwrap(), counter_hm[&infostate1.chars().nth(0).unwrap()] +1);
-                        counter_hm.insert(infostate1.chars().nth(1).unwrap(), counter_hm[&infostate1.chars().nth(1).unwrap()] + 1);
-                    }
-                }
-                for infostate2 in INFOSTATES {
-                    key.set_player_id(2);
-                    key.set_infostate(infostate2);
-                    if let Some(ind_value) = indicator.get(&key) {
-                        if *ind_value {
-                            let duration = start_time.elapsed();
-                            println!("Time for prune check False: {:?}", duration);
-                            return false;
-                        }
-                    } else {
-                        continue;
-                    }
-                    if infostate2.chars().nth(0).unwrap() == infostate2.chars().nth(1).unwrap() {
-                        if counter_hm[&infostate2.chars().nth(0).unwrap()] > 1 {
-                            continue;
-                        } else {
-                            counter_hm.insert(infostate2.chars().nth(0).unwrap(), counter_hm[&infostate2.chars().nth(0).unwrap()] + 2);
-                        }
-                    } else {
-                        if counter_hm[&infostate2.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate2.chars().nth(1).unwrap()] > 2 {
-                            continue;
-                        } else {
-                            counter_hm.insert(infostate2.chars().nth(0).unwrap(), counter_hm[&infostate2.chars().nth(0).unwrap()] +1);
-                            counter_hm.insert(infostate2.chars().nth(1).unwrap(), counter_hm[&infostate2.chars().nth(1).unwrap()] + 1);
-                        }
-                    }
-                    for infostate3 in INFOSTATES {
-                        key.set_player_id(3);
-                        key.set_infostate(infostate3);
-                        if let Some(ind_value) = indicator.get(&key) {
-                            if *ind_value {
-                                let duration = start_time.elapsed();
-                                println!("Time for prune check False: {:?}", duration);
-                                return false;
-                            }
-                        } else {
-                            continue;
-                        }
-                        if infostate3.chars().nth(0).unwrap() == infostate3.chars().nth(1).unwrap() {
-                            if counter_hm[&infostate3.chars().nth(0).unwrap()] > 1 {
-                                continue;
-                            } else {
-                                counter_hm.insert(infostate3.chars().nth(0).unwrap(), counter_hm[&infostate3.chars().nth(0).unwrap()] + 2);
-                            }
-                        } else {
-                            if counter_hm[&infostate3.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate3.chars().nth(1).unwrap()] > 2 {
-                                continue;
-                            } else {
-                                counter_hm.insert(infostate3.chars().nth(0).unwrap(), counter_hm[&infostate3.chars().nth(0).unwrap()] +1);
-                                counter_hm.insert(infostate3.chars().nth(1).unwrap(), counter_hm[&infostate3.chars().nth(1).unwrap()] + 1);
-                            }
-                        }
-                        for infostate4 in INFOSTATES {
-                            key.set_player_id(4);
-                            key.set_infostate(infostate4);
-                            if let Some(ind_value) = indicator.get(&key) {
-                                if *ind_value {
-                                    let duration = start_time.elapsed();
-                                    println!("Time for prune check False: {:?}", duration);
-                                    return false;
-                                }
-                            } else {
-                                continue;
-                            }
-                            if infostate4.chars().nth(0).unwrap() == infostate4.chars().nth(1).unwrap() {
-                                if counter_hm[&infostate4.chars().nth(0).unwrap()] > 1 {
-                                    continue;
-                                } else {
-                                    counter_hm.insert(infostate4.chars().nth(0).unwrap(), counter_hm[&infostate4.chars().nth(0).unwrap()] + 2);
-                                }
-                            } else {
-                                if counter_hm[&infostate4.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate4.chars().nth(1).unwrap()] > 2 {
-                                    continue;
-                                } else {
-                                    counter_hm.insert(infostate4.chars().nth(0).unwrap(), counter_hm[&infostate4.chars().nth(0).unwrap()] +1);
-                                    counter_hm.insert(infostate4.chars().nth(1).unwrap(), counter_hm[&infostate4.chars().nth(1).unwrap()] + 1);
-                                }
-                            }
-                            for infostate5 in INFOSTATES {
-                                key.set_player_id(5);
-                                key.set_infostate(infostate5);
-                                if let Some(ind_value) = indicator.get(&key) {
-                                    if *ind_value {
-                                        let duration = start_time.elapsed();
-                                        println!("Time for prune check False: {:?}", duration);
-                                        return false;
-                                    }
-                                } else {
-                                    continue;
-                                }
-                                if infostate5.chars().nth(0).unwrap() == infostate5.chars().nth(1).unwrap() {
-                                    if counter_hm[&infostate5.chars().nth(0).unwrap()] > 1 {
-                                        continue;
-                                    } else {
-                                        counter_hm.insert(infostate5.chars().nth(0).unwrap(), counter_hm[&infostate5.chars().nth(0).unwrap()] + 2);
-                                    }
-                                } else {
-                                    if counter_hm[&infostate5.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate5.chars().nth(1).unwrap()] > 2 {
-                                        continue;
-                                    } else {
-                                        counter_hm.insert(infostate5.chars().nth(0).unwrap(), counter_hm[&infostate5.chars().nth(0).unwrap()] +1);
-                                        counter_hm.insert(infostate5.chars().nth(1).unwrap(), counter_hm[&infostate5.chars().nth(1).unwrap()] + 1);
-                                    }
-                                }
+    //         // Check if adding to counter_hm exceeds count, break if true
+    //         for infostate1 in INFOSTATES {
+    //             key.set_player_id(1);
+    //             key.set_infostate(infostate1);
+    //             if let Some(ind_value) = indicator.get(&key) {
+    //                 if *ind_value {
+    //                     let duration = start_time.elapsed();
+    //                     println!("Time for prune check False: {:?}", duration);
+    //                     return false;
+    //                 }
+    //             } else {
+    //                 continue;
+    //             }
+    //             if infostate1.chars().nth(0).unwrap() == infostate1.chars().nth(1).unwrap() {
+    //                 if counter_hm[&infostate1.chars().nth(0).unwrap()] > 1 {
+    //                     continue;
+    //                 } else {
+    //                     counter_hm.insert(infostate1.chars().nth(0).unwrap(), counter_hm[&infostate1.chars().nth(0).unwrap()] + 2);
+    //                 }
+    //             } else {
+    //                 if counter_hm[&infostate1.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate1.chars().nth(1).unwrap()] > 2 {
+    //                     continue;
+    //                 } else {
+    //                     counter_hm.insert(infostate1.chars().nth(0).unwrap(), counter_hm[&infostate1.chars().nth(0).unwrap()] +1);
+    //                     counter_hm.insert(infostate1.chars().nth(1).unwrap(), counter_hm[&infostate1.chars().nth(1).unwrap()] + 1);
+    //                 }
+    //             }
+    //             for infostate2 in INFOSTATES {
+    //                 key.set_player_id(2);
+    //                 key.set_infostate(infostate2);
+    //                 if let Some(ind_value) = indicator.get(&key) {
+    //                     if *ind_value {
+    //                         let duration = start_time.elapsed();
+    //                         println!("Time for prune check False: {:?}", duration);
+    //                         return false;
+    //                     }
+    //                 } else {
+    //                     continue;
+    //                 }
+    //                 if infostate2.chars().nth(0).unwrap() == infostate2.chars().nth(1).unwrap() {
+    //                     if counter_hm[&infostate2.chars().nth(0).unwrap()] > 1 {
+    //                         continue;
+    //                     } else {
+    //                         counter_hm.insert(infostate2.chars().nth(0).unwrap(), counter_hm[&infostate2.chars().nth(0).unwrap()] + 2);
+    //                     }
+    //                 } else {
+    //                     if counter_hm[&infostate2.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate2.chars().nth(1).unwrap()] > 2 {
+    //                         continue;
+    //                     } else {
+    //                         counter_hm.insert(infostate2.chars().nth(0).unwrap(), counter_hm[&infostate2.chars().nth(0).unwrap()] +1);
+    //                         counter_hm.insert(infostate2.chars().nth(1).unwrap(), counter_hm[&infostate2.chars().nth(1).unwrap()] + 1);
+    //                     }
+    //                 }
+    //                 for infostate3 in INFOSTATES {
+    //                     key.set_player_id(3);
+    //                     key.set_infostate(infostate3);
+    //                     if let Some(ind_value) = indicator.get(&key) {
+    //                         if *ind_value {
+    //                             let duration = start_time.elapsed();
+    //                             println!("Time for prune check False: {:?}", duration);
+    //                             return false;
+    //                         }
+    //                     } else {
+    //                         continue;
+    //                     }
+    //                     if infostate3.chars().nth(0).unwrap() == infostate3.chars().nth(1).unwrap() {
+    //                         if counter_hm[&infostate3.chars().nth(0).unwrap()] > 1 {
+    //                             continue;
+    //                         } else {
+    //                             counter_hm.insert(infostate3.chars().nth(0).unwrap(), counter_hm[&infostate3.chars().nth(0).unwrap()] + 2);
+    //                         }
+    //                     } else {
+    //                         if counter_hm[&infostate3.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate3.chars().nth(1).unwrap()] > 2 {
+    //                             continue;
+    //                         } else {
+    //                             counter_hm.insert(infostate3.chars().nth(0).unwrap(), counter_hm[&infostate3.chars().nth(0).unwrap()] +1);
+    //                             counter_hm.insert(infostate3.chars().nth(1).unwrap(), counter_hm[&infostate3.chars().nth(1).unwrap()] + 1);
+    //                         }
+    //                     }
+    //                     for infostate4 in INFOSTATES {
+    //                         key.set_player_id(4);
+    //                         key.set_infostate(infostate4);
+    //                         if let Some(ind_value) = indicator.get(&key) {
+    //                             if *ind_value {
+    //                                 let duration = start_time.elapsed();
+    //                                 println!("Time for prune check False: {:?}", duration);
+    //                                 return false;
+    //                             }
+    //                         } else {
+    //                             continue;
+    //                         }
+    //                         if infostate4.chars().nth(0).unwrap() == infostate4.chars().nth(1).unwrap() {
+    //                             if counter_hm[&infostate4.chars().nth(0).unwrap()] > 1 {
+    //                                 continue;
+    //                             } else {
+    //                                 counter_hm.insert(infostate4.chars().nth(0).unwrap(), counter_hm[&infostate4.chars().nth(0).unwrap()] + 2);
+    //                             }
+    //                         } else {
+    //                             if counter_hm[&infostate4.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate4.chars().nth(1).unwrap()] > 2 {
+    //                                 continue;
+    //                             } else {
+    //                                 counter_hm.insert(infostate4.chars().nth(0).unwrap(), counter_hm[&infostate4.chars().nth(0).unwrap()] +1);
+    //                                 counter_hm.insert(infostate4.chars().nth(1).unwrap(), counter_hm[&infostate4.chars().nth(1).unwrap()] + 1);
+    //                             }
+    //                         }
+    //                         for infostate5 in INFOSTATES {
+    //                             key.set_player_id(5);
+    //                             key.set_infostate(infostate5);
+    //                             if let Some(ind_value) = indicator.get(&key) {
+    //                                 if *ind_value {
+    //                                     let duration = start_time.elapsed();
+    //                                     println!("Time for prune check False: {:?}", duration);
+    //                                     return false;
+    //                                 }
+    //                             } else {
+    //                                 continue;
+    //                             }
+    //                             if infostate5.chars().nth(0).unwrap() == infostate5.chars().nth(1).unwrap() {
+    //                                 if counter_hm[&infostate5.chars().nth(0).unwrap()] > 1 {
+    //                                     continue;
+    //                                 } else {
+    //                                     counter_hm.insert(infostate5.chars().nth(0).unwrap(), counter_hm[&infostate5.chars().nth(0).unwrap()] + 2);
+    //                                 }
+    //                             } else {
+    //                                 if counter_hm[&infostate5.chars().nth(0).unwrap()] > 2 || counter_hm[&infostate5.chars().nth(1).unwrap()] > 2 {
+    //                                     continue;
+    //                                 } else {
+    //                                     counter_hm.insert(infostate5.chars().nth(0).unwrap(), counter_hm[&infostate5.chars().nth(0).unwrap()] +1);
+    //                                     counter_hm.insert(infostate5.chars().nth(1).unwrap(), counter_hm[&infostate5.chars().nth(1).unwrap()] + 1);
+    //                                 }
+    //                             }
 
 
-                                // Player 5 exit
-                                if infostate5.chars().nth(0).unwrap() == infostate5.chars().nth(1).unwrap() {
-                                    counter_hm.insert(infostate5.chars().nth(0).unwrap(), counter_hm[&infostate5.chars().nth(0).unwrap()] - 2);
-                                } else {
-                                    counter_hm.insert(infostate5.chars().nth(0).unwrap(), counter_hm[&infostate5.chars().nth(0).unwrap()] - 1);
-                                    counter_hm.insert(infostate5.chars().nth(1).unwrap(), counter_hm[&infostate5.chars().nth(1).unwrap()] - 1);
-                                }
-                            }
+    //                             // Player 5 exit
+    //                             if infostate5.chars().nth(0).unwrap() == infostate5.chars().nth(1).unwrap() {
+    //                                 counter_hm.insert(infostate5.chars().nth(0).unwrap(), counter_hm[&infostate5.chars().nth(0).unwrap()] - 2);
+    //                             } else {
+    //                                 counter_hm.insert(infostate5.chars().nth(0).unwrap(), counter_hm[&infostate5.chars().nth(0).unwrap()] - 1);
+    //                                 counter_hm.insert(infostate5.chars().nth(1).unwrap(), counter_hm[&infostate5.chars().nth(1).unwrap()] - 1);
+    //                             }
+    //                         }
                             
-                            // Player 4 exit
-                            if infostate4.chars().nth(0).unwrap() == infostate4.chars().nth(1).unwrap() {
-                                counter_hm.insert(infostate4.chars().nth(0).unwrap(), counter_hm[&infostate4.chars().nth(0).unwrap()] - 2);
-                            } else {
-                                counter_hm.insert(infostate4.chars().nth(0).unwrap(), counter_hm[&infostate4.chars().nth(0).unwrap()] - 1);
-                                counter_hm.insert(infostate4.chars().nth(1).unwrap(), counter_hm[&infostate4.chars().nth(1).unwrap()] - 1);
-                            }
-                        }
-                        // Player 3 exit
-                        if infostate3.chars().nth(0).unwrap() == infostate3.chars().nth(1).unwrap() {
-                            counter_hm.insert(infostate3.chars().nth(0).unwrap(), counter_hm[&infostate3.chars().nth(0).unwrap()] - 2);
-                        } else {
-                            counter_hm.insert(infostate3.chars().nth(0).unwrap(), counter_hm[&infostate3.chars().nth(0).unwrap()] - 1);
-                            counter_hm.insert(infostate3.chars().nth(1).unwrap(), counter_hm[&infostate3.chars().nth(1).unwrap()] - 1);
-                        }
+    //                         // Player 4 exit
+    //                         if infostate4.chars().nth(0).unwrap() == infostate4.chars().nth(1).unwrap() {
+    //                             counter_hm.insert(infostate4.chars().nth(0).unwrap(), counter_hm[&infostate4.chars().nth(0).unwrap()] - 2);
+    //                         } else {
+    //                             counter_hm.insert(infostate4.chars().nth(0).unwrap(), counter_hm[&infostate4.chars().nth(0).unwrap()] - 1);
+    //                             counter_hm.insert(infostate4.chars().nth(1).unwrap(), counter_hm[&infostate4.chars().nth(1).unwrap()] - 1);
+    //                         }
+    //                     }
+    //                     // Player 3 exit
+    //                     if infostate3.chars().nth(0).unwrap() == infostate3.chars().nth(1).unwrap() {
+    //                         counter_hm.insert(infostate3.chars().nth(0).unwrap(), counter_hm[&infostate3.chars().nth(0).unwrap()] - 2);
+    //                     } else {
+    //                         counter_hm.insert(infostate3.chars().nth(0).unwrap(), counter_hm[&infostate3.chars().nth(0).unwrap()] - 1);
+    //                         counter_hm.insert(infostate3.chars().nth(1).unwrap(), counter_hm[&infostate3.chars().nth(1).unwrap()] - 1);
+    //                     }
                         
-                    }
-                    // Player 2 exit
-                    if infostate2.chars().nth(0).unwrap() == infostate2.chars().nth(1).unwrap() {
-                        counter_hm.insert(infostate2.chars().nth(0).unwrap(), counter_hm[&infostate2.chars().nth(0).unwrap()] - 2);
-                    } else {
-                        counter_hm.insert(infostate2.chars().nth(0).unwrap(), counter_hm[&infostate2.chars().nth(0).unwrap()] - 1);
-                        counter_hm.insert(infostate2.chars().nth(1).unwrap(), counter_hm[&infostate2.chars().nth(1).unwrap()] - 1);
-                    }
+    //                 }
+    //                 // Player 2 exit
+    //                 if infostate2.chars().nth(0).unwrap() == infostate2.chars().nth(1).unwrap() {
+    //                     counter_hm.insert(infostate2.chars().nth(0).unwrap(), counter_hm[&infostate2.chars().nth(0).unwrap()] - 2);
+    //                 } else {
+    //                     counter_hm.insert(infostate2.chars().nth(0).unwrap(), counter_hm[&infostate2.chars().nth(0).unwrap()] - 1);
+    //                     counter_hm.insert(infostate2.chars().nth(1).unwrap(), counter_hm[&infostate2.chars().nth(1).unwrap()] - 1);
+    //                 }
                     
-                }
-                // Player 1 exit
-                if infostate1.chars().nth(0).unwrap() == infostate1.chars().nth(1).unwrap() {
-                    counter_hm.insert(infostate1.chars().nth(0).unwrap(), counter_hm[&infostate1.chars().nth(0).unwrap()] - 2);
-                } else {
-                    counter_hm.insert(infostate1.chars().nth(0).unwrap(), counter_hm[&infostate1.chars().nth(0).unwrap()] - 1);
-                    counter_hm.insert(infostate1.chars().nth(1).unwrap(), counter_hm[&infostate1.chars().nth(1).unwrap()] - 1);
-                }
+    //             }
+    //             // Player 1 exit
+    //             if infostate1.chars().nth(0).unwrap() == infostate1.chars().nth(1).unwrap() {
+    //                 counter_hm.insert(infostate1.chars().nth(0).unwrap(), counter_hm[&infostate1.chars().nth(0).unwrap()] - 2);
+    //             } else {
+    //                 counter_hm.insert(infostate1.chars().nth(0).unwrap(), counter_hm[&infostate1.chars().nth(0).unwrap()] - 1);
+    //                 counter_hm.insert(infostate1.chars().nth(1).unwrap(), counter_hm[&infostate1.chars().nth(1).unwrap()] - 1);
+    //             }
                 
-            }
-            // Player 0 exit
-            if infostate0.chars().nth(0).unwrap() == infostate0.chars().nth(1).unwrap() {
-                counter_hm.insert(infostate0.chars().nth(0).unwrap(), counter_hm[&infostate0.chars().nth(0).unwrap()] - 2);
-            } else {
-                counter_hm.insert(infostate0.chars().nth(0).unwrap(), counter_hm[&infostate0.chars().nth(0).unwrap()] - 1);
-                counter_hm.insert(infostate0.chars().nth(1).unwrap(), counter_hm[&infostate0.chars().nth(1).unwrap()] - 1);
-            }
-        }
-        let duration = start_time.elapsed();
-        println!("Time for prune check: {:?}", duration);
-        true
-    }
+    //         }
+    //         // Player 0 exit
+    //         if infostate0.chars().nth(0).unwrap() == infostate0.chars().nth(1).unwrap() {
+    //             counter_hm.insert(infostate0.chars().nth(0).unwrap(), counter_hm[&infostate0.chars().nth(0).unwrap()] - 2);
+    //         } else {
+    //             counter_hm.insert(infostate0.chars().nth(0).unwrap(), counter_hm[&infostate0.chars().nth(0).unwrap()] - 1);
+    //             counter_hm.insert(infostate0.chars().nth(1).unwrap(), counter_hm[&infostate0.chars().nth(1).unwrap()] - 1);
+    //         }
+    //     }
+    //     let duration = start_time.elapsed();
+    //     println!("Time for prune check: {:?}", duration);
+    //     true
+    // }
     fn player_all_0(&self, indicator: HashMap<BRKey, bool>, player_id: usize) -> bool {
         for infostate in INFOSTATES {
             let key_br: BRKey = BRKey::new(player_id, infostate);

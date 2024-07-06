@@ -3,7 +3,7 @@ use rand::Rng;
 use rand::thread_rng;
 
 use crate::history_public::ActionObservation;
-use super::keys::{BRKey, MSKey, MAX_NUM_BRKEY};
+use super::keys::{BRKey, MSKey, Infostate, MAX_NUM_BRKEY};
 
 pub struct HeuristicMixedStrategyPolicy {
     policies: HashMap<MSKey, HashMap<BRKey, Vec<f32>>>,
@@ -15,14 +15,14 @@ pub trait MSInterface {
     fn update(&mut self, key: &MSKey, possible_moves: &Vec<ActionObservation>, update_values: &HashMap<BRKey, Vec<f32>>);
     fn is_key_in_action_map(&self, key: &MSKey) -> bool;
     fn update_action_map(&mut self, key: &MSKey, possible_moves: &Vec<ActionObservation>);
-    fn add_value(&mut self, key_ms: &MSKey, player_id: usize, infostate: &str, index: usize, value: f32);
+    fn add_value(&mut self, key_ms: &MSKey, player_id: usize, infostate: &Infostate, index: usize, value: f32);
     fn policies_contains_key(&self, key: &MSKey) -> bool;
     fn action_map_contains_key(&self, key: &MSKey) -> bool;
     fn policy_insert(&mut self, key: MSKey, value: HashMap<BRKey, Vec<f32>>);
     fn action_map_insert(&mut self, key: MSKey, value: Vec<ActionObservation>);
     fn policy_get_mut(&mut self, key: &MSKey) -> Option<&mut HashMap<BRKey, Vec<f32>>>;
-    fn get_best_response_index(&self, key: &MSKey, infostate: &str) -> Option<usize>;
-    fn get_best_response(&self, key: &MSKey, infostate: &str) -> ActionObservation;
+    fn get_best_response_index(&self, key: &MSKey, infostate: &Infostate) -> Option<usize>;
+    fn get_best_response(&self, key: &MSKey, infostate: &Infostate) -> ActionObservation;
 }
 
 impl HeuristicMixedStrategyPolicy {
@@ -75,7 +75,7 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
             self.action_map.insert(key.clone(), possible_moves.clone());
         }
     }
-    fn add_value(&mut self, key_ms: &MSKey, player_id: usize, infostate: &str, index: usize, value: f32) {
+    fn add_value(&mut self, key_ms: &MSKey, player_id: usize, infostate: &Infostate, index: usize, value: f32) {
         let key_br: BRKey = BRKey::new(player_id, infostate);
         if let Some(policy) = self.policies.get_mut(key_ms) {
             if let Some(infostate_policy) = policy.get_mut(&key_br) {
@@ -106,7 +106,7 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
     fn policy_get_mut(&mut self, key: &MSKey) -> Option<&mut HashMap<BRKey, Vec<f32>>> {
         self.policies.get_mut(key)
     }
-    fn get_best_response_index(&self, key: &MSKey, infostate: &str) -> Option<usize> {
+    fn get_best_response_index(&self, key: &MSKey, infostate: &Infostate) -> Option<usize> {
         // Returns index of highest value
         if let Some(policy) = self.policies.get(key) {
             let player_id = key.player_id();
@@ -120,7 +120,7 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
             None
         }
     }
-    fn get_best_response(&self, key: &MSKey, infostate: &str) -> ActionObservation {
+    fn get_best_response(&self, key: &MSKey, infostate: &Infostate) -> ActionObservation {
         let action_index: Option<usize> = self.get_best_response_index(key, infostate);
         if let Some(index) = action_index {
             if let Some(action_vec) = self.action_map.get(key){

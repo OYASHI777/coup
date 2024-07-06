@@ -3,37 +3,40 @@
 // 6 hashmap <infostate, bool>
 // 6 vec for infostates with true values
 // 6 vec for infostates false values
-use super::keys::INFOSTATES;
+use super::keys::{INFOSTATES, Infostate};
+use super::keys::Infostate::*;
 // use rayon::iter::IntoParallelIterator; 
 use rayon::prelude::*;
 use crossbeam::thread;
-use std::clone;
 use std::collections::HashMap;
 use std::collections::hash_map::Keys;
 use std::time::Instant;
+use ahash::AHashMap;
+
 
 #[derive(Clone)]
 pub struct ReachProb {
-    reach_probs_player0: HashMap<String, bool>,
-    reach_probs_player1: HashMap<String, bool>,
-    reach_probs_player2: HashMap<String, bool>,
-    reach_probs_player3: HashMap<String, bool>,
-    reach_probs_player4: HashMap<String, bool>,
-    reach_probs_player5: HashMap<String, bool>,
+    // TODO: make String an Infostate ENUM
+    reach_probs_player0: AHashMap<Infostate, bool>,
+    reach_probs_player1: AHashMap<Infostate, bool>,
+    reach_probs_player2: AHashMap<Infostate, bool>,
+    reach_probs_player3: AHashMap<Infostate, bool>,
+    reach_probs_player4: AHashMap<Infostate, bool>,
+    reach_probs_player5: AHashMap<Infostate, bool>,
     
-    true_infostates_player0: Vec<String>,
-    true_infostates_player1: Vec<String>,
-    true_infostates_player2: Vec<String>,
-    true_infostates_player3: Vec<String>,
-    true_infostates_player4: Vec<String>,
-    true_infostates_player5: Vec<String>,
+    true_infostates_player0: Vec<Infostate>,
+    true_infostates_player1: Vec<Infostate>,
+    true_infostates_player2: Vec<Infostate>,
+    true_infostates_player3: Vec<Infostate>,
+    true_infostates_player4: Vec<Infostate>,
+    true_infostates_player5: Vec<Infostate>,
     
-    false_infostates_player0: Vec<String>,
-    false_infostates_player1: Vec<String>,
-    false_infostates_player2: Vec<String>,
-    false_infostates_player3: Vec<String>,
-    false_infostates_player4: Vec<String>,
-    false_infostates_player5: Vec<String>,
+    false_infostates_player0: Vec<Infostate>,
+    false_infostates_player1: Vec<Infostate>,
+    false_infostates_player2: Vec<Infostate>,
+    false_infostates_player3: Vec<Infostate>,
+    false_infostates_player4: Vec<Infostate>,
+    false_infostates_player5: Vec<Infostate>,
 
     len: usize,
 }
@@ -43,17 +46,17 @@ impl ReachProb {
     // cloning
     // TODO: Write restrictors for Discard and 
     pub fn new() -> Self{
-        let mut starter: HashMap<String, bool> = HashMap::with_capacity(15);
-        for infostates in INFOSTATES.iter() {
-            starter.insert(infostates.to_string(), true);
+        let mut starter: AHashMap<Infostate, bool> = AHashMap::with_capacity(15);
+        for infostates in [AA, AB, AC, AD, AE, BB, BC, BD, BE, CC, CD, CE, DD, DE, EE].iter() {
+            starter.insert(*infostates, true);
         }
         let total_infostates: usize = 15;
-        let p0: [&str; 15] = ["AB", "AC", "AD", "AE", "BC", "BD", "BE", "CD", "CE", "DE", "AA", "EE", "CC", "DD", "BB"];
-        let p1: [&str; 15] = ["CD", "BC", "BD", "AC", "AD", "CE", "DE", "BE", "AE", "AB", "DD", "CC", "AA", "BB", "EE"];
-        let p2: [&str; 15] = ["BE", "AE", "AD", "DE", "CE", "CD", "BC", "BD", "AB", "AC", "BB", "AA", "DD", "CC", "EE"];
-        let p3: [&str; 15] = ["CE", "CD", "AC", "AD", "DE", "AE", "BC", "BD", "BE", "AB", "EE", "AA", "CC", "BB", "DD"];
-        let p4: [&str; 15] = ["BD", "CD", "AC", "AD", "BE", "CE", "DE", "AB", "AE", "BC", "AA", "CC", "EE", "DD", "BB"];
-        let p5: [&str; 15] = ["AE", "DE", "AB", "CD", "AC", "BE", "AD", "CE", "BD", "BC", "CC", "BB", "AA", "DD", "EE"];
+        let p0: [Infostate; 15] = [AB, AC, AD, AE, BC, BD, BE, CD, CE, DE, AA, EE, CC, DD, BB];
+        let p1: [Infostate; 15] = [CD, BC, BD, AC, AD, CE, DE, BE, AE, AB, DD, CC, AA, BB, EE];
+        let p2: [Infostate; 15] = [BE, AE, AD, DE, CE, CD, BC, BD, AB, AC, BB, AA, DD, CC, EE];
+        let p3: [Infostate; 15] = [CE, CD, AC, AD, DE, AE, BC, BD, BE, AB, EE, AA, CC, BB, DD];
+        let p4: [Infostate; 15] = [BD, CD, AC, AD, BE, CE, DE, AB, AE, BC, AA, CC, EE, DD, BB];
+        let p5: [Infostate; 15] = [AE, DE, AB, CD, AC, BE, AD, CE, BD, BC, CC, BB, AA, DD, EE];
         ReachProb{
             reach_probs_player0: starter.clone(),
             reach_probs_player1: starter.clone(),
@@ -61,12 +64,12 @@ impl ReachProb {
             reach_probs_player3: starter.clone(),
             reach_probs_player4: starter.clone(),
             reach_probs_player5: starter.clone(),
-            true_infostates_player0: p0.iter().map(|&s| s.to_owned()).collect(),
-            true_infostates_player1: p1.iter().map(|&s| s.to_owned()).collect(),
-            true_infostates_player2: p2.iter().map(|&s| s.to_owned()).collect(),
-            true_infostates_player3: p3.iter().map(|&s| s.to_owned()).collect(),
-            true_infostates_player4: p4.iter().map(|&s| s.to_owned()).collect(),
-            true_infostates_player5: p5.iter().map(|&s| s.to_owned()).collect(),
+            true_infostates_player0: p0.to_vec(),
+            true_infostates_player1: p1.to_vec(),
+            true_infostates_player2: p2.to_vec(),
+            true_infostates_player3: p3.to_vec(),
+            true_infostates_player4: p4.to_vec(),
+            true_infostates_player5: p5.to_vec(),
             false_infostates_player0: Vec::with_capacity(total_infostates),
             false_infostates_player1: Vec::with_capacity(total_infostates),
             false_infostates_player2: Vec::with_capacity(total_infostates),
@@ -77,10 +80,7 @@ impl ReachProb {
         }
     }
     pub fn new_empty() -> Self {
-        let mut starter: HashMap<String, bool> = HashMap::with_capacity(15);
-        for infostates in INFOSTATES.iter() {
-            starter.insert(infostates.to_string(), true);
-        }
+        let starter: AHashMap<Infostate, bool> = AHashMap::with_capacity(15);
         let total_infostates: usize = 15;
         ReachProb{
             reach_probs_player0: starter.clone(),
@@ -104,7 +104,8 @@ impl ReachProb {
             len: 0,
         }
     }
-    pub fn player_infostate_keys(&self, player_id: usize) -> Keys<'_, String, bool>{
+    
+    pub fn player_infostate_keys(&self, player_id: usize) -> Keys<'_, Infostate, bool>{
         match player_id {
             0 => self.reach_probs_player0.keys(),
             1 => self.reach_probs_player1.keys(),
@@ -115,7 +116,7 @@ impl ReachProb {
             _ => panic!("Invalid player_id please make sure its between 0 to 5 inclusive"),
         }
     }
-    pub fn get_status(&self, player_id: usize, infostate: &str) -> Option<&bool> {
+    pub fn get_status(&self, player_id: usize, infostate: &Infostate) -> Option<&bool> {
         match player_id {
             // Add the rest
             0 => {
@@ -165,7 +166,7 @@ impl ReachProb {
             }
         }
     }
-    pub fn get_mut_status(&mut self, player_id: usize, infostate: &str) -> Option<&bool> {
+    pub fn get_mut_status(&mut self, player_id: usize, infostate: &Infostate) -> Option<&bool> {
         match player_id {
             // Add the rest
             0 => {
@@ -215,31 +216,49 @@ impl ReachProb {
             }
         }
     }
-    pub fn set_status(&mut self, player_id: usize, infostate: &str, status: bool) {
+    pub fn set_status(&mut self, player_id: usize, infostate: &Infostate, status: bool) {
         // Add if not inside
+        log::trace!("Before set_status for player {player_id}, infostate: {infostate:?}, status: {status}");
+        self.log_state();
+        // log::trace!("True Infostates");
+        // log::trace!("P0: {:?}", self.true_infostates_player0.len());
+        // log::trace!("P1: {:?}", self.true_infostates_player1.len());
+        // log::trace!("P2: {:?}", self.true_infostates_player2.len());
+        // log::trace!("P3: {:?}", self.true_infostates_player3.len());
+        // log::trace!("P4: {:?}", self.true_infostates_player4.len());
+        // log::trace!("P5: {:?}", self.true_infostates_player5.len());
+        // log::trace!("False Infostates");
+        // log::trace!("P0: {:?}", self.false_infostates_player0.len());
+        // log::trace!("P1: {:?}", self.false_infostates_player1.len());
+        // log::trace!("P2: {:?}", self.false_infostates_player2.len());
+        // log::trace!("P3: {:?}", self.false_infostates_player3.len());
+        // log::trace!("P4: {:?}", self.false_infostates_player4.len());
+        // log::trace!("P5: {:?}", self.false_infostates_player5.len());
         match player_id {
             0 => {
                 if let Some(value) = self.reach_probs_player0.get_mut(infostate){
+                    log::trace!("value of {value} found! in player0");
                     if *value != status {
                         *value = status;
                         if status {
-                            if let Some(pos) = self.false_infostates_player0.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.false_infostates_player0.iter().position(|x| *x == *infostate){
                                 self.false_infostates_player0.swap_remove(pos);
-                                self.true_infostates_player0.push(infostate.to_string());
+                                self.true_infostates_player0.push(*infostate);
                             }
                         } else {
-                            if let Some(pos) = self.true_infostates_player0.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.true_infostates_player0.iter().position(|x| *x == *infostate){
                                 self.true_infostates_player0.swap_remove(pos);
-                                self.false_infostates_player0.push(infostate.to_string());
+                                self.false_infostates_player0.push(*infostate);
                             }
                         }
                     }
                 } else {
-                    self.reach_probs_player0.insert(infostate.to_string(), status);
+                    log::trace!("Player 0 Insertion!");
+                    self.reach_probs_player0.insert(*infostate, status);
                     if status {
-                        self.true_infostates_player0.push(infostate.to_string());
+                        self.true_infostates_player0.push(*infostate);
                     } else {
-                        self.false_infostates_player0.push(infostate.to_string());
+                        self.false_infostates_player0.push(*infostate);
                     }
                     self.len += 1;
                 }
@@ -249,23 +268,23 @@ impl ReachProb {
                     if *value != status {
                         *value = status;
                         if status {
-                            if let Some(pos) = self.false_infostates_player1.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.false_infostates_player1.iter().position(|x| *x == *infostate){
                                 self.false_infostates_player1.swap_remove(pos);
-                                self.true_infostates_player1.push(infostate.to_string());
+                                self.true_infostates_player1.push(*infostate);
                             }
                         } else {
-                            if let Some(pos) = self.true_infostates_player1.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.true_infostates_player1.iter().position(|x| *x == *infostate){
                                 self.true_infostates_player1.swap_remove(pos);
-                                self.false_infostates_player1.push(infostate.to_string());
+                                self.false_infostates_player1.push(*infostate);
                             }
                         }
                     }
                 } else {
-                    self.reach_probs_player1.insert(infostate.to_string(), status);
+                    self.reach_probs_player1.insert(*infostate, status);
                     if status {
-                        self.true_infostates_player1.push(infostate.to_string());
+                        self.true_infostates_player1.push(*infostate);
                     } else {
-                        self.false_infostates_player1.push(infostate.to_string());
+                        self.false_infostates_player1.push(*infostate);
                     }
                     self.len += 1;
                 }
@@ -275,23 +294,23 @@ impl ReachProb {
                     if *value != status {
                         *value = status;
                         if status {
-                            if let Some(pos) = self.false_infostates_player2.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.false_infostates_player2.iter().position(|x| *x == *infostate){
                                 self.false_infostates_player2.swap_remove(pos);
-                                self.true_infostates_player2.push(infostate.to_string());
+                                self.true_infostates_player2.push(*infostate);
                             }
                         } else {
-                            if let Some(pos) = self.true_infostates_player2.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.true_infostates_player2.iter().position(|x| *x == *infostate){
                                 self.true_infostates_player2.swap_remove(pos);
-                                self.false_infostates_player2.push(infostate.to_string());
+                                self.false_infostates_player2.push(*infostate);
                             }
                         }
                     }
                 } else {
-                    self.reach_probs_player2.insert(infostate.to_string(), status);
+                    self.reach_probs_player2.insert(*infostate, status);
                     if status {
-                        self.true_infostates_player2.push(infostate.to_string());
+                        self.true_infostates_player2.push(*infostate);
                     } else {
-                        self.false_infostates_player2.push(infostate.to_string());
+                        self.false_infostates_player2.push(*infostate);
                     }
                     self.len += 1;
                 }
@@ -301,23 +320,23 @@ impl ReachProb {
                     if *value != status {
                         *value = status;
                         if status {
-                            if let Some(pos) = self.false_infostates_player3.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.false_infostates_player3.iter().position(|x| *x == *infostate){
                                 self.false_infostates_player3.swap_remove(pos);
-                                self.true_infostates_player3.push(infostate.to_string());
+                                self.true_infostates_player3.push(*infostate);
                             }
                         } else {
-                            if let Some(pos) = self.true_infostates_player3.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.true_infostates_player3.iter().position(|x| *x == *infostate){
                                 self.true_infostates_player3.swap_remove(pos);
-                                self.false_infostates_player3.push(infostate.to_string());
+                                self.false_infostates_player3.push(*infostate);
                             }
                         }
                     }
                 } else {
-                    self.reach_probs_player3.insert(infostate.to_string(), status);
+                    self.reach_probs_player3.insert(*infostate, status);
                     if status {
-                        self.true_infostates_player3.push(infostate.to_string());
+                        self.true_infostates_player3.push(*infostate);
                     } else {
-                        self.false_infostates_player3.push(infostate.to_string());
+                        self.false_infostates_player3.push(*infostate);
                     }
                     self.len += 1;
                 }
@@ -327,23 +346,23 @@ impl ReachProb {
                     if *value != status {
                         *value = status;
                         if status {
-                            if let Some(pos) = self.false_infostates_player4.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.false_infostates_player4.iter().position(|x| *x == *infostate){
                                 self.false_infostates_player4.swap_remove(pos);
-                                self.true_infostates_player4.push(infostate.to_string());
+                                self.true_infostates_player4.push(*infostate);
                             }
                         } else {
-                            if let Some(pos) = self.true_infostates_player4.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.true_infostates_player4.iter().position(|x| *x == *infostate){
                                 self.true_infostates_player4.swap_remove(pos);
-                                self.false_infostates_player4.push(infostate.to_string());
+                                self.false_infostates_player4.push(*infostate);
                             }
                         }
                     }
                 } else {
-                    self.reach_probs_player4.insert(infostate.to_string(), status);
+                    self.reach_probs_player4.insert(*infostate, status);
                     if status {
-                        self.true_infostates_player4.push(infostate.to_string());
+                        self.true_infostates_player4.push(*infostate);
                     } else {
-                        self.false_infostates_player4.push(infostate.to_string());
+                        self.false_infostates_player4.push(*infostate);
                     }
                     self.len += 1;
                 }
@@ -353,23 +372,23 @@ impl ReachProb {
                     if *value != status {
                         *value = status;
                         if status {
-                            if let Some(pos) = self.false_infostates_player5.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.false_infostates_player5.iter().position(|x| *x == *infostate){
                                 self.false_infostates_player5.swap_remove(pos);
-                                self.true_infostates_player5.push(infostate.to_string());
+                                self.true_infostates_player5.push(*infostate);
                             }
                         } else {
-                            if let Some(pos) = self.true_infostates_player5.iter().position(|x| *x == infostate.to_string()){
+                            if let Some(pos) = self.true_infostates_player5.iter().position(|x| *x == *infostate){
                                 self.true_infostates_player5.swap_remove(pos);
-                                self.false_infostates_player5.push(infostate.to_string());
+                                self.false_infostates_player5.push(*infostate);
                             }
                         }
                     }
                 } else {
-                    self.reach_probs_player5.insert(infostate.to_string(), status);
+                    self.reach_probs_player5.insert(*infostate, status);
                     if status {
-                        self.true_infostates_player5.push(infostate.to_string());
+                        self.true_infostates_player5.push(*infostate);
                     } else {
-                        self.false_infostates_player5.push(infostate.to_string());
+                        self.false_infostates_player5.push(*infostate);
                     }
                     self.len += 1;
                 }
@@ -378,8 +397,23 @@ impl ReachProb {
                 panic!("Invalid Player ID, please provide between 0 to 5 both inclusive");
             }
         }
+        log::trace!("After set_status");
+        log::trace!("True Infostates");
+        log::trace!("P0: {:?}", self.true_infostates_player0.len());
+        log::trace!("P1: {:?}", self.true_infostates_player1.len());
+        log::trace!("P2: {:?}", self.true_infostates_player2.len());
+        log::trace!("P3: {:?}", self.true_infostates_player3.len());
+        log::trace!("P4: {:?}", self.true_infostates_player4.len());
+        log::trace!("P5: {:?}", self.true_infostates_player5.len());
+        log::trace!("False Infostates");
+        log::trace!("P0: {:?}", self.false_infostates_player0.len());
+        log::trace!("P1: {:?}", self.false_infostates_player1.len());
+        log::trace!("P2: {:?}", self.false_infostates_player2.len());
+        log::trace!("P3: {:?}", self.false_infostates_player3.len());
+        log::trace!("P4: {:?}", self.false_infostates_player4.len());
+        log::trace!("P5: {:?}", self.false_infostates_player5.len());
     }
-    pub fn remove(&mut self, player_id: usize, infostate: &str) {
+    pub fn remove(&mut self, player_id: usize, infostate: &Infostate) {
         // TODO: fill
         match player_id {
             0 => {
@@ -480,7 +514,7 @@ impl ReachProb {
     pub fn len(&self) -> usize {
         self.len
     }
-    fn sort_true_infostates_by_length(&self) -> Vec<&Vec<String>> {
+    fn sort_true_infostates_by_length(&self) -> Vec<&Vec<Infostate>> {
         let mut true_vectors = vec![
             &self.true_infostates_player0,
             &self.true_infostates_player1,
@@ -494,7 +528,7 @@ impl ReachProb {
         true_vectors
     }
 
-    fn sort_false_infostates_by_true_lengths(&self) -> Vec<&Vec<String>> {
+    fn sort_false_infostates_by_true_lengths(&self) -> Vec<&Vec<Infostate>> {
         let true_lengths = vec![
             self.true_infostates_player0.len(),
             self.true_infostates_player1.len(),
@@ -516,12 +550,58 @@ impl ReachProb {
         false_vectors.sort_by(|a, b| b.1.cmp(&a.1));
         false_vectors.into_iter().map(|(vec, _)| vec).collect()
     }
+    pub fn log_state(&self) {
+        log::trace!("HashMap State");
+        log::trace!("P0: {:?}", self.reach_probs_player0);
+        log::trace!("P1: {:?}", self.reach_probs_player1);
+        log::trace!("P2: {:?}", self.reach_probs_player2);
+        log::trace!("P3: {:?}", self.reach_probs_player3);
+        log::trace!("P4: {:?}", self.reach_probs_player4);
+        log::trace!("P5: {:?}", self.reach_probs_player5);
+        log::trace!("True Infostates");
+        log::trace!("P0: {:?}", self.true_infostates_player0);
+        log::trace!("P1: {:?}", self.true_infostates_player1);
+        log::trace!("P2: {:?}", self.true_infostates_player2);
+        log::trace!("P3: {:?}", self.true_infostates_player3);
+        log::trace!("P4: {:?}", self.true_infostates_player4);
+        log::trace!("P5: {:?}", self.true_infostates_player5);
+        log::trace!("False Infostates");
+        log::trace!("P0: {:?}", self.false_infostates_player0);
+        log::trace!("P1: {:?}", self.false_infostates_player1);
+        log::trace!("P2: {:?}", self.false_infostates_player2);
+        log::trace!("P3: {:?}", self.false_infostates_player3);
+        log::trace!("P4: {:?}", self.false_infostates_player4);
+        log::trace!("P5: {:?}", self.false_infostates_player5);
+    }
+    pub fn print_state(&self) {
+        println!("HashMap State");
+        println!("P0: {:?}", self.reach_probs_player0);
+        println!("P1: {:?}", self.reach_probs_player1);
+        println!("P2: {:?}", self.reach_probs_player2);
+        println!("P3: {:?}", self.reach_probs_player3);
+        println!("P4: {:?}", self.reach_probs_player4);
+        println!("P5: {:?}", self.reach_probs_player5);
+        println!("True Infostates");
+        println!("P0: {:?}", self.true_infostates_player0);
+        println!("P1: {:?}", self.true_infostates_player1);
+        println!("P2: {:?}", self.true_infostates_player2);
+        println!("P3: {:?}", self.true_infostates_player3);
+        println!("P4: {:?}", self.true_infostates_player4);
+        println!("P5: {:?}", self.true_infostates_player5);
+        println!("False Infostates");
+        println!("P0: {:?}", self.false_infostates_player0);
+        println!("P1: {:?}", self.false_infostates_player1);
+        println!("P2: {:?}", self.false_infostates_player2);
+        println!("P3: {:?}", self.false_infostates_player3);
+        println!("P4: {:?}", self.false_infostates_player4);
+        println!("P5: {:?}", self.false_infostates_player5);
+    }
     pub fn should_prune(&self) -> bool {
         let start_time = Instant::now();
         let output: bool = self.should_pure_prune();
         let elapsed_time = start_time.elapsed();
         if output {
-            // println!("True Prune Time: {:?}", elapsed_time);
+            log::info!("reach_prob|should prune| true prune Time: {:?}", elapsed_time);
         }
         output
     }
@@ -530,8 +610,8 @@ impl ReachProb {
         // Returns true if reach prob indicates a state that should be pruned
         // If there does not exist a gamestate where at least 1 infostate's indicator is 1 return true
         let total_infostates: usize = INFOSTATES.len();
-        let pointers_true: Vec<&Vec<String>> = self.sort_true_infostates_by_length();
-        let pointers_false: Vec<&Vec<String>> = self.sort_false_infostates_by_true_lengths();
+        let pointers_true: Vec<&Vec<Infostate>> = self.sort_true_infostates_by_length();
+        let pointers_false: Vec<&Vec<Infostate>> = self.sort_false_infostates_by_true_lengths();
         let mut carrier_bool: bool;
         let mut counter_hm: HashMap<&str, usize> = HashMap::with_capacity(5);
         counter_hm.insert("A", 0);
@@ -546,10 +626,12 @@ impl ReachProb {
         let mut i4: usize = 0;
         let mut i5: usize = 0;
         let mut break_bool: bool;
-        'outer: while i0 < self.true_infostates_player0.len() + self.false_infostates_player0.len() {
+
+        'outer: while i0 < pointers_true[0].len() + pointers_false[0].len() {
+            log::trace!("i0: {}", i0);
             carrier_bool = false;
             break_bool = true;
-            let infostate0: &str;
+            let infostate0: &Infostate;
             if i0 < pointers_true[0].len(){
                 // index true_infostates
                 infostate0 = &pointers_true[0][i0];
@@ -563,8 +645,8 @@ impl ReachProb {
                 i0 += 1;
                 continue;
             }
-            while i1 < self.true_infostates_player1.len() + self.false_infostates_player1.len() {
-                let infostate1: &str;
+            while i1 < pointers_true[1].len() + pointers_false[1].len() {
+                let infostate1: &Infostate;
                 if i1 < pointers_true[1].len(){
                     // index true_infostates
                     infostate1 = &pointers_true[1][i1];
@@ -578,8 +660,8 @@ impl ReachProb {
                     i1 += 1;
                     continue;
                 }
-                while i2 < self.true_infostates_player2.len() + self.false_infostates_player2.len() {
-                    let infostate2: &str;
+                while i2 < pointers_true[2].len() + pointers_false[2].len() {
+                    let infostate2: &Infostate;
                     if i2 < pointers_true[2].len(){
                         // index true_infostates
                         infostate2 = &pointers_true[2][i2];
@@ -593,8 +675,8 @@ impl ReachProb {
                         i2 += 1;
                         continue;
                     }
-                    while i3 < self.true_infostates_player3.len() + self.false_infostates_player3.len() {
-                        let infostate3: &str;
+                    while i3 < pointers_true[3].len() + pointers_false[3].len() {
+                        let infostate3: &Infostate;
                         if i3 < pointers_true[3].len(){
                             // index true_infostates
                             infostate3 = &pointers_true[3][i3];
@@ -608,8 +690,8 @@ impl ReachProb {
                             i3 += 1;
                             continue;
                         }
-                        while i4 < self.true_infostates_player4.len() + self.false_infostates_player4.len() {
-                            let infostate4: &str;
+                        while i4 < pointers_true[4].len() + pointers_false[4].len() {
+                            let infostate4: &Infostate;
                             if i4 < pointers_true[4].len(){
                                 // index true_infostates
                                 infostate4 = &pointers_true[4][i4];
@@ -623,8 +705,8 @@ impl ReachProb {
                                 i4 += 1;
                                 continue;
                             }
-                            while i5 < self.true_infostates_player5.len() + self.false_infostates_player5.len() {
-                                let infostate5: &str;
+                            while i5 < pointers_true[5].len() + pointers_false[5].len() {
+                                let infostate5: &Infostate;
                                 if i5 < pointers_true[5].len(){
                                     // index true_infostates
                                     infostate5 = &pointers_true[5][i5];
@@ -644,6 +726,7 @@ impl ReachProb {
                                     // return true;
                                     continue 'outer;
                                 }
+                                log::trace!("carrier_bool: {carrier_bool}");
                                 if carrier_bool {
                                     // If there exists a legal gamestate where at least 1 infostate is true
                                     // Do not prune and return false
@@ -671,8 +754,8 @@ impl ReachProb {
     }
     pub fn should_pure_prune_par(&self) -> bool {
         let total_infostates: usize = INFOSTATES.len();
-        let pointers_true: Vec<&Vec<String>> = self.sort_true_infostates_by_length();
-        let pointers_false: Vec<&Vec<String>> = self.sort_false_infostates_by_true_lengths();
+        let pointers_true: Vec<&Vec<Infostate>> = self.sort_true_infostates_by_length();
+        let pointers_false: Vec<&Vec<Infostate>> = self.sort_false_infostates_by_true_lengths();
         let mut carrier_bool: bool;
         let mut counter_hm_base: HashMap<&str, usize> = HashMap::with_capacity(5);
         counter_hm_base.insert("A", 0);
@@ -691,7 +774,7 @@ impl ReachProb {
                 let mut carrier_bool: bool = false;
                 let mut break_bool: bool = true;
                 let mut counter_hm: HashMap<&str, usize> = counter_hm_base.clone();
-                let infostate0: &str;
+                let infostate0: &Infostate;
                 if i0 < pointers_true[0].len(){
                     // index true_infostates
                     infostate0 = &pointers_true[0][i0];
@@ -704,7 +787,7 @@ impl ReachProb {
                 }
                 self.increment_continue(&infostate0, &mut counter_hm);
                 while i1 < total_infostates {
-                    let infostate1: &str;
+                    let infostate1: &Infostate;
                     if i1 < pointers_true[1].len(){
                         // index true_infostates
                         infostate1 = &pointers_true[1][i1];
@@ -718,7 +801,7 @@ impl ReachProb {
                         continue;
                     }
                     while i2 < total_infostates {
-                        let infostate2: &str;
+                        let infostate2: &Infostate;
                         if i2 < pointers_true[2].len(){
                             // index true_infostates
                             infostate2 = &pointers_true[2][i2];
@@ -732,7 +815,7 @@ impl ReachProb {
                             continue;
                         }
                         while i3 < total_infostates {
-                            let infostate3: &str;
+                            let infostate3: &Infostate;
                             if i3 < pointers_true[3].len(){
                                 // index true_infostates
                                 infostate3 = &pointers_true[3][i3];
@@ -746,7 +829,7 @@ impl ReachProb {
                                 continue;
                             }
                             while i4 < total_infostates {
-                                let infostate4: &str;
+                                let infostate4: &Infostate;
                                 if i4 < pointers_true[4].len(){
                                     // index true_infostates
                                     infostate4 = &pointers_true[4][i4];
@@ -760,7 +843,7 @@ impl ReachProb {
                                     continue;
                                 }
                                 while i5 < total_infostates {
-                                    let infostate5: &str;
+                                    let infostate5: &Infostate;
                                     if i5 < pointers_true[5].len(){
                                         // index true_infostates
                                         infostate5 = &pointers_true[5][i5];
@@ -804,11 +887,11 @@ impl ReachProb {
         }); 
         prune_result.unwrap_or(false)
     }
-    fn increment_continue(&self, str_ref: &str, counter_hm: &mut HashMap<&str, usize> ) -> bool {
+    fn increment_continue(&self, str_ref: &Infostate, counter_hm: &mut HashMap<&str, usize> ) -> bool {
         // Takes a hashmap and increments according to str_ref value
         // Returns true if should continue because an impossible gamestate is reached!
         // If an impossible str_ref value is given, true is returned and nothing is incremented
-        if str_ref == "AA" {
+        if *str_ref == AA {
             if counter_hm["A"] > 1{
                 return true;
             } else {
@@ -816,7 +899,7 @@ impl ReachProb {
                     *value += 2;
                 }
             }
-        } else if str_ref == "AB" {
+        } else if *str_ref == AB {
             if counter_hm["A"] > 2 || counter_hm["B"] > 2{
                 return true;
             } else {
@@ -827,7 +910,7 @@ impl ReachProb {
                     *value += 1;
                 }
             }
-        } else if str_ref == "AC" {
+        } else if *str_ref == AC {
             if counter_hm["A"] > 2 || counter_hm["C"] > 2{
                 return true;
             } else {
@@ -838,7 +921,7 @@ impl ReachProb {
                     *value += 1;
                 }
             }
-        } else if str_ref == "AD" {
+        } else if *str_ref == AD {
             if counter_hm["A"] > 2 || counter_hm["D"] > 2{
                 return true;
             } else {
@@ -849,7 +932,7 @@ impl ReachProb {
                     *value += 1;
                 }
             }
-        } else if str_ref == "AE" {
+        } else if *str_ref == AE {
             if counter_hm["A"] > 2 || counter_hm["E"] > 2{
                 return true;
             } else {
@@ -860,7 +943,7 @@ impl ReachProb {
                     *value += 1;
                 }
             }
-        } else if str_ref == "BB" { 
+        } else if *str_ref == BB { 
             if counter_hm["B"] > 1{
                 return true;
             } else {
@@ -868,7 +951,7 @@ impl ReachProb {
                     *value += 2;
                 }
             }
-        } else if str_ref == "BC" { 
+        } else if *str_ref == BC { 
             if counter_hm["B"] > 2 || counter_hm["C"] > 2{
                 return true;
             } else {
@@ -879,7 +962,7 @@ impl ReachProb {
                     *value += 1;
                 }
             }
-        } else if str_ref == "BD" { 
+        } else if *str_ref == BD { 
             if counter_hm["B"] > 2 || counter_hm["D"] > 2{
                 return true;
             } else {
@@ -890,7 +973,7 @@ impl ReachProb {
                     *value += 1;
                 }
             }
-        } else if str_ref == "BE" { 
+        } else if *str_ref == BE { 
             if counter_hm["B"] > 2 || counter_hm["E"] > 2{
                 return true;
             } else {
@@ -901,7 +984,7 @@ impl ReachProb {
                     *value += 1;
                 }
             }
-        } else if str_ref == "CC" {
+        } else if *str_ref == CC {
             if counter_hm["C"] > 1{
                 return true;
             } else {
@@ -909,7 +992,7 @@ impl ReachProb {
                     *value += 2;
                 }
             }
-        } else if str_ref == "CD" {
+        } else if *str_ref == CD {
             if counter_hm["C"] > 2 || counter_hm["D"] > 2{
                 return true;
             } else {
@@ -920,7 +1003,7 @@ impl ReachProb {
                     *value += 1;
                 }
             }
-        } else if str_ref == "CE" {
+        } else if *str_ref == CE {
             if counter_hm["C"] > 2 || counter_hm["E"] > 2{
                 return true;
             } else {
@@ -931,7 +1014,7 @@ impl ReachProb {
                     *value += 1;
                 }
             }
-        } else if str_ref == "DD" {
+        } else if *str_ref == DD {
             if counter_hm["D"] > 1{
                 return true;
             } else {
@@ -939,7 +1022,7 @@ impl ReachProb {
                     *value += 2;
                 }
             }
-        } else if str_ref == "DE" {
+        } else if *str_ref == DE {
             if counter_hm["D"] > 2 || counter_hm["E"] > 2{
                 return true;
             } else {
@@ -950,7 +1033,7 @@ impl ReachProb {
                     *value += 1;
                 }
             }
-        } else if str_ref == "EE" {
+        } else if *str_ref == EE {
             if counter_hm["E"] > 1{
                 return true;
             } else {
@@ -961,95 +1044,95 @@ impl ReachProb {
         }
         false
     }
-    fn decrement(&self, str_ref: &str, counter_hm: &mut HashMap<&str, usize> ) {
+    fn decrement(&self, str_ref: &Infostate, counter_hm: &mut HashMap<&str, usize> ) {
         // Takes a HashMap and decrements according to str_ref value
-        if str_ref == "AA" {
+        if *str_ref == AA {
             if let Some(value) = counter_hm.get_mut("A"){
                 *value -= 2;
             }
-        } else if str_ref == "AB" {
+        } else if *str_ref == AB {
             if let Some(value) = counter_hm.get_mut("A"){
                 *value -= 1;
             }
             if let Some(value) = counter_hm.get_mut("B"){
                 *value -= 1;
             }
-        } else if str_ref == "AC" {
+        } else if *str_ref == AC {
             if let Some(value) = counter_hm.get_mut("A"){
                 *value -= 1;
             }
             if let Some(value) = counter_hm.get_mut("C"){
                 *value -= 1;
             }
-        } else if str_ref == "AD" {
+        } else if *str_ref == AD {
             if let Some(value) = counter_hm.get_mut("A"){
                 *value -= 1;
             }
             if let Some(value) = counter_hm.get_mut("D"){
                 *value -= 1;
             }
-        } else if str_ref == "AE" {
+        } else if *str_ref == AE {
             if let Some(value) = counter_hm.get_mut("A"){
                 *value -= 1;
             }
             if let Some(value) = counter_hm.get_mut("E"){
                 *value -= 1;
             }
-        } else if str_ref == "BB" { 
+        } else if *str_ref == BB { 
             if let Some(value) = counter_hm.get_mut("B"){
                 *value -= 2;
             }
-        } else if str_ref == "BC" { 
+        } else if *str_ref == BC { 
             if let Some(value) = counter_hm.get_mut("B"){
                 *value -= 1;
             }
             if let Some(value) = counter_hm.get_mut("C"){
                 *value -= 1;
             }
-        } else if str_ref == "BD" { 
+        } else if *str_ref == BD { 
             if let Some(value) = counter_hm.get_mut("B"){
                 *value -= 1;
             }
             if let Some(value) = counter_hm.get_mut("D"){
                 *value -= 1;
             }
-        } else if str_ref == "BE" { 
+        } else if *str_ref == BE { 
             if let Some(value) = counter_hm.get_mut("B"){
                 *value -= 1;
             }
             if let Some(value) = counter_hm.get_mut("E"){
                 *value -= 1;
             }
-        } else if str_ref == "CC" {
+        } else if *str_ref == CC {
             if let Some(value) = counter_hm.get_mut("C"){
                 *value -= 2;
             }
-        } else if str_ref == "CD" {
+        } else if *str_ref == CD {
             if let Some(value) = counter_hm.get_mut("C"){
                 *value -= 1;
             }
             if let Some(value) = counter_hm.get_mut("D"){
                 *value -= 1;
             }
-        } else if str_ref == "CE" {
+        } else if *str_ref == CE {
             if let Some(value) = counter_hm.get_mut("C"){
                 *value -= 1;
             }
             if let Some(value) = counter_hm.get_mut("E"){
                 *value -= 1;
             }
-        } else if str_ref == "DD" {
+        } else if *str_ref == DD {
             if let Some(value) = counter_hm.get_mut("D"){
                 *value -= 2;
             }
-        } else if str_ref == "DE" {
+        } else if *str_ref == DE {
             if let Some(value) = counter_hm.get_mut("D"){
                 *value -= 1;
             }
             if let Some(value) = counter_hm.get_mut("E"){
                 *value -= 1;
             }
-        } else if str_ref == "EE" {
+        } else if *str_ref == EE {
             if let Some(value) = counter_hm.get_mut("E"){
                 *value -= 2;
             }

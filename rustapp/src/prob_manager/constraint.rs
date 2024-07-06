@@ -3197,8 +3197,6 @@ impl CollectiveConstraint{
             }
         }
 
-
-        log::trace!("Natural true");
         true
     }
     pub fn printlog(&self) {

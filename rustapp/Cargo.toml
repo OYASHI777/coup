@@ -20,6 +20,7 @@ serde_json = "1.0"
 bson = "2.9.0"
 crossbeam = "0.8"
 tokio = {version = "1.37", features = ["full"]}
+ahash = "0.8"
 
 [dev-dependencies]
 criterion = "0.3"

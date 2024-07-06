@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use super::keys::{BRKey, MAX_NUM_BRKEY};
+use super::keys::{BRKey, MAX_NUM_BRKEY, INFOSTATES};
 use crate::prob_manager::constraint::CollectiveConstraint;
 pub struct BestResponseIndVec {
     // === BRKey ===
@@ -13,20 +13,19 @@ pub struct BestResponseIndVec {
     // CC [1, 0, 1, 1, 0, 1]
     policies: Vec<HashMap<BRKey, bool>>
 }
-pub const INFOSTATES: [&str; 15] = ["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE", "EE"];
 impl BestResponseIndVec {
     pub fn new(max_size: usize) -> Self {
         let mut root_hm: HashMap<BRKey, bool> = HashMap::with_capacity(MAX_NUM_BRKEY);
         let constraint: CollectiveConstraint = CollectiveConstraint::new();
         for player_id in 0..6 {
             for infostate in INFOSTATES {
-                if constraint.player_can_have_active_cards_str(player_id, infostate) {
+                if constraint.player_can_have_active_cards_str(player_id, infostate.to_str()) {
                     let key: BRKey = BRKey::new(player_id, infostate);
                     root_hm.insert(key, true);
                 }
             }
         }
-        let mut policies = Vec::with_capacity(max_size);
+        let policies = Vec::with_capacity(max_size);
         BestResponseIndVec { policies }
     }
     pub fn create_root(constraint: &CollectiveConstraint, max_size: usize) -> Self {
@@ -35,7 +34,7 @@ impl BestResponseIndVec {
         let mut root_hm: HashMap<BRKey, bool> = HashMap::with_capacity(MAX_NUM_BRKEY);
         for player_id in 0..6 {
             for infostate in INFOSTATES {
-                if constraint.player_can_have_active_cards_str(player_id, infostate) {
+                if constraint.player_can_have_active_cards_str(player_id, infostate.to_str()) {
                     let key: BRKey = BRKey::new(player_id, infostate);
                     root_hm.insert(key, true);
                 }
@@ -47,9 +46,6 @@ impl BestResponseIndVec {
     }
     pub fn reset(&mut self) {
         self.policies.clear();
-    }
-    pub fn infostates_arr() -> [&'static str; 15] {
-        INFOSTATES
     }
     pub fn push(&mut self, hm: HashMap<BRKey, bool>) {
 

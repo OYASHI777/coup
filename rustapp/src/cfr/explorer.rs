@@ -1,5 +1,6 @@
 use rand::prelude::SliceRandom;
 use rand::{thread_rng, Rng};
+use tokio::time::error::Elapsed;
 use crate::prob_manager::naive_prob::NaiveProb;
 use crate::prob_manager::naive_sampler::NaiveSampler;
 use crate::history_public::{AOName, ActionObservation, Card, History};
@@ -9,9 +10,11 @@ use super::best_response_policy::BestResponseIndVec;
 use super::mixed_strategy_policy::{HeuristicMixedStrategyPolicy, MSInterface};
 use super::policy_handler::{PolicyHandler, Pruner};
 use super::value_function::{HeuristicValueFunction, ValueEvaluation};
-use super::keys::{BRKey, MSKey, INFOSTATES, MAX_NUM_BRKEY};
+use super::keys::{BRKey, MSKey, INFOSTATES, MAX_NUM_BRKEY, Infostate};
 use super::reach_prob::ReachProb;
+// use std::collections::hash_map::RandomState;
 use std::time::Instant;
+use ahash::AHashMap;
 // use super::best_response_policy::BRKey;
 
 use std::collections::HashMap;
@@ -32,6 +35,7 @@ struct Explorer<'a> {
     node_counter: u128,
     visit_counter: u128,
     prune_counter: u128,
+    won_counter: u128,
     // TO Document best_response_policy
 }
 
@@ -55,6 +59,7 @@ impl <'a> Explorer<'a> {
             node_counter: 0,
             visit_counter: 0,
             prune_counter: 0,
+            won_counter: 0,
             // best_response_policy: HashMap::new(),
         }
     }
@@ -74,6 +79,18 @@ impl <'a> Explorer<'a> {
         self.node_counter = 0;
         self.visit_counter = 0;
         self.prune_counter = 0;
+        self.won_counter = 0;
+    }
+
+    pub fn reset_counters(&mut self) {
+        // Temp
+        self.path = "root".to_string();
+        self.history.reset();
+        self.prob.reset();
+        self.node_counter = 0;
+        self.visit_counter = 0;
+        self.prune_counter = 0;
+        self.won_counter = 0;
     }
 
     pub fn print(&self) {
@@ -280,6 +297,9 @@ impl <'a> Explorer<'a> {
     }
     pub fn nodes_pruned(&self) -> u128 {
         self.prune_counter
+    }
+    pub fn nodes_won(&self) -> u128 {
+        self.won_counter
     }
     pub fn naive_prune(&self, action: &ActionObservation) -> bool {
         // can player play this card?
@@ -614,10 +634,14 @@ impl <'a> Explorer<'a> {
         self.visit_counter += 1;
         
         // INITIALISE REWARDS
+        // TODO: abstract to a function
+        // let mut rewards: HashMap<BRKey, f32> = HashMap::with_capacity(MAX_NUM_BRKEY);
         let mut rewards: HashMap<BRKey, f32> = HashMap::with_capacity(MAX_NUM_BRKEY);
-
         if depth_counter >= self.max_depth || self.history.game_won(){
             // CASE WHEN LEAF NODE REACHED
+            if self.history.game_won() {
+                self.won_counter += 1;
+            }
             self.node_counter += 1;
             let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
             let move_player: usize = self.history.latest_move().player_id();
@@ -629,13 +653,15 @@ impl <'a> Explorer<'a> {
         // } else if self.policy_handler.should_prune_current(reach_prob){
         } else if reach_prob.should_prune(){
             self.prune_counter += 1;
+            let start_time = Instant::now();
             for player_id in 0..6 as usize {
                 for infostate in reach_prob.player_infostate_keys(player_id) {
                     let key_br = BRKey::new(player_id, infostate);
                     rewards.insert(key_br, 0.0);
                 }
             }
-
+            let elapsed_time = start_time.elapsed();
+            log::info!("prune|rewards|insert time :{:?}", elapsed_time);
         } else {
             // Always false for simulations
             let bool_know_priv_info: bool = false; 
@@ -649,6 +675,7 @@ impl <'a> Explorer<'a> {
                 // FOR SPECIAL CASES => {Collective Challenge, CollectiveBlock, ExchangeDraw}
                 // TODO: fix for ExchangeDraw case
                 // TODO: Free for all CollectiveChallenge and CollectiveBlock
+                let start_time = Instant::now();
                 let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
                 for player_id in 0..6 as usize {
                     if latest_influence_time_t[player_id] > 0 {
@@ -659,12 +686,15 @@ impl <'a> Explorer<'a> {
                         }
                     }
                 }
+                let elapsed_time = start_time.elapsed();
+                log::info!("special case|q_value| update action map time: {:?}", elapsed_time);
                 // TODO: Initialise mixed strategy policy
             } else {
                 // FOR NORMAL MOVES
                 let player_id: usize = possible_outcomes[0].player_id();
                 let key_ms_t: MSKey = MSKey::new(player_id, &self.path);
                 // INITIALISING Q VALUES
+                let start_time = Instant::now();
                 if !self.q_values.action_map_contains_key(&key_ms_t) {
                     self.q_values.update_action_map(&key_ms_t, &possible_outcomes);
                     let mut new_policy: HashMap<BRKey, Vec<f32>> = HashMap::with_capacity(MAX_NUM_BRKEY);
@@ -675,8 +705,11 @@ impl <'a> Explorer<'a> {
                     }
                     self.q_values.policy_insert(key_ms_t.clone(), new_policy);
                 }
+                let elapsed_time = start_time.elapsed();
+                log::info!("q_value|initialise q_values|insert time: {:?}", elapsed_time);
                 // TODO: check if q_values has key_ms_t
                 // INITIALISING MIXED STRATEGY POLICY
+                let start_time = Instant::now();
                 if !self.mixed_strategy_policy_vec.action_map_contains_key(&key_ms_t) {
                     self.mixed_strategy_policy_vec.action_map_insert(key_ms_t.clone(), possible_outcomes.clone());
                 }
@@ -688,7 +721,8 @@ impl <'a> Explorer<'a> {
                     }
                     self.mixed_strategy_policy_vec.policy_insert(key_ms_t.clone(), new_policy)
                 }
-                
+                let elapsed_time = start_time.elapsed();
+                log::info!("mixed policy|initialise mixed policy|insert time: {:?}", elapsed_time);
             }
             // RECURSIONS
             // Test if depth < 6 whether can random sample
@@ -709,6 +743,8 @@ impl <'a> Explorer<'a> {
                     let start_time = Instant::now();
                     let mut next_reach_prob: ReachProb = reach_prob.clone();
                     let elapsed_time = start_time.elapsed();
+                    log::info!("collective|reach_prob|clone time: {:?}", elapsed_time);
+
                     // TODO: Link mixed strategy
                     // This is a temp to see how many nodes will be visited
                     let mut rng = thread_rng();
@@ -717,7 +753,7 @@ impl <'a> Explorer<'a> {
                         if player_id == opposing_player_id {
                             continue;
                         }
-                        let infostates: Vec<String> = next_reach_prob.player_infostate_keys(player_id).cloned().collect();
+                        let infostates: Vec<Infostate> = next_reach_prob.player_infostate_keys(player_id).cloned().collect();
                         for infostate in infostates {
                             if let Some(indicator) = next_reach_prob.get_mut_status(player_id, &infostate) {
                                 if *indicator {
@@ -729,7 +765,8 @@ impl <'a> Explorer<'a> {
                         }
                     }
                     
-                    rewards = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
+                    // rewards = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
+                    rewards = self.pmccfr(depth_counter + 1, &reach_prob, None);
                     // TODO: backpropogate
                     self.drop_node();
                 }
@@ -744,12 +781,15 @@ impl <'a> Explorer<'a> {
                 }
             } else {
                 // Initialise rewards to 0 for relevant infostates
+                let start_time = Instant::now();
                 for player_id in 0..6 as usize {
                     for infostate in reach_prob.player_infostate_keys(player_id) {
                         let key_br = BRKey::new(player_id, infostate);
                         rewards.insert(key_br, 0.0);
                     }
                 }
+                let elapsed_time = start_time.elapsed();
+                log::info!("normal|initialise rewards|insert time: {:?}", elapsed_time);
 
                 let mut action_index: usize = 0;
                 // LOOP THROUGH ALL ACTIONS AND RECURSE
@@ -796,12 +836,16 @@ impl <'a> Explorer<'a> {
                         
                         // INITIALISING next_reach_prob based on action sampled to be passed into recursion
                         // TODO: Abstract this to a function
+                        let start_time = Instant::now();
                         let mut next_reach_prob: ReachProb = reach_prob.clone();
+                        let elapsed_time = start_time.elapsed();
+                        log::info!("normal|reach_prob|clone time: {:?}", elapsed_time);
                         // Filling next reach prob based on input reachprob and action for pmccfr function
                         //      If indicator == 1 and action is best response => 1
                         //      If indicator == 1 and action is not best response => 0
                         //      If indicator == 0 => 0
                         // TOCHECK: next player?
+                        let start_time = Instant::now();
                         for infostate in reach_prob.player_infostate_keys(next_player_id) {
                             if let Some(old_indicator) = reach_prob.get_status(next_player_id, infostate) {
                                 if *old_indicator {
@@ -813,7 +857,8 @@ impl <'a> Explorer<'a> {
                                 }
                             }
                         }
-                        
+                        let elapsed_time = start_time.elapsed();
+                        log::info!("normal|fill next reach prob| set status time: {:?}", elapsed_time);
                         // Filling transition hashmap for pmccfr function 1 to 1
                         // TODO: Abstract this to a function
                         // let mut transition_map: HashMap<String, Vec<String>> = HashMap::with_capacity(MAX_NUM_BRKEY);
@@ -829,6 +874,7 @@ impl <'a> Explorer<'a> {
                         
                         // UPDATE Q_VALUES BASED ON RETURNED REWARDS
                         // TODO: Abstract this to a function
+                        let start_time = Instant::now();
                         if let Some(q_value) = self.q_values.policy_get_mut(&key_ms_t) {
                             for infostate in INFOSTATES {
                                 let key_br: BRKey = BRKey::new(next_player_id, infostate);
@@ -843,28 +889,36 @@ impl <'a> Explorer<'a> {
                         } else {
                             panic!("q_values should have been initialised earlier!");
                         }
+                        let elapsed_time = start_time.elapsed();
+                        log::info!("normal|q_value update|+= time: {:?}", elapsed_time);
                         // UPDATE REWARDS for now if reach_prob = 1 we update
                             // Ignore the distinction for when current player is playing BR cos its complicated for infostates
                         // TODO: Abstract this to a function
+                        let start_time = Instant::now();
+                        let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
                         for player_id in 0..6 as usize {
+                            key_br.set_player_id(player_id);
                             for infostate in reach_prob.player_infostate_keys(player_id) {
                                 if let Some(indicator) = reach_prob.get_status(player_id, infostate) {
                                     if *indicator {
                                         let mut increment_val: f32 = 0.0;
-                                        let key_br: BRKey = BRKey::new(player_id, infostate);
+                                        key_br.set_infostate(infostate);
+                                        // 0-100ns for increment but usually 100ns
                                         if let Some(temp_reward_val) = temp_reward.get(&key_br) {
                                             increment_val = *temp_reward_val;
                                         }
+                                        // 0-100ns usually 100 ns
                                         if let Some(reward_val) = rewards.get_mut(&key_br){
                                             *reward_val += increment_val;
                                         } else {
-                                            rewards.insert(key_br, increment_val);
+                                            rewards.insert(key_br.clone(), increment_val);
                                         }
                                     }
                                 }
                             }
                         }
-                       
+                        let elapsed_time = start_time.elapsed();
+                        log::info!("normal|update rewards| new & insert time: {:?}", elapsed_time);
                         // IMPROVE: Do like some rayon shit
                         // Drop node we added before recursing
                         self.drop_node();                      
@@ -912,16 +966,12 @@ impl <'a> Explorer<'a> {
                                     }
                                 }
                             } else {
-                                let card_str0: &str = &action.cards()[0].card_to_str();
-                                let card_str1: &str = &action.cards()[1].card_to_str();
-                                let mut cards: Vec<&str> = vec![card_str0, card_str1];
-                                cards.sort();
-                                let cards_str: String = cards.join("");
+                                let cards_action: Infostate = Infostate::cards_to_enum(&action.cards()[0], &action.cards()[1]);
                                 for player_id in 0..6 as usize {
                                     for infostate in reach_prob.player_infostate_keys(player_id) {
                                         if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
                                             if player_id == action.player_id() {
-                                                if *infostate == cards_str {
+                                                if *infostate == cards_action {
                                                     // Only insert for infostates that can possibly have discarded the card
                                                     // TODO: Change
                                                     // DIscard 2 cards only ever has one choice
@@ -1060,7 +1110,6 @@ pub fn cfr_test(){
     // 7 | 506043405 | 553012287 | 64.434922s
     // 8 | 7299339741 | 7854551863 | 716.8951678s
 
-    use std::time::Instant;
     let max_test_depth: usize = 13;
     let mut pmccfr: Explorer = Explorer::new(0);
     for max_depth in 1..max_test_depth {
@@ -1092,7 +1141,6 @@ pub fn cfr_prune_test(){
     // 10 | 263800653 | 617546480 | 21.5476017s
     //11 | 1327829521 | 3009749018 | 89.5332159s
 
-    use std::time::Instant;
     let max_test_depth: usize = 20;
     for max_depth in 10..max_test_depth {
         let mut pmccfr: Explorer = Explorer::new(max_depth);
@@ -1123,7 +1171,6 @@ pub fn mccfr_test(){
     // 11 | 2060243 | 4889974
     // 12 | 7317020 | 17459595
 
-    use std::time::Instant;
     let max_test_depth: usize = 200;
     let max_iterations: usize = 1000;
     let mut pmccfr: Explorer = Explorer::new(0);
@@ -1167,7 +1214,6 @@ pub fn mccfr_prune_test(){
     // 11 | 2052800 | 2819914
     // 12 | 7353081 | 10183281
 
-    use std::time::Instant;
     let max_test_depth: usize = 200;
     let max_iterations: usize = 1000;
     let mut pmccfr: Explorer = Explorer::new(0);
@@ -1196,7 +1242,7 @@ pub fn mccfr_prune_test(){
         println!("{} | {} | {}", max_depth, max_nodes_reached, max_nodes_traversed);
     }
 }
-pub fn pmccfr_test() {
+pub fn pmccfr_test(start_test_depth: usize, max_test_depth: usize, max_iterations: usize) {
     // max_depth | total_end_nodes | total_nodes_visited | Pure Pruned
     // 1 | 9 | 10 | 0
     // 2 | 17 | 27 | 0
@@ -1223,89 +1269,104 @@ pub fn pmccfr_test() {
     // 10 | 497707 | 694303 | 1535
     // 11 | 1942557 | 2689918 | 11672
 
-    // Faster Version 1
-    // 1 | 9 | 10 | 0
-    // 2 | 17 | 27 | 0
-    // 3 | 57 | 84 | 0
-    // 4 | 89 | 167 | 30
-    // 5 | 156 | 325 | 29770
-    // 6 | 271 | 559 | 94970
-    // 7 | 364 | 950 | 196908
-    // 8 | 441 | 1245 | 370828
-    // 9 | 574 | 1928 | 638952
-    // 10 | 674 | 2418 | 1051651
-    // 11 | 703 | 3200 | 1608984
-    // 12 | 741 | 3931 | 2339117
-    // 13 | 715 | 3805 | 3234769
-    // 14 | 1034 | 7000 | 4265619
-    // 15 | 961 | 5657 | 5386099
-    // 16 | 760 | 5917 | 6608496
-    // 17 | 981 | 7771 | 7895369
-    // 18 | 1087 | 7913 | 9224954
-    // 19 | 898 | 8473 | 10607794
-    // 20 | 894 | 8429 | 12042572
-    // 21 | 666 | 7320 | 13570739
-    // 22 | 491 | 8184 | 15135870
-    // 23 | 534 | 9310 | 16744824
-    // 24 | 475 | 9329 | 18389226
-    // 25 | 529 | 9522 | 20036801
-    // 26 | 595 | 9928 | 21697141
-    // 27 | 294 | 10300 | 23422421
-    // 28 | 370 | 11983 | 25110109
-    // 29 | 119 | 9380 | 26807041
-    // 30 | 266 | 10176 | 28523400
-    // 31 | 111 | 10700 | 30257905
-    // 32 | 183 | 10314 | 32002831
-    // 33 | 284 | 11303 | 33771472
-    // 34 | 92 | 10526 | 35471110
-    // 35 | 153 | 8314 | 37227688
-    // 36 | 113 | 10796 | 38938183
-    // 37 | 45 | 8903 | 40690908
-    // 38 | 89 | 12897 | 42397046
-    // 39 | 0 | 9264 | 44143046
-    // 40 | 2 | 11893 | 45854581
-    // 41 | 70 | 8737 | 47576241
-    // 42 | 0 | 15606 | 49247246
-    // 43 | 48 | 10236 | 50987955
-    // 44 | 0 | 11388 | 52696596
-    // 45 | 0 | 9794 | 54454714
-    // 46 | 0 | 8607 | 56163688
-    // 47 | 0 | 10783 | 57903818
-    // 48 | 0 | 12085 | 59637335
-    // 49 | 0 | 8857 | 61399814
-    let max_test_depth: usize = 100;
-    let max_iterations: usize = 10000;
+    // Fast max 1000 iter
+    // 1 | 0 | 9 | 10 | 0 | 1000
+    // 2 | 0 | 17 | 27 | 0 | 1000
+    // 3 | 0 | 61 | 88 | 0 | 1000
+    // 4 | 0 | 91 | 169 | 20 | 1000
+    // 5 | 0 | 173 | 345 | 50 | 1000
+    // 6 | 0 | 258 | 586 | 90 | 1000
+    // 7 | 0 | 387 | 1019 | 138 | 1000
+    // 8 | 0 | 486 | 1560 | 178 | 1000
+    // 9 | 0 | 543 | 1868 | 213 | 999
+    // 10 | 0 | 690 | 2539 | 245 | 1000
+    // 11 | 0 | 742 | 3865 | 221 | 997
+    // 12 | 0 | 754 | 4500 | 272 | 999
+    // 13 | 0 | 735 | 4438 | 221 | 979
+    // 14 | 0 | 671 | 5461 | 269 | 979
+    // 15 | 0 | 869 | 5666 | 221 | 855
+    // 16 | 0 | 733 | 6583 | 269 | 813
+    // 17 | 0 | 958 | 6707 | 269 | 546
+    // 18 | 0 | 859 | 6756 | 277 | 498
+    // 19 | 0 | 953 | 9362 | 221 | 439
+    // 20 | 0 | 754 | 8109 | 221 | 439
+    // 21 | 0 | 808 | 9469 | 269 | 404
+    // 22 | 0 | 525 | 9631 | 221 | 419
+    // 23 | 0 | 432 | 10724 | 277 | 376
+    // 24 | 0 | 444 | 10359 | 261 | 346
+    // 25 | 0 | 303 | 11002 | 221 | 274
+    // 26 | 0 | 305 | 10842 | 231 | 246
+    // 27 | 0 | 286 | 10822 | 269 | 155
+    // 28 | 0 | 305 | 7511 | 265 | 137
+    // 29 | 0 | 301 | 15766 | 257 | 70
+    // 30 | 0 | 337 | 11209 | 269 | 42
+    // 31 | 0 | 108 | 11627 | 257 | 17
+    // 32 | 0 | 274 | 11359 | 221 | 17
+    // 33 | 0 | 219 | 10021 | 277 | 15
+    // 34 | 0 | 119 | 9541 | 273 | 6
+    // 35 | 0 | 79 | 10885 | 269 | 4
+    // 36 | 0 | 1 | 8889 | 221 | 2
+    // 37 | 0 | 82 | 11660 | 273 | 3
+    // 38 | 0 | 46 | 11848 | 221 | 3
+    // let start_test_depth: usize = 10;
+    // let max_test_depth: usize = 11;
+    // let max_iterations: usize = 1;
     let mut pmccfr: Explorer = Explorer::new(0);
-    for max_depth in 45..max_test_depth {
+    for max_depth in start_test_depth..max_test_depth {
         let mut i: usize = 0;
         let mut max_nodes_traversed: u128 = 0;
         let mut max_nodes_reached: u128 = 0;
+        let mut max_nodes_won: u128 = 0;
         let mut min_nodes_pruned: u128 = 1000000000000000000000000000;
+        let mut total_nodes_traversed: u128 = 0;
+        let mut total_nodes_reached: u128 = 0;
+        let mut total_nodes_pruned: u128 = 0;
+        let mut total_nodes_won: u128 = 0;
+        let mut no_depth_pos: u128 = 0;
         while i < max_iterations {
             pmccfr.set_depth(max_depth);
-            let mut reach_prob: ReachProb = ReachProb::new();
+            let reach_prob: ReachProb = ReachProb::new();
             // for player_id in 0..6 as usize {
             //     for infostate in INFOSTATES {
             //         let brkey: BRKey = BRKey::new(player_id, infostate);
             //         reach_prob.insert(brkey, true);
             //     }
             // }
+            let start_time = Instant::now();
             pmccfr.pmccfr(0, &reach_prob, None);
+            let elapsed_time = start_time.elapsed();
+            println!("Iteration time: {:?}", elapsed_time);
             let nodes_traversed: u128 = pmccfr.nodes_traversed();
             let nodes_reached: u128 = pmccfr.nodes_reached();
             let nodes_pruned: u128 = pmccfr.nodes_pruned();
+            let nodes_won: u128 = pmccfr.nodes_won();
+            total_nodes_pruned += nodes_pruned;
+            total_nodes_reached += nodes_reached;
+            total_nodes_traversed += nodes_traversed;
+            total_nodes_won += nodes_won;
             if max_nodes_traversed < nodes_traversed {
                 max_nodes_traversed = nodes_traversed;
             }
             if max_nodes_reached < nodes_reached {
                 max_nodes_reached = nodes_reached;
             }
+            if max_nodes_won < nodes_won {
+                max_nodes_won = nodes_won;
+            }
             if min_nodes_pruned > nodes_pruned {
                 min_nodes_pruned = nodes_pruned;
             }
-            pmccfr.reset();
+            if nodes_reached > 0 {
+                no_depth_pos += 1;
+            }
+            pmccfr.reset_counters();
             i += 1;
         }
-        println!("{} | {} | {} | {}", max_depth, max_nodes_reached, max_nodes_traversed, min_nodes_pruned);
+        let avg_nodes_pruned: f32 = total_nodes_pruned as f32 / max_iterations as f32;
+        let avg_nodes_reached: f32 = total_nodes_reached as f32 / max_iterations as f32;
+        let avg_nodes_traversed: f32 = total_nodes_traversed as f32 / max_iterations as f32;
+        // println!("{} | {} | {} | {} | {} | {}", max_depth, max_nodes_won, max_nodes_reached, max_nodes_traversed, min_nodes_pruned, no_depth_pos);
+        println!("{} | {} | {:.0} | {:.0} | {:.0} | {}", max_depth, total_nodes_won, avg_nodes_reached, avg_nodes_traversed, avg_nodes_pruned, no_depth_pos);
+        pmccfr.reset();
     }
 }
