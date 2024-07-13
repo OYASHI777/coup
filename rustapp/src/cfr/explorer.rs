@@ -683,12 +683,12 @@ impl <'a> Explorer<'a> {
                 // Dont need to initialise
             } else if self.is_collective_node() {
                 // FOR SPECIAL CASES => {Collective Challenge, CollectiveBlock}
+                // based on key_ms_t
                 // TODO: fix for ExchangeDraw case
                 // TODO: Free for all CollectiveChallenge and CollectiveBlock
                 let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
                 let possible_challenge_moves: Vec<ActionObservation> = vec![ActionObservation::ChallengeAccept, ActionObservation::ChallengeDeny];
                 for player_id in 0..6 as u8 {
-                    // based on key_ms_t
                     if latest_influence_time_t[player_id as usize] > 0 {
                         self.mixed_strategy_policy_vec.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));
                         self.q_values.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));   
@@ -696,8 +696,8 @@ impl <'a> Explorer<'a> {
                 }
             } else {
                 // FOR NORMAL MOVES
-                let player_id: u8 = possible_outcomes[0].player_id() as u8;
                 // based on key_ms_t
+                let player_id: u8 = possible_outcomes[0].player_id() as u8;
                 self.mixed_strategy_policy_vec.insert_default_if_empty_by_keys(player_id, &self.path, &possible_outcomes, reach_prob.player_infostate_keys(player_id));
                 self.q_values.insert_default_if_empty_by_keys(player_id, &self.path, &possible_outcomes, reach_prob.player_infostate_keys(player_id));
             }
@@ -732,15 +732,16 @@ impl <'a> Explorer<'a> {
                             if let Some(indicator) = next_reach_prob.get_mut_status(player_id, &infostate) {
                                 if *indicator {
                                     if rng.gen_range(0.0..1.0) > 0.5 {
-                                        next_reach_prob.set_status(player_id, &infostate, false);
+                                        *indicator = false;
+                                        // next_reach_prob.set_status(player_id, &infostate, false);
                                     }
                                 }
                             }
                         }
                     }
                     
-                    // rewards = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
-                    rewards = self.pmccfr(depth_counter + 1, &reach_prob, None);
+                    rewards = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
+                    // rewards = self.pmccfr(depth_counter + 1, &reach_prob, None);
                     // TODO: backpropogate
                     self.drop_node();
                 }
@@ -1347,7 +1348,7 @@ pub fn pmccfr_test(start_test_depth: usize, max_test_depth: usize, max_iteration
             pmccfr.reset_counters();
             i += 1;
             let avg_time_current_node: f64 = iteration_time / nodes_traversed as f64;
-            println!("avg time for iteration of depth {}: {:.9} secs iteration: {:.9} secs", i, avg_time_current_node, iteration_time);
+            // println!("avg time for iteration of depth {}: {:.9} secs iteration: {:.9} secs", i, avg_time_current_node, iteration_time);
         }
         let avg_time: f64 = total_time / max_iterations as f64;
         let avg_time_per_node: f64 = total_time / total_nodes_traversed as f64;

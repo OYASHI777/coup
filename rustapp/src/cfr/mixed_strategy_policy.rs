@@ -5,6 +5,7 @@ use ahash::AHashMap;
 use crate::history_public::ActionObservation;
 use super::keys::{BRKey, MSKey, Infostate, MAX_NUM_BRKEY};
 use std::collections::hash_map::Keys;
+use rand::seq::SliceRandom;
 
 pub struct HeuristicMixedStrategyPolicy {
     policies: AHashMap<MSKey, AHashMap<BRKey, Vec<f32>>>, //TODO: Change AHashMap with BRKey to IntMap somehow
@@ -133,11 +134,31 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
     }
     fn get_best_response_index(&self, key: &MSKey, infostate: &Infostate) -> Option<usize> {
         // Returns index of highest value
+        // returns random index if all the same
         if let Some(policy) = self.policies.get(key) {
             let player_id = key.player_id();
             let key: BRKey = BRKey::new(player_id, infostate);
             if let Some(infostate_policy) = policy.get(&key) {
-                infostate_policy.iter().enumerate().max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap()).map(|(index, _)| index)
+                // infostate_policy.iter().enumerate().max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap()).map(|(index, _)| index)
+                // Find the maximum value in the infostate_policy
+                let max_value: f32 = infostate_policy.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+                if let Some(&max_value) = infostate_policy.iter().max_by(|a, b| a.partial_cmp(b).unwrap()) {
+                    // Collect all indices that have the maximum value
+                    let max_indices: Vec<usize> = infostate_policy.iter()
+                        .enumerate()
+                        .filter_map(|(index, &value)| if value == max_value { Some(index) } else { None })
+                        .collect();
+                    
+                    // Select a random index from the max_indices
+                    if max_indices.len() == 1 {
+                        Some(max_indices[0])
+                    } else {
+                        let mut rng = thread_rng();
+                        max_indices.choose(&mut rng).cloned()
+                    }
+                } else {
+                    None
+                }
             } else {
                 None
             }

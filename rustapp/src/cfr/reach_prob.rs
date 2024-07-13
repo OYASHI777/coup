@@ -165,7 +165,7 @@ impl ReachProb {
             }
         }
     }
-    pub fn get_mut_status(&mut self, player_id: u8, infostate: &Infostate) -> Option<&bool> {
+    pub fn get_mut_status(&mut self, player_id: u8, infostate: &Infostate) -> Option<&mut bool> {
         match player_id {
             // Add the rest
             0 => {
