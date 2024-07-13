@@ -780,8 +780,21 @@ impl <'a> Explorer<'a> {
                 // === NEW ===
                 // get infostates
                 // TODO: Remember to empty later on!
-                let infostates = reach_prob.get_infostates(move_player);
+                let infostates: Vec<Infostate> = reach_prob.get_infostates(move_player);
                 self.naive_sample_exchange_draw_all(move_player, &infostates);
+                // Assuming that over here action info doesnt matter as bool_know_priv_info == false
+                self.add_node(action, bool_know_priv_info);
+                // KEEP: Protection in case impossible states returned
+                if self.exchange_draw_info.keys().len() == reach_prob.player_infostate_keys(move_player).len(){
+                    rewards = self.pmccfr(depth_counter + 1, &reach_prob, None);
+                } else {
+                    let mut next_reach_prob: ReachProb = reach_prob.clone();
+                    let retained_info_str: Vec<String> = self.exchange_draw_info.keys().cloned().collect();
+                    let retained_info: Vec<Infostate> = retained_info_str.into_iter().map(|str| Infostate::from_str(&str)).collect();
+                    next_reach_prob.retain_infostates(move_player, retained_info);
+                    rewards = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
+                }
+                self.drop_node();
             } else {
                 // Initialise rewards to 0 for relevant infostates
                 let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
@@ -1297,6 +1310,7 @@ pub fn pmccfr_test(start_test_depth: usize, max_test_depth: usize, max_iteration
             i += 1;
             let avg_time_current_node: f64 = iteration_time / nodes_traversed as f64;
             // println!("avg time for iteration of depth {}: {:.9} secs iteration: {:.9} secs", i, avg_time_current_node, iteration_time);
+            pmccfr.reset();
         }
         let avg_time: f64 = total_time / max_iterations as f64;
         let avg_time_per_node: f64 = total_time / total_nodes_traversed as f64;

@@ -609,7 +609,7 @@ impl CollectiveConstraint{
                     if group.count() > 3 {
                         // Its not possible to reveal a card that the player should not even be able to have!
                         // debug_assert!(group.count() <= 3, "Impossible case reached!");
-                        log::trace!("GROUP COUNT HIGH! FIX WITH LEGAL MOVE PRUNE");
+                        // log::trace!("GROUP COUNT HIGH! FIX WITH LEGAL MOVE PRUNE");
                     }
                 } else {
                     if let Some(card_dead) = self.pc_hm.get(&player_id) { 
@@ -1141,7 +1141,6 @@ impl CollectiveConstraint{
                 // subsume if possible
                 // Checks if j group is subset of i group
                 if constraint.gc_vec[j].part_list_is_subset_of(&constraint.gc_vec[i]) {
-                    log::trace!("{j} is subset of {i}!");
                     // No need to store participation_list as j is a subset
                     // i part_list Subsuming j will just be i
 
@@ -1309,7 +1308,7 @@ impl CollectiveConstraint{
                 let mut bool_mutually_exclusive: bool = false;
                 let mut total_cards_remaining: usize = 0;
                 let mut total_unique_cards_remaining: usize = 0;
-                log::trace!("Main list : {:?}", constraint.gc_vec[i]);
+                // log::trace!("Main list : {:?}", constraint.gc_vec[i]);
 
                 for iplayer_id in 0..6 {
                     // Copying values again
@@ -1328,11 +1327,11 @@ impl CollectiveConstraint{
                     }
                     // players_left store the group of players that can have player_i_possible_cards
                     let mut players_left: [u8; 7] = constraint.gc_vec[i].get_list().clone();
-                    log::trace!("Currently checking for player: {iplayer_id}");
+                    // log::trace!("Currently checking for player: {iplayer_id}");
                     for group in constraint.gc_vec.iter() {
                         if group.part_list_is_subset_of(&constraint.gc_vec[i]) && group.get_list()[iplayer_id] == 0 {
                             // update the subset_union_card_list and alive card counts
-                            log::trace!("Checking group: {:?}", group);
+                            // log::trace!("Checking group: {:?}", group);
                             bool_mutually_exclusive = GroupConstraint::lists_are_mut_excl(group.get_list(), &subset_union_card_list[group.card()]);
                             if let Some(value) = player_i_possible_cards.get_mut(group.card()){
                                 if bool_mutually_exclusive {
@@ -1497,7 +1496,7 @@ impl CollectiveConstraint{
                                     if *value > 2 {
                                         if iplayer_id == player_id {
                                             if *vcard == *card {
-                                                log::trace!("Section Subset 0 Known I True");
+                                                // log::trace!("Section Subset 0 Known I True");
                                                 return true;
                                             } 
                                             // No return false here because only 1 card will be added!
@@ -1663,9 +1662,9 @@ impl CollectiveConstraint{
                                                     } 
                                                 } 
                                             }
-                                            log::trace!("Entering Section Subset 2P Recurse C");
+                                            // log::trace!("Entering Section Subset 2P Recurse C");
                                             if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
-                                                log::trace!("Section Subset 2P Recurse C False");
+                                                // log::trace!("Section Subset 2P Recurse C False");
                                                 return false;
                                             } else {
                                                 return true;
@@ -3090,11 +3089,11 @@ impl CollectiveConstraint{
                                     }
                                 }
                                 let mut new_constraint: CollectiveConstraint = constraint.clone();
-                                log::trace!("Entering Section 4B Copy Recurse D");
+                                // log::trace!("Entering Section 4B Copy Recurse D");
                                 new_constraint.add_raw_public_constraint(id, *vcard);
                                 new_constraint.add_raw_public_constraint(id, *vcard);
                                 if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
-                                    log::trace!("Section Subset 4B Copy Recurse D False");
+                                    // log::trace!("Section Subset 4B Copy Recurse D False");
                                     return false;
                                 } else {
                                     return true;

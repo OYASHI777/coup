@@ -105,6 +105,36 @@ impl Infostate {
     pub fn contains(&self, card_str: &str) -> bool {
         self[0] == *card_str || self[1] == *card_str
     }
+    pub fn from_str(str: &str) -> Self {
+        match str {
+            "AA" => Infostate::AA,
+            "AB" => Infostate::AB,
+            "AC" => Infostate::AC,
+            "AD" => Infostate::AD,
+            "AE" => Infostate::AE,
+            "BB" => Infostate::BB,
+            "BC" => Infostate::BC,
+            "BD" => Infostate::BD,
+            "BE" => Infostate::BE,
+            "CC" => Infostate::CC,
+            "CD" => Infostate::CD,
+            "CE" => Infostate::CE,
+            "DD" => Infostate::DD,
+            "DE" => Infostate::DE,
+            "EE" => Infostate::EE,
+            "BA" => Infostate::AB,
+            "CA" => Infostate::AC,
+            "DA" => Infostate::AD,
+            "EA" => Infostate::AE,
+            "CB" => Infostate::BC,
+            "DB" => Infostate::BD,
+            "EB" => Infostate::BE,
+            "DC" => Infostate::CD,
+            "EC" => Infostate::CE,
+            "ED" => Infostate::DE,
+            _ => panic!("Invalid String"),
+        }
+    }
     pub fn cards_to_enum(card_0: &Card, card_1: &Card) -> Self {
         let card_0_str: &str = card_0.card_to_str(); 
         let card_1_str: &str = card_1.card_to_str(); 

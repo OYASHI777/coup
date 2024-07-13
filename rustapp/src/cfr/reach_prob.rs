@@ -105,6 +105,38 @@ impl ReachProb {
             len: 0,
         }
     }
+    pub fn retain_infostates(&mut self, player_id: u8, infostates: Vec<Infostate>) {
+        let map: &mut AHashMap<Infostate, bool> = match player_id {
+            0 => &mut self.reach_probs_player0,
+            1 => &mut self.reach_probs_player1,
+            2 => &mut self.reach_probs_player2,
+            3 => &mut self.reach_probs_player3,
+            4 => &mut self.reach_probs_player4,
+            5 => &mut self.reach_probs_player5,
+            _ => panic!("Invalid player id"),
+        };
+        let true_vec: &mut Vec<Infostate> = match player_id {
+            0 => &mut self.true_infostates_player0,
+            1 => &mut self.true_infostates_player1,
+            2 => &mut self.true_infostates_player2,
+            3 => &mut self.true_infostates_player3,
+            4 => &mut self.true_infostates_player4,
+            5 => &mut self.true_infostates_player5,
+            _ => panic!("Invalid player id"),
+        };
+        let false_vec: &mut Vec<Infostate> = match player_id {
+            0 => &mut self.false_infostates_player0,
+            1 => &mut self.false_infostates_player1,
+            2 => &mut self.false_infostates_player2,
+            3 => &mut self.false_infostates_player3,
+            4 => &mut self.false_infostates_player4,
+            5 => &mut self.false_infostates_player5,
+            _ => panic!("Invalid player id"),
+        };
+        map.retain(|key, _| infostates.contains(key));
+        true_vec.retain(|key| infostates.contains(key));
+        false_vec.retain(|key| infostates.contains(key));
+    }
     pub fn clone_constrained(&self, player_id: u8, card: &Card, mixed_strategy_policy: &Box<dyn MSInterface>, key_ms: &MSKey, action: &ActionObservation) -> Self {
         // If player is move player:
         //      If indicator == 1 and action is best response => 1
@@ -654,7 +686,6 @@ impl ReachProb {
         // 5 microseconds worst case... without checking if state is possible
         // Returns true if reach prob indicates a state that should be pruned
         // If there does not exist a gamestate where at least 1 infostate's indicator is 1 return true
-        let total_infostates: usize = INFOSTATES.len();
         let pointers_true: Vec<&Vec<Infostate>> = self.sort_true_infostates_by_length();
         let pointers_false: Vec<&Vec<Infostate>> = self.sort_false_infostates_by_true_lengths();
         let mut carrier_bool: bool;

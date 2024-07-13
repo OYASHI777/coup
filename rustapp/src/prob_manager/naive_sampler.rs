@@ -119,12 +119,15 @@ impl<'a> NaiveSampler<'a> {
 
     pub fn hm_constructor(&mut self, constraint: &CollectiveConstraint, player: u8, infostates: &Vec<Infostate>) -> AHashMap<String, String> {
         // returns a map of player infostate to 2 randomly drawn card from pile (last 3 cards)
+        // TODO: Optimize, this shit increases avg time per node by 20+ microseconds
+        // TODO: Change, needs to manually do...
         self.shuffle();
-        let mut temp_constraint: CollectiveConstraint = constraint.clone();
         let mut result: AHashMap<String, String> = AHashMap::with_capacity(INFOSTATES.len());
         let player_id: usize = player as usize;
         for infostate in infostates {
             let card_vec: Vec<Card> = infostate.to_vec_card();
+            // DO NOT MOVE TEMP_CONSTRAINT OUT OF LOOP AS THAT WILL MESS THINGS UP
+            let mut temp_constraint: CollectiveConstraint = constraint.clone();
             temp_constraint.remove_constraints(player_id);
             temp_constraint.add_joint_constraint(player_id, &card_vec);
             if let Some(card_str) = self.par_constructor(&mut temp_constraint) {
@@ -141,9 +144,9 @@ impl<'a> NaiveSampler<'a> {
                 let chosen_cards_str: String = chosen_cards.into_iter().collect();
                 result.insert(infostate.to_str().to_string(), chosen_cards_str);
             } else {
-                println!("Generation failed for player: {:?}", player);
-                temp_constraint.print();
-                debug_assert!(false, "Generation failed");
+                // println!("Generation failed for player: {:?}", player);
+                // temp_constraint.print();
+                // debug_assert!(false, "Generation failed");
             }
         }
         result
