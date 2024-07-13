@@ -776,7 +776,9 @@ impl <'a> Explorer<'a> {
                     // TODO: Include naive pruning for impossible actions!
                     if self.naive_prune(action){
                         continue;
-                    } if action.name() == AOName::ExchangeDraw {
+                    } 
+                    if action.name() == AOName::ExchangeDraw {
+                        // TODO: Delete? Seems redundant
                         // Chance Node
                         if let Some(sampled_action) = self.naive_sample_exchange_draw(action.player_id()) {
                             self.add_node(sampled_action, bool_know_priv_info);
@@ -901,6 +903,7 @@ impl <'a> Explorer<'a> {
                         let move_player: u8 = action.player_id() as u8;
                         let key_ms_t: MSKey = MSKey::new(move_player, &path_t);
                         
+                        // TODO: Just clone reach prob and edit so its not so messy...
                         let mut next_reach_prob: ReachProb = ReachProb::new_empty();
                         // let mut next_reach_prob: HashMap<BRKey, bool> = HashMap::with_capacity(reach_prob.len());
                         // Filling next reach prob based on input reachprob and action for pmccfr function
@@ -963,10 +966,12 @@ impl <'a> Explorer<'a> {
                         } else if action.name() == AOName::RevealRedraw {
                             // INITIALISING REACH_PROB AFTER THIS MOVE
                             let card_str: &str = action.card().card_to_str();
+                            // TODO: abstract out to method in reach_prob | also check if infostate is in a compiled set of infostates (speed)
                             for player_id in 0..6 {
                                 for infostate in reach_prob.player_infostate_keys(player_id) {
                                     if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
                                         if player_id == action.player_id() as u8 {
+                                            // Only keep infostates that has the revealed card
                                             if infostate.contains(card_str) {
                                                 let infostate_best_response = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, &infostate);
                                                 if *old_indicator {
