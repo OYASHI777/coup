@@ -669,7 +669,7 @@ impl <'a> Explorer<'a> {
                 key_br.set_player_id(player_id);
                 for infostate in reach_prob.player_infostate_keys(player_id) {
                     key_br.set_infostate(infostate);
-                    rewards.insert(key_br.clone(), 0.0);
+                    rewards.insert(key_br, 0.0);
                 }
             }
         } else {
@@ -797,7 +797,7 @@ impl <'a> Explorer<'a> {
                     key_br.set_player_id(player_id);
                     for infostate in reach_prob.player_infostate_keys(player_id) {
                         key_br.set_infostate(infostate);
-                        rewards.insert(key_br.clone(), 0.0);
+                        rewards.insert(key_br, 0.0);
                     }
                 }
 
@@ -870,7 +870,7 @@ impl <'a> Explorer<'a> {
                         // let mut transition_map: HashMap<String, Vec<String>> = HashMap::with_capacity(MAX_NUM_BRKEY);
                         // for key_br in next_reach_prob.keys() {
                         //     // 1 to 1 no change case
-                        //     transition_map.insert(key_br.clone(), vec![key_br.clone()]);
+                        //     transition_map.insert(key_br, vec![key_br]);
                         // }
                         self.add_node(*action, bool_know_priv_info);
                         // Recurse and continue on an action
@@ -915,7 +915,7 @@ impl <'a> Explorer<'a> {
                                         if let Some(reward_val) = rewards.get_mut(&key_br){
                                             *reward_val += increment_val;
                                         } else {
-                                            rewards.insert(key_br.clone(), increment_val);
+                                            rewards.insert(key_br, increment_val);
                                         }
                                     }
                                 }
@@ -1057,7 +1057,7 @@ impl <'a> Explorer<'a> {
                                         if let Some(reward_val) = rewards.get_mut(&key_br){
                                             *reward_val += increment_val
                                         } else {
-                                            rewards.insert(key_br.clone(), increment_val);
+                                            rewards.insert(key_br, increment_val);
                                         }
                                     }
                                 }
@@ -1101,7 +1101,7 @@ impl <'a> Explorer<'a> {
             let mut rewards_clone: AHashMap<BRKey, f32> = AHashMap::with_capacity(MAX_NUM_BRKEY);
             //  Temp
             for key_br in rewards.keys() {
-                rewards_clone.insert(key_br.clone(), 0.0);
+                rewards_clone.insert(*key_br, 0.0);
             }
             for (key_br, key_br_vec) in transition_map {
                 for new_key_br in key_br_vec {

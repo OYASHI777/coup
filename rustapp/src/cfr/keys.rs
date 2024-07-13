@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::ops::Index;
 use crate::history_public::Card;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 // TODO: Make BRKey key = player_id * 15 + infostate! still a u8
 pub struct BRKey { //TODO: Implement Copy and don't use Clone
     player_id: u8, //TODO: Change to u8
