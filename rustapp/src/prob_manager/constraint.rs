@@ -357,6 +357,10 @@ impl CollectiveConstraint{
             // card in pc_hm?
             if *pc_hm_card == card {
                 self.pc_hm.remove(&player_id);
+                // KIV: NEW LATE ADDITION 13/07/2024
+                if let Some(value) = self.dead_card_count.get_mut(&card){
+                    *value -= 1;
+                }
             } else {
                 debug_assert!(false, "Removing card constraint that does not exist in pc_hm");
             }
@@ -365,6 +369,10 @@ impl CollectiveConstraint{
             // Removes it and adds remainder to pc_hm
             if let Some(index) = jc_hm_vec.iter().position(|c| *c == card){
                 jc_hm_vec.remove(index);
+                // KIV: NEW LATE ADDITION 13/07/2024
+                if let Some(value) = self.dead_card_count.get_mut(&card){
+                    *value -= 1;
+                }
                 if jc_hm_vec.len() == 1 {
                     if let Some(remaining_card) = jc_hm_vec.pop(){
                         self.pc_hm.insert(player_id, remaining_card);
@@ -394,8 +402,29 @@ impl CollectiveConstraint{
         self.group_dead_player_prune(player_id, card_vec);
     }
     pub fn remove_constraints(&mut self, player_id: usize) {
-        self.pc_hm.remove(&player_id);
-        self.jc_hm.remove(&player_id);
+        if let Some(card) = self.pc_hm.get_mut(&player_id) {
+            // KIV: NEW LATE ADDITION
+            if let Some(value) = self.dead_card_count.get_mut(card){
+                *value -= 1;
+            }
+            self.pc_hm.remove(&player_id);
+        }
+        if let Some(card_vec) = self.jc_hm.get_mut(&player_id) {
+            // KIV: NEW LATE ADDITION
+            if card_vec[0] == card_vec[1] {
+                if let Some(value) = self.dead_card_count.get_mut(&card_vec[0]){
+                    *value -= 2;
+                }
+            } else {
+                if let Some(value) = self.dead_card_count.get_mut(&card_vec[0]){
+                    *value -= 1;
+                }
+                if let Some(value) = self.dead_card_count.get_mut(&card_vec[1]){
+                    *value -= 1;
+                }
+            }
+            self.jc_hm.remove(&player_id);
+        }
     }
     // You will never remove from group only pop to reverse it because you cannot unmix cards
     pub fn group_initial_prune(&mut self, player_id: usize, card: &Card, count: usize, bool_card_dead: bool){

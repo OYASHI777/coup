@@ -119,17 +119,18 @@ impl<'a> NaiveSampler<'a> {
 
     pub fn hm_constructor(&mut self, constraint: &CollectiveConstraint, player: u8, infostates: &Vec<Infostate>) -> AHashMap<String, String> {
         // returns a map of player infostate to 2 randomly drawn card from pile (last 3 cards)
-        // TODO: Optimize, this shit increases avg time per node by 20+ microseconds
+        // TODO: Optimize, this shit increases avg time per node by 15-20 microseconds
         // TODO: Change, needs to manually do...
         self.shuffle();
         let mut result: AHashMap<String, String> = AHashMap::with_capacity(INFOSTATES.len());
         let player_id: usize = player as usize;
+        let mut temp_constraint: CollectiveConstraint = constraint.clone();
+        // TODO: Figure out why sometimes Generation fails but outside of this no need for retaining
         for infostate in infostates {
             let card_vec: Vec<Card> = infostate.to_vec_card();
-            // DO NOT MOVE TEMP_CONSTRAINT OUT OF LOOP AS THAT WILL MESS THINGS UP
-            let mut temp_constraint: CollectiveConstraint = constraint.clone();
             temp_constraint.remove_constraints(player_id);
-            temp_constraint.add_joint_constraint(player_id, &card_vec);
+            temp_constraint.add_raw_public_constraint(player_id, card_vec[0]);
+            temp_constraint.add_raw_public_constraint(player_id, card_vec[1]);
             if let Some(card_str) = self.par_constructor(&mut temp_constraint) {
                 let mut rng = rand::thread_rng();
                 let random_number: f64 = rng.gen();
@@ -144,9 +145,8 @@ impl<'a> NaiveSampler<'a> {
                 let chosen_cards_str: String = chosen_cards.into_iter().collect();
                 result.insert(infostate.to_str().to_string(), chosen_cards_str);
             } else {
-                // println!("Generation failed for player: {:?}", player);
-                // temp_constraint.print();
-                // debug_assert!(false, "Generation failed");
+                // This return None when a player cannot have a particular infostate
+                // Nothing is saved when a player cannot have a particular infostate
             }
         }
         result

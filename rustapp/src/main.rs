@@ -125,7 +125,7 @@ fn main() {
     // mccfr_test();
     // mccfr_prune_test();
     logger(LOG_LEVEL);
-    pmccfr_test(60, 61, 1);
+    pmccfr_test(30, 31, 100);
     // error_farmer(1000000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);

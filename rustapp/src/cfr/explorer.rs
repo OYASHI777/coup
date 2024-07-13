@@ -1310,6 +1310,9 @@ pub fn pmccfr_test(start_test_depth: usize, max_test_depth: usize, max_iteration
             i += 1;
             let avg_time_current_node: f64 = iteration_time / nodes_traversed as f64;
             // println!("avg time for iteration of depth {}: {:.9} secs iteration: {:.9} secs", i, avg_time_current_node, iteration_time);
+            
+            // reset if you dont want to accumulate memory
+            // real run needs to accumulate memory
             pmccfr.reset();
         }
         let avg_time: f64 = total_time / max_iterations as f64;
