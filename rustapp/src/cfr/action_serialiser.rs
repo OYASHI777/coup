@@ -15,29 +15,29 @@ impl ActionEmbedding for DefaultEmbedding {
         // Public moves only!
         match action {
             ActionObservation::EmptyAO => panic!("root"),
-            ActionObservation::Income { player_id } => format!("ICP{}", player_id),
-            ActionObservation::ForeignAid { player_id } => format!("FAP{}", player_id),
-            ActionObservation::Tax { player_id } => format!("TXP{}", player_id),
-            ActionObservation::Steal { player_id, opposing_player_id, ..  } => format!("SLP{}P{}", player_id, opposing_player_id),
-            ActionObservation::Assassinate { player_id, opposing_player_id, ..  } => format!("ASP{}P{}", player_id, opposing_player_id),
-            ActionObservation::Coup { player_id, opposing_player_id, ..  } => format!("COP{}P{}", player_id, opposing_player_id),
+            ActionObservation::Income { player_id } => format!("IC{}", player_id),
+            ActionObservation::ForeignAid { player_id } => format!("FA{}", player_id),
+            ActionObservation::Tax { player_id } => format!("TX{}", player_id),
+            ActionObservation::Steal { player_id, opposing_player_id, ..  } => format!("SL{}|{}", player_id, opposing_player_id),
+            ActionObservation::Assassinate { player_id, opposing_player_id, ..  } => format!("AS{}|{}", player_id, opposing_player_id),
+            ActionObservation::Coup { player_id, opposing_player_id, ..  } => format!("CO{}|{}", player_id, opposing_player_id),
             ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => 
                 format!("CH{}{}{}", opposing_player_id, participants.iter().map(|&b| if b { '1' } else { '0' }).collect::<String>(), final_actioner),
             ActionObservation::CollectiveBlock { participants, opposing_player_id, final_actioner } => 
-            format!("BT{}{}{}", opposing_player_id, participants.iter().map(|&b| if b { '1' } else { '0' }).collect::<String>(), final_actioner),
-            ActionObservation::BlockSteal { player_id, opposing_player_id, card } => format!("BS{}P{}P{}",if *card == Card::Captain {"C"} else {"A"}, player_id, opposing_player_id ),
-            ActionObservation::BlockAssassinate { player_id, opposing_player_id, ..  } => format!("BAP{}P{}", player_id, opposing_player_id),
+            format!("BC{}{}{}", opposing_player_id, participants.iter().map(|&b| if b { '1' } else { '0' }).collect::<String>(), final_actioner),
+            ActionObservation::BlockSteal { player_id, opposing_player_id, card } => format!("BS{}|{}|{}",if *card == Card::Captain {"C"} else {"A"}, player_id, opposing_player_id ),
+            ActionObservation::BlockAssassinate { player_id, opposing_player_id, ..  } => format!("BA{}|{}", player_id, opposing_player_id),
             ActionObservation::Discard { player_id, card, no_cards } => {
                 match no_cards {
-                    1 => format!("DCP{}{}", player_id, card[0].card_to_string()),
-                    2 => format!("DCP{}{}{}", player_id, card[0].card_to_string(), card[1].card_to_string()),
+                    1 => format!("DO{}{}", player_id, card[0].card_to_string()),
+                    2 => format!("DA{}{}{}", player_id, card[0].card_to_string(), card[1].card_to_string()),
                     _ => panic!("Invalid number of cards"),
                 }
             },
-            ActionObservation::RevealRedraw { player_id, card } => format!("RRP{}{}", player_id, card.card_to_string()),
-            ActionObservation::Exchange { player_id } => format!("EXP{}", player_id),
-            ActionObservation::ExchangeDraw { player_id , card } => format!("EXD{}{}{}", player_id, card[0].card_to_string(), card[1].card_to_string()),
-            ActionObservation::ExchangeChoice { player_id , no_cards, .. } => format!("EC{}P{}", no_cards, player_id),
+            ActionObservation::RevealRedraw { player_id, card } => format!("RR{}{}", player_id, card.card_to_string()),
+            ActionObservation::Exchange { player_id } => format!("EX{}", player_id),
+            ActionObservation::ExchangeDraw { player_id , card } => format!("ED{}{}{}", player_id, card[0].card_to_string(), card[1].card_to_string()),
+            ActionObservation::ExchangeChoice { player_id , no_cards, .. } => format!("EC{}{}", no_cards, player_id),
             _ => panic!("bad kind"),
         }
     }

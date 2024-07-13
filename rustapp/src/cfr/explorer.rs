@@ -688,11 +688,13 @@ impl <'a> Explorer<'a> {
                 // TODO: Free for all CollectiveChallenge and CollectiveBlock
                 let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
                 let possible_challenge_moves: Vec<ActionObservation> = vec![ActionObservation::ChallengeAccept, ActionObservation::ChallengeDeny];
+                let challenged_player_id: u8 = self.history.latest_move().player_id() as u8;
                 for player_id in 0..6 as u8 {
-                    if latest_influence_time_t[player_id as usize] > 0 {
-                        self.mixed_strategy_policy_vec.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));
-                        self.q_values.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));   
+                    if player_id == challenged_player_id || latest_influence_time_t[player_id as usize] == 0 {
+                        continue;
                     }
+                    self.mixed_strategy_policy_vec.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));
+                    self.q_values.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));   
                 }
             } else {
                 // FOR NORMAL MOVES
@@ -719,27 +721,27 @@ impl <'a> Explorer<'a> {
                     // self.policy_handler.forward_pass_best_response_policy(&self.path, latest_influence_time_t, &self.history, &mut self.best_response_policy_vec, mix_strat_policy_time_t);
                     let mut next_reach_prob: ReachProb = reach_prob.clone();
 
-                    // TODO: Link mixed strategy
-                    // This is a temp to see how many nodes will be visited
-                    let mut rng = thread_rng();
                     let opposing_player_id: u8 = action.opposing_player_id() as u8;
+                    let mut key_ms_t = MSKey::new(0, &path_t);
+                    let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
                     for player_id in 0..6 as u8 {
-                        if player_id == opposing_player_id {
+                        if player_id == opposing_player_id || latest_influence_time_t[player_id as usize] == 0{
                             continue;
                         }
-                        let infostates: Vec<Infostate> = next_reach_prob.player_infostate_keys(player_id).cloned().collect();
-                        for infostate in infostates {
-                            if let Some(indicator) = next_reach_prob.get_mut_status(player_id, &infostate) {
-                                if *indicator {
-                                    if rng.gen_range(0.0..1.0) > 0.5 {
-                                        *indicator = false;
-                                        // next_reach_prob.set_status(player_id, &infostate, false);
+                        key_ms_t.set_player_id(player_id);
+                        for infostate in reach_prob.player_infostate_keys(player_id) {
+                            if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
+                                if *old_indicator {
+                                    let infostate_best_response: ActionObservation = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, infostate);
+                                    if !(infostate_best_response == action) {
+                                        // change 1 to 0
+                                        next_reach_prob.set_status(player_id, infostate, false);
                                     }
                                 }
                             }
                         }
                     }
-                    
+
                     rewards = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
                     // rewards = self.pmccfr(depth_counter + 1, &reach_prob, None);
                     // TODO: backpropogate
@@ -747,6 +749,9 @@ impl <'a> Explorer<'a> {
                 }
             // Add ExchangeDraw here
             } else if self.is_exchangedraw_node() {
+                // TODO: Sample based on actual draw probability using NaiveSampler please
+                // TODO: Consider private/public seperation how does this work?
+                // For each infostate of the player, sample 2 new cards for exchange choice
                 if let Some(action) = possible_outcomes.choose(&mut thread_rng()).cloned() {
                     self.add_node(action, bool_know_priv_info);
                     // Placeholder

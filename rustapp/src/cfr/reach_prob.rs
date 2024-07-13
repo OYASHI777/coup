@@ -217,26 +217,9 @@ impl ReachProb {
     }
     pub fn set_status(&mut self, player_id: u8, infostate: &Infostate, status: bool) {
         // Add if not inside
-        log::trace!("Before set_status for player {player_id}, infostate: {infostate:?}, status: {status}");
-        self.log_state();
-        // log::trace!("True Infostates");
-        // log::trace!("P0: {:?}", self.true_infostates_player0.len());
-        // log::trace!("P1: {:?}", self.true_infostates_player1.len());
-        // log::trace!("P2: {:?}", self.true_infostates_player2.len());
-        // log::trace!("P3: {:?}", self.true_infostates_player3.len());
-        // log::trace!("P4: {:?}", self.true_infostates_player4.len());
-        // log::trace!("P5: {:?}", self.true_infostates_player5.len());
-        // log::trace!("False Infostates");
-        // log::trace!("P0: {:?}", self.false_infostates_player0.len());
-        // log::trace!("P1: {:?}", self.false_infostates_player1.len());
-        // log::trace!("P2: {:?}", self.false_infostates_player2.len());
-        // log::trace!("P3: {:?}", self.false_infostates_player3.len());
-        // log::trace!("P4: {:?}", self.false_infostates_player4.len());
-        // log::trace!("P5: {:?}", self.false_infostates_player5.len());
         match player_id {
             0 => {
                 if let Some(value) = self.reach_probs_player0.get_mut(infostate){
-                    log::trace!("value of {value} found! in player0");
                     if *value != status {
                         *value = status;
                         if status {
@@ -252,7 +235,6 @@ impl ReachProb {
                         }
                     }
                 } else {
-                    log::trace!("Player 0 Insertion!");
                     self.reach_probs_player0.insert(*infostate, status);
                     if status {
                         self.true_infostates_player0.push(*infostate);
@@ -396,21 +378,21 @@ impl ReachProb {
                 panic!("Invalid Player ID, please provide between 0 to 5 both inclusive");
             }
         }
-        log::trace!("After set_status");
-        log::trace!("True Infostates");
-        log::trace!("P0: {:?}", self.true_infostates_player0.len());
-        log::trace!("P1: {:?}", self.true_infostates_player1.len());
-        log::trace!("P2: {:?}", self.true_infostates_player2.len());
-        log::trace!("P3: {:?}", self.true_infostates_player3.len());
-        log::trace!("P4: {:?}", self.true_infostates_player4.len());
-        log::trace!("P5: {:?}", self.true_infostates_player5.len());
-        log::trace!("False Infostates");
-        log::trace!("P0: {:?}", self.false_infostates_player0.len());
-        log::trace!("P1: {:?}", self.false_infostates_player1.len());
-        log::trace!("P2: {:?}", self.false_infostates_player2.len());
-        log::trace!("P3: {:?}", self.false_infostates_player3.len());
-        log::trace!("P4: {:?}", self.false_infostates_player4.len());
-        log::trace!("P5: {:?}", self.false_infostates_player5.len());
+        // log::trace!("After set_status");
+        // log::trace!("True Infostates");
+        // log::trace!("P0: {:?}", self.true_infostates_player0.len());
+        // log::trace!("P1: {:?}", self.true_infostates_player1.len());
+        // log::trace!("P2: {:?}", self.true_infostates_player2.len());
+        // log::trace!("P3: {:?}", self.true_infostates_player3.len());
+        // log::trace!("P4: {:?}", self.true_infostates_player4.len());
+        // log::trace!("P5: {:?}", self.true_infostates_player5.len());
+        // log::trace!("False Infostates");
+        // log::trace!("P0: {:?}", self.false_infostates_player0.len());
+        // log::trace!("P1: {:?}", self.false_infostates_player1.len());
+        // log::trace!("P2: {:?}", self.false_infostates_player2.len());
+        // log::trace!("P3: {:?}", self.false_infostates_player3.len());
+        // log::trace!("P4: {:?}", self.false_infostates_player4.len());
+        // log::trace!("P5: {:?}", self.false_infostates_player5.len());
     }
     pub fn remove(&mut self, player_id: u8, infostate: &Infostate) {
         // TODO: fill
@@ -600,7 +582,7 @@ impl ReachProb {
         let output: bool = self.should_pure_prune();
         let elapsed_time = start_time.elapsed();
         if output {
-            log::info!("reach_prob|should prune| true prune Time: {:?}", elapsed_time);
+            // log::info!("reach_prob|should prune| true prune Time: {:?}", elapsed_time);
         }
         output
     }
@@ -627,7 +609,6 @@ impl ReachProb {
         let mut break_bool: bool;
 
         'outer: while i0 < pointers_true[0].len() + pointers_false[0].len() {
-            log::trace!("i0: {}", i0);
             carrier_bool = false;
             break_bool = true;
             let infostate0: &Infostate;
@@ -725,7 +706,6 @@ impl ReachProb {
                                     // return true;
                                     continue 'outer;
                                 }
-                                log::trace!("carrier_bool: {carrier_bool}");
                                 if carrier_bool {
                                     // If there exists a legal gamestate where at least 1 infostate is true
                                     // Do not prune and return false

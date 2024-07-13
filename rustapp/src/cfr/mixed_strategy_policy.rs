@@ -118,9 +118,14 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
         }
         if !self.action_map_contains_key(&key_ms) {
             self.action_map_insert(key_ms.clone(), actions.clone());
+            if self.action_map_contains_key(&key_ms){
+            }
         }
         if !self.policies_contains_key(&key_ms) {
             self.policy_insert(key_ms.clone(), new_policy.clone());
+            if self.policies_contains_key(&key_ms){
+            }
+            
         }
     }
     fn action_map_get(&self, key: &MSKey) -> Option<&Vec<ActionObservation>> {
@@ -141,7 +146,6 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
             if let Some(infostate_policy) = policy.get(&key) {
                 // infostate_policy.iter().enumerate().max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap()).map(|(index, _)| index)
                 // Find the maximum value in the infostate_policy
-                let max_value: f32 = infostate_policy.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
                 if let Some(&max_value) = infostate_policy.iter().max_by(|a, b| a.partial_cmp(b).unwrap()) {
                     // Collect all indices that have the maximum value
                     let max_indices: Vec<usize> = infostate_policy.iter()
@@ -149,7 +153,7 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
                         .filter_map(|(index, &value)| if value == max_value { Some(index) } else { None })
                         .collect();
                     
-                    // Select a random index from the max_indices
+                    // Select a random index from the max_indices if more than 1
                     if max_indices.len() == 1 {
                         Some(max_indices[0])
                     } else {
@@ -157,12 +161,14 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
                         max_indices.choose(&mut rng).cloned()
                     }
                 } else {
-                    None
+                    println!("max_value failed! for {:?}", infostate_policy);
+                    panic!("max_value failed!");
                 }
             } else {
                 None
             }
         } else {
+            println!("MSKey of {:?} not found! in get_best_response_index!", key);
             None
         }
     }
@@ -175,6 +181,7 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
                 panic!("action_map does not contain key!");
             }
         } else {
+            //TODO: Change and check for random value logic
             let mut rng = thread_rng();
             if let Some(action_vec) = self.action_map.get(key){
                 let random_index: usize = rng.gen_range(0..action_vec.len());

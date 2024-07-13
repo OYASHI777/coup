@@ -114,6 +114,7 @@ use cfr::explorer::{cfr_test, mccfr_test, cfr_prune_test, mccfr_prune_test, pmcc
 // 2024-03-23T23:18:59 [INFO] - Time taken for Optimal PC Filter: 32.8897ms
 // 2024-03-23T23:18:59 [INFO] - Time taken for Optimal GC Filter: 100ns
 // // 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 fn main() {
 
     // game_rnd(1000, true);
@@ -123,8 +124,8 @@ fn main() {
     // cfr_prune_test();
     // mccfr_test();
     // mccfr_prune_test();
-    // logger();
-    pmccfr_test(1, 10, 50);
+    // logger(LOG_LEVEL);
+    pmccfr_test(5, 10, 50);
     // error_farmer(1000000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
@@ -137,14 +138,14 @@ fn main() {
     // test_shuffle(100);
 }
 pub fn find_overflow(game_no: usize, rep_no: usize) {
-    logger();
+    logger(LOG_LEVEL);
     for i in 0..rep_no {
         overflow_farmer(game_no, true);
         let output: Result<(), io::Error> = clear_logs();
     }
 }
 pub fn test_satis(){
-    logger();
+    logger(LOG_LEVEL);
     let mut prob = NaiveProb::new();
 //     let mut colcon = CollectiveConstraint::new();
 //     colcon.add_public_constraint(3, Card::Duke);
@@ -1058,7 +1059,7 @@ pub fn test_satis(){
     }
 }
 pub fn test_shuffle(iterations: usize){
-    logger();
+    logger(LOG_LEVEL);
     let mut prob: NaiveProb = NaiveProb::new();
 
     for i in 0..iterations {
@@ -1153,7 +1154,7 @@ pub fn test_reach() {
     println!("output: {}", output);
 }
 // pub fn test_belief(iterations: usize){
-//     logger();
+//     logger(LOG_LEVEL);
 
 //     let mut hh = History::new(0);
 //     let mut step: usize = 0;
@@ -1189,7 +1190,7 @@ pub fn test_reach() {
 //     }
 // }
 // pub fn test_filter(iterations: usize){
-//     logger();
+//     logger(LOG_LEVEL);
 
 //     let mut prob = NaiveProb::new();
 //     // println!("Initialising Sets");
@@ -1275,7 +1276,7 @@ pub fn test_reach() {
 // }
 
 // pub fn make_belief(iterations: usize){
-//     // logger();
+//     // logger(LOG_LEVEL);
 
 //     let mut prob = NaiveProb::new();
 //     // println!("Initialising Sets");
@@ -1331,7 +1332,7 @@ pub fn test_reach() {
 
 pub fn game_rnd(game_no: usize, log_bool: bool){
     if log_bool{
-        logger();
+        logger(LOG_LEVEL);
     }
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
@@ -1401,7 +1402,7 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
 }
 pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     if log_bool{
-        logger();
+        logger(LOG_LEVEL);
     }
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
@@ -1719,7 +1720,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
 
 pub fn error_farmer(game_no: usize, log_bool: bool){
     if log_bool{
-        logger();
+        logger(LOG_LEVEL);
     }
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
@@ -2034,7 +2035,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
 }
 pub fn overflow_farmer(game_no: usize, log_bool: bool){
     if log_bool{
-        // logger();
+        // logger(LOG_LEVEL);
     }
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
@@ -2359,7 +2360,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
 
 pub fn test_impossible_state(game_no: usize, log_bool: bool){
     if log_bool{
-        logger();
+        logger(LOG_LEVEL);
     }
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
@@ -2463,7 +2464,7 @@ pub fn test_impossible_state(game_no: usize, log_bool: bool){
     println!("Total Time: {:?}", elapsed_time);
 }
 
-pub fn logger(){
+pub fn logger(level: LevelFilter){
     // let log_file = File::create("app.log").unwrap();
 
     let log_file = File::create("rustapp.log").expect("Failed to create log file");
@@ -2482,7 +2483,7 @@ pub fn logger(){
         })
         // Set log level filter; this line is optional if using default_filter_or in from_env
         // .filter(None, LevelFilter::Trace) // Adjust the log level as needed
-        .filter(None, LevelFilter::Info) // Adjust the log level as needed
+        .filter(None, level) // Adjust the log level as needed
         // Direct logs to the file
         .target(Target::Pipe(Box::new(log_file)))
         // Apply the configuration
