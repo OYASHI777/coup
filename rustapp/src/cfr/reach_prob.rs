@@ -148,6 +148,37 @@ impl ReachProb {
             _ => panic!("Invalid player_id please make sure its between 0 to 5 inclusive"),
         }
     }
+    pub fn get_infostates(&self, player_id: u8) -> Vec<Infostate> {
+        let mut result: Vec<Infostate> = Vec::with_capacity(INFOSTATES.len());
+        match player_id {
+            0 => {
+                result.extend(self.true_infostates_player0.clone());
+                result.extend(self.false_infostates_player0.clone());
+            },
+            1 => {
+                result.extend(self.true_infostates_player1.clone());
+                result.extend(self.false_infostates_player1.clone());
+            },
+            2 => {
+                result.extend(self.true_infostates_player2.clone());
+                result.extend(self.false_infostates_player2.clone());
+            },
+            3 => {
+                result.extend(self.true_infostates_player3.clone());
+                result.extend(self.false_infostates_player3.clone());
+            },
+            4 => {
+                result.extend(self.true_infostates_player4.clone());
+                result.extend(self.false_infostates_player4.clone());
+            },
+            5 => {
+                result.extend(self.true_infostates_player5.clone());
+                result.extend(self.false_infostates_player5.clone());
+            },
+            _ => panic!("Invalid player_id please make sure its between 0 to 5 inclusive"),
+        };
+        result
+    }
     pub fn get_status(&self, player_id: u8, infostate: &Infostate) -> Option<&bool> {
         match player_id {
             // Add the rest

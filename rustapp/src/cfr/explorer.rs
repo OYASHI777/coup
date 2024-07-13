@@ -362,6 +362,16 @@ impl <'a> Explorer<'a> {
         }
     }
 
+    pub fn naive_sample_exchange_draw_all(&mut self, player_id: u8, infostates: &Vec<Infostate>) {
+        // Store to self hashmap
+        let latest_constraint: CollectiveConstraint = self.prob.latest_constraint();
+        self.exchange_draw_info = self.chance_sampler.hm_constructor(&latest_constraint, player_id, infostates);
+    }
+
+    pub fn empty_exchange_draw_info(&mut self) {
+        self.exchange_draw_info.clear();
+    }
+
     pub fn explore_recurse(&mut self, depth_counter: usize) {
         self.visit_counter += 1;
         if depth_counter >= self.max_depth {
@@ -754,13 +764,24 @@ impl <'a> Explorer<'a> {
                 // TODO: Sample based on actual draw probability using NaiveSampler please
                 // TODO: Consider private/public seperation how does this work?
                 // For each infostate of the player, sample 2 new cards for exchange choice
-                if let Some(action) = possible_outcomes.choose(&mut thread_rng()).cloned() {
-                    self.add_node(action, bool_know_priv_info);
-                    // Placeholder
-                    rewards = self.pmccfr(depth_counter + 1, reach_prob, None);
-                    // TODO: backpropogate
-                    self.drop_node();
-                }
+                let action: ActionObservation = possible_outcomes[0];
+                let move_player: u8 = action.player_id() as u8;
+                // if let Some(sampled_action) = self.naive_sample_exchange_draw(action.player_id()) {
+                //     self.add_node(sampled_action, bool_know_priv_info);
+                //     // let next_reach_prob: HashMap<BRKey, bool> = HashMap::with_capacity(MAX_NUM_BRKEY);
+                //     // TODO: Fill reach prob based on input reachprob and action for pmccfr function
+                //     // let transition_map: HashMap<String, Vec<String>> = HashMap::with_capacity(MAX_NUM_BRKEY);
+                //     // TODO: Fill transition hashmap for pmccfr function
+                //     rewards = self.pmccfr(depth_counter + 1, reach_prob, None);
+                //     // TODO: backpropogate
+                //     self.drop_node();
+                //     // TODO: UPDATE REWARDS?
+                // }
+                // === NEW ===
+                // get infostates
+                // TODO: Remember to empty later on!
+                let infostates = reach_prob.get_infostates(move_player);
+                self.naive_sample_exchange_draw_all(move_player, &infostates);
             } else {
                 // Initialise rewards to 0 for relevant infostates
                 let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
@@ -779,21 +800,7 @@ impl <'a> Explorer<'a> {
                     if self.naive_prune(action){
                         continue;
                     } 
-                    if action.name() == AOName::ExchangeDraw {
-                        // TODO: Delete? Seems redundant
-                        // Chance Node
-                        if let Some(sampled_action) = self.naive_sample_exchange_draw(action.player_id()) {
-                            self.add_node(sampled_action, bool_know_priv_info);
-                            // let next_reach_prob: HashMap<BRKey, bool> = HashMap::with_capacity(MAX_NUM_BRKEY);
-                            // TODO: Fill reach prob based on input reachprob and action for pmccfr function
-                            // let transition_map: HashMap<String, Vec<String>> = HashMap::with_capacity(MAX_NUM_BRKEY);
-                            // TODO: Fill transition hashmap for pmccfr function
-                            rewards = self.pmccfr(depth_counter + 1, reach_prob, None);
-                            // TODO: backpropogate
-                            self.drop_node();
-                            // TODO: UPDATE REWARDS?
-                        } 
-                    } else if action.name() == AOName::ExchangeChoice {
+                    if action.name() == AOName::ExchangeChoice {
                         // TODO: Change to the actual code randomly sample from each player's mixed_strategy
                         // Shuffle reach prob
                         // let mut next_reach_prob: HashMap<BRKey, bool> = reach_prob.clone();
@@ -1289,7 +1296,7 @@ pub fn pmccfr_test(start_test_depth: usize, max_test_depth: usize, max_iteration
             pmccfr.reset_counters();
             i += 1;
             let avg_time_current_node: f64 = iteration_time / nodes_traversed as f64;
-            println!("avg time for iteration of depth {}: {:.9} secs iteration: {:.9} secs", i, avg_time_current_node, iteration_time);
+            // println!("avg time for iteration of depth {}: {:.9} secs iteration: {:.9} secs", i, avg_time_current_node, iteration_time);
         }
         let avg_time: f64 = total_time / max_iterations as f64;
         let avg_time_per_node: f64 = total_time / total_nodes_traversed as f64;

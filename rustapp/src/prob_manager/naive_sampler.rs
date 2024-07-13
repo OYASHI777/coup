@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 use ahash::AHashMap;
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use rand::prelude::SliceRandom;
 use super::constraint::{GroupConstraint, CollectiveConstraint};
@@ -117,8 +117,8 @@ impl<'a> NaiveSampler<'a> {
         final_result
     }
 
-    fn hm_constructor(&mut self, constraint: &CollectiveConstraint, player: u8, infostates: &Vec<Infostate>) -> AHashMap<String, String> {
-        // returns a map of player infostate to randomly drawn card from pile
+    pub fn hm_constructor(&mut self, constraint: &CollectiveConstraint, player: u8, infostates: &Vec<Infostate>) -> AHashMap<String, String> {
+        // returns a map of player infostate to 2 randomly drawn card from pile (last 3 cards)
         self.shuffle();
         let mut temp_constraint: CollectiveConstraint = constraint.clone();
         let mut result: AHashMap<String, String> = AHashMap::with_capacity(INFOSTATES.len());
@@ -128,7 +128,18 @@ impl<'a> NaiveSampler<'a> {
             temp_constraint.remove_constraints(player_id);
             temp_constraint.add_joint_constraint(player_id, &card_vec);
             if let Some(card_str) = self.par_constructor(&mut temp_constraint) {
-                result.insert(infostate.to_str().to_string(), card_str);
+                let mut rng = rand::thread_rng();
+                let random_number: f64 = rng.gen();
+                let mut chosen_cards: Vec<char> = if random_number < 0.33333333333 {
+                    vec![card_str.chars().nth(13).unwrap(), card_str.chars().nth(14).unwrap()]
+                } else if random_number < 0.6666666666 {
+                    vec![card_str.chars().nth(12).unwrap(), card_str.chars().nth(14).unwrap()]
+                } else {
+                    vec![card_str.chars().nth(12).unwrap(), card_str.chars().nth(13).unwrap()]
+                };
+                chosen_cards.sort_unstable();
+                let chosen_cards_str: String = chosen_cards.into_iter().collect();
+                result.insert(infostate.to_str().to_string(), chosen_cards_str);
             } else {
                 println!("Generation failed for player: {:?}", player);
                 temp_constraint.print();
