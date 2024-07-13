@@ -393,6 +393,10 @@ impl CollectiveConstraint{
         // self.add_inferred_groups();
         self.group_dead_player_prune(player_id, card_vec);
     }
+    pub fn remove_constraints(&mut self, player_id: usize) {
+        self.pc_hm.remove(&player_id);
+        self.jc_hm.remove(&player_id);
+    }
     // You will never remove from group only pop to reverse it because you cannot unmix cards
     pub fn group_initial_prune(&mut self, player_id: usize, card: &Card, count: usize, bool_card_dead: bool){
         // Pruning for revealredraw or exchangedraw
@@ -3203,6 +3207,11 @@ impl CollectiveConstraint{
         log::info!("{}", format!("Public Constraint HM: {:?}", self.pc_hm));
         log::info!("{}", format!("Joint Constraint HM: {:?}", self.jc_hm));
         log::info!("{}", format!("Group Constraint VEC: {:?}", self.gc_vec));
+    }
+    pub fn print(&self) {
+        println!("{}", format!("Public Constraint HM: {:?}", self.pc_hm));
+        println!("{}", format!("Joint Constraint HM: {:?}", self.jc_hm));
+        println!("{}", format!("Group Constraint VEC: {:?}", self.gc_vec));
     }
     pub fn player_can_have_active_cards(&self, player_id: usize, cards: &[Card; 2]) -> bool {
         if self.player_can_have_active_card(player_id, &cards[0]){

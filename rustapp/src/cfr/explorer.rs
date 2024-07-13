@@ -22,6 +22,7 @@ struct Explorer<'a> {
     // This is a struct used to conduct Pure Monte Carlo CounterFactual Regret Minimization (PMCCFR)
     start_player: usize,
     path: String,
+    exchange_draw_info: AHashMap<String, String>,
     action_embedder: Box<dyn ActionEmbedding>,
     history: History,
     best_response_policy_vec: BestResponseIndVec, //Effectively obsolete
@@ -47,6 +48,7 @@ impl <'a> Explorer<'a> {
             // temporarily the starting_player is 0
             start_player: 0,
             path: "root".to_string(),
+            exchange_draw_info: AHashMap::with_capacity(INFOSTATES.len()),
             action_embedder: Box::new(DefaultEmbedding),
             history: History::new(0),
             best_response_policy_vec: BestResponseIndVec::new(max_depth + 1),

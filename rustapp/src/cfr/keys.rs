@@ -5,7 +5,7 @@ use crate::history_public::Card;
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 // TODO: Make BRKey key = player_id * 15 + infostate! still a u8
-pub struct BRKey { //TODO: Implement Copy and don't use Clone
+pub struct BRKey { 
     player_id: u8, //TODO: Change to u8
     infostate: Infostate,
 }
@@ -172,6 +172,26 @@ impl Infostate {
             Infostate::DD => "DD",
             Infostate::DE => "DE",
             Infostate::EE => "EE",
+            _ => unimplemented!(),
+        }
+    }
+    pub fn to_vec_card(&self) -> Vec<Card> {
+        match self {
+            Infostate::AA => vec![Card::str_to_card("A"), Card::str_to_card("A")],
+            Infostate::AB => vec![Card::str_to_card("A"), Card::str_to_card("B")],
+            Infostate::AC => vec![Card::str_to_card("A"), Card::str_to_card("C")],
+            Infostate::AD => vec![Card::str_to_card("A"), Card::str_to_card("D")],
+            Infostate::AE => vec![Card::str_to_card("A"), Card::str_to_card("E")],
+            Infostate::BB => vec![Card::str_to_card("B"), Card::str_to_card("B")],
+            Infostate::BC => vec![Card::str_to_card("B"), Card::str_to_card("C")],
+            Infostate::BD => vec![Card::str_to_card("B"), Card::str_to_card("D")],
+            Infostate::BE => vec![Card::str_to_card("B"), Card::str_to_card("E")],
+            Infostate::CC => vec![Card::str_to_card("C"), Card::str_to_card("C")],
+            Infostate::CD => vec![Card::str_to_card("C"), Card::str_to_card("D")],
+            Infostate::CE => vec![Card::str_to_card("C"), Card::str_to_card("E")],
+            Infostate::DD => vec![Card::str_to_card("D"), Card::str_to_card("D")],
+            Infostate::DE => vec![Card::str_to_card("D"), Card::str_to_card("E")],
+            Infostate::EE => vec![Card::str_to_card("E"), Card::str_to_card("E")],
             _ => unimplemented!(),
         }
     }

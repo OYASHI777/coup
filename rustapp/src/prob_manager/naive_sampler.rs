@@ -1,10 +1,12 @@
 use std::sync::Mutex;
+use ahash::AHashMap;
 use rand::thread_rng;
 use std::collections::HashMap;
 use rand::prelude::SliceRandom;
 use super::constraint::{GroupConstraint, CollectiveConstraint};
-use crate::history_public::Card;
-use std::time::Instant;
+use crate::{cfr::keys::Infostate, history_public::Card};
+use dashmap::DashMap;
+use crate::cfr::keys::INFOSTATES;
 
 #[derive(Debug)]
 pub struct NaiveSampler<'a> {
@@ -85,10 +87,11 @@ impl<'a> NaiveSampler<'a> {
         // Nested for loops
         // Higher values makes longer tasks shorter but shorter tasks take more time!
         let num_splits: usize;
-        if pointers[0].len() < 15 {
+        let max_splits = 2;
+        if pointers[0].len() < max_splits {
             num_splits = pointers[0].len();
         } else {
-            num_splits = 15;
+            num_splits = max_splits;
         }
         let chunk_size: usize = pointers[0].len() / num_splits;
         let result: Mutex<Option<String>> = Mutex::new(None);
@@ -112,6 +115,27 @@ impl<'a> NaiveSampler<'a> {
         // let duration = start_time.elapsed();
         // println!("Duration = {:?}", duration);
         final_result
+    }
+
+    fn hm_constructor(&mut self, constraint: &CollectiveConstraint, player: u8, infostates: &Vec<Infostate>) -> AHashMap<String, String> {
+        // returns a map of player infostate to randomly drawn card from pile
+        self.shuffle();
+        let mut temp_constraint: CollectiveConstraint = constraint.clone();
+        let mut result: AHashMap<String, String> = AHashMap::with_capacity(INFOSTATES.len());
+        let player_id: usize = player as usize;
+        for infostate in infostates {
+            let card_vec: Vec<Card> = infostate.to_vec_card();
+            temp_constraint.remove_constraints(player_id);
+            temp_constraint.add_joint_constraint(player_id, &card_vec);
+            if let Some(card_str) = self.par_constructor(&mut temp_constraint) {
+                result.insert(infostate.to_str().to_string(), card_str);
+            } else {
+                println!("Generation failed for player: {:?}", player);
+                temp_constraint.print();
+                debug_assert!(false, "Generation failed");
+            }
+        }
+        result
     }
 
     fn search_in_half(&self, half: &[&str], constraint: &CollectiveConstraint, pointers: &Vec<&Vec<&str>>) -> Option<String> {
