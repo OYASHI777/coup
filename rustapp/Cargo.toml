@@ -21,6 +21,7 @@ bson = "2.9.0"
 crossbeam = "0.8"
 tokio = {version = "1.37", features = ["full"]}
 ahash = "0.8"
+nohash-hasher = "0.2.0"
 
 [dev-dependencies]
 criterion = "0.3"
@@ -36,3 +37,7 @@ path = "src/main.rs"
 
 [build]
 target-dir = "D:/stuff/Code Project Folder/Coup AI/rustapp"
+
+[profile.release-lto]
+inherits = "release"
+lto = true

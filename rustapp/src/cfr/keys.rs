@@ -4,8 +4,9 @@ use std::ops::Index;
 use crate::history_public::Card;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct BRKey {
-    player_id: usize,
+// TODO: Make BRKey key = player_id * 15 + infostate! still a u8
+pub struct BRKey { //TODO: Implement Copy and don't use Clone
+    player_id: usize, //TODO: Change to u8
     infostate: Infostate,
 }
 pub const MAX_NUM_BRKEY: usize = 6 * 15; 
@@ -36,7 +37,7 @@ impl BRKey {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MSKey {
-    player_id: usize,
+    player_id: usize, //TODO: change to u8
     path: String,
 }
 
@@ -69,23 +70,25 @@ impl Hash for MSKey {
         self.path.hash(state);
     }
 }
+
+#[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Hash, Copy ,Clone)]
 pub enum Infostate {
-    AA,
-    AB,
-    AC,
-    AD,
-    AE,
-    BB,
-    BC,
-    BD,
-    BE,
-    CC,
-    CD,
-    CE,
-    DD,
-    DE,
-    EE,
+    AA = 0,
+    AB = 1,
+    AC = 2,
+    AD = 3,
+    AE = 4,
+    BB = 5,
+    BC = 6,
+    BD = 7,
+    BE = 8,
+    CC = 9,
+    CD = 10,
+    CE = 11,
+    DD = 12,
+    DE = 13,
+    EE = 14,
 }
 
 impl Index<usize> for Infostate {
@@ -98,6 +101,7 @@ impl Index<usize> for Infostate {
         &infostate_str[index..index + 1]
     }
 }
+
 
 impl Infostate {
     pub fn contains(&self, card_str: &str) -> bool {

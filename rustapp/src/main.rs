@@ -113,7 +113,7 @@ use cfr::explorer::{cfr_test, mccfr_test, cfr_prune_test, mccfr_prune_test, pmcc
 // 2024-03-23T23:18:59 [INFO] - Time taken for Optimal JC Filter: 300ns
 // 2024-03-23T23:18:59 [INFO] - Time taken for Optimal PC Filter: 32.8897ms
 // 2024-03-23T23:18:59 [INFO] - Time taken for Optimal GC Filter: 100ns
-// 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
+// // 2024-03-23T23:18:59 [INFO] - Total Time taken for filter_state_optimal: 119.5825ms
 fn main() {
 
     // game_rnd(1000, true);
@@ -123,8 +123,8 @@ fn main() {
     // cfr_prune_test();
     // mccfr_test();
     // mccfr_prune_test();
-    logger();
-    pmccfr_test(2, 3, 50);
+    // logger();
+    pmccfr_test(10, 11, 100);
     // error_farmer(1000000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);

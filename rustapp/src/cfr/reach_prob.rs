@@ -15,7 +15,7 @@ use ahash::AHashMap;
 
 #[derive(Clone)]
 pub struct ReachProb {
-    // TODO: make String an Infostate ENUM
+    // TODO: Make AHashMap an Intmap<u8, bool> with nohashhasher, the interface takes Infostate but converts it under the hood as u8
     reach_probs_player0: AHashMap<Infostate, bool>,
     reach_probs_player1: AHashMap<Infostate, bool>,
     reach_probs_player2: AHashMap<Infostate, bool>,
@@ -1044,6 +1044,7 @@ impl ReachProb {
     }
     fn decrement(&self, str_ref: &Infostate, counter_hm: &mut AHashMap<&str, usize> ) {
         // Takes a HashMap and decrements according to str_ref value
+        //TODO: Consider if a lookup table is faster
         if *str_ref == AA {
             if let Some(value) = counter_hm.get_mut("A"){
                 *value -= 2;

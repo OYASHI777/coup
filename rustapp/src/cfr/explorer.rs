@@ -1340,6 +1340,8 @@ pub fn pmccfr_test(start_test_depth: usize, max_test_depth: usize, max_iteration
         let mut total_nodes_pruned: u128 = 0;
         let mut total_nodes_won: u128 = 0;
         let mut no_depth_pos: u128 = 0;
+        let mut total_time: f64 = 0.0;
+        let mut iteration_time: f64 = 0.0;
         while i < max_iterations {
             pmccfr.set_depth(max_depth);
             let reach_prob: ReachProb = ReachProb::new();
@@ -1352,7 +1354,9 @@ pub fn pmccfr_test(start_test_depth: usize, max_test_depth: usize, max_iteration
             let start_time = Instant::now();
             pmccfr.pmccfr(0, &reach_prob, None);
             let elapsed_time = start_time.elapsed();
-            println!("Iteration time: {:?}", elapsed_time);
+            total_time += elapsed_time.as_secs_f64();
+            iteration_time = elapsed_time.as_secs_f64();
+            // println!("Iteration time: {:?}", elapsed_time);
             let nodes_traversed: u128 = pmccfr.nodes_traversed();
             let nodes_reached: u128 = pmccfr.nodes_reached();
             let nodes_pruned: u128 = pmccfr.nodes_pruned();
@@ -1378,22 +1382,29 @@ pub fn pmccfr_test(start_test_depth: usize, max_test_depth: usize, max_iteration
             }
             pmccfr.reset_counters();
             i += 1;
+            let avg_time_current_node: f64 = iteration_time / nodes_traversed as f64;
+            println!("avg time for iteration of depth {}: {:.9} secs iteration: {:.9} secs", i, avg_time_current_node, iteration_time);
         }
+        let avg_time: f64 = total_time / max_iterations as f64;
+        let avg_time_per_node: f64 = total_time / total_nodes_traversed as f64;
+
+        println!("avg_time for depth {} : {:.9} secs", max_depth, avg_time);
+        println!("avg_time_per_node for depth {} : {:.9} secs", max_depth, avg_time_per_node);
         let avg_nodes_pruned: f32 = total_nodes_pruned as f32 / max_iterations as f32;
         let avg_nodes_reached: f32 = total_nodes_reached as f32 / max_iterations as f32;
         let avg_nodes_traversed: f32 = total_nodes_traversed as f32 / max_iterations as f32;
         // println!("{} | {} | {} | {} | {} | {}", max_depth, max_nodes_won, max_nodes_reached, max_nodes_traversed, min_nodes_pruned, no_depth_pos);
         println!("{} | {} | {:.0} | {:.0} | {:.0} | {}", max_depth, total_nodes_won, avg_nodes_reached, avg_nodes_traversed, avg_nodes_pruned, no_depth_pos);
-        if let Some(policy) = pmccfr.get_root_policy() {
-            println!("policy: {:?}", policy);
-        } else {
-            println!("policy returned None");
-        }
-        if let Some(action_map) = pmccfr.get_root_action_map() {
-            println!("action_map: {:?}", action_map);
-        } else {
-            println!("action_map returned None");
-        }
+        // if let Some(policy) = pmccfr.get_root_policy() {
+        //     println!("policy: {:?}", policy);
+        // } else {
+        //     println!("policy returned None");
+        // }
+        // if let Some(action_map) = pmccfr.get_root_action_map() {
+        //     println!("action_map: {:?}", action_map);
+        // } else {
+        //     println!("action_map returned None");
+        // }
         pmccfr.reset();
     }
 }

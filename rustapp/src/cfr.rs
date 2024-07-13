@@ -1,6 +1,6 @@
 pub mod explorer;
 mod best_response_policy;
-mod keys;
+pub mod keys;
 mod mixed_strategy_policy;
 mod policy_handler;
 mod action_serialiser;
