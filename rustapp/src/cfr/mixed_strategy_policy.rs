@@ -4,6 +4,7 @@ use ahash::AHashMap;
 
 use crate::history_public::ActionObservation;
 use super::keys::{BRKey, MSKey, Infostate, MAX_NUM_BRKEY};
+use std::collections::hash_map::Keys;
 
 pub struct HeuristicMixedStrategyPolicy {
     policies: AHashMap<MSKey, AHashMap<BRKey, Vec<f32>>>, //TODO: Change AHashMap with BRKey to IntMap somehow
@@ -21,6 +22,7 @@ pub trait MSInterface {
     fn action_map_contains_key(&self, key: &MSKey) -> bool;
     fn policy_insert(&mut self, key: MSKey, value: AHashMap<BRKey, Vec<f32>>);
     fn action_map_insert(&mut self, key: MSKey, value: Vec<ActionObservation>);
+    fn insert_default_if_empty_by_keys(&mut self, player_id: u8, path: &str, actions: &Vec<ActionObservation>, infostates: Keys<'_, Infostate, bool>);
     fn policy_get_mut(&mut self, key: &MSKey) -> Option<&mut AHashMap<BRKey, Vec<f32>>>;
     fn policy_get(&self, key: &MSKey) -> Option<& AHashMap<BRKey, Vec<f32>>>;
     fn get_best_response_index(&self, key: &MSKey, infostate: &Infostate) -> Option<usize>;
@@ -104,6 +106,21 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
     }
     fn action_map_insert(&mut self, key: MSKey, value: Vec<ActionObservation>) {
         self.action_map.insert(key, value);
+    }
+    fn insert_default_if_empty_by_keys(&mut self, player_id: u8, path: &str, actions: &Vec<ActionObservation>, infostates: Keys<'_, Infostate, bool>) {
+        let key_ms: MSKey = MSKey::new(player_id, path); 
+        let mut key_br: BRKey = BRKey::new(player_id, &Infostate::AA);
+        let mut new_policy: AHashMap<BRKey, Vec<f32>> = AHashMap::with_capacity(MAX_NUM_BRKEY);
+        for infostate in infostates {
+            key_br.set_infostate(infostate);
+            new_policy.insert(key_br, vec![0.0; actions.len()]);
+        }
+        if !self.action_map_contains_key(&key_ms) {
+            self.action_map_insert(key_ms.clone(), actions.clone());
+        }
+        if !self.policies_contains_key(&key_ms) {
+            self.policy_insert(key_ms.clone(), new_policy.clone());
+        }
     }
     fn action_map_get(&self, key: &MSKey) -> Option<&Vec<ActionObservation>> {
         self.action_map.get(key)

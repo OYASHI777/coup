@@ -686,57 +686,20 @@ impl <'a> Explorer<'a> {
                 // TODO: fix for ExchangeDraw case
                 // TODO: Free for all CollectiveChallenge and CollectiveBlock
                 let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
-                let mut key_ms_t: MSKey = MSKey::new(0, &self.path);
                 let possible_challenge_moves: Vec<ActionObservation> = vec![ActionObservation::ChallengeAccept, ActionObservation::ChallengeDeny];
                 for player_id in 0..6 as u8 {
+                    // based on key_ms_t
                     if latest_influence_time_t[player_id as usize] > 0 {
-                        key_ms_t.set_player_id(player_id);
-                        // TODO: check if q_values has key_ms_t
-                        if !self.q_values.action_map_contains_key(&key_ms_t) {
-                            self.q_values.update_action_map(&key_ms_t, &possible_challenge_moves);
-                        }
-                        // TODO: Initialise mixed strategy policy
-                        if !self.mixed_strategy_policy_vec.action_map_contains_key(&key_ms_t){
-                            self.mixed_strategy_policy_vec.action_map_insert(key_ms_t.clone(), possible_challenge_moves.clone());
-                        }
-                        if !self.mixed_strategy_policy_vec.policies_contains_key(&key_ms_t) {
-                            let mut new_policy: AHashMap<BRKey, Vec<f32>> = AHashMap::with_capacity(MAX_NUM_BRKEY);
-                            for infostate in reach_prob.player_infostate_keys(player_id) {
-                                let key: BRKey = BRKey::new(player_id, infostate);
-                                new_policy.insert(key, vec![0.0; possible_challenge_moves.len()]);
-                            }
-                            self.mixed_strategy_policy_vec.policy_insert(key_ms_t.clone(), new_policy);
-                        }
+                        self.mixed_strategy_policy_vec.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));
+                        self.q_values.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));   
                     }
                 }
             } else {
                 // FOR NORMAL MOVES
                 let player_id: u8 = possible_outcomes[0].player_id() as u8;
-                let key_ms_t: MSKey = MSKey::new(player_id, &self.path);
-                // INITIALISING Q VALUES
-                if !self.q_values.action_map_contains_key(&key_ms_t) {
-                    self.q_values.update_action_map(&key_ms_t, &possible_outcomes);
-                    let mut new_policy: AHashMap<BRKey, Vec<f32>> = AHashMap::with_capacity(MAX_NUM_BRKEY);
-                    // TOCHECK if this might be all players and not just player_id?
-                    for infostate in reach_prob.player_infostate_keys(player_id) {
-                        let key: BRKey = BRKey::new(player_id, infostate);
-                        new_policy.insert(key.clone(), vec![0.0; possible_outcomes.len()]);
-                    }
-                    self.q_values.policy_insert(key_ms_t.clone(), new_policy);
-                }
-                // TODO: check if q_values has key_ms_t
-                // INITIALISING MIXED STRATEGY POLICY
-                if !self.mixed_strategy_policy_vec.action_map_contains_key(&key_ms_t) {
-                    self.mixed_strategy_policy_vec.action_map_insert(key_ms_t.clone(), possible_outcomes.clone());
-                }
-                if !self.mixed_strategy_policy_vec.policies_contains_key(&key_ms_t) {
-                    let mut new_policy: AHashMap<BRKey, Vec<f32>> = AHashMap::with_capacity(MAX_NUM_BRKEY);
-                    for infostate in reach_prob.player_infostate_keys(player_id) {
-                        let key: BRKey = BRKey::new(player_id, infostate);
-                        new_policy.insert(key, vec![0.0; possible_outcomes.len()]);
-                    }
-                    self.mixed_strategy_policy_vec.policy_insert(key_ms_t.clone(), new_policy);
-                }
+                // based on key_ms_t
+                self.mixed_strategy_policy_vec.insert_default_if_empty_by_keys(player_id, &self.path, &possible_outcomes, reach_prob.player_infostate_keys(player_id));
+                self.q_values.insert_default_if_empty_by_keys(player_id, &self.path, &possible_outcomes, reach_prob.player_infostate_keys(player_id));
             }
             // RECURSIONS
             // Test if depth < 6 whether can random sample
