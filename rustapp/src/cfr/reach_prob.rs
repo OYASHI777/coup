@@ -106,9 +106,11 @@ impl ReachProb {
         }
     }
     pub fn clone_constrained(&self, player_id: u8, card: &Card, mixed_strategy_policy: &Box<dyn MSInterface>, key_ms: &MSKey, action: &ActionObservation) -> Self {
-        // INITIALISING REACH_PROB AFTER THIS MOVE
+        // If player is move player:
+        //      If indicator == 1 and action is best response => 1
+        //      If indicator == 1 and action is not best response => 0
+        //      If indicator == 0 => 0
         let card_str: &str = card.card_to_str();
-        // TODO: abstract out to method in reach_prob | also check if infostate is in a compiled set of infostates (speed)
         let mut next_reach_prob: Self = self.clone();
         for infostate in self.player_infostate_keys(player_id) {
             if let Some(old_indicator) = self.get_status(player_id, infostate) {
