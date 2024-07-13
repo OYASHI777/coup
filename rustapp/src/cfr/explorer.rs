@@ -85,12 +85,12 @@ impl <'a> Explorer<'a> {
     }
 
     pub fn get_root_policy(&self) -> Option<& AHashMap<BRKey, Vec<f32>>>{
-        let key: MSKey = MSKey::new(self.start_player, "root");
+        let key: MSKey = MSKey::new(self.start_player as u8, "root");
         self.mixed_strategy_policy_vec.policy_get(&key)
     }
     
     pub fn get_root_action_map(&self) -> Option<&Vec<ActionObservation>>{
-        let key: MSKey = MSKey::new(self.start_player, "root");
+        let key: MSKey = MSKey::new(self.start_player as u8, "root");
         self.mixed_strategy_policy_vec.action_map_get(&key)
     }
 
@@ -665,7 +665,7 @@ impl <'a> Explorer<'a> {
         } else if reach_prob.should_prune(){
             self.prune_counter += 1;
             let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
-            for player_id in 0..6 as usize {
+            for player_id in 0..6 as u8 {
                 key_br.set_player_id(player_id);
                 for infostate in reach_prob.player_infostate_keys(player_id) {
                     key_br.set_infostate(infostate);
@@ -688,8 +688,8 @@ impl <'a> Explorer<'a> {
                 let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
                 let mut key_ms_t: MSKey = MSKey::new(0, &self.path);
                 let possible_challenge_moves: Vec<ActionObservation> = vec![ActionObservation::ChallengeAccept, ActionObservation::ChallengeDeny];
-                for player_id in 0..6 as usize {
-                    if latest_influence_time_t[player_id] > 0 {
+                for player_id in 0..6 as u8 {
+                    if latest_influence_time_t[player_id as usize] > 0 {
                         key_ms_t.set_player_id(player_id);
                         // TODO: check if q_values has key_ms_t
                         if !self.q_values.action_map_contains_key(&key_ms_t) {
@@ -711,7 +711,7 @@ impl <'a> Explorer<'a> {
                 }
             } else {
                 // FOR NORMAL MOVES
-                let player_id: usize = possible_outcomes[0].player_id();
+                let player_id: u8 = possible_outcomes[0].player_id() as u8;
                 let key_ms_t: MSKey = MSKey::new(player_id, &self.path);
                 // INITIALISING Q VALUES
                 if !self.q_values.action_map_contains_key(&key_ms_t) {
@@ -759,8 +759,8 @@ impl <'a> Explorer<'a> {
                     // TODO: Link mixed strategy
                     // This is a temp to see how many nodes will be visited
                     let mut rng = thread_rng();
-                    let opposing_player_id: usize = action.opposing_player_id();
-                    for player_id in 0..6 as usize {
+                    let opposing_player_id: u8 = action.opposing_player_id() as u8;
+                    for player_id in 0..6 as u8 {
                         if player_id == opposing_player_id {
                             continue;
                         }
@@ -793,7 +793,7 @@ impl <'a> Explorer<'a> {
             } else {
                 // Initialise rewards to 0 for relevant infostates
                 let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
-                for player_id in 0..6 as usize {
+                for player_id in 0..6 as u8 {
                     key_br.set_player_id(player_id);
                     for infostate in reach_prob.player_infostate_keys(player_id) {
                         key_br.set_infostate(infostate);
@@ -842,7 +842,7 @@ impl <'a> Explorer<'a> {
 
                         // Add History and stuff to sample a possible move
                         
-                        let next_player_id: usize = action.player_id();
+                        let next_player_id: u8 = action.player_id() as u8;
                         let key_ms_t = MSKey::new(next_player_id, &path_t);
                         
                         
@@ -876,7 +876,8 @@ impl <'a> Explorer<'a> {
                         // Recurse and continue on an action
                         let temp_reward: AHashMap<BRKey, f32> = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
                         
-                        let move_player: usize = action.player_id();
+                        // TODO: Change, move_player is same as next_player_id
+                        let move_player: u8 = action.player_id() as u8;
                         
                         // UPDATE Q_VALUES BASED ON RETURNED REWARDS
                         // TODO: Abstract this to a function
@@ -899,7 +900,7 @@ impl <'a> Explorer<'a> {
                             // Ignore the distinction for when current player is playing BR cos its complicated for infostates
                         // TODO: Abstract this to a function
                         let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
-                        for player_id in 0..6 as usize {
+                        for player_id in 0..6 as u8 {
                             key_br.set_player_id(player_id);
                             for infostate in reach_prob.player_infostate_keys(player_id) {
                                 if let Some(indicator) = reach_prob.get_status(player_id, infostate) {
@@ -928,7 +929,7 @@ impl <'a> Explorer<'a> {
                     } else {
                         // CASE DISCARD, REVEALREDRAW and player cannot have the cards to do the current action
                         // Do not do anything
-                        let move_player: usize = action.player_id();
+                        let move_player: u8 = action.player_id() as u8;
                         let key_ms_t: MSKey = MSKey::new(move_player, &path_t);
                         
                         let mut next_reach_prob: ReachProb = ReachProb::new_empty();
@@ -943,10 +944,10 @@ impl <'a> Explorer<'a> {
                             if action.no_cards() == 1 {
                                 // INITIALISING REACH_PROB AFTER THIS MOVE
                                 let card_str: &str = action.cards()[0].card_to_str();
-                                for player_id in 0..6 as usize {
+                                for player_id in 0..6 as u8 {
                                     for infostate in reach_prob.player_infostate_keys(player_id) {
                                         if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
-                                            if player_id == action.player_id() {
+                                            if player_id == action.player_id() as u8 {
                                                 if infostate.contains(card_str) {
                                                     if *old_indicator {
                                                         let infostate_best_response = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, &infostate);
@@ -968,10 +969,10 @@ impl <'a> Explorer<'a> {
                                 }
                             } else {
                                 let cards_action: Infostate = Infostate::cards_to_enum(&action.cards()[0], &action.cards()[1]);
-                                for player_id in 0..6 as usize {
+                                for player_id in 0..6 as u8 {
                                     for infostate in reach_prob.player_infostate_keys(player_id) {
                                         if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
-                                            if player_id == action.player_id() {
+                                            if player_id == action.player_id() as u8 {
                                                 if *infostate == cards_action {
                                                     // Only insert for infostates that can possibly have discarded the card
                                                     // TODO: Change
@@ -996,7 +997,7 @@ impl <'a> Explorer<'a> {
                             for player_id in 0..6 {
                                 for infostate in reach_prob.player_infostate_keys(player_id) {
                                     if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
-                                        if player_id == action.player_id() {
+                                        if player_id == action.player_id() as u8 {
                                             if infostate.contains(card_str) {
                                                 let infostate_best_response = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, &infostate);
                                                 if *old_indicator {
@@ -1020,7 +1021,7 @@ impl <'a> Explorer<'a> {
                         // RECURSING
                         let temp_reward: AHashMap<BRKey, f32> = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
                         // Update the rewards SAME AS NORMAL MOVES
-                        let move_player: usize = action.player_id();
+                        let move_player: u8 = action.player_id() as u8;
                         
                         // UPDATE Q_VALUES BASED ON RETURNED REWARDS
                         // TODO: Abstract this to a function
@@ -1043,7 +1044,7 @@ impl <'a> Explorer<'a> {
                             // Ignore the distinction for when current player is playing BR cos its complicated for infostates
                         // TODO: Abstract this to a function
                         let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
-                        for player_id in 0..6 as usize {
+                        for player_id in 0..6 as u8 {
                             key_br.set_player_id(player_id);
                             for infostate in reach_prob.player_infostate_keys(player_id) {
                                 if let Some(indicator) = reach_prob.get_status(player_id, infostate) {
@@ -1085,7 +1086,7 @@ impl <'a> Explorer<'a> {
                     // CASE WHEN action == ExchangeDraw
                 } else {
                     // MIXED STRATEGY POLICY should have been initialised earlier
-                    let current_player: usize = possible_outcomes[0].player_id();
+                    let current_player: u8 = possible_outcomes[0].player_id() as u8;
                     let mskey_t: MSKey = MSKey::new(current_player, &path_t);
                     for infostate in INFOSTATES {
                         if let Some(best_move_index) = self.q_values.get_best_response_index(&mskey_t, infostate) {

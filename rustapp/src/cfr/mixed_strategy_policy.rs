@@ -6,7 +6,7 @@ use crate::history_public::ActionObservation;
 use super::keys::{BRKey, MSKey, Infostate, MAX_NUM_BRKEY};
 
 pub struct HeuristicMixedStrategyPolicy {
-    policies: AHashMap<MSKey, AHashMap<BRKey, Vec<f32>>>,
+    policies: AHashMap<MSKey, AHashMap<BRKey, Vec<f32>>>, //TODO: Change AHashMap with BRKey to IntMap somehow
     // action_map is for possible moves made at MSKey path location | not included in path but are future moves
     action_map: AHashMap<MSKey, Vec<ActionObservation>>,
 }
@@ -15,7 +15,7 @@ pub trait MSInterface {
     fn update(&mut self, key: &MSKey, possible_moves: &Vec<ActionObservation>, update_values: &AHashMap<BRKey, Vec<f32>>);
     fn is_key_in_action_map(&self, key: &MSKey) -> bool;
     fn update_action_map(&mut self, key: &MSKey, possible_moves: &Vec<ActionObservation>);
-    fn add_value(&mut self, key_ms: &MSKey, player_id: usize, infostate: &Infostate, index: usize, value: f32);
+    fn add_value(&mut self, key_ms: &MSKey, player_id: u8, infostate: &Infostate, index: usize, value: f32);
     fn policies_contains_key(&self, key: &MSKey) -> bool;
     fn action_map_get(&self, key: &MSKey) -> Option<&Vec<ActionObservation>>;
     fn action_map_contains_key(&self, key: &MSKey) -> bool;
@@ -77,7 +77,7 @@ impl MSInterface for HeuristicMixedStrategyPolicy {
             self.action_map.insert(key.clone(), possible_moves.clone());
         }
     }
-    fn add_value(&mut self, key_ms: &MSKey, player_id: usize, infostate: &Infostate, index: usize, value: f32) {
+    fn add_value(&mut self, key_ms: &MSKey, player_id: u8, infostate: &Infostate, index: usize, value: f32) {
         let key_br: BRKey = BRKey::new(player_id, infostate);
         if let Some(policy) = self.policies.get_mut(key_ms) {
             if let Some(infostate_policy) = policy.get_mut(&key_br) {

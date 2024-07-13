@@ -348,7 +348,7 @@ impl Pruner for PolicyHandler {
     // }
     fn player_all_0(&self, indicator: HashMap<BRKey, bool>, player_id: usize) -> bool {
         for infostate in INFOSTATES {
-            let key_br: BRKey = BRKey::new(player_id, infostate);
+            let key_br: BRKey = BRKey::new(player_id as u8, infostate);
             if let Some(value) = indicator.get(&key_br) {
                 if *value {
                     return false;

@@ -104,7 +104,7 @@ impl ReachProb {
         }
     }
     
-    pub fn player_infostate_keys(&self, player_id: usize) -> Keys<'_, Infostate, bool>{
+    pub fn player_infostate_keys(&self, player_id: u8) -> Keys<'_, Infostate, bool>{
         match player_id {
             0 => self.reach_probs_player0.keys(),
             1 => self.reach_probs_player1.keys(),
@@ -115,7 +115,7 @@ impl ReachProb {
             _ => panic!("Invalid player_id please make sure its between 0 to 5 inclusive"),
         }
     }
-    pub fn get_status(&self, player_id: usize, infostate: &Infostate) -> Option<&bool> {
+    pub fn get_status(&self, player_id: u8, infostate: &Infostate) -> Option<&bool> {
         match player_id {
             // Add the rest
             0 => {
@@ -165,7 +165,7 @@ impl ReachProb {
             }
         }
     }
-    pub fn get_mut_status(&mut self, player_id: usize, infostate: &Infostate) -> Option<&bool> {
+    pub fn get_mut_status(&mut self, player_id: u8, infostate: &Infostate) -> Option<&bool> {
         match player_id {
             // Add the rest
             0 => {
@@ -215,7 +215,7 @@ impl ReachProb {
             }
         }
     }
-    pub fn set_status(&mut self, player_id: usize, infostate: &Infostate, status: bool) {
+    pub fn set_status(&mut self, player_id: u8, infostate: &Infostate, status: bool) {
         // Add if not inside
         log::trace!("Before set_status for player {player_id}, infostate: {infostate:?}, status: {status}");
         self.log_state();
@@ -412,7 +412,7 @@ impl ReachProb {
         log::trace!("P4: {:?}", self.false_infostates_player4.len());
         log::trace!("P5: {:?}", self.false_infostates_player5.len());
     }
-    pub fn remove(&mut self, player_id: usize, infostate: &Infostate) {
+    pub fn remove(&mut self, player_id: u8, infostate: &Infostate) {
         // TODO: fill
         match player_id {
             0 => {

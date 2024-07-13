@@ -20,7 +20,7 @@ impl BestResponseIndVec {
         for player_id in 0..6 {
             for infostate in INFOSTATES {
                 if constraint.player_can_have_active_cards_str(player_id, infostate.to_str()) {
-                    let key: BRKey = BRKey::new(player_id, infostate);
+                    let key: BRKey = BRKey::new(player_id as u8, infostate);
                     root_hm.insert(key, true);
                 }
             }
@@ -35,7 +35,7 @@ impl BestResponseIndVec {
         for player_id in 0..6 {
             for infostate in INFOSTATES {
                 if constraint.player_can_have_active_cards_str(player_id, infostate.to_str()) {
-                    let key: BRKey = BRKey::new(player_id, infostate);
+                    let key: BRKey = BRKey::new(player_id as u8, infostate);
                     root_hm.insert(key, true);
                 }
             }

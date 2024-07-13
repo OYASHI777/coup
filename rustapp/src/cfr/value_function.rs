@@ -25,7 +25,7 @@ impl ValueEvaluation<u8> for HeuristicValueFunction {
                 player_value = value_survival;
             }
             for infostate in INFOSTATES {
-                output.insert(BRKey::new(player_id, infostate), player_value);
+                output.insert(BRKey::new(player_id as u8, infostate), player_value);
             }
         }
         return output

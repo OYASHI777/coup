@@ -6,16 +6,15 @@ use crate::history_public::Card;
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 // TODO: Make BRKey key = player_id * 15 + infostate! still a u8
 pub struct BRKey { //TODO: Implement Copy and don't use Clone
-    player_id: usize, //TODO: Change to u8
+    player_id: u8, //TODO: Change to u8
     infostate: Infostate,
 }
 pub const MAX_NUM_BRKEY: usize = 6 * 15; 
 // pub const INFOSTATES: [&str; 15] = ["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE", "EE"];
 pub const INFOSTATES: [&Infostate; 15] = [&Infostate::AA, &Infostate::AB, &Infostate::AC, &Infostate::AD, &Infostate::AE, &Infostate::BB, &Infostate::BC, &Infostate::BD, &Infostate::BE, &Infostate::CC, &Infostate::CD, &Infostate::CE, &Infostate::DD, &Infostate::DE, &Infostate::EE];
 impl BRKey {
-    pub fn new(player_id: usize, infostate: &Infostate) -> Self {
-        debug_assert!(player_id > 0, "Invalid player_id");
-        debug_assert!(player_id < 6, "Invalid player_id");
+    pub fn new(player_id: u8, infostate: &Infostate) -> Self {
+        debug_assert!(player_id < 6, "Invalid player_id of {player_id}");
         BRKey {
             player_id,
             infostate: *infostate,
@@ -24,10 +23,10 @@ impl BRKey {
     pub fn set_infostate(&mut self, new_infostate: &Infostate) {
         self.infostate = *new_infostate;
     }
-    pub fn set_player_id(&mut self, new_player_id: usize) {
+    pub fn set_player_id(&mut self, new_player_id: u8) {
         self.player_id = new_player_id;
     }
-    pub fn player_id(&self) -> usize {
+    pub fn player_id(&self) -> u8 {
         self.player_id
     }
     pub fn infostate(&self) -> Infostate {
@@ -37,14 +36,13 @@ impl BRKey {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MSKey {
-    player_id: usize, //TODO: change to u8
+    player_id: u8, //TODO: change to u8
     path: String,
 }
 
 impl MSKey {
-    pub fn new(player_id: usize, path: &str) -> Self {
-        debug_assert!(player_id > 0, "Invalid player_id");
-        debug_assert!(player_id < 6, "Invalid player_id");
+    pub fn new(player_id: u8, path: &str) -> Self {
+        debug_assert!(player_id < 6, "Invalid player_id of {player_id}");
         MSKey {
             player_id,
             path: path.to_string(),
@@ -53,13 +51,13 @@ impl MSKey {
     pub fn path(&self) -> &str {
         &self.path
     }
-    pub fn player_id(&self) -> usize {
+    pub fn player_id(&self) -> u8 {
         self.player_id
     }
     pub fn set_path(&mut self, new_path: &str) {
         self.path = new_path.to_string();
     }
-    pub fn set_player_id(&mut self, new_player_id: usize) {
+    pub fn set_player_id(&mut self, new_player_id: u8) {
         self.player_id = new_player_id;
     }
 }
