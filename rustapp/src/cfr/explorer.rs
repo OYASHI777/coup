@@ -1287,7 +1287,7 @@ pub fn pmccfr_test(start_test_depth: usize, max_test_depth: usize, max_iteration
             pmccfr.reset_counters();
             i += 1;
             let avg_time_current_node: f64 = iteration_time / nodes_traversed as f64;
-            // println!("avg time for iteration of depth {}: {:.9} secs iteration: {:.9} secs", i, avg_time_current_node, iteration_time);
+            println!("avg time for iteration of depth {}: {:.9} secs iteration: {:.9} secs", i, avg_time_current_node, iteration_time);
         }
         let avg_time: f64 = total_time / max_iterations as f64;
         let avg_time_per_node: f64 = total_time / total_nodes_traversed as f64;

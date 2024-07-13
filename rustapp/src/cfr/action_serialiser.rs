@@ -22,9 +22,14 @@ impl ActionEmbedding for DefaultEmbedding {
             ActionObservation::Assassinate { player_id, opposing_player_id, ..  } => format!("AS{}|{}", player_id, opposing_player_id),
             ActionObservation::Coup { player_id, opposing_player_id, ..  } => format!("CO{}|{}", player_id, opposing_player_id),
             ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => 
-                format!("CH{}{}{}", opposing_player_id, participants.iter().map(|&b| if b { '1' } else { '0' }).collect::<String>(), final_actioner),
+                format!("CH{}|{}", opposing_player_id, final_actioner),
             ActionObservation::CollectiveBlock { participants, opposing_player_id, final_actioner } => 
-            format!("BC{}{}{}", opposing_player_id, participants.iter().map(|&b| if b { '1' } else { '0' }).collect::<String>(), final_actioner),
+                format!("BC{}|{}", opposing_player_id, final_actioner),
+            // Not recombining version
+            // ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => 
+            //     format!("CH{}{}{}", opposing_player_id, participants.iter().map(|&b| if b { '1' } else { '0' }).collect::<String>(), final_actioner),
+            // ActionObservation::CollectiveBlock { participants, opposing_player_id, final_actioner } => 
+            //     format!("BC{}{}{}", opposing_player_id, participants.iter().map(|&b| if b { '1' } else { '0' }).collect::<String>(), final_actioner),
             ActionObservation::BlockSteal { player_id, opposing_player_id, card } => format!("BS{}|{}|{}",if *card == Card::Captain {"C"} else {"A"}, player_id, opposing_player_id ),
             ActionObservation::BlockAssassinate { player_id, opposing_player_id, ..  } => format!("BA{}|{}", player_id, opposing_player_id),
             ActionObservation::Discard { player_id, card, no_cards } => {
