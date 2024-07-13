@@ -915,81 +915,86 @@ impl <'a> Explorer<'a> {
                         if action.name() == AOName::Discard {
                             if action.no_cards() == 1 {
                                 // INITIALISING REACH_PROB AFTER THIS MOVE
-                                let card_str: &str = action.cards()[0].card_to_str();
-                                for player_id in 0..6 as u8 {
-                                    for infostate in reach_prob.player_infostate_keys(player_id) {
-                                        if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
-                                            if player_id == action.player_id() as u8 {
-                                                if infostate.contains(card_str) {
-                                                    if *old_indicator {
-                                                        let infostate_best_response = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, &infostate);
-                                                        if *action == infostate_best_response {
-                                                            next_reach_prob.set_status(player_id, infostate, true);
-                                                        } else {
-                                                            next_reach_prob.set_status(player_id, infostate, false);
-                                                        }
-                                                    } else {
-                                                        next_reach_prob.set_status(player_id, infostate, *old_indicator);
-                                                    }
-                                                }
-                                            } else {
-                                                // Populate as per before
-                                                next_reach_prob.set_status(player_id, infostate, *old_indicator);
-                                            }
-                                        } 
-                                    }
-                                }
+                                // let card_str: &str = action.cards()[0].card_to_str();
+                                let card: Card = action.cards()[0];
+                                next_reach_prob = reach_prob.clone_constrained(move_player, &card, &self.mixed_strategy_policy_vec, &key_ms_t, action);
+                            
+                                // for player_id in 0..6 as u8 {
+                                //     for infostate in reach_prob.player_infostate_keys(player_id) {
+                                //         if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
+                                //             if player_id == action.player_id() as u8 {
+                                //                 if infostate.contains(card_str) {
+                                //                     if *old_indicator {
+                                //                         let infostate_best_response = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, &infostate);
+                                //                         if *action == infostate_best_response {
+                                //                             next_reach_prob.set_status(player_id, infostate, true);
+                                //                         } else {
+                                //                             next_reach_prob.set_status(player_id, infostate, false);
+                                //                         }
+                                //                     } else {
+                                //                         next_reach_prob.set_status(player_id, infostate, *old_indicator);
+                                //                     }
+                                //                 }
+                                //             } else {
+                                //                 // Populate as per before
+                                //                 next_reach_prob.set_status(player_id, infostate, *old_indicator);
+                                //             }
+                                //         } 
+                                //     }
+                                // }
                             } else {
                                 let cards_action: Infostate = Infostate::cards_to_enum(&action.cards()[0], &action.cards()[1]);
-                                for player_id in 0..6 as u8 {
-                                    for infostate in reach_prob.player_infostate_keys(player_id) {
-                                        if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
-                                            if player_id == action.player_id() as u8 {
-                                                if *infostate == cards_action {
-                                                    // Only insert for infostates that can possibly have discarded the card
-                                                    // TODO: Change
-                                                    // DIscard 2 cards only ever has one choice
-                                                    // Then player dies
-                                                    // Should change indicator to 0 because player is never alive
-                                                    // This makes it so that when pruning, this player is effectively ignored as though the game were
-                                                    // only for the alive players
-                                                    next_reach_prob.set_status(player_id, infostate, false);
-                                                }
-                                            } else {
-                                                // Populate as per before
-                                                next_reach_prob.set_status(player_id, infostate, *old_indicator);
-                                            }
-                                        }
-                                    }
-                                }
+                                next_reach_prob = reach_prob.clone_constrained_infostate(move_player, &cards_action);
+                                // for player_id in 0..6 as u8 {
+                                //     for infostate in reach_prob.player_infostate_keys(player_id) {
+                                //         if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
+                                //             if player_id == action.player_id() as u8 {
+                                //                 if *infostate == cards_action {
+                                //                     // Only insert for infostates that can possibly have discarded the card
+                                //                     // TODO: Change
+                                //                     // DIscard 2 cards only ever has one choice
+                                //                     // Then player dies
+                                //                     // Should change indicator to 0 because player is never alive
+                                //                     // This makes it so that when pruning, this player is effectively ignored as though the game were
+                                //                     // only for the alive players
+                                //                     next_reach_prob.set_status(player_id, infostate, false);
+                                //                 }
+                                //             } else {
+                                //                 // Populate as per before
+                                //                 next_reach_prob.set_status(player_id, infostate, *old_indicator);
+                                //             }
+                                //         }
+                                //     }
+                                // }
                             }
                         } else if action.name() == AOName::RevealRedraw {
                             // INITIALISING REACH_PROB AFTER THIS MOVE
-                            let card_str: &str = action.card().card_to_str();
+                            let card: Card = action.card();
+                            next_reach_prob = reach_prob.clone_constrained(move_player, &card, &self.mixed_strategy_policy_vec, &key_ms_t, action);
                             // TODO: abstract out to method in reach_prob | also check if infostate is in a compiled set of infostates (speed)
-                            for player_id in 0..6 {
-                                for infostate in reach_prob.player_infostate_keys(player_id) {
-                                    if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
-                                        if player_id == action.player_id() as u8 {
-                                            // Only keep infostates that has the revealed card
-                                            if infostate.contains(card_str) {
-                                                let infostate_best_response = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, &infostate);
-                                                if *old_indicator {
-                                                    if *action == infostate_best_response {
-                                                        next_reach_prob.set_status(player_id, infostate, true);
-                                                    } else {
-                                                        next_reach_prob.set_status(player_id, infostate, false);
-                                                    }
-                                                } else {
-                                                    next_reach_prob.set_status(player_id, infostate, false);
-                                                }
-                                            }
-                                        } else {
-                                            next_reach_prob.set_status(player_id, infostate,*old_indicator);
-                                        }
-                                    }
-                                }
-                            }
+                            // for player_id in 0..6 {
+                            //     for infostate in reach_prob.player_infostate_keys(player_id) {
+                            //         if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
+                            //             if player_id == action.player_id() as u8 {
+                            //                 // Only keep infostates that has the revealed card
+                            //                 if infostate.contains(card_str) {
+                            //                     let infostate_best_response = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, &infostate);
+                            //                     if *old_indicator {
+                            //                         if *action == infostate_best_response {
+                            //                             next_reach_prob.set_status(player_id, infostate, true);
+                            //                         } else {
+                            //                             next_reach_prob.set_status(player_id, infostate, false);
+                            //                         }
+                            //                     } else {
+                            //                         next_reach_prob.set_status(player_id, infostate, false);
+                            //                     }
+                            //                 }
+                            //             } else {
+                            //                 next_reach_prob.set_status(player_id, infostate,*old_indicator);
+                            //             }
+                            //         }
+                            //     }
+                            // }
                         }
                         self.add_node(*action, bool_know_priv_info);
                         // RECURSING

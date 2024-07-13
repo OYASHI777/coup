@@ -3,7 +3,7 @@
 // 6 hashmap <infostate, bool>
 // 6 vec for infostates with true values
 // 6 vec for infostates false values
-use super::keys::{INFOSTATES, Infostate};
+use super::keys::{Infostate, MSKey, INFOSTATES};
 use super::keys::Infostate::*;
 // use rayon::iter::IntoParallelIterator; 
 use rayon::prelude::*;
@@ -11,6 +11,8 @@ use crossbeam::thread;
 use std::collections::hash_map::Keys;
 use std::time::Instant;
 use ahash::AHashMap;
+use super::mixed_strategy_policy::MSInterface;
+use crate::history_public::{Card, ActionObservation};
 
 
 #[derive(Clone)]
@@ -103,7 +105,36 @@ impl ReachProb {
             len: 0,
         }
     }
-    
+    pub fn clone_constrained(&self, player_id: u8, card: &Card, mixed_strategy_policy: &Box<dyn MSInterface>, key_ms: &MSKey, action: &ActionObservation) -> Self {
+        // INITIALISING REACH_PROB AFTER THIS MOVE
+        let card_str: &str = card.card_to_str();
+        // TODO: abstract out to method in reach_prob | also check if infostate is in a compiled set of infostates (speed)
+        let mut next_reach_prob: Self = self.clone();
+        for infostate in self.player_infostate_keys(player_id) {
+            if let Some(old_indicator) = self.get_status(player_id, infostate) {
+                if infostate.contains(card_str) {
+                    let infostate_best_response = mixed_strategy_policy.get_best_response(key_ms, infostate);
+                    if *old_indicator && *action != infostate_best_response {
+                        next_reach_prob.set_status(player_id, infostate, false);
+                    }
+                } else {
+                    next_reach_prob.remove(player_id, infostate);
+                }
+            }
+        }
+        next_reach_prob
+    }
+    pub fn clone_constrained_infostate(&self, player_id: u8, constraint: &Infostate) -> Self {
+        let mut next_reach_prob: Self = self.clone();
+        for infostate in self.player_infostate_keys(player_id) {
+            if *infostate != *constraint {
+                next_reach_prob.remove(player_id, infostate);
+            } else {
+                next_reach_prob.set_status(player_id, infostate, false);
+            }
+        }
+        next_reach_prob
+    }
     pub fn player_infostate_keys(&self, player_id: u8) -> Keys<'_, Infostate, bool>{
         match player_id {
             0 => self.reach_probs_player0.keys(),
