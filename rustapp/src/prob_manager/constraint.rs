@@ -131,7 +131,7 @@ impl GroupConstraint {
         }
     }
     pub fn part_list_is_subset_of(&self, group: &Self) -> bool {
-        Checks if self participation list is a subset of group's participation list
+        // Checks if self participation list is a subset of group's participation list
         GroupConstraint::list1_is_subset_list2(&self.get_list(), &group.get_list())
     }
     pub fn list1_is_subset_list2(list1: &[u8; 7], list2: &[u8; 7]) -> bool {
@@ -263,7 +263,7 @@ impl CollectiveConstraint{
     pub fn gc_vec(&mut self) -> &mut Vec<GroupConstraint>{
         &mut self.gc_vec
     }
-    // pub fn add_raw_public_constraint(&mut self, player_id: usize, card: Card){
+    pub fn add_raw_public_constraint(&mut self, player_id: usize, card: Card){
         // Therefore its useful for determining if a player can have a card
         // It does this by adding the constraint without pruning
         // So the check becomes, if we add this constraint, can the old constraints still be fulfilled?
@@ -447,7 +447,7 @@ impl CollectiveConstraint{
         }
         let mut index: usize = 0;
         while index < self.gc_vec.len() {
-            [INITIAL PRUNE] if player 0 revealredraws a Duke, we prune the groups that had player 0 duke and oldcount <= newcount
+            // [INITIAL PRUNE] if player 0 revealredraws a Duke, we prune the groups that had player 0 duke and oldcount <= newcount
             let group = &mut self.gc_vec[index];
             // if group.card() == card && group.get_list()[player_id] == 1 && group.count() <= count{
 
@@ -514,7 +514,7 @@ impl CollectiveConstraint{
                 }
                 // Other cases PRUNED in Initial PRUNE
             }
-            // if group.count_alive() == 0{
+            if group.count_alive() == 0{
                 // No longer handled in group_initial_prune
                 self.gc_vec.swap_remove(index);
             } else if self.dead_card_count[group.card()] == 3 {
@@ -757,7 +757,7 @@ impl CollectiveConstraint{
         // Duke [0 1 0 0 0 0 1] : count = 2
         // If player 1's dead card is not Duke
         // We know that there must be at least 1 Duke in the Pile
-        Duke [0 0 0 0 0 0 1] : count = 1
+        // Duke [0 0 0 0 0 0 1] : count = 1
         let mut index: usize = 0;
 
         while index < self.gc_vec.len() {
@@ -785,7 +785,7 @@ impl CollectiveConstraint{
                             }
 
                         } else if let Some(dead_card_vec) = self.jc_hm.get(&player_id) {
-                            TODO: Review this it was originally not commented out
+                            // TODO: Review this it was originally not commented out
                             // I have implemented this for extensibility options
                             max_possible_holdings = 0;
                             for card in dead_card_vec.iter() {
@@ -810,7 +810,7 @@ impl CollectiveConstraint{
                         }
                     }
                 }
-            // }
+            }
             // Adding discovery of sets via subsets
             // Checking if subset has been checked already
             // let mut union_part_list_checked: Vec<[u8; 7]> = Vec::new();
@@ -951,7 +951,7 @@ impl CollectiveConstraint{
     }
     pub fn update_group_constraint(&mut self, player_id: usize){
         // For each gc, if player is not a participant, they now become one
-        If all players are participants, remove from tracking
+        // If all players are participants, remove from tracking
         // Might already be done in exchangedraw
         let mut index: usize = 0;
         while index < self.gc_vec.len() {
@@ -1211,7 +1211,7 @@ impl CollectiveConstraint{
                             // log::trace!("Section 2A False");
                             return false
                         } else {
-                            Since group is full, subsuming more groups will not provide more information
+                            // Since group is full, subsuming more groups will not provide more information
                             j += 1;
                             // log::trace!("Full Break A");
                             break;
@@ -1796,7 +1796,7 @@ impl CollectiveConstraint{
 
             // Next algo begins here!
 
-            Modifying card_count for a different purpose!
+            // Modifying card_count for a different purpose!
             for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate(){
                 // [TESTING] if need to comment out or not ANS: Needs to be commented out
                 // Trying to make it work with this
@@ -2167,7 +2167,7 @@ impl CollectiveConstraint{
             let mut k: usize = 0;
             while k < excl_list.len() {
                 // if excl_list[k] == 0 {
-                    Include dead players card if they are not in the excl_list group and the player is fully dead
+                    // Include dead players card if they are not in the excl_list group and the player is fully dead
                     if let Some(temp_card_vec) = constraint.jc_hm.get(&k) {
                         for vcard in temp_card_vec.iter() {
                             // update Hashmap
@@ -2660,7 +2660,7 @@ impl CollectiveConstraint{
                 for id in 0..6 as usize {
                     if union_group_set[id] == 0 {
                         continue;
-                    // }
+                    }
                     let mut possible_cards: HashMap<Card, usize> = HashMap::with_capacity(5);
                     possible_cards.insert(Card::Ambassador, 0);
                     possible_cards.insert(Card::Assassin, 0);
@@ -2921,7 +2921,7 @@ impl CollectiveConstraint{
         }
         // === Section 4C ===
         // Fill up group by finding the complement group of all dead players
-        initialise card count
+        // initialise card count
         // card_count_alive stores only the alive cards i the group union_group_sets
         let mut card_count_alive: HashMap<Card, usize> = HashMap::with_capacity(5);
         let mut union_group_set: [u8; 7] = [1; 7];
