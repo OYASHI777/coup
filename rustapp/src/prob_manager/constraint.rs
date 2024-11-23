@@ -3367,16 +3367,16 @@ mod constrainttest {
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
     
-        log::info!(" === Test 9 === ");
+        // log::info!(" === Test 9 === ");
         // colcon.printlog();
     
         let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 5, &Card::Contessa);
         assert!(output);
-        if output {
-            println!("Test 9 Legal Correct");
-        } else {
-            println!("Test 9 Illegal Wrong");
-        }
+        // if output {
+        //     println!("Test 9 Legal Correct");
+        // } else {
+        //     println!("Test 9 Illegal Wrong");
+        // }
     }
     #[test]
     fn test3() {
