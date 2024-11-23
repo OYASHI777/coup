@@ -25,12 +25,15 @@ nohash-hasher = "0.2.0"
 dashmap = "6.0.1"
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = {version = "0.5", features = ["html_reports"]}
 
 [[bench]]
 name = "my_benchmark"
 harness = false
 
+[[bench]]
+name = "constraint_benchmark"
+harness = false
 
 [[bin]]
 name = "rustapp"

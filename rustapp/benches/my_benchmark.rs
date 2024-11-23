@@ -121,5 +121,5 @@ fn bench_standard_move(c: &mut Criterion) {
     // });
 }
 
-criterion_group!(benches, bench_standard_move);
-criterion_main!(benches);
+// criterion_group!(benches, bench_standard_move);
+// criterion_main!(benches);
