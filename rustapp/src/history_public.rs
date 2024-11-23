@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
+use std::convert::TryFrom;
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum Card {
-    Ambassador,
-    Assassin,
-    Captain,
-    Duke,
-    Contessa,
+    Ambassador = 0, // 0
+    Assassin = 1, // 1
+    Captain = 2, // 2
+    Duke = 3, // 3
+    Contessa = 4, // 4
 }
 impl Card {
     pub fn card_to_string(&self) -> String {
@@ -57,6 +58,26 @@ impl Card {
         }
     }
 }
+impl From<Card> for u8 {
+    fn from(card: Card) -> u8 {
+        card as u8
+    }
+}
+impl TryFrom<u8> for Card {
+    type Error = ();
+    
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Card::Ambassador),
+            1 => Ok(Card::Assassin),
+            2 => Ok(Card::Captain),
+            3 => Ok(Card::Duke),
+            4 => Ok(Card::Contessa),
+            _ => Err(())
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum AOName {
     EmptyAO,

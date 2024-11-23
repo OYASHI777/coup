@@ -39,6 +39,10 @@ harness = false
 name = "rustapp"
 path = "src/main.rs"
 
+[[bin]]
+name = "constraint_test"
+path = "src/bin/constraint_test.rs"
+
 [build]
 target-dir = "D:/stuff/Code Project Folder/Coup AI/rustapp"
 
