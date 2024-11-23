@@ -118,14 +118,14 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 fn main() {
 
     // game_rnd(1000, true);
-    // test_satis();
+    test_satis();
     // game_rnd_constraint(100, true);
     // cfr_test();
     // cfr_prune_test();
     // mccfr_test();
     // mccfr_prune_test();
-    logger(LOG_LEVEL);
-    pmccfr_test(30, 31, 100);
+    // logger(LOG_LEVEL);
+    // pmccfr_test(1, 100, 10);
     // error_farmer(1000000000, true);
     // find_overflow(500000, 200);
     // test_par_constructor(100000, false);
