@@ -345,6 +345,7 @@ pub struct CompressedCollectiveConstraint {
     group_constraints: Vec<CompressedGroupConstraint>, // Stores all the known group constraints
     dead_card_count: [u8; 5], // each index represents the number of dead cards for the Card enum corresponding to that index
 }
+/// Constructors, Gettors, Simple Checks
 impl CompressedCollectiveConstraint {
     /// Constructor that returns an empty CompressedCollectiveConstraint
     pub fn new() -> Self {
@@ -418,5 +419,8 @@ impl CompressedCollectiveConstraint {
     // pub fn gc_vec(&mut self) -> &mut Vec<GroupConstraint>{
     pub fn group_constraints_mut(&mut self) -> &mut Vec<CompressedGroupConstraint>{
         &mut self.group_constraints
+    }
+    pub fn dead_card_count(&self) -> &[u8; 5] {
+        &self.dead_card_count
     }
 }
