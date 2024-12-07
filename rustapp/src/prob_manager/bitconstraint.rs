@@ -63,7 +63,7 @@ impl CompressedGroupConstraint {
     }
 
     /// Retrieves the current dead count.
-    pub fn get_dead_count(&self) -> u8 {
+    fn get_dead_count(&self) -> u8 {
         ((self.0 & (0b11 << Self::DEAD_COUNT_SHIFT)) >> Self::DEAD_COUNT_SHIFT) as u8
     }
 
@@ -77,7 +77,7 @@ impl CompressedGroupConstraint {
     }
     
     /// Retrieves the current alive count.
-    pub fn get_alive_count(&self) -> u8 {
+    fn get_alive_count(&self) -> u8 {
         ((self.0 & (0b11 << Self::ALIVE_COUNT_SHIFT)) >> Self::ALIVE_COUNT_SHIFT) as u8
     }
     /// Sets the total count (0-3).
@@ -87,6 +87,44 @@ impl CompressedGroupConstraint {
         self.0 &= !(0b11 << Self::TOTAL_COUNT_SHIFT);
         // Set new total count bits
         self.0 |= (count as u16 & 0b11) << Self::TOTAL_COUNT_SHIFT;
+    }
+    fn add_dead_count(&mut self, amount: u8) {
+        let dead_bits = (self.0 & Self::DEAD_COUNT_MASK) >> Self::DEAD_COUNT_SHIFT;
+        let new_count = dead_bits + (amount as u16);
+        debug_assert!(new_count < 4, "Dead count would exceed maximum");
+        self.0 = (self.0 & !Self::DEAD_COUNT_MASK) | (new_count << Self::DEAD_COUNT_SHIFT);
+    }
+
+    fn sub_dead_count(&mut self, amount: u8) {
+        let dead_bits = (self.0 & Self::DEAD_COUNT_MASK) >> Self::DEAD_COUNT_SHIFT;
+        debug_assert!(dead_bits >= amount as u16, "Dead count would go below zero");
+        self.0 = (self.0 & !Self::DEAD_COUNT_MASK) | ((dead_bits - amount as u16) << Self::DEAD_COUNT_SHIFT);
+    }
+
+    fn add_alive_count(&mut self, amount: u8) {
+        let alive_bits = (self.0 & Self::ALIVE_COUNT_MASK) >> Self::ALIVE_COUNT_SHIFT;
+        let new_count = alive_bits + (amount as u16);
+        debug_assert!(new_count < 4, "Alive count would exceed maximum");
+        self.0 = (self.0 & !Self::ALIVE_COUNT_MASK) | (new_count << Self::ALIVE_COUNT_SHIFT);
+    }
+
+    fn sub_alive_count(&mut self, amount: u8) {
+        let alive_bits = (self.0 & Self::ALIVE_COUNT_MASK) >> Self::ALIVE_COUNT_SHIFT;
+        debug_assert!(alive_bits >= amount as u16, "Alive count would go below zero");
+        self.0 = (self.0 & !Self::ALIVE_COUNT_MASK) | ((alive_bits - amount as u16) << Self::ALIVE_COUNT_SHIFT);
+    }
+
+    fn add_total_count(&mut self, amount: u8) {
+        let total_bits = (self.0 & Self::TOTAL_COUNT_MASK) >> Self::TOTAL_COUNT_SHIFT;
+        let new_count = total_bits + (amount as u16);
+        debug_assert!(new_count < 4, "Total count would exceed maximum");
+        self.0 = (self.0 & !Self::TOTAL_COUNT_MASK) | (new_count << Self::TOTAL_COUNT_SHIFT);
+    }
+
+    fn sub_total_count(&mut self, amount: u8) {
+        let total_bits = (self.0 & Self::TOTAL_COUNT_MASK) >> Self::TOTAL_COUNT_SHIFT;
+        debug_assert!(total_bits >= amount as u16, "Total count would go below zero");
+        self.0 = (self.0 & !Self::TOTAL_COUNT_MASK) | ((total_bits - amount as u16) << Self::TOTAL_COUNT_SHIFT);
     }
     /// Updates the total_count based on dead_count and alive_count.
     ///
@@ -190,52 +228,41 @@ impl CompressedGroupConstraint {
             }
         }
     }
+    /// Removes a player from the group represented by the group constraint
+    /// Example: If the participation list originally included Players {1, 2, 5}, then subtracting 5 would make it {1, 2}.
     pub fn group_subtract(&mut self, player_id: usize){
         debug_assert!(player_id < 7, "Invalid Player Id");
         let mask = !(0b1 << player_id);
         self.0 &= mask;
     }
-    // pub fn count_add(&mut self, num: usize){
-    //     self.count += num;
-    // }
-    // pub fn count_dead_add(&mut self, num: usize){
-    //     self.count_dead += num;
-    //     self.count += num;
-    // }
-    // pub fn count_alive_add(&mut self, num: usize){
-    //     self.count_alive += num;
-    //     self.count += num;
-    // }
-    // pub fn count_subtract(&mut self, num: usize){
-    //     if self.count < num {
-    //         self.count = 0;
-    //     } else {
-    //         self.count -= num;
-    //     }
-    // }
-    // pub fn count_dead_subtract(&mut self, num: usize){
-    //     if self.count_dead < num {
-    //         self.count_dead = 0;
-    //     } else {
-    //         self.count_dead -= num;
-    //         self.count -= num;
-    //     }
-    // }
-    // pub fn count_alive_subtract(&mut self, num: usize){
-    //     if self.count_alive < num {
-    //         self.count_alive = 0;
-    //     } else {
-    //         self.count_alive -= num;
-    //         self.count -= num;
-    //     }
-    // }
-    // pub fn count(&self) -> usize {
-    //     self.count
-    // }
-    // pub fn count_dead(&self) -> usize {
-    //     self.count_dead
-    // }
-    // pub fn count_alive(&self) -> usize {
-    //     self.count_alive
-    // }
+    /// Adds number to dead count and increases total count too
+    pub fn count_dead_add(&mut self, num: u8){
+        self.add_dead_count(num);
+        self.add_total_count(num);
+    }
+    /// Adds number to alive count and increases total count too
+    pub fn count_alive_add(&mut self, num: u8){
+        self.add_alive_count(num);
+        self.add_total_count(num);
+    }
+    /// Subtracts number to dead count and decreases total count too
+    pub fn count_dead_subtract(&mut self, num: u8){
+        self.sub_dead_count(num);
+        self.sub_total_count(num);
+    }
+    /// Subtracts number to alive count and decreases total count too
+    pub fn count_alive_subtract(&mut self, num: u8){
+        self.sub_alive_count(num);
+        self.sub_total_count(num);
+    }
+    // TODO: Merge and refactor the wrappers
+    pub fn count(&self) -> u8 {
+        self.get_total_count()
+    }
+    pub fn count_dead(&self) -> u8 {
+        self.get_dead_count()
+    }
+    pub fn count_alive(&self) -> u8 {
+        self.get_alive_count()
+    }
 }
