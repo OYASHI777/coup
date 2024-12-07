@@ -1,5 +1,9 @@
 use crate::history_public::Card;
 
+// TODO: public constraint as a u32 3 bits per card x 6 players? Or probably better to just have a Vec that reserves space and reduces need for conversion
+// TODO: joint constraint as u64 3bits per card x 6 players?
+// TODO: but this is helpful for storeing the game state and sending it to a neural network...
+
 /// From right to left, where 0 represents the last item
 /// Bits 0..=6 represent boolean flags indicating which players are involved
 /// Bits 7..=9 represent the Card number from 0..=4
@@ -290,4 +294,44 @@ impl CompressedGroupConstraint {
     pub fn card(&self) -> Card {
         self.get_card()
     } 
+    // TODO: Test
+    /// Returns true if input group makes self redundant 
+    pub fn is_subset_of(&self, group: &Self) -> bool {
+        // Returns true if group makes self redundant
+        // Its redundant if they have the same participation list and their counts are equal
+        // Its also redundant if they have the same participation list and group has a higher count
+        //      If a group has at least 2 Dukes, it also fulfils having at least 1 Duke.
+        //      Therefore having at least 1 Duke is redundant
+
+        if self.get_card() == group.get_card() &&
+        // If participation lists are the same
+        ((self.0 | Self::PLAYER_BITS) == (group.0 | Self::PLAYER_BITS)) &&
+        self.count() <= group.count() && 
+        self.count_dead() <= group.count_dead() &&
+        self.count_alive() <= group.count_alive() {
+            return true
+        }
+        return false
+    }
+    // TODO: Test
+    /// Returns true if self's partipation list is subset of the input group's participation list
+    /// Returns true if both participation lists are equal
+    pub fn part_list_is_subset_of(&self, group: &Self) -> bool {
+        // Checks if self participation list is a subset of group's participation list
+        (group.0 | Self::PLAYER_BITS) == (self.0 | Self::PLAYER_BITS) | (group.0 | Self::PLAYER_BITS)
+    }
+    // TODO: Test
+    /// Returns true if the participation lists of self and group are mutually exclusive
+    pub fn part_list_is_mut_excl(&self, group: &Self) -> bool {
+        // Checks if the groups are mutually exclusive
+        ((self.0 | Self::PLAYER_BITS) & (group.0 | Self::PLAYER_BITS)) == 0
+    }
+    // TODO: Test
+    // TODO: Refactor and make this redundant
+    /// TODO: Consider refactoring this to use the bit representation
+    /// TODO: Also considering why make a function this way... like u pass a mut ref and return it what even...
+    pub fn list_union<'a>(list1: &'a mut [bool; 7], list2: &[bool; 7]) -> &'a [bool; 7] {
+        list1.iter_mut().zip(list2).for_each(|(a, b)| *a |= b);
+        list1
+    }
 }
