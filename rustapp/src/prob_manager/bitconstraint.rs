@@ -389,4 +389,34 @@ impl CompressedCollectiveConstraint {
         // If you reach here, its basically true just dependent on the center pile (player 6)
         participation_list[6]
     }
+    // TODO: [REFACTOR] Consider not exposing inner item
+    // pub fn get_jc_hm(&self) -> &HashMap<usize, Vec<Card>> {
+        pub fn joint_constraints(&self) -> &[[Option<Card>; 2]; 6] {
+            &self.joint_constraints
+        }
+    // TODO: [REFACTOR] Consider not exposing inner item
+    // pub fn get_pc_hm(&self) -> &HashMap<usize, Card> {
+        pub fn public_constraints(&self) -> &[Option<Card>; 6] {
+            &self.public_constraints
+        }
+    // TODO: [REFACTOR] Consider not exposing inner item
+    // pub fn get_gc_vec(&self) -> &Vec<GroupConstraint>{
+        pub fn group_constraints(&self) -> &Vec<CompressedGroupConstraint>{
+            &self.group_constraints
+        }
+    // TODO: [REFACTOR] Consider not exposing inner item
+    // pub fn jc_hm(&mut self) -> &mut HashMap<usize, Vec<Card>> {
+        pub fn joint_constraints_mut(&mut self) -> &mut [[Option<Card>; 2]; 6] {
+            &mut self.joint_constraints
+        }
+    // TODO: [REFACTOR] Consider not exposing inner item
+    // pub fn pc_hm(&mut self) -> &mut HashMap<usize, Card> {
+        pub fn public_constraints_mut(&mut self) -> &mut [Option<Card>; 6] {
+            &mut self.public_constraints
+        }
+    // TODO: [REFACTOR] Consider not exposing inner item
+    // pub fn gc_vec(&mut self) -> &mut Vec<GroupConstraint>{
+    pub fn group_constraints_mut(&mut self) -> &mut Vec<CompressedGroupConstraint>{
+        &mut self.group_constraints
+    }
 }
