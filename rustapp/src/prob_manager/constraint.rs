@@ -174,6 +174,7 @@ impl GroupConstraint {
         log::info!("{}", format!("Card: {:?}", self.card));
     }
 }
+
 impl PartialEq for GroupConstraint {
     fn eq(&self, other: &Self) -> bool {
         self.participation_list == other.participation_list && self.card == other.card && self.count == other.count && self.count_dead == other.count_dead && self.count_alive == other.count_alive
@@ -323,7 +324,11 @@ impl CompressedGroupConstraint {
         ]
     }
 }
-
+impl CompressedGroupConstraint {
+    pub fn new_list(participation_list: [bool; 7], card: Card, count_dead: usize, count_alive: usize) -> Self {
+        todo!();
+    }
+}
 
 #[derive(Clone)]
 pub struct CollectiveConstraint {
