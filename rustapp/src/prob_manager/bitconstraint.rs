@@ -138,6 +138,7 @@ impl CompressedGroupConstraint {
     }
 }
 impl CompressedGroupConstraint {
+    /// Constructor method that initialised based on a list of flags with each index representing player id
     pub fn new_list(participation_list: [bool; 7], card: Card, count_dead: usize, count_alive: usize) -> Self {
         debug_assert!(count_dead < 4, "Dead count must be less than 4");
         debug_assert!(count_alive < 4, "Alive count must be less than 4");
@@ -154,5 +155,16 @@ impl CompressedGroupConstraint {
         value |= ((count_dead + count_alive) as u16 & 0b11) << Self::TOTAL_COUNT_SHIFT;
         CompressedGroupConstraint(value)
     }
-    // pub fn new_bit(participation_flags: b)
+    pub fn new_bit(participation_flags: u8, card: Card, count_dead: usize, count_alive: usize) -> Self {
+        debug_assert!(participation_flags < 0b10000000, "Participation flag should be < 0b10000000 as there are only 7 players");
+        debug_assert!(count_dead < 4, "Dead count must be less than 4");
+        debug_assert!(count_alive < 4, "Alive count must be less than 4");
+        debug_assert!(count_dead + count_alive < 4, "Total count must be less than 4");
+        let mut value: u16 = participation_flags as u16;
+        value |= (card as u16 & 0b111) << Self::CARD_SHIFT;
+        value |= (count_dead as u16 & 0b11) << Self::DEAD_COUNT_SHIFT;
+        value |= (count_alive as u16 & 0b11) << Self::ALIVE_COUNT_SHIFT;
+        value |= ((count_dead + count_alive) as u16 & 0b11) << Self::TOTAL_COUNT_SHIFT;
+        CompressedGroupConstraint(value)
+    }
 }
