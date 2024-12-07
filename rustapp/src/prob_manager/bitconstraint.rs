@@ -19,6 +19,7 @@ impl CompressedGroupConstraint {
     const ALIVE_COUNT_MASK: u16 = 0b0011_0000_0000_0000; // Bits 12-13
     const TOTAL_COUNT_SHIFT: u8 = 14;
     const TOTAL_COUNT_MASK: u16 = 0b1100_0000_0000_0000; // Bits 14-15
+    const MAX_PLAYERS: u8 = 7;
     pub fn new(player_id: usize, card: Card, count_dead: usize, count_alive: usize) -> Self {
         debug_assert!(player_id < 6);
         let mut output = CompressedGroupConstraint(Self::START_FLAGS[player_id]);
@@ -29,17 +30,17 @@ impl CompressedGroupConstraint {
         output
     }
 
-    pub fn set_player_flag(&mut self, index: usize, value: bool) {
-        debug_assert!(index < 7);
+    pub fn set_player_flag(&mut self, player_id: usize, value: bool) {
+        debug_assert!(player_id < 7);
         if value {
-            self.0 |= 1 << index;
+            self.0 |= 1 << player_id;
         } else {
-            self.0 &= !(1 << index);
+            self.0 &= !(1 << player_id);
         }
     }
-    pub fn get_player_flag(&self, index: usize) -> bool {
-        debug_assert!(index < 7);
-        (self.0 & (1 << index)) != 0
+    pub fn get_player_flag(&self, player_id: usize) -> bool {
+        debug_assert!(player_id < 7);
+        (self.0 & (1 << player_id)) != 0
     }
     pub fn set_card(&mut self, card: Card) {
         debug_assert!(u8::from(card) < 8, "Card value out of bounds");
@@ -155,16 +156,86 @@ impl CompressedGroupConstraint {
         value |= ((count_dead + count_alive) as u16 & 0b11) << Self::TOTAL_COUNT_SHIFT;
         CompressedGroupConstraint(value)
     }
-    pub fn new_bit(participation_flags: u8, card: Card, count_dead: usize, count_alive: usize) -> Self {
+    /// Constructor method that initialised based on a u16 0b00000000 for e.g. with each bit STARTING FROM THE RIGHT representing a player id flag
+    /// From right to left, where 0 represents the last item
+    /// Bits 0..=6 represent boolean flags indicating which players are involved
+    /// Bits 7..=9 represent the Card number from 0..=4
+    /// Bits 10..=11 represent the dead count 0..=2
+    /// Bits 12..=13 represent the alive count 1..=3
+    /// Bits 14..=15 represent total count = dead + alive 1..=3
+    pub fn new_bit(participation_flags: u16, card: Card, count_dead: usize, count_alive: usize) -> Self {
         debug_assert!(participation_flags < 0b10000000, "Participation flag should be < 0b10000000 as there are only 7 players");
         debug_assert!(count_dead < 4, "Dead count must be less than 4");
         debug_assert!(count_alive < 4, "Alive count must be less than 4");
         debug_assert!(count_dead + count_alive < 4, "Total count must be less than 4");
-        let mut value: u16 = participation_flags as u16;
+        let mut value: u16 = participation_flags;
         value |= (card as u16 & 0b111) << Self::CARD_SHIFT;
         value |= (count_dead as u16 & 0b11) << Self::DEAD_COUNT_SHIFT;
         value |= (count_alive as u16 & 0b11) << Self::ALIVE_COUNT_SHIFT;
         value |= ((count_dead + count_alive) as u16 & 0b11) << Self::TOTAL_COUNT_SHIFT;
         CompressedGroupConstraint(value)
     }
+    /// Adds a player to the group represented by the group constraint
+    /// Example: If the participation list originally included Players {1, 2, 5}, then adding 6 would make it {1, 2, 5, 6}.
+    pub fn group_add(&mut self, player_id: usize){
+        debug_assert!(player_id < 7, "Invalid Player Id");
+        self.set_player_flag(player_id, true);
+    }
+    /// Replaces current participation list with a new one
+    pub fn group_add_list(&mut self, list: [bool; 7]){
+        self.0 &= !Self::PLAYER_BITS;
+        for (index, flag) in list.iter().enumerate() {
+            if *flag {
+                self.0 |= 1 << index;
+            }
+        }
+    }
+    pub fn group_subtract(&mut self, player_id: usize){
+        debug_assert!(player_id < 7, "Invalid Player Id");
+        let mask = !(0b1 << player_id);
+        self.0 &= mask;
+    }
+    // pub fn count_add(&mut self, num: usize){
+    //     self.count += num;
+    // }
+    // pub fn count_dead_add(&mut self, num: usize){
+    //     self.count_dead += num;
+    //     self.count += num;
+    // }
+    // pub fn count_alive_add(&mut self, num: usize){
+    //     self.count_alive += num;
+    //     self.count += num;
+    // }
+    // pub fn count_subtract(&mut self, num: usize){
+    //     if self.count < num {
+    //         self.count = 0;
+    //     } else {
+    //         self.count -= num;
+    //     }
+    // }
+    // pub fn count_dead_subtract(&mut self, num: usize){
+    //     if self.count_dead < num {
+    //         self.count_dead = 0;
+    //     } else {
+    //         self.count_dead -= num;
+    //         self.count -= num;
+    //     }
+    // }
+    // pub fn count_alive_subtract(&mut self, num: usize){
+    //     if self.count_alive < num {
+    //         self.count_alive = 0;
+    //     } else {
+    //         self.count_alive -= num;
+    //         self.count -= num;
+    //     }
+    // }
+    // pub fn count(&self) -> usize {
+    //     self.count
+    // }
+    // pub fn count_dead(&self) -> usize {
+    //     self.count_dead
+    // }
+    // pub fn count_alive(&self) -> usize {
+    //     self.count_alive
+    // }
 }

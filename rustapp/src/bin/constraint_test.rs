@@ -7,10 +7,22 @@ fn main() {
         // println!("Player: {player}");
         // let mut test = CompressedGroupConstraint::new(player, Card::Contessa, 0, 0);
         // let mut test = CompressedGroupConstraint::new_list([false, false, true, false, true, false, false], Card::Contessa, 2, 1);
-        println!("{}", 0b01001100 as u16);
-        println!("{}", 0b10000000 as u16);
         let mut test = CompressedGroupConstraint::new_bit(0b01001100, Card::Contessa, 2, 1);
         // test.update_total_count();
+        println!("Before:");
+        for i in 0..7 {
+            println!("P{i}: {:?}", test.get_player_flag(i));
+        }
+        println!("Flags: {:?}", test.get_set_players());
+        println!("Card: {:?}", test.get_card());
+        println!("Dead Count: {:?}", test.get_dead_count());
+        println!("Alive Count: {:?}", test.get_alive_count());
+        println!("Total Count: {:?}", test.get_total_count());
+
+        // test.group_add_list([true, false, false, true, false ,false, true]);
+        test.group_subtract(1);
+
+        println!("After:");
         for i in 0..7 {
             println!("P{i}: {:?}", test.get_player_flag(i));
         }
