@@ -277,4 +277,17 @@ impl CompressedGroupConstraint {
     pub fn all_in(&self) -> bool {
         (self.0 & Self::PLAYER_BITS) == 0b0000_0000_0111_1111
     }
+    // TODO: Determine if this is the fastest way
+    /// Returns true if participation list includes all players
+    pub fn none_in(&self) -> bool {
+        (self.0 & Self::PLAYER_BITS) == 0b0000_0000_0000_0000
+    }
+    /// Returns a list of flags (the participation list) that indicates the set of players being specified to have a certain count of alive cards and dead cards
+    pub fn get_list(&self) -> [bool; 7]{
+        self.get_set_players()
+    }
+    /// Gets the Card thats stored
+    pub fn card(&self) -> Card {
+        self.get_card()
+    } 
 }
