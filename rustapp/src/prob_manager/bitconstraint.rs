@@ -1,5 +1,7 @@
 use crate::history_public::Card;
 
+use super::constraint::GroupConstraint;
+
 // TODO: public constraint as a u32 3 bits per card x 6 players? Or probably better to just have a Vec that reserves space and reduces need for conversion
 // TODO: joint constraint as u64 3bits per card x 6 players?
 // TODO: but this is helpful for storeing the game state and sending it to a neural network...
@@ -332,5 +334,26 @@ impl CompressedGroupConstraint {
     pub fn list_union<'a>(list1: &'a mut [bool; 7], list2: &[bool; 7]) -> &'a [bool; 7] {
         list1.iter_mut().zip(list2).for_each(|(a, b)| *a |= b);
         list1
+    }
+}
+
+pub struct CompressedCollectiveConstraint {
+    public_constraints: Vec<Card>,
+    joint_constraints: Vec<Vec<Card>>,
+    group_constraints: Vec<CompressedGroupConstraint>,
+    dead_card_count: [u8; 5],
+}
+impl CompressedCollectiveConstraint {
+    pub fn new() -> Self {
+        let public_constraints: Vec<Card> = Vec::with_capacity(6);
+        let joint_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let group_constraints: Vec<CompressedGroupConstraint> = Vec::with_capacity(15);
+        let dead_card_count: [u8; 5] = [0; 5];
+        Self {
+            public_constraints,
+            joint_constraints,
+            group_constraints,
+            dead_card_count,
+        }
     }
 }
