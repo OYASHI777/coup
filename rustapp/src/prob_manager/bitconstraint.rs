@@ -337,16 +337,19 @@ impl CompressedGroupConstraint {
     }
 }
 
+/// A struct that helps in card counting. Stores all information known about cards by a particular player.
 pub struct CompressedCollectiveConstraint {
-    public_constraints: Vec<Card>,
-    joint_constraints: Vec<Vec<Card>>,
-    group_constraints: Vec<CompressedGroupConstraint>,
-    dead_card_count: [u8; 5],
+    // TODO: [OPTIMIZE] Consider if can just combine public and joint constraints
+    public_constraints: [Option<Card>; 6], // Stores all the dead cards of players with 1 dead card
+    joint_constraints:[[Option<Card>; 2]; 6], // Stores all the dead cards of dead players 
+    group_constraints: Vec<CompressedGroupConstraint>, // Stores all the known group constraints
+    dead_card_count: [u8; 5], // each index represents the number of dead cards for the Card enum corresponding to that index
 }
 impl CompressedCollectiveConstraint {
+    /// Constructor that returns an empty CompressedCollectiveConstraint
     pub fn new() -> Self {
-        let public_constraints: Vec<Card> = Vec::with_capacity(6);
-        let joint_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let public_constraints: [Option<Card>; 6] = [None; 6];
+        let joint_constraints: [[Option<Card>; 2]; 6] = [[None; 2]; 6];
         let group_constraints: Vec<CompressedGroupConstraint> = Vec::with_capacity(15);
         let dead_card_count: [u8; 5] = [0; 5];
         Self {
@@ -355,5 +358,35 @@ impl CompressedCollectiveConstraint {
             group_constraints,
             dead_card_count,
         }
+    }
+    /// Returns true if there are no constraints
+    pub fn is_empty(&self) -> bool {
+        self.public_constraints.is_empty() && 
+        self.joint_constraints.is_empty() && 
+        self.group_constraints.is_empty()
+    }
+    // TODO: Test this with random game generator
+    // TODO: [OPTIMIZE] Perhaps can use bits to do this faster?
+    /// "Is Group Complement of self's public constraints and joint constraints?"
+    /// Tells us if information in a group is exactly mutually exclusive from information in public_constraint and joint_constraint
+    /// Group is mutually exclusive if all public_constraints and joint_constraints that have the same Card as the GroupConstraint's Card
+    /// apply to players not represented in the participation list (false)
+    /// By "exactly" mutual exclusive, we mean that all players must be represented in the public_constraint, joint_constraint and GroupConstraint
+    /// This is why its called "Complement" because we want to know if a particular group is the set complement of the information known in the 
+    /// public and joint constraints.
+    /// We compare only participation list and Card
+    pub fn is_complement_of_pcjc(&self, group: &CompressedGroupConstraint) -> bool {
+        let participation_list: [bool; 7] = group.get_list();
+        // TODO: [OPTIMIZE] Just loop unroll this
+        for player in 0..6 as usize {
+            if participation_list[player] || 
+            self.public_constraints[player] == Some(group.card()) || 
+            self.joint_constraints[player].contains(&Some(group.card())){
+                continue;
+            }
+            return false
+        }
+        // If you reach here, its basically true just dependent on the center pile (player 6)
+        participation_list[6]
     }
 }
