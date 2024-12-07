@@ -327,7 +327,7 @@ impl CompressedGroupConstraint {
         // Checks if the groups are mutually exclusive
         ((self.0 & Self::PLAYER_BITS) & (group.0 & Self::PLAYER_BITS)) == 0
     }
-    // TODO: Test
+    // TODO: [TEST]
     // TODO: Refactor and make this redundant
     /// TODO: Consider refactoring this to use the bit representation
     /// TODO: Also considering why make a function this way... like u pass a mut ref and return it what even...
@@ -366,7 +366,7 @@ impl CompressedCollectiveConstraint {
         self.joint_constraints.is_empty() && 
         self.group_constraints.is_empty()
     }
-    // TODO: Test this with random game generator
+    // TODO: [TEST] this with random game generator
     // TODO: [OPTIMIZE] Perhaps can use bits to do this faster?
     /// "Is Group Complement of self's public constraints and joint constraints?"
     /// Tells us if information in a group is exactly mutually exclusive from information in public_constraint and joint_constraint
