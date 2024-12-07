@@ -256,13 +256,25 @@ impl CompressedGroupConstraint {
         self.sub_total_count(num);
     }
     // TODO: Merge and refactor the wrappers
+    /// Returns count of alive + dead cards present in the group
     pub fn count(&self) -> u8 {
         self.get_total_count()
     }
+    /// Returns count of dead cards present in the group
     pub fn count_dead(&self) -> u8 {
         self.get_dead_count()
     }
+    /// Returns count of alive cards present in the group
     pub fn count_alive(&self) -> u8 {
         self.get_alive_count()
+    }
+    /// Returns the flag of whether a player is in the group being represented by the GroupConstraint
+    pub fn indicator(&self, player_id : usize) -> bool {
+        self.get_player_flag(player_id)
+    }
+    // TODO: Determine if this is the fastest way
+    /// Returns true if participation list includes all players
+    pub fn all_in(&self) -> bool {
+        (self.0 & Self::PLAYER_BITS) == 0b0000_0000_0111_1111
     }
 }
