@@ -294,8 +294,9 @@ impl CompressedGroupConstraint {
     pub fn card(&self) -> Card {
         self.get_card()
     } 
-    // TODO: Test
-    /// Returns true if input group makes self redundant 
+    /// Returns true if input group makes self redundant group constraint to store
+    /// - The participation lists have to be equal
+    /// - alive and dead counts of self have to be less than the input group
     pub fn is_subset_of(&self, group: &Self) -> bool {
         // Returns true if group makes self redundant
         // Its redundant if they have the same participation list and their counts are equal
@@ -305,26 +306,24 @@ impl CompressedGroupConstraint {
 
         if self.get_card() == group.get_card() &&
         // If participation lists are the same
-        ((self.0 | Self::PLAYER_BITS) == (group.0 | Self::PLAYER_BITS)) &&
-        self.count() <= group.count() && 
+        ((self.0 & Self::PLAYER_BITS) == (group.0 & Self::PLAYER_BITS)) &&
+        // self.count() <= group.count() && 
         self.count_dead() <= group.count_dead() &&
         self.count_alive() <= group.count_alive() {
             return true
         }
         return false
     }
-    // TODO: Test
     /// Returns true if self's partipation list is subset of the input group's participation list
     /// Returns true if both participation lists are equal
     pub fn part_list_is_subset_of(&self, group: &Self) -> bool {
         // Checks if self participation list is a subset of group's participation list
-        (group.0 | Self::PLAYER_BITS) == (self.0 | Self::PLAYER_BITS) | (group.0 | Self::PLAYER_BITS)
+        (group.0 & Self::PLAYER_BITS) == (self.0 & Self::PLAYER_BITS) | (group.0 & Self::PLAYER_BITS)
     }
-    // TODO: Test
     /// Returns true if the participation lists of self and group are mutually exclusive
     pub fn part_list_is_mut_excl(&self, group: &Self) -> bool {
         // Checks if the groups are mutually exclusive
-        ((self.0 | Self::PLAYER_BITS) & (group.0 | Self::PLAYER_BITS)) == 0
+        ((self.0 & Self::PLAYER_BITS) & (group.0 & Self::PLAYER_BITS)) == 0
     }
     // TODO: Test
     // TODO: Refactor and make this redundant
