@@ -262,6 +262,7 @@ impl CompressedGroupConstraint {
         self.sub_total_count(num);
     }
     // TODO: Merge and refactor the wrappers
+    // TODO: Review if its better to return a usize
     /// Returns count of alive + dead cards present in the group
     pub fn count(&self) -> u8 {
         self.get_total_count()
@@ -520,7 +521,7 @@ impl CompressedCollectiveConstraint {
     }
     /// Unimplemented!
     pub fn remove_public_constraint(&mut self) {
-        unimplemented!("Not reason to use so far")
+        todo!("Implement for debug reasons")
     }
     // TODO: [TEST]
     /// Adds a joint constraint for some player and calls group_dead_player_prune
@@ -536,6 +537,41 @@ impl CompressedCollectiveConstraint {
             false => [Some(cards[1]), Some(cards[0])],
         };
         self.group_dead_player_prune();
+    }
+    // TODO: [TEST]
+    /// Updates knowledge when RevealRedraw is done or Discard is done
+    /// bool_card_dead:
+    /// - RevealRedraw/Exchange: bool_card_dead = false as card that is revealed is not dead, but reshuffled
+    /// - Discard: bool_card_dead = true as card that is revealed is dead
+    /// count:
+    /// - Refers to the number of cards revealed
+    /// Pruning:
+    /// - [INITIAL PRUNE] if player 0 revealredraws a Duke, we prune the groups that had player 0 duke and oldcount <= newcount
+    pub fn group_initial_prune(&mut self, player_id: usize, card: Card, count: usize, bool_card_dead: bool) {
+        debug_assert!(player_id <= 6, "Player ID Wrong");
+        // The assumption here is that this will only be called by an alive player.
+        let player_dead_count: usize = count + (self.public_constraints[player_id] == Some(card)) as usize; 
+        debug_assert!(self.joint_constraints[player_id] == [None, None], "Impossible Case Reached! The assumption here is that this will only be called by an alive player.");
+        let mut i: usize = 0;
+        while i < self.group_constraints.len() {
+            let group = &mut self.group_constraints[i];
+            if group.card() == card && group.get_player_flag(player_id) {
+                if group.count() <= player_dead_count as u8 {
+                    self.group_constraints.swap_remove(i);
+                    continue;
+                } else if bool_card_dead {
+                    group.count_dead_add(count as u8);
+                    group.count_alive_subtract(count as u8);
+                    i += 1;
+                    continue;
+                }
+            }
+            if self.is_complement_of_pcjc(&self.group_constraints[i]) {
+                self.group_constraints.swap_remove(i);
+                continue;
+            }
+            i += 1;
+        }
     }
     pub fn group_redundant_prune(&mut self) {
         todo!()
