@@ -573,10 +573,21 @@ impl CompressedCollectiveConstraint {
             i += 1;
         }
     }
+    /// Assumes group_initial_prune was used before this
+    pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: [Card; 2]) {
+        // Assumes group_initial_prune was used before this
+        todo!()
+    }
+    // TODO: [TEST] Try to see if you can do a 2n checks instead of n^2, by just checking if the added item makes anything redundant or if it is redundant
+    pub fn add_group_constraint(&mut self) {
+        todo!()
+    }
+    // TODO: [TEST] Make alternate version of this that tests by only comparing the modified index against every other index
     pub fn group_redundant_prune(&mut self) {
         todo!()
     }
-    pub fn group_dead_player_prune(&mut self) {
-        todo!()
+    // TODO: [TEST] Make alternate version of this that adds with 2n checks for when you use it with a particular group added in mind.
+    pub fn add_inferred_groups(&mut self) {
+
     }
 }
