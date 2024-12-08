@@ -424,7 +424,7 @@ impl CompressedCollectiveConstraint {
         &self.dead_card_count
     }
 }
-/// Methods to Add
+/// Adds a public constraint without pruning group constraints that are redundant
 impl CompressedCollectiveConstraint {
     /// Adds a group to the group constraints 
     pub fn add_raw_group(&mut self, group: CompressedGroupConstraint) {
@@ -467,6 +467,8 @@ impl CompressedCollectiveConstraint {
             i += 1;
         }
     }
+    // TODO: [TEST]
+    /// Adds a public constraint, and prunes group constraints that are redundant
     pub fn add_public_constraint(&mut self, player_id: usize, card: Card) {
         self.dead_card_count[card as usize] += 1;
         debug_assert!(self.dead_card_count[card as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", card, self.dead_card_count[card as usize]);
@@ -516,8 +518,29 @@ impl CompressedCollectiveConstraint {
         }
         self.group_redundant_prune();
     }
-
+    /// Unimplemented!
+    pub fn remove_public_constraint(&mut self) {
+        unimplemented!("Not reason to use so far")
+    }
+    // TODO: [TEST]
+    /// Adds a joint constraint for some player and calls group_dead_player_prune
+    pub fn add_joint_constraint(&mut self, player_id: usize, cards: [Card; 2]) {
+        debug_assert!(self.public_constraints[player_id].is_none(), "Player already half dead, how to die again??");
+        debug_assert!(self.joint_constraints[player_id][0].is_none() && self.joint_constraints[player_id][1].is_none(), "Player already dead, how to die again??");
+        self.dead_card_count[cards[0] as usize] += 1;
+        self.dead_card_count[cards[1] as usize] += 1;
+        debug_assert!(self.dead_card_count[cards[0] as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", cards[0], self.dead_card_count[cards[0] as usize]);
+        debug_assert!(self.dead_card_count[cards[0] as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", cards[1], self.dead_card_count[cards[1] as usize]);
+        self.joint_constraints[player_id] = match cards[0] < cards[1] {
+            true => [Some(cards[0]), Some(cards[1])],
+            false => [Some(cards[1]), Some(cards[0])],
+        };
+        self.group_dead_player_prune();
+    }
     pub fn group_redundant_prune(&mut self) {
+        todo!()
+    }
+    pub fn group_dead_player_prune(&mut self) {
         todo!()
     }
 }
