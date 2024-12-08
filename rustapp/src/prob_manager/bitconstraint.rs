@@ -424,3 +424,46 @@ impl CompressedCollectiveConstraint {
         &self.dead_card_count
     }
 }
+/// Methods to Add
+impl CompressedCollectiveConstraint {
+    /// Adds a group to the group constraints 
+    pub fn add_raw_group(&mut self, group: CompressedGroupConstraint) {
+        self.group_constraints.push(group);
+    }
+    // TODO: [TEST]
+    /// Why is this raw?
+    pub fn add_raw_public_constraint(&mut self, player_id: usize, card: Card) {
+        self.dead_card_count[card as usize] += 1;
+        let current = self.public_constraints[player_id];
+        match current {
+            None => self.public_constraints[player_id] = Some(card),
+            Some(dead_card) => {
+                self.public_constraints[player_id] = None;
+                self.joint_constraints[player_id] = match dead_card < card {
+                    true => {
+                        [Some(dead_card), Some(card)]
+                    },
+                    false => {
+                        [Some(card), Some(dead_card)]
+                    },
+                };
+                    
+            },
+        }
+        // [Test] - is this needed for add public constraints?
+        let mut i: usize = 0;
+        while i < self.joint_constraints.len() {
+            let group = &mut self.group_constraints[i];
+            if group.card() == card && group.get_player_flag(player_id) {
+                if group.count_alive() != 1 {
+                    group.count_dead_add(1);
+                    group.count_alive_subtract(1);
+                } else {
+                    self.group_constraints.swap_remove(i);
+                    continue;
+                }
+            }
+            i += 1;
+        }
+    }
+}
