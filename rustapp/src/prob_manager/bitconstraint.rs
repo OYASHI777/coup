@@ -434,6 +434,7 @@ impl CompressedCollectiveConstraint {
     /// Why is this raw?
     pub fn add_raw_public_constraint(&mut self, player_id: usize, card: Card) {
         self.dead_card_count[card as usize] += 1;
+        debug_assert!(self.dead_card_count[card as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", card, self.dead_card_count[card as usize]);
         let current = self.public_constraints[player_id];
         match current {
             None => self.public_constraints[player_id] = Some(card),
@@ -465,5 +466,58 @@ impl CompressedCollectiveConstraint {
             }
             i += 1;
         }
+    }
+    pub fn add_public_constraint(&mut self, player_id: usize, card: Card) {
+        self.dead_card_count[card as usize] += 1;
+        debug_assert!(self.dead_card_count[card as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", card, self.dead_card_count[card as usize]);
+        let current = self.public_constraints[player_id];
+        match current {
+            None => self.public_constraints[player_id] = Some(card),
+            Some(dead_card) => {
+                self.public_constraints[player_id] = None;
+                self.joint_constraints[player_id] = match dead_card < card {
+                    true => {
+                        [Some(dead_card), Some(card)]
+                    },
+                    false => {
+                        [Some(card), Some(dead_card)]
+                    },
+                };
+                    
+            },
+        }
+        let mut i: usize = 0;
+        while i < self.joint_constraints.len() {
+            let group = &mut self.group_constraints[i];
+            if group.card() == card && group.get_player_flag(player_id) {
+                if group.count_alive() != 1 {
+                    group.count_dead_add(1);
+                    group.count_alive_subtract(1);
+                } else {
+                    self.group_constraints.swap_remove(i);
+                    continue;
+                }
+                // TODO: [TEST] is this really supposed to be an else if? and not an if?
+                // TODO: This can be an else if, because it is already handled in the first if condition swap_remove
+            } else if self.dead_card_count[group.card() as usize] == 3 {
+                // [DEAD PRUNE] Prune group is all cards have been shown to be dead for some card.
+                // TODO: Why not just remove when count_alive is 0? Wait is this already covered?
+                // TODO: [TEST] When this is done, and perhaps remove this
+                // TODO: Also shouldnt this only trigger for input card not all cards...
+                self.group_constraints.swap_remove(i);
+                continue;
+            } else if self.is_complement_of_pcjc(&self.group_constraints[i]) {
+                // [COMPLEMENT PRUNE] if group union (all public) union (joint constraint) is a full set it just means the card could be anywhere
+                // TODO: [TEST] Can we use an outer if group_card() == card and only check this if the condition holds?
+                self.group_constraints.swap_remove(i);
+                continue;
+            }
+            i += 1;
+        }
+        self.group_redundant_prune();
+    }
+
+    pub fn group_redundant_prune(&mut self) {
+        todo!()
     }
 }
