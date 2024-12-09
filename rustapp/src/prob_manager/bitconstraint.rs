@@ -391,6 +391,36 @@ impl CompressedCollectiveConstraint {
         // If you reach here, its basically true just dependent on the center pile (player 6)
         participation_list[6]
     }
+    /// Test to determine if input group_in_question is considered redundant because of the information provided in group_in_reference
+    /// Note: this is a test that decides the redundancy of group_in_question and not group_to_reference
+    /// YOU WILL NOT NECESSARILY GET THE SAME OUTPUT IF YOU SWAP THEM
+    pub fn is_redundant(&self, group_in_question: &CompressedGroupConstraint, group_to_reference: &CompressedGroupConstraint) -> bool {
+        if group_in_question.is_subset_of(group_to_reference) {
+            return true;
+        }
+        if group_in_question.card() != group_to_reference.card() {
+            return false;
+        } 
+        if group_in_question.count_alive() == 0 {
+            return true;
+        }
+        let remaining_count = 3 - self.dead_card_count[group_in_question.card() as usize] as u8;
+        if group_in_question.count_alive() == remaining_count && group_to_reference.count_alive() == remaining_count {
+        // [REMOVE] I do not recall why the bottom was commented out, but it probably was cos the uncommented but new
+        // To uncomment if the first working version works
+        // if group_in_question.count() == remaining_count && group_to_reference.count() == remaining_count {
+        // [REMOVE] ==END===
+            // e.g. where group 2 part list is subset of group 1 part list
+            // Group 1 [0 1 0 0 1 0 1] : count = remaining_count
+            // Group 2 [0 1 0 0 0 0 1] : count = remaining_count
+            // We know both conditions must be true
+            // All remaining cards are within the set denoted by group 1 and the set denoted by group 2
+            // For both conditions to be true, player 4 must not have the card
+            // Therefore group 1 is redundant
+            return group_to_reference.part_list_is_subset_of(group_in_question);
+        }
+        false
+    }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn get_jc_hm(&self) -> &HashMap<usize, Vec<Card>> {
         pub fn joint_constraints(&self) -> &[[Option<Card>; 2]; 6] {
@@ -536,7 +566,7 @@ impl CompressedCollectiveConstraint {
             true => [Some(cards[0]), Some(cards[1])],
             false => [Some(cards[1]), Some(cards[0])],
         };
-        self.group_dead_player_prune();
+        self.group_dead_player_prune(player_id, cards);
     }
     // TODO: [TEST]
     /// Updates knowledge when RevealRedraw is done or Discard is done
@@ -573,7 +603,9 @@ impl CompressedCollectiveConstraint {
             i += 1;
         }
     }
+    // TODO: [ALT] to see if swap_remove checks can be in the if group.indicator(player_id) under a different paradigm
     /// Assumes group_initial_prune was used before this
+    /// Prunes a group constraints based on a dead player's cards (I think? TODO: Validate)
     pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: [Card; 2]) {
         // Assumes group_initial_prune was used before this
         // [OLD]
@@ -645,13 +677,36 @@ impl CompressedCollectiveConstraint {
         // }
         // self.group_redundant_prune();
     }
-    // TODO: [ALT] Try to see if you can do a 2n checks instead of n^2, by just checking if the added item makes anything redundant or if it is redundant
+    // TODO: [ALT] Try to see if you can do a 2n checks instead of n^2, by just checking if the added item makes anything redundant or if it is redundant so you shift 
+    // work to the add instead of just a generic check on all group constraints
     pub fn add_group_constraint(&mut self) {
         todo!()
     }
     // TODO: [ALT] Make alternate version of this that tests by only comparing the modified index against every other index
+    /// Loops through group_constraints, and removes redundant constraints
     pub fn group_redundant_prune(&mut self) {
-        todo!()
+        if self.group_constraints.len() < 1 {
+            return
+        }
+        let mut i: usize = 0;
+        let mut j: usize = 0;
+        let mut i_incremented: bool;
+        'outer:  while i < self.group_constraints.len() - 1 {
+            j = i + 1;
+            'inner: while j < self.group_constraints.len() {
+                let group_i = &self.group_constraints[i];
+                let group_j = &self.group_constraints[j];
+                if self.is_redundant(group_i, group_j) {
+                    self.group_constraints.swap_remove(i);
+                    continue 'outer;
+                } else if self.is_redundant(group_j, group_i) {
+                    self.group_constraints.swap_remove(j);
+                    continue 'inner;
+                } 
+                j += 1;
+            }
+            i += 1;
+        }
     }
     // TODO: [ALT] Make alternate version of this that adds with 2n checks for when you use it with a particular group added in mind.
     pub fn add_inferred_groups(&mut self) {
