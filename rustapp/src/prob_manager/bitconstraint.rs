@@ -690,7 +690,6 @@ impl CompressedCollectiveConstraint {
         }
         let mut i: usize = 0;
         let mut j: usize = 0;
-        let mut i_incremented: bool;
         'outer:  while i < self.group_constraints.len() - 1 {
             j = i + 1;
             'inner: while j < self.group_constraints.len() {
