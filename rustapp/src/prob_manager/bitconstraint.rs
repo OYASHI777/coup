@@ -588,6 +588,24 @@ impl CompressedCollectiveConstraint {
         };
         self.group_dead_player_prune(player_id, cards);
     }
+    /// Removes all the constraints for a particular player and updates dead_card_count
+    /// NOTE:
+    /// - This does not modify the group_constraints that have dead_counts
+    /// - This is only intended to be used for simple debugging
+    /// - This should handle the group_constraints if it is intended to be used algorithmically 
+    pub fn remove_constraints(&mut self, player_id: usize) {
+        if let Some(card) = self.public_constraints[player_id] {
+            self.dead_card_count[card as usize] -= 1;
+            self.public_constraints[player_id] = None;
+        }
+        if let Some(card) = self.joint_constraints[player_id][0] {
+            self.dead_card_count[card as usize] -= 1;
+        }
+        if let Some(card) = self.joint_constraints[player_id][1] {
+            self.dead_card_count[card as usize] -= 1;
+        }
+        self.joint_constraints[player_id] = [None; 2];
+    }
     // TODO: [TEST]
     /// Updates knowledge when RevealRedraw is done or Discard is done
     /// bool_card_dead:
