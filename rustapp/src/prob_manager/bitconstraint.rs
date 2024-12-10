@@ -549,9 +549,29 @@ impl CompressedCollectiveConstraint {
         }
         self.group_redundant_prune();
     }
-    /// Unimplemented!
-    pub fn remove_public_constraint(&mut self) {
-        todo!("Implement for debug reasons")
+    /// Removes a public constraint, and adjust the public_constraints and joint_constraints appropriately
+    /// NOTE:
+    /// - This does not modify the group_constraints that have dead_counts
+    /// - This is only intended to be used for simple debugging
+    /// - This should handle the group_constraints if it is intended to be used algorithmically 
+    pub fn remove_public_constraint(&mut self, player_id: usize, card: Card) {
+        debug_assert!(self.public_constraints[player_id].is_none() || self.public_constraints[player_id] == Some(card), "Removing card constraint that does not exist in public_constraints");
+        if self.public_constraints[player_id] == Some(card) {
+            self.public_constraints[player_id] = None;
+            self.dead_card_count[card as usize] -= 1;
+            return;
+        } 
+        if self.joint_constraints[player_id][0] == Some(card) {
+            self.public_constraints[player_id] = self.joint_constraints[player_id][1];
+            self.joint_constraints[player_id] = [None; 2];
+            self.dead_card_count[card as usize] -= 1; 
+            return;
+        }
+        if self.joint_constraints[player_id][1] == Some(card) {
+            self.public_constraints[player_id] = self.joint_constraints[player_id][0];
+            self.joint_constraints[player_id] = [None; 2];
+            self.dead_card_count[card as usize] -= 1; 
+        }
     }
     // TODO: [TEST]
     /// Adds a joint constraint for some player and calls group_dead_player_prune
