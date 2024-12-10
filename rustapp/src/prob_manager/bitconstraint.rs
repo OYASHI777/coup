@@ -1,5 +1,5 @@
 use crate::history_public::Card;
-
+use std::collections::HashSet;
 use super::constraint::GroupConstraint;
 
 // TODO: public constraint as a u32 3 bits per card x 6 players? Or probably better to just have a Vec that reserves space and reduces need for conversion
@@ -605,6 +605,24 @@ impl CompressedCollectiveConstraint {
             self.dead_card_count[card as usize] -= 1;
         }
         self.joint_constraints[player_id] = [None; 2];
+    }
+    // TODO: [ALT] Make this a check whenever inserting a group or modifying a group to avoid this disgusting mess 
+    // It may also be that a HashSet is too slow as its not cache efficient
+    /// Checks all group_constraints and removes the duplicates
+    /// NOTE:
+    /// - This is used for debugging
+    /// - Mostly unnecessary to optimize or to make new traits because of
+    pub fn remove_duplicate_groups(&mut self) {
+        // TODO: Make CompressedGroupConstraint hashable...
+        // let mut seen: HashSet<CompressedGroupConstraint> = HashSet::new();
+        // let mut i: usize = 0;
+        // while i < self.group_constraints.len() {
+        //     if seen.insert(self.group_constraints[i]) {
+        //         i += 1;
+        //     } else {
+        //         self.group_constraints.swap_remove(i);
+        //     }
+        // }
     }
     // TODO: [TEST]
     /// Updates knowledge when RevealRedraw is done or Discard is done
