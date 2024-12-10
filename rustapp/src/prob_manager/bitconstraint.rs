@@ -451,6 +451,22 @@ impl CompressedCollectiveConstraint {
     pub fn group_constraints_mut(&mut self) -> &mut Vec<CompressedGroupConstraint>{
         &mut self.group_constraints
     }
+    /// Gets the number of dead cards a player has for a particular card
+    /// NOTE:
+    /// - Not actually used except for debugging
+    pub fn player_dead_card_count(&self, player_id: usize, card: Card) -> u8 {
+        let mut output: u8 = 0;
+        if self.public_constraints[player_id] == Some(card) {
+            output += 1;
+        }
+        if self.joint_constraints[player_id][0] == Some(card) {
+            output += 1;
+        }
+        if self.joint_constraints[player_id][1] == Some(card) {
+            output += 1;
+        }
+        output
+    }
     pub fn dead_card_count(&self) -> &[u8; 5] {
         &self.dead_card_count
     }
