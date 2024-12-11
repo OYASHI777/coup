@@ -48,6 +48,9 @@ impl CompressedGroupConstraint {
         debug_assert!(player_id < 7);
         (self.0 & (1 << player_id)) != 0
     }
+    pub fn get_player_flags(&self) -> u16 {
+        self.0 & Self::PLAYER_BITS
+    }
     pub fn set_card(&mut self, card: Card) {
         debug_assert!(u8::from(card) < 8, "Card value out of bounds");
         // Clear existing card bits
@@ -343,6 +346,7 @@ pub struct CompressedCollectiveConstraint {
     // TODO: [OPTIMIZE] Consider if can just combine public and joint constraints
     public_constraints: [Option<Card>; 6], // Stores all the dead cards of players with 1 dead card
     joint_constraints:[[Option<Card>; 2]; 6], // Stores all the dead cards of dead players 
+    // [ALT] TODO: Change group_constraints to by card so Vec<Vec<CompressedGroupConstraint>> ... maybe remove Card from it? or make this an object?
     group_constraints: Vec<CompressedGroupConstraint>, // Stores all the known group constraints
     dead_card_count: [u8; 5], // each index represents the number of dead cards for the Card enum corresponding to that index
 }
@@ -473,48 +477,7 @@ impl CompressedCollectiveConstraint {
 }
 /// Adds a public constraint without pruning group constraints that are redundant
 impl CompressedCollectiveConstraint {
-    /// Adds a group to the group constraints 
-    pub fn add_raw_group(&mut self, group: CompressedGroupConstraint) {
-        self.group_constraints.push(group);
-    }
-    // TODO: [TEST]
-    /// Why is this raw?
-    pub fn add_raw_public_constraint(&mut self, player_id: usize, card: Card) {
-        self.dead_card_count[card as usize] += 1;
-        debug_assert!(self.dead_card_count[card as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", card, self.dead_card_count[card as usize]);
-        let current = self.public_constraints[player_id];
-        match current {
-            None => self.public_constraints[player_id] = Some(card),
-            Some(dead_card) => {
-                self.public_constraints[player_id] = None;
-                self.joint_constraints[player_id] = match dead_card < card {
-                    true => {
-                        [Some(dead_card), Some(card)]
-                    },
-                    false => {
-                        [Some(card), Some(dead_card)]
-                    },
-                };
-                    
-            },
-        }
-        // [Test] - is this needed for add public constraints?
-        let mut i: usize = 0;
-        while i < self.joint_constraints.len() {
-            let group = &mut self.group_constraints[i];
-            if group.card() == card && group.get_player_flag(player_id) {
-                if group.count_alive() != 1 {
-                    group.count_dead_add(1);
-                    group.count_alive_subtract(1);
-                } else {
-                    self.group_constraints.swap_remove(i);
-                    continue;
-                }
-            }
-            i += 1;
-        }
-    }
-    // TODO: [TEST]
+       // TODO: [TEST]
     /// Adds a public constraint, and prunes group constraints that are redundant
     pub fn add_public_constraint(&mut self, player_id: usize, card: Card) {
         self.dead_card_count[card as usize] += 1;
@@ -536,15 +499,45 @@ impl CompressedCollectiveConstraint {
             },
         }
         let mut i: usize = 0;
-        while i < self.group_constraints.len() {
+        'outer: while i < self.group_constraints.len() {
             let group = &mut self.group_constraints[i];
             if group.card() == card && group.get_player_flag(player_id) {
                 if group.count_alive() != 1 {
                     group.count_dead_add(1);
                     group.count_alive_subtract(1);
+                    // THE EDIT CHECK for redundancy
+                    // [ALT FAILED] ok it seems like i cant simply check for redundancy like that
+                    // [ALT ALT] Consider seperating group constraints by cards Vec<Vec<>> so you only need iter through the same card
+                    // let mut j: usize = 0;
+                    // 'inner: while j < self.group_constraints.len() {
+                    //     if i != j || group.card() == self.group_constraints[j].card() && 
+                    //     group.get_player_flags() == self.group_constraints[j].get_player_flags() && 
+                    //     group.count_dead() <= self.group_constraints[j].count_dead() &&
+                    //         group.count_alive() <= self.group_constraints[j].count_alive() {
+                    //             // In this check part list have to be equal
+                    //             // Check if i is subset of j
+                    //             self.group_constraints.swap_remove(i);
+                    //             continue 'outer;
+                    //         }
+                    //     j += 1;
+                    // }
+                    // j = 0;
+                    // let mut removal_indices: Vec<usize> = Vec::with_capacity(self.group_constraints.len());
+                    // 'inner: while j < self.group_constraints.len() {
+                    //     if i != j || group.card() == self.group_constraints[j].card() && 
+                    //     group.get_player_flags() == self.group_constraints[j].get_player_flags() && 
+                    //     group.count_dead() >= self.group_constraints[j].count_dead() &&
+                    //     group.count_alive() >= self.group_constraints[j].count_alive() {
+                    //         // In this check part list have to be equal
+                    //         // Check if i is subset of j
+                    //         removal_indices.push(j);
+                    //     }
+                    //     j += 1;
+                    // }
+
                 } else {
                     self.group_constraints.swap_remove(i);
-                    continue;
+                    continue 'outer;
                 }
                 // TODO: [TEST] is this really supposed to be an else if? and not an if?
                 // TODO: This can be an else if, because it is already handled in the first if condition swap_remove
@@ -554,15 +547,17 @@ impl CompressedCollectiveConstraint {
                 // TODO: [TEST] When this is done, and perhaps remove this
                 // TODO: Also shouldnt this only trigger for input card not all cards...
                 self.group_constraints.swap_remove(i);
-                continue;
+                continue 'outer;
             } else if self.is_complement_of_pcjc(&self.group_constraints[i]) {
                 // [COMPLEMENT PRUNE] if group union (all public) union (joint constraint) is a full set it just means the card could be anywhere
                 // TODO: [TEST] Can we use an outer if group_card() == card and only check this if the condition holds?
                 self.group_constraints.swap_remove(i);
-                continue;
+                continue 'outer;
             }
             i += 1;
         }
+        // Why should there be a redundant prune?
+        // swap_remove() should not cause a redundancy
         self.group_redundant_prune();
     }
     /// Removes a public constraint, and adjust the public_constraints and joint_constraints appropriately
