@@ -479,12 +479,15 @@ impl CompressedCollectiveConstraint {
 /// Adds a public constraint without pruning group constraints that are redundant
 impl CompressedCollectiveConstraint {
     // TODO: [TEST]
+    // TODO: Read through and theory check
     // TODO: Investigate Initial group prune relevance here
     // TODO: Investigate if how inferred groups can be produced here 
     /// Adds a public constraint, and prunes group constraints that are redundant
     /// NOTE:
     /// - Assumes no group is redundant before adding
-    /// - Leave no group redundant after adding
+    /// - Assumes no dead player info is in groups before adding
+    /// - Leaves no group redundant after adding
+    /// - Leaves no dead player info in groups
     pub fn add_public_constraint(&mut self, player_id: usize, card: Card) {
         self.dead_card_count[card as usize] += 1;
         debug_assert!(self.dead_card_count[card as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", card, self.dead_card_count[card as usize]);
