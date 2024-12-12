@@ -5,7 +5,9 @@ pub mod constraint;
 pub mod loader;
 mod coup_const;
 pub mod bitconstraint;
+pub mod bitconstraint_iterative;
 pub mod naive_sampler;
+
 // pub mod best_response_policy;
 
 // replay struct for Turn, Player, Action

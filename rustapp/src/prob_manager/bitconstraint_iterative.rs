@@ -12,6 +12,7 @@ use super::constraint::GroupConstraint;
 /// Bits 10..=11 represent the dead count 0..=2
 /// Bits 12..=13 represent the alive count 1..=3
 /// Bits 14..=15 represent total count = dead + alive 1..=3
+#[derive(PartialEq, Eq)]
 pub struct CompressedGroupConstraint(u16);
 
 impl CompressedGroupConstraint {
@@ -296,6 +297,9 @@ impl CompressedGroupConstraint {
     pub fn get_list(&self) -> [bool; 7]{
         self.get_set_players()
     }
+    pub fn get_flags(&self) -> u16 {
+        self.0 & Self::PLAYER_BITS
+    }
     /// Gets the Card thats stored
     pub fn card(&self) -> Card {
         self.get_card()
@@ -312,7 +316,7 @@ impl CompressedGroupConstraint {
 
         if self.get_card() == group.get_card() &&
         // If participation lists are the same
-        ((self.0 & Self::PLAYER_BITS) == (group.0 & Self::PLAYER_BITS)) &&
+        (self.get_flags() == group.get_flags()) &&
         // self.count() <= group.count() && 
         self.count_dead() <= group.count_dead() &&
         self.count_alive() <= group.count_alive() {
@@ -338,6 +342,32 @@ impl CompressedGroupConstraint {
     pub fn list_union<'a>(list1: &'a mut [bool; 7], list2: &[bool; 7]) -> &'a [bool; 7] {
         list1.iter_mut().zip(list2).for_each(|(a, b)| *a |= b);
         list1
+    }
+        /// Test to determine if input group_in_question is considered redundant because of the information provided in group_in_reference
+    /// Note: this is a test that decides the redundancy of group_in_question and not group_to_reference
+    /// YOU WILL NOT NECESSARILY GET THE SAME OUTPUT IF YOU SWAP THEM
+    /// This is different from the original
+    pub fn is_redundant(&self, group_to_reference: &CompressedGroupConstraint) -> bool {
+        if self == group_to_reference {
+            return true
+        }
+        if self.get_card() == group_to_reference.get_card() {
+            if self.get_flags() == group_to_reference.get_flags() && 
+            // Same Participation list / player flags
+            self.count_alive() < group_to_reference.count_alive() {
+                // dead_count is skipped because self cannot possibly have more
+                // Can use < here instead of <= as == is covered earlier
+                // [SUBSET] group in question is redundant as its informational content is fully described by group_to_reference
+                return true
+            }
+            // Don't recall why old version checks remaining counts
+            if group_to_reference.part_list_is_subset_of(self) &&
+            self.count_alive() == group_to_reference.count_alive() {
+                // [SUBSET] group in questions is redundant as its informational content is fully described by group_to_reference
+                return true
+            }
+        }
+        false
     }
 }
 
@@ -395,61 +425,32 @@ impl CompressedCollectiveConstraint {
         // If you reach here, its basically true just dependent on the center pile (player 6)
         participation_list[6]
     }
-    /// Test to determine if input group_in_question is considered redundant because of the information provided in group_in_reference
-    /// Note: this is a test that decides the redundancy of group_in_question and not group_to_reference
-    /// YOU WILL NOT NECESSARILY GET THE SAME OUTPUT IF YOU SWAP THEM
-    pub fn is_redundant(&self, group_in_question: &CompressedGroupConstraint, group_to_reference: &CompressedGroupConstraint) -> bool {
-        if group_in_question.is_subset_of(group_to_reference) {
-            return true;
-        }
-        if group_in_question.card() != group_to_reference.card() {
-            return false;
-        } 
-        if group_in_question.count_alive() == 0 {
-            return true;
-        }
-        let remaining_count = 3 - self.dead_card_count[group_in_question.card() as usize] as u8;
-        if group_in_question.count_alive() == remaining_count && group_to_reference.count_alive() == remaining_count {
-        // [REMOVE] I do not recall why the bottom was commented out, but it probably was cos the uncommented but new
-        // To uncomment if the first working version works
-        // if group_in_question.count() == remaining_count && group_to_reference.count() == remaining_count {
-        // [REMOVE] ==END===
-            // e.g. where group 2 part list is subset of group 1 part list
-            // Group 1 [0 1 0 0 1 0 1] : count = remaining_count
-            // Group 2 [0 1 0 0 0 0 1] : count = remaining_count
-            // We know both conditions must be true
-            // All remaining cards are within the set denoted by group 1 and the set denoted by group 2
-            // For both conditions to be true, player 4 must not have the card
-            // Therefore group 1 is redundant
-            return group_to_reference.part_list_is_subset_of(group_in_question);
-        }
-        false
-    }
+
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn get_jc_hm(&self) -> &HashMap<usize, Vec<Card>> {
-        pub fn joint_constraints(&self) -> &[[Option<Card>; 2]; 6] {
-            &self.joint_constraints
-        }
+    pub fn joint_constraints(&self) -> &[[Option<Card>; 2]; 6] {
+        &self.joint_constraints
+    }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn get_pc_hm(&self) -> &HashMap<usize, Card> {
-        pub fn public_constraints(&self) -> &[Option<Card>; 6] {
-            &self.public_constraints
-        }
+    pub fn public_constraints(&self) -> &[Option<Card>; 6] {
+        &self.public_constraints
+    }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn get_gc_vec(&self) -> &Vec<GroupConstraint>{
-        pub fn group_constraints(&self) -> &Vec<CompressedGroupConstraint>{
-            &self.group_constraints
-        }
+    pub fn group_constraints(&self) -> &Vec<CompressedGroupConstraint>{
+        &self.group_constraints
+    }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn jc_hm(&mut self) -> &mut HashMap<usize, Vec<Card>> {
-        pub fn joint_constraints_mut(&mut self) -> &mut [[Option<Card>; 2]; 6] {
-            &mut self.joint_constraints
-        }
+    pub fn joint_constraints_mut(&mut self) -> &mut [[Option<Card>; 2]; 6] {
+        &mut self.joint_constraints
+    }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn pc_hm(&mut self) -> &mut HashMap<usize, Card> {
-        pub fn public_constraints_mut(&mut self) -> &mut [Option<Card>; 6] {
-            &mut self.public_constraints
-        }
+    pub fn public_constraints_mut(&mut self) -> &mut [Option<Card>; 6] {
+        &mut self.public_constraints
+    }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn gc_vec(&mut self) -> &mut Vec<GroupConstraint>{
     pub fn group_constraints_mut(&mut self) -> &mut Vec<CompressedGroupConstraint>{
@@ -477,16 +478,26 @@ impl CompressedCollectiveConstraint {
 }
 /// Adds a public constraint without pruning group constraints that are redundant
 impl CompressedCollectiveConstraint {
-       // TODO: [TEST]
+    // TODO: [TEST]
+    // TODO: Investigate Initial group prune relevance here
+    // TODO: Investigate if how inferred groups can be produced here 
     /// Adds a public constraint, and prunes group constraints that are redundant
+    /// NOTE:
+    /// - Assumes no group is redundant before adding
+    /// - Leave no group redundant after adding
     pub fn add_public_constraint(&mut self, player_id: usize, card: Card) {
         self.dead_card_count[card as usize] += 1;
         debug_assert!(self.dead_card_count[card as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", card, self.dead_card_count[card as usize]);
+        let dead_card_flag: bool = self.dead_card_count[card as usize] == 3;
+        let mut dead_player_flag: bool = false;
+        let mut dead_player_card_vec: [Option<Card>; 2] = [None; 2];
         let current = self.public_constraints[player_id];
         match current {
             None => self.public_constraints[player_id] = Some(card),
             Some(dead_card) => {
                 self.public_constraints[player_id] = None;
+                dead_player_flag = true;
+                dead_player_card_vec = [Some(dead_card), Some(card)];
                 self.joint_constraints[player_id] = match dead_card < card {
                     true => {
                         [Some(dead_card), Some(card)]
@@ -495,70 +506,115 @@ impl CompressedCollectiveConstraint {
                         [Some(card), Some(dead_card)]
                     },
                 };
-                    
             },
         }
+        // LMAO dead player prune modifies all group card types
         let mut i: usize = 0;
-        'outer: while i < self.group_constraints.len() {
-            let group = &mut self.group_constraints[i];
-            if group.card() == card && group.get_player_flag(player_id) {
-                if group.count_alive() != 1 {
-                    group.count_dead_add(1);
-                    group.count_alive_subtract(1);
-                    // THE EDIT CHECK for redundancy
-                    // [ALT FAILED] ok it seems like i cant simply check for redundancy like that
-                    // [ALT ALT] Consider seperating group constraints by cards Vec<Vec<>> so you only need iter through the same card
-                    // let mut j: usize = 0;
-                    // 'inner: while j < self.group_constraints.len() {
-                    //     if i != j || group.card() == self.group_constraints[j].card() && 
-                    //     group.get_player_flags() == self.group_constraints[j].get_player_flags() && 
-                    //     group.count_dead() <= self.group_constraints[j].count_dead() &&
-                    //         group.count_alive() <= self.group_constraints[j].count_alive() {
-                    //             // In this check part list have to be equal
-                    //             // Check if i is subset of j
-                    //             self.group_constraints.swap_remove(i);
-                    //             continue 'outer;
-                    //         }
-                    //     j += 1;
-                    // }
-                    // j = 0;
-                    // let mut removal_indices: Vec<usize> = Vec::with_capacity(self.group_constraints.len());
-                    // 'inner: while j < self.group_constraints.len() {
-                    //     if i != j || group.card() == self.group_constraints[j].card() && 
-                    //     group.get_player_flags() == self.group_constraints[j].get_player_flags() && 
-                    //     group.count_dead() >= self.group_constraints[j].count_dead() &&
-                    //     group.count_alive() >= self.group_constraints[j].count_alive() {
-                    //         // In this check part list have to be equal
-                    //         // Check if i is subset of j
-                    //         removal_indices.push(j);
-                    //     }
-                    //     j += 1;
-                    // }
-
-                } else {
+        let mut change_flag: bool = false;
+        if !dead_player_flag {
+            let mut count_same_card_groups: u16 = 0;
+            'outer: while i < self.group_constraints.len() {
+                let group = &mut self.group_constraints[i];
+                if group.card() == card {
+                    count_same_card_groups += 1;
+                    if dead_card_flag {
+                        // [DEAD PRUNE] Prune group is all cards have been shown to be dead for some card.
+                        self.group_constraints.swap_remove(i);
+                        continue 'outer;
+                    }
+                    if group.get_player_flag(player_id) {
+                        if group.count_alive() != 1 {
+                            group.count_dead_add(1);
+                            group.count_alive_subtract(1);
+                            change_flag = true;
+                        } else {
+                            // [NO ALIVE PRUNE] count_alive == 0, so group is effectively useless as info is captured in public and joint constraints
+                            self.group_constraints.swap_remove(i);
+                            continue 'outer;
+                        }
+                    }
+                }
+                if self.is_complement_of_pcjc(&self.group_constraints[i]) {
+                    // [COMPLEMENT PRUNE] if group union (all public) union (joint constraint) is a full set it just means the card could be anywhere
+                    // This should be done for ALL groups, as adding a public constraint card can make any group complement regardless of card type
                     self.group_constraints.swap_remove(i);
                     continue 'outer;
                 }
-                // TODO: [TEST] is this really supposed to be an else if? and not an if?
-                // TODO: This can be an else if, because it is already handled in the first if condition swap_remove
-            } else if self.dead_card_count[group.card() as usize] == 3 {
-                // [DEAD PRUNE] Prune group is all cards have been shown to be dead for some card.
-                // TODO: Why not just remove when count_alive is 0? Wait is this already covered?
-                // TODO: [TEST] When this is done, and perhaps remove this
-                // TODO: Also shouldnt this only trigger for input card not all cards...
-                self.group_constraints.swap_remove(i);
-                continue 'outer;
-            } else if self.is_complement_of_pcjc(&self.group_constraints[i]) {
-                // [COMPLEMENT PRUNE] if group union (all public) union (joint constraint) is a full set it just means the card could be anywhere
-                // TODO: [TEST] Can we use an outer if group_card() == card and only check this if the condition holds?
-                self.group_constraints.swap_remove(i);
-                continue 'outer;
+                i += 1;
             }
-            i += 1;
+            if change_flag && count_same_card_groups > 1{
+                // Redundancy is assumed at the beginning, so if no change, nothing needs to be checked
+                // Redundancy only occurs if cards of both groups are the same.
+                // If no player dies, only groups with the same card are affected by changes
+                // so no need to run redundant prune to compare groups with different cards
+                // This is O(n) and you could make it better, but would require memory allocation. For simplicity and dud to small len() of vec we use O(n^2)
+                self.group_redundant_prune();
+            }
+        } else {
+            'outer: while i < self.group_constraints.len() {
+                let group = &mut self.group_constraints[i];
+                // TODO: [DEAD PLAYER PRUNE] somewhere around here (start with contains logic)
+                if group.card() == card {
+                    if dead_card_flag {
+                        // [DEAD PRUNE] Prune group is all cards have been shown to be dead for some card.
+                        self.group_constraints.swap_remove(i);
+                        continue 'outer;
+                    }
+                }
+                if group.indicator(player_id) {
+                    group.group_subtract(player_id);
+                    change_flag = true;
+                    // Get dead players cards and deal with it
+                    if Some(group.card()) == dead_player_card_vec[0] {
+                        if dead_player_card_vec[0] == dead_player_card_vec[1] {
+                            // Remove dead player information from group since its stored in public/joint constraints
+                            // Player's dead card before this was the same card
+                            // Now remove alive card (to reflect it as dead) and so remove both dead cards from group 
+                            if group.count_alive() == 1 {
+                                // [NO ALIVE] pruned
+                                self.group_constraints.swap_remove(i);
+                                continue;
+                            }
+                            // Remove current card then became dead
+                            group.count_alive_subtract(1);
+                            // Remove previous card that was dead
+                            group.count_dead_subtract(1);
+                        } else {
+                            // Player's dead card before this was a different card
+                            if group.count_alive() == 1 {
+                                self.group_constraints.swap_remove(i);
+                                continue;
+                            }
+                            // Remove current card then became dead
+                            group.count_alive_subtract(1);
+                        }
+                    } else if Some(group.card()) == dead_player_card_vec[1] {
+                            // Player's dead card before this was a different card
+                            if group.count_alive() == 1 {
+                                self.group_constraints.swap_remove(i);
+                                continue;
+                            }
+                            // Remove current card then became dead
+                            group.count_alive_subtract(1);
+                    }
+                    // If group.card() doesnt match any of dead players card, they are simply subtracted from the group flags
+                }
+                // Might still need to handle same case as above since may not always subtract indicator
+                if self.is_complement_of_pcjc(&self.group_constraints[i]) {
+                    // [COMPLEMENT PRUNE] if group union (all public) union (joint constraint) is a full set it just means the card could be anywhere
+                    // This should be done for ALL groups, as adding a public constraint card can make any group complement regardless of card type
+                    self.group_constraints.swap_remove(i);
+                    continue 'outer;
+                }
+                i += 1;
+            }
+            if change_flag {
+                // Redundancy is assumed at the beginning, so if no change, nothing needs to be checked
+                // If a player dies, all card groups can be affected by changes
+                // This is O(n) and you could make it better, but would require memory allocation. For simplicity and dud to small len() of vec we use O(n^2)
+                self.group_redundant_prune();
+            }
         }
-        // Why should there be a redundant prune?
-        // swap_remove() should not cause a redundancy
-        self.group_redundant_prune();
     }
     /// Removes a public constraint, and adjust the public_constraints and joint_constraints appropriately
     /// NOTE:
@@ -762,10 +818,10 @@ impl CompressedCollectiveConstraint {
             'inner: while j < self.group_constraints.len() {
                 let group_i = &self.group_constraints[i];
                 let group_j = &self.group_constraints[j];
-                if self.is_redundant(group_i, group_j) {
+                if group_i.is_redundant(group_j) {
                     self.group_constraints.swap_remove(i);
                     continue 'outer;
-                } else if self.is_redundant(group_j, group_i) {
+                } else if group_j.is_redundant(group_i) {
                     self.group_constraints.swap_remove(j);
                     continue 'inner;
                 } 
