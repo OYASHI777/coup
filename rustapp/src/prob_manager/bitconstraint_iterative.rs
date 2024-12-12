@@ -508,7 +508,6 @@ impl CompressedCollectiveConstraint {
                 };
             },
         }
-        // LMAO dead player prune modifies all group card types
         let mut i: usize = 0;
         let mut change_flag: bool = false;
         if !dead_player_flag {
@@ -563,7 +562,6 @@ impl CompressedCollectiveConstraint {
                 }
                 if group.indicator(player_id) {
                     group.group_subtract(player_id);
-                    change_flag = true;
                     // Get dead players cards and deal with it
                     if Some(group.card()) == dead_player_card_vec[0] {
                         if dead_player_card_vec[0] == dead_player_card_vec[1] {
@@ -571,7 +569,7 @@ impl CompressedCollectiveConstraint {
                             // Player's dead card before this was the same card
                             // Now remove alive card (to reflect it as dead) and so remove both dead cards from group 
                             if group.count_alive() == 1 {
-                                // [NO ALIVE] pruned
+                                // [NO ALIVE PRUNE]
                                 self.group_constraints.swap_remove(i);
                                 continue;
                             }
@@ -582,6 +580,7 @@ impl CompressedCollectiveConstraint {
                         } else {
                             // Player's dead card before this was a different card
                             if group.count_alive() == 1 {
+                                // [NO ALIVE PRUNE]
                                 self.group_constraints.swap_remove(i);
                                 continue;
                             }
@@ -589,15 +588,16 @@ impl CompressedCollectiveConstraint {
                             group.count_alive_subtract(1);
                         }
                     } else if Some(group.card()) == dead_player_card_vec[1] {
-                            // Player's dead card before this was a different card
-                            if group.count_alive() == 1 {
-                                self.group_constraints.swap_remove(i);
-                                continue;
-                            }
-                            // Remove current card then became dead
-                            group.count_alive_subtract(1);
+                        // Player's dead card before this was a different card
+                        if group.count_alive() == 1 {
+                            // [NO ALIVE PRUNE]
+                            self.group_constraints.swap_remove(i);
+                            continue;
+                        }
+                        // Remove current card then became dead
+                        group.count_alive_subtract(1);
                     }
-                    // If group.card() doesnt match any of dead players card, they are simply subtracted from the group flags
+                    change_flag = true;
                 }
                 // Might still need to handle same case as above since may not always subtract indicator
                 if self.is_complement_of_pcjc(&self.group_constraints[i]) {
