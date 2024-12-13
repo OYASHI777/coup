@@ -892,6 +892,7 @@ impl CompressedCollectiveConstraint {
     /// - Leaves no dead player info in groups
     pub fn update_group_constraint(&mut self, player_id: usize, card: Card, count: usize) {
         let mut i: usize = 0;
+        let mut change_flag: bool = false;
         while i < self.group_constraints.len() {
             let group = &mut self.group_constraints[i];
             if !group.get_player_flag(player_id) && group.get_player_flag(6) {
@@ -902,19 +903,22 @@ impl CompressedCollectiveConstraint {
                         group.count_dead_add(1);
                     }
                 }
-            }
-            if group.all_in() {
-                // [FULL PRUNE] part list are all true so the card could be anywhere
-                self.group_constraints.swap_remove(i);
-                continue;
-            } else if self.is_complement_of_pcjc(&self.group_constraints[i]) {
-                // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
-                self.group_constraints.swap_remove(i);
-                continue;
+                if group.all_in() {
+                    // [FULL PRUNE] part list are all true so the card could be anywhere
+                    self.group_constraints.swap_remove(i);
+                    continue;
+                } else if self.is_complement_of_pcjc(&self.group_constraints[i]) {
+                    // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+                    self.group_constraints.swap_remove(i);
+                    continue;
+                }
+                change_flag = true;
             }
             i += 1;
         }
-        self.group_redundant_prune();
+        if change_flag {
+            self.group_redundant_prune();
+        }
     }
     /// Loops through group_constraints, and removes redundant constraints
     pub fn group_redundant_prune(&mut self) {
@@ -928,6 +932,7 @@ impl CompressedCollectiveConstraint {
             'inner: while j < self.group_constraints.len() {
                 let group_i = &self.group_constraints[i];
                 let group_j = &self.group_constraints[j];
+                // TODO: [OPTIMIZE]... can do some common checks to reduce by 2 branches...
                 if group_i.is_redundant(group_j) {
                     self.group_constraints.swap_remove(i);
                     continue 'outer;
