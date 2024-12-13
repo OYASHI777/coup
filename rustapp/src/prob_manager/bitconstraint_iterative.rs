@@ -555,7 +555,6 @@ impl CompressedCollectiveConstraint {
         } else {
             'outer: while i < self.group_constraints.len() {
                 let group = &mut self.group_constraints[i];
-                // TODO: [DEAD PLAYER PRUNE] somewhere around here (start with contains logic)
                 if group.card() == card {
                     if dead_card_flag {
                         // [DEAD PRUNE] Prune group is all cards have been shown to be dead for some card.
@@ -564,6 +563,7 @@ impl CompressedCollectiveConstraint {
                     }
                 }
                 if group.indicator(player_id) {
+                    // [DEAD PLAYER PRUNE] 
                     group.group_subtract(player_id);
                     // Get dead players cards and deal with it
                     if Some(group.card()) == dead_player_card_vec[0] {
@@ -807,6 +807,39 @@ impl CompressedCollectiveConstraint {
     // work to the add instead of just a generic check on all group constraints
     pub fn add_group_constraint(&mut self) {
         todo!()
+    }
+    /// Sets player's flag to true for groups that have centerpile flag as true
+    /// NOTE:
+    /// - Assumes player_id is alive and thus joint_constraint is empty, public_constraint may or may not be empty
+    /// - Assumes no group is redundant before adding
+    /// - Assumes no dead player info is in groups before adding
+    /// - Does not leaves no group redundant after adding
+    /// - Leaves no dead player info in groups
+    pub fn update_group_constraint(&mut self, player_id: usize, card: Card, count: usize) {
+        let mut i: usize = 0;
+        while i < self.group_constraints.len() {
+            let group = &mut self.group_constraints[i];
+            if group.get_player_flag(player_id) == false && group.get_player_flag(6) == true {
+                group.group_add(player_id);
+                if let Some(player_dead_card) = self.public_constraints[player_id] {
+                    if player_dead_card == group.card() {
+                        // Added player has a dead card that should be included in the group
+                        group.count_dead_add(1);
+                    }
+                }
+            }
+            if group.all_in() {
+                // [FULL PRUNE] part list are all true so the card could be anywhere
+                self.group_constraints.swap_remove(i);
+                continue;
+            } else if self.is_complement_of_pcjc(&self.group_constraints[i]) {
+                // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+                self.group_constraints.swap_remove(i);
+                continue;
+            }
+            i += 1;
+        }
+        self.group_redundant_prune();
     }
     // TODO: [ALT] Make alternate version of this that tests by only comparing the modified index against every other index
     /// Loops through group_constraints, and removes redundant constraints
