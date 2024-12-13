@@ -101,6 +101,7 @@ impl CompressedGroupConstraint {
     fn add_dead_count(&mut self, amount: u8) {
         let dead_bits = (self.0 & Self::DEAD_COUNT_MASK) >> Self::DEAD_COUNT_SHIFT;
         let new_count = dead_bits + (amount as u16);
+        // TODO: Change this, this is meant to count total dead cards, up to 15, not just those of the card!
         debug_assert!(new_count < 4, "Dead count would exceed maximum");
         self.0 = (self.0 & !Self::DEAD_COUNT_MASK) | (new_count << Self::DEAD_COUNT_SHIFT);
     }
@@ -479,7 +480,7 @@ impl CompressedCollectiveConstraint {
 /// Adds a public constraint without pruning group constraints that are redundant
 impl CompressedCollectiveConstraint {
     // TODO: [TEST]
-    // TODO: Read through and theory check
+    // TODO: [CHECK THEORY] Read through and theory check
     // TODO: Investigate Initial group prune relevance here
     // TODO: Investigate if how inferred groups can be produced here 
     /// Adds a public constraint, and prunes group constraints that are redundant
@@ -804,9 +805,83 @@ impl CompressedCollectiveConstraint {
         // self.group_redundant_prune();
     }
     // TODO: [ALT] Try to see if you can do a 2n checks instead of n^2, by just checking if the added item makes anything redundant or if it is redundant so you shift 
+    // TODO: [CHECK THEORY]
+    // TODO: figure out why count is used? isnt revealredraw always one?
     // work to the add instead of just a generic check on all group constraints
-    pub fn add_group_constraint(&mut self) {
-        todo!()
+    /// Used for RevealRedraw
+    /// - Assumes player_id is alive and thus joint_constraint is empty, public_constraint may or may not be empty
+    /// - Assumes no group is redundant before adding
+    /// - Assumes no dead player info is in groups before adding
+    /// - Does not leaves no group redundant after adding
+    /// - Leaves no dead player info in groups
+    pub fn add_group_constraint(&mut self, player_id: usize, card: Card, count: u8) {
+        let mut change_flag: bool = false;
+        let mut i: usize = 0;
+        while i < self.group_constraints.len() {
+            let group = &mut self.group_constraints[i];
+            if !group.get_player_flag(player_id) && group.get_player_flag(6) {
+                change_flag = true;
+                group.group_add(player_id);
+                // Old Group: Duke [0 1 0 0 0 0 1] Count 1
+                // Move RevealRedraw a Duke is revealed and shuffled into pile
+                // Add Group: Duke [0 0 1 0 0 0 1] Count 1
+                // Intuitively there will be 1 Duke at first with player 2 now shuffled among himself and the pile
+                // And 1 Duke that was originally with Player 1 & pile
+                // After RevealRedraw there are in total 2 Dukes among player 1,2 and Pile
+                // So we must increment the old counter by new_count
+                if group.card() == card {
+                    group.count_alive_add(count);
+                    if Some(card) == self.public_constraints[player_id] {
+                        group.count_dead_add(1);
+                    }
+                    debug_assert!(group.count() <= 3, "Impossible case reached!");
+                    debug_assert!(group.count_alive() <= 3, "Impossible case reached!");
+                    debug_assert!(group.count_dead() <= 3, "Impossible case reached!");
+                } else {
+                    if self.public_constraints[player_id] == Some(group.card()) {
+                        // Adding if player has dead_card thats equal to the group card
+                        group.count_dead_add(1);
+                    }
+                }
+                if group.all_in() {
+                    // [FULL PRUNE] because group constraint just means there could be a Duke anywhere (anyone or the pile might have it)
+                    self.group_constraints.swap_remove(i);
+                    continue;
+                } else if self.is_complement_of_pcjc(&self.group_constraints[i]) {
+                    // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+                    self.group_constraints.swap_remove(i);
+                    continue;
+                }
+            }
+            i += 1;
+        }
+        let addition = if Some(card) == self.public_constraints[player_id] {
+            CompressedGroupConstraint::new(player_id, card, 1, count)
+        } else {
+            CompressedGroupConstraint::new(player_id, card, 0, count)
+        };
+        if change_flag {
+            if !self.is_complement_of_pcjc(&addition) {
+                self.group_constraints.push(addition);
+            }
+            self.group_redundant_prune();
+        } else {
+            if !self.is_complement_of_pcjc(&addition) {
+                // Probably abstract this into a function
+                // No need to check redundancy among all, just what is being added
+                let mut i: usize = 0;
+                while i < self.group_constraints.len() {
+                    if addition.is_redundant(&self.group_constraints[i]) {
+                        break;
+                    }
+                    if self.group_constraints[i].is_redundant(&addition) {
+                        self.group_constraints.swap_remove(i);
+                        continue;
+                    }
+                    i += 1;
+                }
+            }
+        }
     }
     /// Sets player's flag to true for groups that have centerpile flag as true
     /// NOTE:
@@ -819,7 +894,7 @@ impl CompressedCollectiveConstraint {
         let mut i: usize = 0;
         while i < self.group_constraints.len() {
             let group = &mut self.group_constraints[i];
-            if group.get_player_flag(player_id) == false && group.get_player_flag(6) == true {
+            if !group.get_player_flag(player_id) && group.get_player_flag(6) {
                 group.group_add(player_id);
                 if let Some(player_dead_card) = self.public_constraints[player_id] {
                     if player_dead_card == group.card() {
@@ -841,7 +916,6 @@ impl CompressedCollectiveConstraint {
         }
         self.group_redundant_prune();
     }
-    // TODO: [ALT] Make alternate version of this that tests by only comparing the modified index against every other index
     /// Loops through group_constraints, and removes redundant constraints
     pub fn group_redundant_prune(&mut self) {
         if self.group_constraints.len() < 1 {
@@ -868,6 +942,6 @@ impl CompressedCollectiveConstraint {
     }
     // TODO: [ALT] Make alternate version of this that adds with 2n checks for when you use it with a particular group added in mind.
     pub fn add_inferred_groups(&mut self) {
-
+        todo!("maybe?")
     }
 }
