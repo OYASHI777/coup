@@ -27,13 +27,13 @@ impl CompressedGroupConstraint {
     const TOTAL_COUNT_SHIFT: u8 = 14;
     const TOTAL_COUNT_MASK: u16 = 0b1100_0000_0000_0000; // Bits 14-15
     const MAX_PLAYERS: u8 = 7;
-    pub fn new(player_id: usize, card: Card, count_dead: usize, count_alive: usize) -> Self {
+    pub fn new(player_id: usize, card: Card, count_dead: u8, count_alive: u8) -> Self {
         debug_assert!(player_id < 6);
         let mut output = CompressedGroupConstraint(Self::START_FLAGS[player_id]);
         output.set_card(card);
-        output.set_alive_count(count_alive as u8);
-        output.set_dead_count(count_dead as u8);
-        output.set_total_count((count_dead + count_alive) as u8);
+        output.set_alive_count(count_alive);
+        output.set_dead_count(count_dead);
+        output.set_total_count((count_dead + count_alive));
         output
     }
 
@@ -731,37 +731,26 @@ impl CompressedCollectiveConstraint {
         }
     }
     // TODO: [ALT] to see if swap_remove checks can be in the if group.indicator(player_id) under a different paradigm
+    // TODO: [CHECK THEORY]
     /// Assumes group_initial_prune was used before this
     /// Prunes a group constraints based on a dead player's cards (I think? TODO: Validate)
     pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: [Card; 2]) {
-        // Assumes group_initial_prune was used before this
-        // [OLD]
+        // ??? Referenced implementation Assumes group_initial_prune was used before this
+        // [NEW]
         let mut i: usize = 0;
         let mut bool_subtract: bool = false;
         while i < self.group_constraints.len() {
             let group: &mut CompressedGroupConstraint = &mut self.group_constraints[i];
             let card: Card = group.card();
             if group.indicator(player_id) {
-                if !card_vec.contains(&card) {
-                    group.group_subtract(player_id);
-                    bool_subtract = true;
-                } else if card_vec[0] == card_vec[1] {
-                    if card == card_vec[0] {
-                        group.group_subtract(player_id);
-                        group.count_dead_subtract(2);
-                        bool_subtract = true;
-                    }
-                    debug_assert!(group.count() == 0, "Unexpected 0 found!");
-                } else {
-                    if card == card_vec[0] {
-                        group.group_subtract(player_id);
-                        group.count_dead_subtract(1);
-                        bool_subtract = true;
-                    } else if card == card_vec[1] {
-                        group.group_subtract(player_id);
-                        group.count_dead_subtract(1);
-                        bool_subtract = true;
-                    }
+                group.group_subtract(player_id);
+                bool_subtract = true;
+                if card_vec.contains(&card) {
+                    let subtract_count: u8 = match (card_vec[0] == card_vec[1]) {
+                        true => 2,
+                        false => 1,
+                    };
+                    group.count_dead_subtract(subtract_count);
                     debug_assert!(group.count() == 0, "Unexpected 0 found!");
                 }
             }
@@ -775,34 +764,6 @@ impl CompressedCollectiveConstraint {
             i += 1;
         }
         self.group_redundant_prune();
-        // [NEW]
-        // let mut i: usize = 0;
-        // let mut bool_subtract: bool = false;
-        // while i < self.group_constraints.len() {
-        //     let group: &mut CompressedGroupConstraint = &mut self.group_constraints[i];
-        //     let card: Card = group.card();
-        //     if group.indicator(player_id) {
-        //         group.group_subtract(player_id);
-        //         bool_subtract = true;
-        //         if card_vec.contains(&card) {
-        //             let subtract_count: usize = match (card_vec[0] == card_vec[1]) {
-        //                 true => 2,
-        //                 false => 1,
-        //             };
-        //             group.count_dead_subtract(subtract_count);
-        //             debug_assert!(group.count() == 0, "Unexpected 0 found!");
-        //         }
-        //     }
-        //     if group.count_alive() == 0 || //
-        //     self.dead_card_count[card as usize] == 3 || // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
-        //     self.is_complement_of_pcjc(&self.group_constraints[i]) // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
-        //     {
-        //         self.group_constraints.swap_remove(i);
-        //         continue;
-        //     }
-        //     i += 1;
-        // }
-        // self.group_redundant_prune();
     }
     // TODO: [ALT] Try to see if you can do a 2n checks instead of n^2, by just checking if the added item makes anything redundant or if it is redundant so you shift 
     // TODO: [CHECK THEORY]
