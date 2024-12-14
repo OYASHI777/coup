@@ -776,7 +776,16 @@ impl CompressedCollectiveConstraint {
     /// - Does not leaves no group redundant after adding
     /// - Leaves no dead player info in groups
     pub fn add_group_constraint(&mut self, player_id: usize, card: Card, count: u8) {
+        // TODO: Rename to RevealRedraw
+        // DO we need to initial prune here? like those players that
+        // TODO: [THOT] what if player reveals card and its the last card of its kind?
+        // TODO: [THOT] Can we just prune based on representing new information and doing a redundant check?
+        // TODO: [THOT] Or maybe make a method that compares 2 groups, then make a modification to the first based off the second?
+        // TODO: [Implement] Have to label those with pile false as true too!
+        // TODO: [Implement] Refactor to 1 check player flag, 2 check pile flag
+        // TODO: [FINAL] Check if change_flag can be move out or not
         let mut change_flag: bool = false;
+        let player_card_count: u8 = count + (self.public_constraints[player_id] == Some(card)) as u8;
         let mut i: usize = 0;
         while i < self.group_constraints.len() {
             let group = &mut self.group_constraints[i];
@@ -812,6 +821,64 @@ impl CompressedCollectiveConstraint {
                     // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
                     self.group_constraints.swap_remove(i);
                     continue;
+                }
+            } else if group.get_player_flag(player_id)  {
+                // TODO: Check if need initial prune
+                // TODO: Maybe rearrange group.player flag and pile flag
+                if group.card() == card {
+                    if group.count() <= player_card_count {
+                        // [BASIC PRUNE] knowing the player had the card now makes this group obsolete
+                        // TODO: [REEVALUATE] all cases, merge with below
+                        // No need to modify this as the swap information gets added at the end
+                        // In these examples, player will be player 2!
+                        // CASE 1: player has 2 Duke (dead, alive) = (1, 1)
+                        // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0), (0, n) => IMPOSSIBLE, (1, 1) => PRUNE, (1, 2) => Handle here, (2, 1) => PRUNE
+                        // PRUNED because what we add at the end is at least better information
+                        // CASE 2: player has 1 Duke (dead, alive) = (0, 1), 1 alive other card, 
+                        // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => IMPOSSIBLE, (0, 1) => ??, (0, 2) => ??, (0, 3) => ?? ,(1, 1) => ?, (1, 2) => Handle here, (2, 1) => ?
+                        // CASE 3: player has 1 Duke (dead, alive) = (0, 1), 1 dead other card
+                        // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (1, 0) => IMPOSSIBLE, (1, 1) => PRUNE, (1, 2) => Handle here, (2, 1) => PRUNE, (0, 3) =>
+                        // CASE IGNORE: 2 Dead Duke, 2 Alive Duke, Not a possible to reach here!
+                        // TODO: THEN split by whether pile flag true/false
+                        self.group_constraints.swap_remove(i);
+                        continue;
+                    }
+                } 
+                if !group.get_player_flag(6) {
+                    // Naturally group.card() != card && group.get_player_flag == false
+                    // TODO: Handle this?
+                    // If the player's entire hand is known we can remove a flag
+                    // If it does not have the pile as true
+                    // TODO: [CHECK]
+                    if group.card() == card {
+                        if Some(group.card()) == self.public_constraints[player_id] {
+                            // CASE 1: Has dead card == group.card()
+                            // So player has 2 of those cards, and group not pruned...
+                            // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (1, 0) => PRUNED, (1, 1) => PRUNED, (1, 2) => Handle here, (2, 1) => Handle Here
+                            // 
+                        } else {
+                            // CASE 2: Has alive card == group.card(), dead card != group.card()
+                            // Player reveals alive Duke
+                            // [0, 0, 1, 0, 0, 1, 0] Duke 2 => [0, 0, 1, 0, 0, 1, 1] Duke 2
+                            // TODO: Reconcile the player flag, pile flag, == card with BASIC PRUNE
+                            group.set_player_flag(6, true);
+                            change_flag = true;
+                        }
+                    } else {
+                        // 
+                    }
+                    // CASE 3: Has alive and dead card == group.card()
+                    // CASE 4: Has alive and dead card != group.card()
+                    if group.card() != card && Some(group.card()) != self.public_constraints[player_id] {
+                        // [0, 0, 1, 0, 0, 1, 0] Duke 2
+                        // Player 2 as dead Assassin
+                        // If he reveal redraw Captain, we know he does not haev a duke, and so can change group to
+                        // [0, 0, 0, 0, 0, 1, 0] Duke 2
+                        // Pile flag does not become 1 as player did not have the duke, therefore could not have passed it to the pile
+                        group.set_player_flag(player_id, false);
+                        change_flag = true;
+                        // TODO: debug_assert and all false group
+                    }  
                 }
             }
             i += 1;
