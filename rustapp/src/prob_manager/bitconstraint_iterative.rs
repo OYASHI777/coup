@@ -1,3 +1,5 @@
+use rayon::join;
+
 use crate::history_public::Card;
 use std::collections::HashSet;
 use super::constraint::GroupConstraint;
@@ -16,6 +18,8 @@ use super::constraint::GroupConstraint;
 pub struct CompressedGroupConstraint(u16);
 
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
+// [FIRST GLANCE PRIORITY]      - Work on mix edge cases
+// [FIRST GLANCE PRIORITY] Add inferred_card_count
 impl CompressedGroupConstraint {
     const START_FLAGS: [u16; 6] = [0b0000_0000_0100_0001, 0b0000_0000_0100_0010, 0b0000_0000_0100_0100, 0b0000_0000_0100_1000, 0b0000_0000_0101_0000, 0b0000_0000_0110_0000,];
     const PLAYER_BITS: u16 = 0b0000_0000_0111_1111; // Bits 0-6
@@ -396,6 +400,7 @@ impl CompressedCollectiveConstraint {
         let inferred_pile_constraints: [u8; 5] = [0; 5];
         let group_constraints: Vec<CompressedGroupConstraint> = Vec::with_capacity(15);
         let dead_card_count: [u8; 5] = [0; 5];
+        // TODO: Add inferred_card_count
         Self {
             public_single_constraints,
             public_joint_constraints,
@@ -907,11 +912,16 @@ impl CompressedCollectiveConstraint {
             // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
             self.group_redundant_prune();
         } 
+        // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
+        // [THOT] So one might be able to learn information about the hands of other players?
+        // TODO: put a function that fits information discovery here
     }
     /// Mixes card between player_id and the pile, then removes redundant stuff
+    /// Reveal_card == Some(card) for RevealRedraw 
+    /// Reveal_card == None for Ambassador 
     /// - Assumes nothing it just mixes
     /// - Mixing adds the inferred information into the mix!
-    pub fn mix(&mut self, player_id: usize) {
+    pub fn mix(&mut self, player_id: usize, reveal_card: Option<Card>) {
         // Now I could selectively check if there are changes, and choose to redundant prune only sometimes
         // But odds are, there is some set where player flag is 0 so we will need to do it anyways
         for group in self.group_constraints.iter_mut() {
@@ -925,25 +935,53 @@ impl CompressedCollectiveConstraint {
                             group.add_dead_count(1);
                         }
                     }
-                    if self.inferred_single_constraints[player_id] == Some(group_card) {
-                        group.count_alive_add(1);
-                    } else if self.inferred_joint_constraints[player_id] == [Some(group_card), Some(group_card)] {
-                        group.count_alive_add(2);
-                    } else if self.inferred_joint_constraints[player_id].contains(&Some(group_card)) {
-                        group.count_alive_add(1);
-                    }
-                } else {
-                    if !group.get_player_flag(6) {
-                        group.set_player_flag(6, true);
-                        let group_card = group.card();
-                    }
+                    let single_count: u8 = if self.inferred_single_constraints[player_id] == Some(group_card) { 1 } else { 0 };
+                    let joint_count: u8 = self.inferred_joint_constraints[player_id]
+                    .iter()
+                    .filter(|&&card| card == Some(group_card))
+                    .count() as u8;
+                    debug_assert!(single_count + joint_count < 3, "???");
+                    // TODO: put debug_assert somewhere sensible
+                    // debug_assert!(single_count + joint_count + self.dead_card_count()[group_card as usize] < 3, "???");
+                    group.count_alive_add(single_count + joint_count);
+                }
+            } else if !group.get_player_flag(6) {
+                group.set_player_flag(6, true);
+                group.count_alive_add(self.inferred_pile_constraints[group_card as usize]); 
+            } else {
+                // If somehow you have learnt of more inferred information, add it in!
+                let single_count: u8 = if self.inferred_single_constraints[player_id] == Some(group_card) { 1 } else { 0 };
+                let joint_count: u8 = self.inferred_joint_constraints[player_id]
+                .iter()
+                .filter(|&&card| card == Some(group_card))
+                .count() as u8;
+                if group.get_alive_count() < single_count + joint_count {
+                    group.set_alive_count(single_count + joint_count);
                 }
             }
         }
-        // remove only a particular inferred card for reveal_redraw
-        // remove all inferred cards for exchange_draw
-        // Put inferred cards back into groups somhow
+        // [SPECIAL CASE] (probably many if you look up the old algo) If all 3 cards are with ambassador and player, then you know ambassador must have at least 1 of that card
+        // TODO: Find and Handle these cases, in terms of how to rearrange inferred cards
+        if let Some(card) = reveal_card {
+            // RevealRedraw
+            let single_count: u8 = if self.inferred_single_constraints[player_id] == reveal_card { 1 } else { 0 };
+            let joint_count: u8 = self.inferred_joint_constraints[player_id]
+            .iter()
+            .filter(|&&card| card == reveal_card)
+            .count() as u8;
+            // only subtract 1 card here as only 1 is revealed and moved out of player's hand 
+            self.subtract_inferred_player_constraints(player_id, card);
+            let dead_count = (self.public_single_constraints[player_id] == reveal_card) as u8;
+            // Adding new group between player_id and pile
+            self.group_constraints.push(CompressedGroupConstraint::new(player_id, card, dead_count, single_count + joint_count));
+        } else {
+            // Ambassador
+            // Adjust inferred knowledge
+            // No group to add
+            // Subtraction needs to be done cautiously, might be the same as mix in all its edge cases
+        }
         self.group_redundant_prune();
+        // [THOT] Mix dilutes information, so one should mix groups here and undiscover them... really just the player and the current pile?
     }
     // TODO: [ALT] Try to see if you can do a 2n checks instead of n^2, by just checking if the added item makes anything redundant or if it is redundant so you shift 
     // TODO: [CHECK THEORY]
