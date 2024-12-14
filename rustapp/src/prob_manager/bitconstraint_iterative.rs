@@ -539,7 +539,7 @@ impl CompressedCollectiveConstraint {
         self.inferred_pile_constraints = [0; 5];
     }
     // TODO: [TEST]
-    // TODO: [CHECK THEORY] Read through and theory check
+    // TODO: [THEORY REVIEW] Read through and theory check
     // TODO: Investigate Initial group prune relevance here
     // TODO: Investigate if how inferred groups can be produced here 
     /// Adds a public constraint, and prunes group constraints that are redundant
@@ -824,6 +824,7 @@ impl CompressedCollectiveConstraint {
         }
         self.group_redundant_prune();
     }
+    // TODO: [THEORY CHECK]
     /// Does the Reveal part of RevealRedraw
     /// - Only prunes those that can be immediately found to be redundant, without comparing to other groups
     /// - Assumes player_id is alive and thus joint_constraint is empty, public_constraint may or may not be empty
@@ -916,6 +917,7 @@ impl CompressedCollectiveConstraint {
         // [THOT] So one might be able to learn information about the hands of other players?
         // TODO: put a function that fits information discovery here
     }
+    // TODO: [THEORY CHECK]
     /// Mixes card between player_id and the pile, then removes redundant stuff
     /// Reveal_card == Some(card) for RevealRedraw 
     /// Reveal_card == None for Ambassador 
