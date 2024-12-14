@@ -781,6 +781,7 @@ impl CompressedCollectiveConstraint {
         // TODO: [THOT] what if player reveals card and its the last card of its kind?
         // TODO: [THOT] Can we just prune based on representing new information and doing a redundant check?
         // TODO: [THOT] Or maybe make a method that compares 2 groups, then make a modification to the first based off the second?
+        // TODO: [THOT] For list method, consider split revealing card, and shuffling. Revealing card changes LEGAL CARD LIST in a similar way...
         // TODO: [Implement] Have to label those with pile false as true too!
         // TODO: [Implement] Refactor to 1 check player flag, 2 check pile flag
         // TODO: [FINAL] Check if change_flag can be move out or not
@@ -825,7 +826,8 @@ impl CompressedCollectiveConstraint {
             } else if group.get_player_flag(player_id)  {
                 // TODO: Check if need initial prune
                 // TODO: Maybe rearrange group.player flag and pile flag
-                // In these examples, player will be player 2, player flag is always true, pile flag can be true/false, player alive card always >= 1
+                // META-CASE 1
+                // In these examples, player_id == 2, player_flag == true, pile_flag in {true, false}, player alive card always >= 1, group.card() == card == Duke
                 // CASE 1: player has 2 Duke (dead, alive) = (1, 1)
                 // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => GROUP INCLUDES PLAYER WHO HAS ALIVE=0, (0, n) => GROUP INCLUDES PLAYER WHO HAS DEAD CARD, (1, 1) => PRUNE, (1, 2) => Handle here, (2, 1) => PRUNE
                 // PRUNED because what we add at the end is at least better information
@@ -835,16 +837,34 @@ impl CompressedCollectiveConstraint {
                 // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => GROUP INCLUDES PLAYER WHO HAS ALIVE=0, (0, 1) => PRUNE, (0, 2) => HANDLE, (0, 3) => HANDLE, (1, 1) => PRUNE, (1, 2) => HANDLE, (2, 1) => PRUNE
                 // CASE IGNORE: 2 Dead Duke, 2 Alive Duke, Not a possible to reach here!
                 // CONCLUSION 1: Seems like we PRUNE when group.alive_count() <= player card alive count
+
+                // META-CASE 2
+                // In these examples, player_id == 2, player_flag == true, pile_flag in {true, false}, player alive card always >= 1, group.card() != card, card == Duke
+                // In some cases, this revelation might tell us, certain players DONT have card, and so allow us to update the LEGAL CARD LIST
+                // CASE 1: player has 2 Duke (dead, alive) = (1, 1)
+                // If pile_flag == false make it true, if pile_flag == true, leave it
+                // CASE 2: player has 1 Duke (dead, alive) = (0, 1), 1 alive other card, 
+                // If pile_flag == false make it true, if pile_flag == true, leave it
+                // CASE 3: player has 1 Duke (dead, alive) = (0, 1), 1 dead other card
+                // If pile_flag == false make it true, if pile_flag == true, leave it
+                // TODO: [THEORY CHECK] all cases, merge with below
                 // TODO: THEN split by whether pile flag true/false
                 if group.card() == card {
                     if group.count() <= player_card_count {
-                        // [BASIC PRUNE] knowing the player had the card now makes this group obsolete
-                        // TODO: [THEORY CHECK] all cases, merge with below
-                        // No need to modify this as the swap information gets added at the end
+                        // [SUBSET PRUNE] knowing the player had the card now makes this group obsolete
+                        // No need to modify this as the information from the player's pile swap gets added at the end
                         self.group_constraints.swap_remove(i);
                         continue;
                     }
-                } 
+                    // TODO: HANDLE WEIRD CASES
+                    if group.get_player_flag(6) {
+                        // TODO: HANDLE
+                    } else {
+                        // TODO: HANDLE
+                    }
+                } else {
+                    // HANDLE
+                }
                 if !group.get_player_flag(6) {
                     // Naturally group.card() != card && group.get_player_flag == false
                     // TODO: Handle this?
