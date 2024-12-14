@@ -842,10 +842,13 @@ impl CompressedCollectiveConstraint {
                 // META-CASE 2
                 // In these examples, player_id == 2, player_flag == true, pile_flag in {true, false}, player alive card always >= 1, group.card() != card, card == Duke
                 // In some cases, this revelation might tell us, certain players DONT have card, and so allow us to update the LEGAL CARD LIST
-                // CASE 1: player has 2 Duke (dead, alive) = (1, 1)
                 // If pile_flag == false make it true, if pile_flag == true, leave it
+                // player_flag = false, if both player cards are known! KNOWN => player has dead card, and current card, KNOWN => we know player current card and unrevealed card
+                // TODO: [IMPLEMENT] save private inferred info => single and joint, can store there if inferred for quicker access
+                // CASE 1: player has 2 Duke (dead, alive) = (1, 1)
                 // CASE 2: player has 1 Duke (dead, alive) = (0, 1), 1 alive other card, 
                 // If pile_flag == false make it true, if pile_flag == true, leave it
+                // group.card() != Duke where (dead, alive) = (n, 0) => GROUP ALIVE_COUNT > 0, (0, n) => MIX
                 // CASE 3: player has 1 Duke (dead, alive) = (0, 1), 1 dead other card
                 // If pile_flag == false make it true, if pile_flag == true, leave it
                 // TODO: [THEORY CHECK] all cases, merge with below
@@ -857,14 +860,9 @@ impl CompressedCollectiveConstraint {
                         self.group_constraints.swap_remove(i);
                         continue;
                     }
-                    // TODO: HANDLE WEIRD CASES
-                    if group.get_player_flag(6) {
-                        // TODO: HANDLE
-                    } else {
-                        // TODO: HANDLE
-                    }
+                    group.set_player_flag(6, true);
                 } else {
-                    // HANDLE
+                    group.set_player_flag(6, true);
                 }
                 if !group.get_player_flag(6) {
                     // Naturally group.card() != card && group.get_player_flag == false
@@ -1018,6 +1016,7 @@ impl CompressedCollectiveConstraint {
         //          2. updating after => more general (more favourable)
         //              Job of add constraint and public constraint is soley removal of redundancies, and proper updating of groups
         //        Regardless, AMB is trivially easy to update
+        // TODO: IMPLEMENT private single and joint constraint, which would be helpful if somehow we discover players can have a particular card!
         todo!()
     }
 }
