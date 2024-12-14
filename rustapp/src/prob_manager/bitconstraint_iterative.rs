@@ -782,6 +782,7 @@ impl CompressedCollectiveConstraint {
         // TODO: [THOT] Can we just prune based on representing new information and doing a redundant check?
         // TODO: [THOT] Or maybe make a method that compares 2 groups, then make a modification to the first based off the second?
         // TODO: [THOT] For list method, consider split revealing card, and shuffling. Revealing card changes LEGAL CARD LIST in a similar way...
+        //          So perhaps you can do reveal, then prune all, then shuffle all?
         // TODO: [Implement] Have to label those with pile false as true too!
         // TODO: [Implement] Refactor to 1 check player flag, 2 check pile flag
         // TODO: [FINAL] Check if change_flag can be move out or not
@@ -836,7 +837,7 @@ impl CompressedCollectiveConstraint {
                 // CASE 3: player has 1 Duke (dead, alive) = (0, 1), 1 dead other card
                 // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => GROUP INCLUDES PLAYER WHO HAS ALIVE=0, (0, 1) => PRUNE, (0, 2) => HANDLE, (0, 3) => HANDLE, (1, 1) => PRUNE, (1, 2) => HANDLE, (2, 1) => PRUNE
                 // CASE IGNORE: 2 Dead Duke, 2 Alive Duke, Not a possible to reach here!
-                // CONCLUSION 1: Seems like we PRUNE when group.alive_count() <= player card alive count
+                // CONCLUSION 1: Seems like we PRUNE when group.alive_count() == 1 (Like in add_public_constraint)
 
                 // META-CASE 2
                 // In these examples, player_id == 2, player_flag == true, pile_flag in {true, false}, player alive card always >= 1, group.card() != card, card == Duke
@@ -850,7 +851,7 @@ impl CompressedCollectiveConstraint {
                 // TODO: [THEORY CHECK] all cases, merge with below
                 // TODO: THEN split by whether pile flag true/false
                 if group.card() == card {
-                    if group.count() <= player_card_count {
+                    if group.count_alive() == 1 {
                         // [SUBSET PRUNE] knowing the player had the card now makes this group obsolete
                         // No need to modify this as the information from the player's pile swap gets added at the end
                         self.group_constraints.swap_remove(i);
@@ -997,5 +998,26 @@ impl CompressedCollectiveConstraint {
     // TODO: [ALT] Make alternate version of this that adds with 2n checks for when you use it with a particular group added in mind.
     pub fn add_inferred_groups(&mut self) {
         todo!("maybe?")
+    }
+    /// General method that considers the entire Collective Constraint and generates/updates the card state
+    pub fn update_legal_cards_state(&mut self) {
+        // [THOT] Changes only on dead card, reveal redraw, ambassador
+        //        - Dead Card: Makes a player's card known, may reveal info that can be inferred from group
+        //        - RevealRedraw: Same as Dead Card but not permanent, maybe could infer as per dead card, but do an OR like ambassador after?
+        //        - Ambassador: Just an OR between player's list and the Ambassador, then redundant prune and complement prune
+        //        - Private Info Amb: Just [0 0 0 0 0 0 1] for cards left inside private info about players own cards
+        //        - Private Info layer perhaps can just be the insertion of [0 0 0 0 0 0 1] to the public info layer before calculating
+        //        This approach would have simplicity in that AMB is easy, RevealRedraw and Deadcard but update the same way, then RevealRedraw calls AMB Mix
+        // [THOT] We can have all info about player cards - what they cant have as the list?
+        // [THOT] Optimistic - we can assume all cards and substract what they can't have
+        // [THOT] If joint constraint, we know we don't have to generate list for that player
+        // [THOT] If group constraint only has 1 player_flag, we know a player has that particular card
+        // [THOT] If we know all a group's cards, we know what cards the players in the cant have, and what cards the players outside the group cant have 
+        // [THOT] 2 options:
+        //          1. updating while traversing group in dead_card or reveal_redraw => perhaps optimal?
+        //          2. updating after => more general (more favourable)
+        //              Job of add constraint and public constraint is soley removal of redundancies, and proper updating of groups
+        //        Regardless, AMB is trivially easy to update
+        todo!()
     }
 }
