@@ -15,6 +15,8 @@ use super::constraint::GroupConstraint;
 #[derive(PartialEq, Eq)]
 pub struct CompressedGroupConstraint(u16);
 
+// [FIRST GLANCE PRIORITY] Add private/inferred information
+// [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
 impl CompressedGroupConstraint {
     const START_FLAGS: [u16; 6] = [0b0000_0000_0100_0001, 0b0000_0000_0100_0010, 0b0000_0000_0100_0100, 0b0000_0000_0100_1000, 0b0000_0000_0101_0000, 0b0000_0000_0110_0000,];
     const PLAYER_BITS: u16 = 0b0000_0000_0111_1111; // Bits 0-6
