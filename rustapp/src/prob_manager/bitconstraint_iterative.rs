@@ -825,21 +825,22 @@ impl CompressedCollectiveConstraint {
             } else if group.get_player_flag(player_id)  {
                 // TODO: Check if need initial prune
                 // TODO: Maybe rearrange group.player flag and pile flag
+                // In these examples, player will be player 2, player flag is always true, pile flag can be true/false, player alive card always >= 1
+                // CASE 1: player has 2 Duke (dead, alive) = (1, 1)
+                // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => GROUP INCLUDES PLAYER WHO HAS ALIVE=0, (0, n) => GROUP INCLUDES PLAYER WHO HAS DEAD CARD, (1, 1) => PRUNE, (1, 2) => Handle here, (2, 1) => PRUNE
+                // PRUNED because what we add at the end is at least better information
+                // CASE 2: player has 1 Duke (dead, alive) = (0, 1), 1 alive other card, 
+                // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => GROUP INCLUDES PLAYER WHO HAS ALIVE=0, (0, 1) => PRUNE, (0, 2) => HANDLE, (0, 3) => HANDLE, (1, 1) => PRUNE, (1, 2) => HANDLE, (2, 1) => PRUNE
+                // CASE 3: player has 1 Duke (dead, alive) = (0, 1), 1 dead other card
+                // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => GROUP INCLUDES PLAYER WHO HAS ALIVE=0, (0, 1) => PRUNE, (0, 2) => HANDLE, (0, 3) => HANDLE, (1, 1) => PRUNE, (1, 2) => HANDLE, (2, 1) => PRUNE
+                // CASE IGNORE: 2 Dead Duke, 2 Alive Duke, Not a possible to reach here!
+                // CONCLUSION 1: Seems like we PRUNE when group.alive_count() <= player card alive count
+                // TODO: THEN split by whether pile flag true/false
                 if group.card() == card {
                     if group.count() <= player_card_count {
                         // [BASIC PRUNE] knowing the player had the card now makes this group obsolete
-                        // TODO: [REEVALUATE] all cases, merge with below
+                        // TODO: [THEORY CHECK] all cases, merge with below
                         // No need to modify this as the swap information gets added at the end
-                        // In these examples, player will be player 2!
-                        // CASE 1: player has 2 Duke (dead, alive) = (1, 1)
-                        // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0), (0, n) => IMPOSSIBLE, (1, 1) => PRUNE, (1, 2) => Handle here, (2, 1) => PRUNE
-                        // PRUNED because what we add at the end is at least better information
-                        // CASE 2: player has 1 Duke (dead, alive) = (0, 1), 1 alive other card, 
-                        // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => IMPOSSIBLE, (0, 1) => ??, (0, 2) => ??, (0, 3) => ?? ,(1, 1) => ?, (1, 2) => Handle here, (2, 1) => ?
-                        // CASE 3: player has 1 Duke (dead, alive) = (0, 1), 1 dead other card
-                        // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (1, 0) => IMPOSSIBLE, (1, 1) => PRUNE, (1, 2) => Handle here, (2, 1) => PRUNE, (0, 3) =>
-                        // CASE IGNORE: 2 Dead Duke, 2 Alive Duke, Not a possible to reach here!
-                        // TODO: THEN split by whether pile flag true/false
                         self.group_constraints.swap_remove(i);
                         continue;
                     }
