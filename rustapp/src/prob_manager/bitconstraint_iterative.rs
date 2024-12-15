@@ -342,6 +342,10 @@ impl CompressedGroupConstraint {
         // Checks if the groups are mutually exclusive
         ((self.0 & Self::PLAYER_BITS) & (group.0 & Self::PLAYER_BITS)) == 0
     }
+    /// Returns true if participation list is subset of a group of only player and pile as true
+    pub fn part_list_is_subset_of_player_and_pile(&self, player_id: usize) -> bool {
+        Self::START_FLAGS[player_id] == (self.0 & Self::PLAYER_BITS) | Self::START_FLAGS[player_id]
+    }
     // TODO: [TEST]
     // TODO: Refactor and make this redundant
     /// TODO: Consider refactoring this to use the bit representation
@@ -507,10 +511,30 @@ impl CompressedCollectiveConstraint {
             self.inferred_joint_constraints[player_id] = [Some(card), self.inferred_single_constraints[player_id]];
         }
     }
+    /// Removes a specific card from the inferred player constraints if it exists
+    pub fn subtract_inferred_player_constraints(&mut self, player_id: usize, card: Card) {
+        if self.inferred_single_constraints[player_id] == Some(card) {
+            self.inferred_single_constraints[player_id] = None;
+        } else if self.inferred_joint_constraints[player_id] != [None; 2] {
+            if self.inferred_joint_constraints[0] == Some(card) {
+                self.inferred_single_constraints[player_id] = self.inferred_joint_constraints[player_id][1];
+                self.inferred_joint_constraints[player_id] = [None; 2];
+            } else if self.inferred_joint_constraints[1] == Some(card) {
+                self.inferred_single_constraints[player_id] = self.inferred_joint_constraints[player_id][0];
+                self.inferred_joint_constraints[player_id] = [None; 2];
+            }
+        }
+    }
     #[inline]
     /// Increments card counter for inferred pile constraints
     pub fn add_inferred_pile_constraint(&mut self, card: Card) {
         self.inferred_pile_constraints[card as usize] += 1;
+    }
+    /// Removes a specific card from the inferred pile constraints if it exists
+    pub fn subtract_inferred_pile_constraint(&mut self, card: Card) {
+        if self.inferred_pile_constraints[card as usize] > 0 {
+           self.inferred_pile_constraints[card as usize] -= 1; 
+        }
     }
     #[inline]
     /// Empties stores inferred player constraints
@@ -519,25 +543,32 @@ impl CompressedCollectiveConstraint {
         self.inferred_single_constraints[player_id] = None;
         self.inferred_joint_constraints[player_id] = [None; 2];
     }
-    /// Removes a specific card from the inferred player constraints
-    pub fn subtract_inferred_player_constraints(&mut self, player_id: usize, card: Card) {
-        debug_assert!(player_id < 6, "Use proper player_id thats not pile");
-        debug_assert!(self.inferred_joint_constraints[player_id] != [None; 2], "Use proper player_id thats not pile");
-        if self.inferred_single_constraints[player_id].is_none() {
-            if self.inferred_joint_constraints[player_id][0] == Some(card) {
-                self.inferred_single_constraints[player_id] = self.inferred_joint_constraints[player_id][1];
-            } else {
-                self.inferred_single_constraints[player_id] = self.inferred_joint_constraints[player_id][0];
-            }
-            self.inferred_joint_constraints[player_id] = [None; 2];
-        } else {
-            self.inferred_single_constraints[player_id] = None;
-        }
-    }
+
     #[inline]
     /// Empties inferred_pile_constraints
     pub fn empty_inferred_pile_constraint(&mut self) {
         self.inferred_pile_constraints = [0; 5];
+    }
+    /// Calculates all the known cards that are within player and pile
+    /// - Assumption here is that there are no solo group constraints that represent 1 player only!
+    pub fn total_alive_with_player_and_pile(&mut self, player_id: usize) -> [u8; 5] {
+        let mut output: [u8; 5] = [0; 5];
+        if let Some(card) = self.inferred_single_constraints[player_id] {
+            output[card as usize] += 1;
+        }
+        for Some(card) in self.inferred_joint_constraints[player_id] {
+            output[card as usize] += 1;
+        }
+        for group in self.group_constraints {
+            if group.part_list_is_subset_of_player_and_pile(player_id) {
+                // Technically this should only be a group of pile and player if it works properly
+                debug_assert!(group.get_player_flag(player_id) && group.get_player_flag(6), "Either Player or Pile are false, assumption failed!");
+                if output[group.card() as usize] < group.count_alive() {
+                    output[group.card() as usize] = group.count_alive();
+                }
+            }
+        }
+        output
     }
     // TODO: [TEST]
     // TODO: [THEORY REVIEW] Read through and theory check
@@ -931,6 +962,7 @@ impl CompressedCollectiveConstraint {
     pub fn mix(&mut self, player_id: usize, reveal_card: Option<Card>) {
         // Now I could selectively check if there are changes, and choose to redundant prune only sometimes
         // But odds are, there is some set where player flag is 0 so we will need to do it anyways
+        debug_assert!(self.public_joint_constraints[player_id] == [None; 2], "Dead player cant do things man");
         for group in self.group_constraints.iter_mut() {
             let group_card = group.card();
             // consider 2 dimensions, player_flag and pile_flag 0 1, 1 0, 1 1? no 0 0
@@ -978,11 +1010,20 @@ impl CompressedCollectiveConstraint {
             .filter(|&&card| card == reveal_card)
             .count() as u8;
             // only subtract 1 card here as only 1 is revealed and moved out of player's hand 
-            self.subtract_inferred_player_constraints(player_id, card);
             let dead_count = (self.public_single_constraints[player_id] == reveal_card) as u8;
             // Adding new group between player_id and pile
             self.group_constraints.push(CompressedGroupConstraint::new(player_id, card, dead_count, single_count + joint_count));
             // TODO: [CHANGE] COLLORARY 1b, Adding of group constraints should be for all inferred cards in the player union pile
+            // COLLORARY 1b: If player reveals some card A, player inferred A - 1, pile inferred A remains constant,for all cards !A pile number of inferred !A - 1
+            for inferred_card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
+                if Some(inferred_card) != reveal_card {
+                    // pile number inferred - 1
+                    self.subtract_inferred_pile_constraint(card);
+                }
+            }
+            // player inferred A - 1
+            self.subtract_inferred_player_constraints(player_id, card);
+
         } else {
             // Ambassador
             // Adjust inferred knowledge
@@ -1002,10 +1043,22 @@ impl CompressedCollectiveConstraint {
             // CASE: (alive, alive) (X, X) Pile: (A, A, A) => pile will have >= 1 A
             // CASE: (alive, alive) (X, X) Pile: (A, A, X) => pile will have >= 0 A
             // CASE: (alive, alive) (X, X) Pile: (A, X, X) => pile will have >= 0 A
-            // CONCLUSION: Inferred pile constraint will be have total circulating A - no_alive cards?
+            // CONCLUSION: Inferred pile constraint for some card A will be total circulating A - no_alive cards?
+            // TODO: might need to consider the group constraints? if they add to the total circulating?
+            // TODO: [THINK]
+            // CASE: (alive, alive) (X, X) Pile: (A, X, X) but we know the union of both have 3 As so total circulating has to include this!
+            let cards_alive: u8 = match self.public_single_constraints[player_id].is_some() {
+                true => 1, // This function cannot be called if player is dead
+                false => 2,
+            };
+            for inferred_card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
+                // TODO: This is technically wrong... make a function
+                let total_circulating_card_count: u8 = self.pi; //Must be alive
 
+            }
             // TODO: [CHANGE] Adding of group constraints should be for all inferred cards in the player union pile + dead cards
         }
+        // TODO: Add all these to ///
         // Inferred knowledge cases [REVEALREDRAW] [ALL CARDS WITH PILE + PLAYER]
         // These arent just cases for how to represent the new group constraint
         // These also represent what we can infer, if its pile >= 1 we have a 1 inferred card of the pile
@@ -1044,11 +1097,10 @@ impl CompressedCollectiveConstraint {
         // I think COLLORARY 1b forms the entire rule set.
         // QUESTION: Following COLLORARY 1b, how should dropped inferences be converted to group constraints?
         // I think it should be the original inferred for both, but the group of both would contain all the inferred counts from both players for a particular card
-        // TODO: CASES For ambassador
-        // My intuition is that ambassador would just be all inferred cards for both player and pile -1 or more? or maybe -2
-        // Maybe it just depend on player, if 1 card alive -1, if 2 cards alive - 2
-        // [counter; 5] would be required
-        // Group being added is the original inferred counts from both players before subtraction for all cards in both
+        // TODO: [THINK]
+        // QUESTION: How about if we know both of them have a some number of As, but not specifically who?
+        // I guess for reveal_redraw, this should be handled in reveal, for (dead, alive) the union will collapse to be only ambassador, or clearly with player
+        // For (alive, alive)?
         self.group_redundant_prune();
         // [THOT] Mix dilutes information, so one should mix groups here and undiscover them... really just the player and the current pile?
     }
