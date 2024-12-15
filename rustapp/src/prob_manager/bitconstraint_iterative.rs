@@ -516,10 +516,10 @@ impl CompressedCollectiveConstraint {
         if self.inferred_single_constraints[player_id] == Some(card) {
             self.inferred_single_constraints[player_id] = None;
         } else if self.inferred_joint_constraints[player_id] != [None; 2] {
-            if self.inferred_joint_constraints[0] == Some(card) {
+            if self.inferred_joint_constraints[player_id][0] == Some(card) {
                 self.inferred_single_constraints[player_id] = self.inferred_joint_constraints[player_id][1];
                 self.inferred_joint_constraints[player_id] = [None; 2];
-            } else if self.inferred_joint_constraints[1] == Some(card) {
+            } else if self.inferred_joint_constraints[player_id][1] == Some(card) {
                 self.inferred_single_constraints[player_id] = self.inferred_joint_constraints[player_id][0];
                 self.inferred_joint_constraints[player_id] = [None; 2];
             }
@@ -865,6 +865,7 @@ impl CompressedCollectiveConstraint {
     /// - Does not leaves no group redundant after adding
     /// - Does modify a group based on inferred constraints
     /// - Leaves no dead player info in groups
+    /// - New information discovery must update inferred constraints as well as all affected group_constraints!
     pub fn reveal(&mut self, player_id: usize, card: Card) {
         let mut change_flag: bool = false;
         let count = 1;
@@ -952,22 +953,50 @@ impl CompressedCollectiveConstraint {
     // TODO: [THEORY CHECK]
     // TODO: [THOT] Its likely that i can't have a group_constraint that has only 1 flag, because I would need to migrate it to inferred
     //              I guess when migrating, if there already is one and group constaint is >= 1 we dont need to add another
-    /// Mixes card between player_id and the pile, then removes redundant stuff
-    /// Reveal_card == Some(card) for RevealRedraw 
-    /// Reveal_card == None for Ambassador 
-    /// - Assumes nothing it just mixes
-    /// - Should assume all possibly inferred information is fully reflected and stored in the collective constraint
-    /// - Mixing adds the inferred information into the mix!
-    /// - Information is diluted, since only a reduction in information, this should ideally still reflect all possibly inferred information!
+    /// Mixes cards.
+    /// Consists of 2 steps:
+    /// - Updating current groups with information inferred from the mixing player and the pile
+    /// - Dissipating information from the inferred constraints, and adding new groups to track how the cards have spread
+    /// - Removing redundant groups
+    /// 
+    /// Param details:
+    /// - Reveal_card == Some(card) for RevealRedraw 
+    /// - Reveal_card == None for Ambassador 
+    /// Assumptions:
+    /// 
+    /// - Assumes all possibly inferred information is fully reflected and stored in the inferred constraint
+    /// - Mixing adds the inferred information into groups that are affected by the mix
+    /// - Mixing adds new groups to show how cards only the pile has or only the player has are now possibly with either of them (player union pile)
+    /// - Information is "diluted" or "dissipated", since there is a reduction in absolutely known information about a particular player's state
+    /// - This should ideally still reflect all possibly inferred information!
     pub fn mix(&mut self, player_id: usize, reveal_card: Option<Card>) {
         // Now I could selectively check if there are changes, and choose to redundant prune only sometimes
         // But odds are, there is some set where player flag is 0 so we will need to do it anyways
         debug_assert!(self.public_joint_constraints[player_id] == [None; 2], "Dead player cant do things man");
+        // [MIXING] groups so a union between player and pile is formed
+        // TODO: How does this relate to adding groups for inferred information? Seems like over here im modifying groups but excluding inferred information from all the groups?
+        // TODO: But i do so later on. Can I merge them into just one?
+        // QUESTION: Can i just add them as per below, and remove all the redundant ones later? no as some will not be subsets, need to mix them somehow...
+        // POSTULATE: I think when mixing a group, in reality, what we need to do is to update the set from [0 1 0 0 1 0 1] to [0 1 0 1 1 0 1] by reflecting all the new information in this set
+        // POSTULATE: Maybe we do so by considering all circulating cards and the dead cards, and adding the group based on new info?.. But we changing an individual group while iterating over... and referencing all group for information
+        // Actually just need to add the old information captured in pile + player or just pile or just player.
+        // Or can I just mix the sets superficially then add the new information after?
+        // FAILED IDEA: Or can I just add the new information then mix the sets superficially? Im thinking this?
+        //      because then step 1 involves putting all info into group constraint, then step 2 just updates existing without worrying about information loss
+        // But consider this case, [1 0 0 0 0 0 1] A 1 we know player 4 has 2 A
+        // This should give us an updated [1 0 0 0 1 0 1] A 3 and an additional group of [0 0 0 0 1 0 1] 2 A.
+        // So we cannot first add information group then mix, because we lose this information that should have been updated.
+        // Seems like CONCLUSION will be to update then add group.
+        // IDEA: So i guess updating would be taking missing information known from pile or player and adding it in? pile info wont be loss, player info wont be loss, pile & player info will be added in later 
+        
+        // [MIXING] Here we add information to current groups that gain it from the mix e.g. groups where player is 0 and pile is 1 or vice versa
         for group in self.group_constraints.iter_mut() {
             let group_card = group.card();
             // consider 2 dimensions, player_flag and pile_flag 0 1, 1 0, 1 1? no 0 0
             if !group.get_player_flag(player_id) {
                 if group.get_player_flag(6) {
+                    // Here player is 0 and pile is 1
+                    // We add player information that it is originally missing
                     group.set_player_flag(player_id, true);
                     if let Some(dead_card) = self.public_single_constraints[player_id] {
                         if group_card == dead_card {
@@ -985,9 +1014,12 @@ impl CompressedCollectiveConstraint {
                     group.count_alive_add(single_count + joint_count);
                 }
             } else if !group.get_player_flag(6) {
+                // Here player is 1 and pile is 0
+                // We add pile information that it is originally missing
                 group.set_player_flag(6, true);
                 group.count_alive_add(self.inferred_pile_constraints[group_card as usize]); 
             } else {
+                // Here player is 1 and pile is 1, we do a simple check
                 // If somehow you have learnt of more inferred information, add it in!
                 let single_count: u8 = if self.inferred_single_constraints[player_id] == Some(group_card) { 1 } else { 0 };
                 let joint_count: u8 = self.inferred_joint_constraints[player_id]
@@ -999,28 +1031,80 @@ impl CompressedCollectiveConstraint {
                 }
             }
         }
-        // [SPECIAL CASE] (probably many if you look up the old algo) If all 3 cards are with ambassador and player, then you know ambassador must have at least 1 of that card
-        // TODO: Adding of groups seems to be the same for both cases
+        // [DILUTING INFERRED INFORMATION] Mixing causes the inferred constraints to be dissipated from knowing a particular player has a card
+        //                                  to knowing some groups of players have a card
+        // Here we Manage the dissipation of inferred information by:
+        // - Properly subtracting the appropriate amount from inferred pile constraint
+        // - Adding the information into the group constraints => on how the known cards have "spread" from player or pile or BOTH (player union pile) 
         if let Some(card) = reveal_card {
             // RevealRedraw
             // Adjust inferred constraints
-            let single_count: u8 = if self.inferred_single_constraints[player_id] == reveal_card { 1 } else { 0 };
-            let joint_count: u8 = self.inferred_joint_constraints[player_id]
-            .iter()
-            .filter(|&&card| card == reveal_card)
-            .count() as u8;
+            // TODO: Add all these to ///
+            // Inferred knowledge cases [REVEALREDRAW] [ALL CARDS WITH PILE + PLAYER]
+            // These arent just cases for how to represent the new group constraint
+            // These also represent what we can infer, if its pile >= 1 we have a 1 inferred card of the pile
+            // player (dead, alive) = (A, A) Pile (A, X, X) => Pile has >= 1 A
+            // player (dead, alive) = (A, X) Pile (A, A, X) => Pile has >= 1 A
+            // player (dead, alive) = (A, X) Pile (A, X, X) => Pile has >= 0 A (No inferred info for pile)
+            // player (dead, alive) = (A, X) Pile (X, X, X) => Pile has >= 0 A (No inferred info for pile)
+            // player (dead, alive) = (!A, X) Pile (A, A, A) => Pile has >= 2 A
+            // player (dead, alive) = (!A, X) Pile (A, A, X) => Pile has >= 1 A
+            // player (dead, alive) = (!A, X) Pile (A, X, X) => Pile has >= 0 A (No inferred info for pile)
+            // player (dead, alive) = (!A, A) Pile (A, A, X) => Pile has >= 2 A
+            // player (dead, alive) = (!A, A) Pile (A, X, X) => Pile has >= 1 A
+            // player (dead, alive) = (!A, A) Pile (X, X, X) => Pile has >= 0 A (No inferred info for pile)
+            // player (alive, alive) = (A, A) Pile (A, X, X) => Reveal A => Pile has >= 1 A, player inferred A -1
+            // player (alive, alive) = (A, A) Pile (X, X, X) => Reveal A => Pile has >= 0 A (No inferred info for pile)
+            // player (alive, alive) = (X, A) Pile (A, A, X) => Reveal A => Pile has >= 2 A
+            // player (alive, alive) = (X, A) Pile (A, X, X) => Reveal A => Pile has >= 1 A
+            // player (alive, alive) = (X, A) Pile (X, X, X) => Reveal A => Pile has >= 0 A (No inferred info for pile)
+            // player (alive, alive) = (X, A) Pile (A, A, X) => Reveal !A => Pile has >= 1 A
+            // player (alive, alive) = (X, A) Pile (A, X, X) => Reveal !A => Pile has >= 0 A (No inferred info for pile)
+            // player (alive, alive) = (X, A) Pile (X, X, X) => Reveal !A => Pile has >= 0 X (No inferred info for pile)
+            // player (alive, alive) = (X, X) Pile (A, A, A) => Reveal !A => Pile has >= 2 A 
+            // player (alive, alive) = (X, X) Pile (A, A, X) => Reveal !A => Pile has >= 1 A 
+            // player (alive, alive) = (X, X) Pile (A, X, X) => Reveal !A => Pile has >= 0 X (No inferred info for pile)
+            // player (alive, alive) = (A, !A) Pile (A, A, X) => Pile has >= 1 A
+            // player (alive, alive) = (!A, !A) Pile (A, A, A) => Pile has >= 2 A
+            // player (alive, alive) = (B, A) Pile (A, A, X) => Pile has >= 2 A
+            // DEFINITION 0: When we say pile/player inferred - 1, we mean that the number of inferred card X decreases by 1
+            // CONCLUSION 0: In all cases, if player reveal A, player inferred A - 1, pile inferred A remains constant
+            // CONCLUSION 1: In all cases, if player reveal !A, player inferred !A - 1, pile inferred A - 1,
+            // COLLORARY 1: In all cases if player reveals some card A, player inferred A - 1,for all cards !A pile number of inferred !A - 1
+            // COLLORARY 1b: If player reveals some card A, player inferred A - 1, pile inferred A remains constant,for all cards !A pile number of inferred !A - 1
+            // CONCLUSION 2: (dead, alive) reveal A inferred from pile remains same for A,... other cards?
+            // CONCLUSION 3: (dead, alive) reveal !A inferred from pile remove one A,... other cards?
+            // CONCLUSION 4: There is kind of a symmetry here, Reveal !A basically tells us what to do with other cards in group that arent revealed
+            // I think COLLORARY 1b forms the entire rule set.
+            // QUESTION: Following COLLORARY 1b, how should dropped inferences be converted to group constraints?
+            // I think it should be the original inferred for both, but the group of both would contain all the inferred counts from both players for a particular card
+            // TODO: [THINK]
+            // QUESTION: How about if we know both of them have a some number of As, but not specifically who?
+            // I guess for reveal_redraw, this should be handled in reveal, for (dead, alive) the union will collapse to be only ambassador, or clearly with player
+            // For (alive, alive)?
+            // Adding all new group to dissipate known information about player_id and pile
+            let mut card_counts: [u8; 5] = self.inferred_pile_constraints.clone();
+            card_counts[card as usize] += 1;
             // only subtract 1 card here as only 1 is revealed and moved out of player's hand 
-            let dead_count = (self.public_single_constraints[player_id] == reveal_card) as u8;
-            // Adding new group between player_id and pile
-            self.group_constraints.push(CompressedGroupConstraint::new(player_id, card, dead_count, single_count + joint_count));
             // TODO: [CHANGE] COLLORARY 1b, Adding of group constraints should be for all inferred cards in the player union pile
             // COLLORARY 1b: If player reveals some card A, player inferred A - 1, pile inferred A remains constant,for all cards !A pile number of inferred !A - 1
             for inferred_card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
                 if Some(inferred_card) != reveal_card {
+                    // Dissipating Information from pile
                     // pile number inferred - 1
                     self.subtract_inferred_pile_constraint(card);
                 }
+                if card_counts[inferred_card as usize] > 0 {
+                    // Adding Dissipated information to groups appropriately
+                    let dead_count = (self.public_single_constraints[player_id] == Some(inferred_card)) as u8;
+                    self.group_constraints.push(CompressedGroupConstraint::new(player_id, inferred_card, dead_count, card_counts[inferred_card as usize]));
+                }
             }
+            // Get pile counts
+            // Get reveal card and add it to count
+            // Add groups for all those counts with dead_card if reqruied
+            // TODO: [LIKE BELOW] Groups need to be added for all information in pile
+            // Dissipating information from player
             // player inferred A - 1
             self.subtract_inferred_player_constraints(player_id, card);
 
@@ -1045,64 +1129,22 @@ impl CompressedCollectiveConstraint {
             // CASE: (alive, alive) (X, X) Pile: (A, X, X) => pile will have >= 0 A
             // CONCLUSION: Inferred pile constraint for some card A will be total circulating A - no_alive cards?
             // TODO: might need to consider the group constraints? if they add to the total circulating?
-            // TODO: [THINK]
+            // TODO: [THEORY CHECK]
             // CASE: (alive, alive) (X, X) Pile: (A, X, X) but we know the union of both have 3 As so total circulating has to include this!
-            let cards_alive: u8 = match self.public_single_constraints[player_id].is_some() {
+            let player_lives: u8 = match self.public_single_constraints[player_id].is_some() {
                 true => 1, // This function cannot be called if player is dead
                 false => 2,
             };
+            let total_circulating_card_counts: [u8; 5] = self.total_alive_with_player_and_pile(player_id);
             for inferred_card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
-                // TODO: This is technically wrong... make a function
-                let total_circulating_card_count: u8 = self.pi; //Must be alive
-
+                // TODO: [CHANGE] Adding of group constraints should be for all inferred cards in the player union pile + dead cards
+                self.inferred_pile_constraints[inferred_card as usize] = total_circulating_card_counts[inferred_card as usize] - player_lives;
+                // Add group constraints
+                let dead_cards_count = (Some(inferred_card) == self.public_single_constraints[player_id]) as u8;
+                self.group_constraints.push(CompressedGroupConstraint::new(player_id, inferred_card, dead_cards_count, total_circulating_card_counts[inferred_card as usize]));
             }
-            // TODO: [CHANGE] Adding of group constraints should be for all inferred cards in the player union pile + dead cards
         }
-        // TODO: Add all these to ///
-        // Inferred knowledge cases [REVEALREDRAW] [ALL CARDS WITH PILE + PLAYER]
-        // These arent just cases for how to represent the new group constraint
-        // These also represent what we can infer, if its pile >= 1 we have a 1 inferred card of the pile
-        // player (dead, alive) = (A, A) Pile (A, X, X) => Pile has >= 1 A
-        // player (dead, alive) = (A, X) Pile (A, A, X) => Pile has >= 1 A
-        // player (dead, alive) = (A, X) Pile (A, X, X) => Pile has >= 0 A (No inferred info for pile)
-        // player (dead, alive) = (A, X) Pile (X, X, X) => Pile has >= 0 A (No inferred info for pile)
-        // player (dead, alive) = (!A, X) Pile (A, A, A) => Pile has >= 2 A
-        // player (dead, alive) = (!A, X) Pile (A, A, X) => Pile has >= 1 A
-        // player (dead, alive) = (!A, X) Pile (A, X, X) => Pile has >= 0 A (No inferred info for pile)
-        // player (dead, alive) = (!A, A) Pile (A, A, X) => Pile has >= 2 A
-        // player (dead, alive) = (!A, A) Pile (A, X, X) => Pile has >= 1 A
-        // player (dead, alive) = (!A, A) Pile (X, X, X) => Pile has >= 0 A (No inferred info for pile)
-        // player (alive, alive) = (A, A) Pile (A, X, X) => Reveal A => Pile has >= 1 A, player inferred A -1
-        // player (alive, alive) = (A, A) Pile (X, X, X) => Reveal A => Pile has >= 0 A (No inferred info for pile)
-        // player (alive, alive) = (X, A) Pile (A, A, X) => Reveal A => Pile has >= 2 A
-        // player (alive, alive) = (X, A) Pile (A, X, X) => Reveal A => Pile has >= 1 A
-        // player (alive, alive) = (X, A) Pile (X, X, X) => Reveal A => Pile has >= 0 A (No inferred info for pile)
-        // player (alive, alive) = (X, A) Pile (A, A, X) => Reveal !A => Pile has >= 1 A
-        // player (alive, alive) = (X, A) Pile (A, X, X) => Reveal !A => Pile has >= 0 A (No inferred info for pile)
-        // player (alive, alive) = (X, A) Pile (X, X, X) => Reveal !A => Pile has >= 0 X (No inferred info for pile)
-        // player (alive, alive) = (X, X) Pile (A, A, A) => Reveal !A => Pile has >= 2 A 
-        // player (alive, alive) = (X, X) Pile (A, A, X) => Reveal !A => Pile has >= 1 A 
-        // player (alive, alive) = (X, X) Pile (A, X, X) => Reveal !A => Pile has >= 0 X (No inferred info for pile)
-        // player (alive, alive) = (A, !A) Pile (A, A, X) => Pile has >= 1 A
-        // player (alive, alive) = (!A, !A) Pile (A, A, A) => Pile has >= 2 A
-        // player (alive, alive) = (B, A) Pile (A, A, X) => Pile has >= 2 A
-        // DEFINITION 0: When we say pile/player inferred - 1, we mean that the number of inferred card X decreases by 1
-        // CONCLUSION 0: In all cases, if player reveal A, player inferred A - 1, pile inferred A remains constant
-        // CONCLUSION 1: In all cases, if player reveal !A, player inferred !A - 1, pile inferred A - 1,
-        // COLLORARY 1: In all cases if player reveals some card A, player inferred A - 1,for all cards !A pile number of inferred !A - 1
-        // COLLORARY 1b: If player reveals some card A, player inferred A - 1, pile inferred A remains constant,for all cards !A pile number of inferred !A - 1
-        // CONCLUSION 2: (dead, alive) reveal A inferred from pile remains same for A,... other cards?
-        // CONCLUSION 3: (dead, alive) reveal !A inferred from pile remove one A,... other cards?
-        // CONCLUSION 4: There is kind of a symmetry here, Reveal !A basically tells us what to do with other cards in group that arent revealed
-        // I think COLLORARY 1b forms the entire rule set.
-        // QUESTION: Following COLLORARY 1b, how should dropped inferences be converted to group constraints?
-        // I think it should be the original inferred for both, but the group of both would contain all the inferred counts from both players for a particular card
-        // TODO: [THINK]
-        // QUESTION: How about if we know both of them have a some number of As, but not specifically who?
-        // I guess for reveal_redraw, this should be handled in reveal, for (dead, alive) the union will collapse to be only ambassador, or clearly with player
-        // For (alive, alive)?
         self.group_redundant_prune();
-        // [THOT] Mix dilutes information, so one should mix groups here and undiscover them... really just the player and the current pile?
     }
     // TODO: [ALT] Try to see if you can do a 2n checks instead of n^2, by just checking if the added item makes anything redundant or if it is redundant so you shift 
     // TODO: [CHECK THEORY]
