@@ -919,6 +919,8 @@ impl CompressedCollectiveConstraint {
         // TODO: put a function that fits information discovery here
     }
     // TODO: [THEORY CHECK]
+    // TODO: [THOT] Its likely that i can't have a group_constraint that has only 1 flag, because I would need to migrate it to inferred
+    //              I guess when migrating, if there already is one and group constaint is >= 1 we dont need to add another
     /// Mixes card between player_id and the pile, then removes redundant stuff
     /// Reveal_card == Some(card) for RevealRedraw 
     /// Reveal_card == None for Ambassador 
@@ -967,6 +969,7 @@ impl CompressedCollectiveConstraint {
         // TODO: Find and Handle these cases, in terms of how to rearrange inferred cards
         if let Some(card) = reveal_card {
             // RevealRedraw
+            // Adjust inferred constraints
             let single_count: u8 = if self.inferred_single_constraints[player_id] == reveal_card { 1 } else { 0 };
             let joint_count: u8 = self.inferred_joint_constraints[player_id]
             .iter()
@@ -983,6 +986,30 @@ impl CompressedCollectiveConstraint {
             // No group to add
             // Subtraction needs to be done cautiously, might be the same as mix in all its edge cases
         }
+        // Inferred knowledge cases [REVEALREDRAW] [ALL CARDS WITH PILE + PLAYER]
+        // These arent just cases for how to represent the new group constraint
+        // These also represent what we can infer, if its pile >= 1 we have a 1 inferred card of the pile
+        // player (dead, alive) = (A, A) Pile (A, X, X) => Pile has >= 1 A
+        // player (dead, alive) = (A, X) Pile (A, A, X) => Pile has >= 1 A
+        // player (dead, alive) = (A, X) Pile (A, X, X) => Pile has >= 0 A (No inferred info for pile)
+        // player (dead, alive) = (A, X) Pile (X, X, X) => Pile has >= 0 A (No inferred info for pile)
+        // player (dead, alive) = (!A, X) Pile (A, A, A) => Pile has >= 2 A
+        // player (dead, alive) = (!A, X) Pile (A, A, X) => Pile has >= 1 A
+        // player (dead, alive) = (!A, X) Pile (A, X, X) => Pile has >= 0 A (No inferred info for pile)
+        // player (dead, alive) = (!A, A) Pile (A, A, X) => Pile has >= 2 A
+        // player (dead, alive) = (!A, A) Pile (A, X, X) => Pile has >= 1 A
+        // player (dead, alive) = (!A, A) Pile (X, X, X) => Pile has >= 0 A (No inferred info for pile)
+        // player (alive, alive) = (A, A) Pile (A, X, X) => Reveal A => Pile has >= 1 A
+        // player (alive, alive) = (A, A) Pile (X, X, X) => Reveal A => Pile has >= 0 A (No inferred info for pile)
+        // player (alive, alive) = (X, A) Pile (A, A, X) => Reveal A => Pile has >= 2 A
+        // player (alive, alive) = (X, A) Pile (A, X, X) => Reveal A => Pile has >= 1 A
+        // player (alive, alive) = (X, A) Pile (A, A, X) => Reveal !A => Pile has >= 1 A
+        // player (alive, alive) = (X, A) Pile (A, X, X) => Reveal !A => Pile has >= 0 A (No inferred info for pile)
+        // player (alive, alive) = (A, !A) Pile (A, A, X) => Pile has >= 1 A
+        // player (alive, alive) = (!A, !A) Pile (A, A, A) => Pile has >= 2 A
+        // player (alive, alive) = (B, A) Pile (A, A, X) => Pile has >= 2 A
+        // CONCLUSION 1: (dead, alive) reveal A inferred from pile remains same for A,... other cards?
+        // CONCLUSION 2: (dead, alive) reveal !A inferred from pile remove one A,... other cards?
         self.group_redundant_prune();
         // [THOT] Mix dilutes information, so one should mix groups here and undiscover them... really just the player and the current pile?
     }
