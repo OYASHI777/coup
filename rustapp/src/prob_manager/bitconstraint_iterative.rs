@@ -1026,9 +1026,9 @@ impl CompressedCollectiveConstraint {
         // I think COLLORARY 1b forms the entire rule set.
         // QUESTION: Following COLLORARY 1b, how should dropped inferences be converted to group constraints?
         // I think it should be the original inferred for both, but the group of both would contain all the inferred counts from both players for a particular card
-        // TODO: (dead, alive) cases for X being other cards... like all the same, etc... maybe all cards remove 1?
-        // TODO: Reveal !A for all
-        // TODO: cases where
+        // TODO: For ambassador
+        // My intuition is that ambassador would just be all inferred cards for both player and pile -1
+        // Group being added is the original inferred counts from both players before subtraction
         self.group_redundant_prune();
         // [THOT] Mix dilutes information, so one should mix groups here and undiscover them... really just the player and the current pile?
     }
