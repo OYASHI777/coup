@@ -925,7 +925,9 @@ impl CompressedCollectiveConstraint {
     /// Reveal_card == Some(card) for RevealRedraw 
     /// Reveal_card == None for Ambassador 
     /// - Assumes nothing it just mixes
+    /// - Should assume all possibly inferred information is fully reflected and stored in the collective constraint
     /// - Mixing adds the inferred information into the mix!
+    /// - Information is diluted, since only a reduction in information, this should ideally still reflect all possibly inferred information!
     pub fn mix(&mut self, player_id: usize, reveal_card: Option<Card>) {
         // Now I could selectively check if there are changes, and choose to redundant prune only sometimes
         // But odds are, there is some set where player flag is 0 so we will need to do it anyways
@@ -999,17 +1001,34 @@ impl CompressedCollectiveConstraint {
         // player (dead, alive) = (!A, A) Pile (A, A, X) => Pile has >= 2 A
         // player (dead, alive) = (!A, A) Pile (A, X, X) => Pile has >= 1 A
         // player (dead, alive) = (!A, A) Pile (X, X, X) => Pile has >= 0 A (No inferred info for pile)
-        // player (alive, alive) = (A, A) Pile (A, X, X) => Reveal A => Pile has >= 1 A
+        // player (alive, alive) = (A, A) Pile (A, X, X) => Reveal A => Pile has >= 1 A, player inferred A -1
         // player (alive, alive) = (A, A) Pile (X, X, X) => Reveal A => Pile has >= 0 A (No inferred info for pile)
         // player (alive, alive) = (X, A) Pile (A, A, X) => Reveal A => Pile has >= 2 A
         // player (alive, alive) = (X, A) Pile (A, X, X) => Reveal A => Pile has >= 1 A
+        // player (alive, alive) = (X, A) Pile (X, X, X) => Reveal A => Pile has >= 0 A (No inferred info for pile)
         // player (alive, alive) = (X, A) Pile (A, A, X) => Reveal !A => Pile has >= 1 A
         // player (alive, alive) = (X, A) Pile (A, X, X) => Reveal !A => Pile has >= 0 A (No inferred info for pile)
+        // player (alive, alive) = (X, A) Pile (X, X, X) => Reveal !A => Pile has >= 0 X (No inferred info for pile)
+        // player (alive, alive) = (X, X) Pile (A, A, A) => Reveal !A => Pile has >= 2 A 
+        // player (alive, alive) = (X, X) Pile (A, A, X) => Reveal !A => Pile has >= 1 A 
+        // player (alive, alive) = (X, X) Pile (A, X, X) => Reveal !A => Pile has >= 0 X (No inferred info for pile)
         // player (alive, alive) = (A, !A) Pile (A, A, X) => Pile has >= 1 A
         // player (alive, alive) = (!A, !A) Pile (A, A, A) => Pile has >= 2 A
         // player (alive, alive) = (B, A) Pile (A, A, X) => Pile has >= 2 A
-        // CONCLUSION 1: (dead, alive) reveal A inferred from pile remains same for A,... other cards?
-        // CONCLUSION 2: (dead, alive) reveal !A inferred from pile remove one A,... other cards?
+        // DEFINITION 0: When we say pile/player inferred - 1, we mean that the number of inferred card X decreases by 1
+        // CONCLUSION 0: In all cases, if player reveal A, player inferred A - 1, pile inferred A remains constant
+        // CONCLUSION 1: In all cases, if player reveal !A, player inferred !A - 1, pile inferred A - 1,
+        // COLLORARY 1: In all cases if player reveals some card A, player inferred A - 1,for all cards !A pile number of inferred !A - 1
+        // COLLORARY 1b: If player reveals some card A, player inferred A - 1, pile inferred A remains constant,for all cards !A pile number of inferred !A - 1
+        // CONCLUSION 2: (dead, alive) reveal A inferred from pile remains same for A,... other cards?
+        // CONCLUSION 3: (dead, alive) reveal !A inferred from pile remove one A,... other cards?
+        // CONCLUSION 4: There is kind of a symmetry here, Reveal !A basically tells us what to do with other cards in group that arent revealed
+        // I think COLLORARY 1b forms the entire rule set.
+        // QUESTION: Following COLLORARY 1b, how should dropped inferences be converted to group constraints?
+        // I think it should be the original inferred for both, but the group of both would contain all the inferred counts from both players for a particular card
+        // TODO: (dead, alive) cases for X being other cards... like all the same, etc... maybe all cards remove 1?
+        // TODO: Reveal !A for all
+        // TODO: cases where
         self.group_redundant_prune();
         // [THOT] Mix dilutes information, so one should mix groups here and undiscover them... really just the player and the current pile?
     }
