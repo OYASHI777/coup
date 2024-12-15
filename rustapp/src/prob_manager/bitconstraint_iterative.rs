@@ -556,10 +556,12 @@ impl CompressedCollectiveConstraint {
         if let Some(card) = self.inferred_single_constraints[player_id] {
             output[card as usize] += 1;
         }
-        for Some(card) in self.inferred_joint_constraints[player_id] {
-            output[card as usize] += 1;
+        for possible_card in self.inferred_joint_constraints[player_id] {
+            if let Some(card) = possible_card {
+                output[card as usize] += 1;
+            }
         }
-        for group in self.group_constraints {
+        for group in self.group_constraints.iter() {
             if group.part_list_is_subset_of_player_and_pile(player_id) {
                 // Technically this should only be a group of pile and player if it works properly
                 debug_assert!(group.get_player_flag(player_id) && group.get_player_flag(6), "Either Player or Pile are false, assumption failed!");
