@@ -968,7 +968,7 @@ impl CompressedCollectiveConstraint {
             }
         }
         // [SPECIAL CASE] (probably many if you look up the old algo) If all 3 cards are with ambassador and player, then you know ambassador must have at least 1 of that card
-        // TODO: Find and Handle these cases, in terms of how to rearrange inferred cards
+        // TODO: Adding of groups seems to be the same for both cases
         if let Some(card) = reveal_card {
             // RevealRedraw
             // Adjust inferred constraints
@@ -982,11 +982,29 @@ impl CompressedCollectiveConstraint {
             let dead_count = (self.public_single_constraints[player_id] == reveal_card) as u8;
             // Adding new group between player_id and pile
             self.group_constraints.push(CompressedGroupConstraint::new(player_id, card, dead_count, single_count + joint_count));
+            // TODO: [CHANGE] COLLORARY 1b, Adding of group constraints should be for all inferred cards in the player union pile
         } else {
             // Ambassador
             // Adjust inferred knowledge
             // No group to add
             // Subtraction needs to be done cautiously, might be the same as mix in all its edge cases
+            // CASE: (dead, alive) (A, A) Pile: (A, X, X) => pile will have >= 1 A
+            // CASE: (dead, alive) (A, X) Pile: (A, A, X) => pile will have >= 1 A
+            // CASE: (dead, alive) (A, X) Pile: (A, X, X) => pile will have >= 0 A
+            // CASE: (dead, alive) (A, X) Pile: (X, X, X) => pile will have >= 0 A
+            // CASE: (dead, alive) (X, X) Pile: (A, A, A) => pile will have >= 2 A
+            // CASE: (dead, alive) (X, X) Pile: (A, A, X) => pile will have >= 1 A
+            // CASE: (dead, alive) (X, X) Pile: (A, X, X) => pile will have >= 0 A
+            // CASE: (alive, alive) (A, A) Pile: (A, X, X) => pile will have >= 1 A
+            // CASE: (alive, alive) (A, X) Pile: (A, A, X) => pile will have >= 1 A
+            // CASE: (alive, alive) (A, X) Pile: (A, X, X) => pile will have >= 0 A
+            // CASE: (alive, alive) (A, X) Pile: (X, X, X) => pile will have >= 0 A
+            // CASE: (alive, alive) (X, X) Pile: (A, A, A) => pile will have >= 1 A
+            // CASE: (alive, alive) (X, X) Pile: (A, A, X) => pile will have >= 0 A
+            // CASE: (alive, alive) (X, X) Pile: (A, X, X) => pile will have >= 0 A
+            // CONCLUSION: Inferred pile constraint will be have total circulating A - no_alive cards?
+
+            // TODO: [CHANGE] Adding of group constraints should be for all inferred cards in the player union pile + dead cards
         }
         // Inferred knowledge cases [REVEALREDRAW] [ALL CARDS WITH PILE + PLAYER]
         // These arent just cases for how to represent the new group constraint
@@ -1026,9 +1044,11 @@ impl CompressedCollectiveConstraint {
         // I think COLLORARY 1b forms the entire rule set.
         // QUESTION: Following COLLORARY 1b, how should dropped inferences be converted to group constraints?
         // I think it should be the original inferred for both, but the group of both would contain all the inferred counts from both players for a particular card
-        // TODO: For ambassador
-        // My intuition is that ambassador would just be all inferred cards for both player and pile -1
-        // Group being added is the original inferred counts from both players before subtraction
+        // TODO: CASES For ambassador
+        // My intuition is that ambassador would just be all inferred cards for both player and pile -1 or more? or maybe -2
+        // Maybe it just depend on player, if 1 card alive -1, if 2 cards alive - 2
+        // [counter; 5] would be required
+        // Group being added is the original inferred counts from both players before subtraction for all cards in both
         self.group_redundant_prune();
         // [THOT] Mix dilutes information, so one should mix groups here and undiscover them... really just the player and the current pile?
     }
