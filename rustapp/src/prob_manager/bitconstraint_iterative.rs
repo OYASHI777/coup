@@ -951,8 +951,8 @@ impl CompressedCollectiveConstraint {
         // TODO: put a function that fits information discovery here
     }
     // TODO: [THEORY CHECK]
-    // TODO: [THOT] Its likely that i can't have a group_constraint that has only 1 flag, because I would need to migrate it to inferred
-    //              I guess when migrating, if there already is one and group constaint is >= 1 we dont need to add another
+    // TODO: [TEST] 
+    // TODO: [MOVE DOCUMENTATION] to docstring 
     /// Mixes cards.
     /// Consists of 2 steps:
     /// - Updating current groups with information inferred from the mixing player and the pile
