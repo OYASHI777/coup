@@ -875,17 +875,41 @@ impl CompressedCollectiveConstraint {
     /// - Assumes player_id is alive and thus joint_constraint is empty, public_constraint may or may not be empty
     /// - Assumes no group is redundant before adding
     /// - Assumes no dead player info is in groups before adding
-    /// - Does not leaves no group redundant after adding
+    /// - Leaves no group redundant after adding
     /// - Does modify a group based on inferred constraints
     /// - Leaves no dead player info in groups
     /// - New information discovery must update inferred constraints as well as all affected group_constraints!
+    ///     - This new information is reflected in changed in inferred constraint, and PRUNES, not addition to groups (as new information is not a set)
+    ///     - Calls a function that mines the information to generate all other inferred information, which may add groups
+    /// - Does not reflect information change from swapping of cards in Ambassador and RevealRedraw
+    /// CASES:
+    ///      - Reveal A => (alive, alive) [A, B] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
+    ///      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => remove
+    ///      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 3 => flag = false and count_alive - 2
+    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
+    ///      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
+    ///      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
+    ///      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
+    ///      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
+    ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d0a3 => flag = false, count_alive - 1
+    ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d0a2 => flag = false, count_alive - 1
+    ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d0a1 => flag = false, count_alive - 1
+    ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d1a2 => flag = false, count_alive - 1
+    ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d2a1 => remove
+    ///      - Reveal A => (dead, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d1a2 => flag = false, count_dead - 1
+    ///      - Reveal A => (dead, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d1a1 => flag = false, count_dead - 1
+    ///      - Reveal A => (dead, alive) [C, A] and a group with [1 0 0 0 0 0 1] B d{0,1,2}a{3,2,1} => flag = false
+    /// CONCLUSION 1: If all flags 0 => remove | If alive_count less than equals to 0 => remove
+    /// CONCLUSION 2: subtract all card information in inferred group from group_constraint if player_flag = true
     pub fn reveal(&mut self, player_id: usize, card: Card) {
         let mut change_flag: bool = false;
         let count = 1;
         let player_card_count: u8 = count + (self.public_single_constraints[player_id] == Some(card)) as u8;
         // You can DO need this as the mixer will mix this info too!
-        // CHECK A: You don't always add 1, need to check if they already have one too
-        self.add_inferred_player_constraint(player_id, card);
+        if self.inferred_player_constraint_contains(player_id, card) {
+            // Adds information to inferred constraint if it isn't already there
+            self.add_inferred_player_constraint(player_id, card);
+        }
         let mut i: usize = 0;
         while i < self.group_constraints.len() {
             let group: &mut CompressedGroupConstraint = &mut self.group_constraints[i];
@@ -926,6 +950,16 @@ impl CompressedCollectiveConstraint {
                         self.group_constraints.swap_remove(i);
                         continue;
                     }
+                    // [AUDIT] What if revealed card is in inferred_joint_constraint, in this case it does not just remove one card
+                    //      - Reveal A => (alive, alive) [A, B] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
+                    //      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => remove
+                    //      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 3 => flag = false and count_alive - 2
+                    //      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
+                    //      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
+                    //      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
+                    //      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
+                    //      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
+                    //      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] !A 1 => flag = false
                 } else {
                     // Or if temporarily, all player's card is known, whether if 1 is dead, or other known card is different
                     if let Some(dead_card) = self.public_single_constraints[player_id] {
@@ -940,18 +974,29 @@ impl CompressedCollectiveConstraint {
                             group.sub_dead_count(1);
                         }
                         change_flag = true;
-                    } else if let Some(known_card) = self.inferred_single_constraints[player_id] {
-                        // [PLAYER CARDS KNOWN PRUNE] all player cards are known and not group.card() 
-                        if known_card != card && known_card != group.card() {
-                            group.set_player_flag(player_id, false);
-                            if group.none_in() {
-                                self.group_constraints.swap_remove(i);
-                                continue;
-                            }
-                            change_flag = true;
+                    } else if !self.inferred_joint_constraints[player_id].contains(&Some(group.card())) {
+
+                        // [PLAYER CARDS KNOWN PRUNE] all player cards are now known and are not group.card() 
+                        group.set_player_flag(player_id, false);
+                        if group.none_in() {
+                            self.group_constraints.swap_remove(i);
+                            continue;
                         }
+                        change_flag = true;
+                    } else if self.inferred_joint_constraints[player_id].contains(&Some(group.card())) {
+                        // [PLAYER CARDS KNOWN PRUNE] all player cards are now known and are not group.card() 
+                        group.set_player_flag(player_id, false);
+                        // Since card != group.card(), there can only be one card inside that == group.card()
+                        // If we are consistent this should not happen as this group should already have been pruned elsewhere, when original inferred group was addede
+                        // But we handle it just in case
+                        if group.none_in() || group.count_alive() < 2{
+                            self.group_constraints.swap_remove(i);
+                            continue;
+                        }
+                        group.count_alive_subtract(1);
+                        debug_assert!(false, "We were inconsistent TT, subtract should have been done when original inferred constraint was added");
+                        change_flag = true;
                     }
-                    
                 }
             }
             i += 1;
