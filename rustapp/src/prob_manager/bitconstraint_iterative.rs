@@ -872,6 +872,9 @@ impl CompressedCollectiveConstraint {
     // - !!! If already inside, should not add. because the player could just be reveal info we already know
     // [THOT]: Information only gets added if the "wave function collapses"-ish, when any particular set of players' cards are fully determined
     // [THOT]: To define carefully what "fully determined" means
+    // [THOT]: Like "fuzzy info" that is probabilistic only "set-resolves" if for some set, all the items are known
+    // [THOT]: We are interested in the set resolving of a set of just 1 player
+    // QUESTION: how does this resolving idea pair with possible card combinations a player can have?
     // [THOT]: Every group constraint defines and in group and an out group, from which we can piece together sets of information by taking the union over the whole group
     /// Does the Reveal part of RevealRedraw
     /// - Only prunes those that can be immediately found to be redundant, without comparing to other groups
