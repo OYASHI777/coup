@@ -870,6 +870,9 @@ impl CompressedCollectiveConstraint {
     // TODO: [THEORY CHECK]
     // TODO: CHECK A Reflect how inferred groups is updated by this reveal
     // - !!! If already inside, should not add. because the player could just be reveal info we already know
+    // [THOT]: Information only gets added if the "wave function collapses"-ish, when any particular set of players' cards are fully determined
+    // [THOT]: To define carefully what "fully determined" means
+    // [THOT]: Every group constraint defines and in group and an out group, from which we can piece together sets of information by taking the union over the whole group
     /// Does the Reveal part of RevealRedraw
     /// - Only prunes those that can be immediately found to be redundant, without comparing to other groups
     /// - Assumes player_id is alive and thus joint_constraint is empty, public_constraint may or may not be empty
@@ -883,6 +886,8 @@ impl CompressedCollectiveConstraint {
     ///     - Calls a function that mines the information to generate all other inferred information, which may add groups
     /// - Does not reflect information change from swapping of cards in Ambassador and RevealRedraw
     /// CASES:
+    /// We update group_constraints where player_id flag is true only
+    /// group constraints with group.card() == A
     ///      - Reveal A => (alive, alive) [A, B] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
     ///      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => remove
     ///      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 3 => flag = false and count_alive - 2
@@ -891,6 +896,7 @@ impl CompressedCollectiveConstraint {
     ///      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
     ///      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
     ///      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
+    /// group constraints with group.card() != A | (d0a3 -> dead 0 alive 3)
     ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d0a3 => flag = false, count_alive - 1
     ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d0a2 => flag = false, count_alive - 1
     ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d0a1 => flag = false, count_alive - 1
@@ -898,6 +904,7 @@ impl CompressedCollectiveConstraint {
     ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d2a1 => remove
     ///      - Reveal A => (dead, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d1a2 => flag = false, count_dead - 1
     ///      - Reveal A => (dead, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d1a1 => flag = false, count_dead - 1
+    /// group constraints with group.card() not in player inferred constraints
     ///      - Reveal A => (dead, alive) [C, A] and a group with [1 0 0 0 0 0 1] B d{0,1,2}a{3,2,1} => flag = false
     /// CONCLUSION 1: If all flags 0 => remove | If alive_count less than equals to 0 => remove
     /// CONCLUSION 2: subtract all card information in inferred group from group_constraint if player_flag = true
