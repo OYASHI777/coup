@@ -549,6 +549,14 @@ impl CompressedCollectiveConstraint {
     pub fn empty_inferred_pile_constraint(&mut self) {
         self.inferred_pile_constraints = [0; 5];
     }
+    /// Return true if inferred player constraint contains a particular card 
+    pub fn inferred_player_constraint_contains(&self, player_id: usize, card: Card) -> bool {
+        self.inferred_single_constraints[player_id] == Some(card) || self.inferred_joint_constraints[player_id].contains(&Some(card))
+    }
+    /// Return true if inferred pile constraint contains a particular card 
+    pub fn inferred_pile_constraint_contains(&self, card: Card) -> bool {
+        self.inferred_pile_constraints.containts(Some(card))
+    }
     /// Calculates all the known cards that are within player and pile
     /// - Assumption here is that there are no solo group constraints that represent 1 player only!
     pub fn total_alive_with_player_and_pile(&mut self, player_id: usize) -> [u8; 5] {
@@ -576,6 +584,7 @@ impl CompressedCollectiveConstraint {
     // TODO: [THEORY REVIEW] Read through and theory check
     // TODO: Investigate Initial group prune relevance here
     // TODO: Investigate if how inferred groups can be produced here 
+    // TODO: CHECK how it updates inferred group => If last group, all inferred should be removed. If first card dead, remove one from inferred.
     /// Adds a public constraint, and prunes group constraints that are redundant
     /// NOTE:
     /// - Assumes no group is redundant before adding
@@ -859,6 +868,8 @@ impl CompressedCollectiveConstraint {
         self.group_redundant_prune();
     }
     // TODO: [THEORY CHECK]
+    // TODO: CHECK A Reflect how inferred groups is updated by this reveal
+    // - !!! If already inside, should not add. because the player could just be reveal info we already know
     /// Does the Reveal part of RevealRedraw
     /// - Only prunes those that can be immediately found to be redundant, without comparing to other groups
     /// - Assumes player_id is alive and thus joint_constraint is empty, public_constraint may or may not be empty
@@ -873,6 +884,7 @@ impl CompressedCollectiveConstraint {
         let count = 1;
         let player_card_count: u8 = count + (self.public_single_constraints[player_id] == Some(card)) as u8;
         // You can DO need this as the mixer will mix this info too!
+        // CHECK A: You don't always add 1, need to check if they already have one too
         self.add_inferred_player_constraint(player_id, card);
         let mut i: usize = 0;
         while i < self.group_constraints.len() {
