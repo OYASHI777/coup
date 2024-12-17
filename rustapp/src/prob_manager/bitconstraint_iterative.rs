@@ -920,7 +920,6 @@ impl CompressedCollectiveConstraint {
         todo!()
     }
     // TODO: [THEORY CHECK]
-    // TODO: CHECK A Reflect how inferred groups is updated by this reveal
     // - !!! If already inside, should not add. because the player could just be reveal info we already know
     // [THOT]: Information only gets added if the "wave function collapses"-ish, when any particular set of players' cards are fully determined
     // [THOT]: To define carefully what "fully determined" means
@@ -975,9 +974,6 @@ impl CompressedCollectiveConstraint {
     /// FINAL CONCLUSION: Its the same treatment regardless of what card the group is, because we really are comparing a player's hand to the groups.
     ///                   The algo is less about a reveal and more about how to update groups after new information is added from the reveal.
     pub fn reveal(&mut self, player_id: usize, card: Card) {
-        let count = 1;
-        let player_card_count: u8 = count + (self.public_single_constraints[player_id] == Some(card)) as u8;
-        // You can DO need this as the mixer will mix this info too!
         if !self.inferred_player_constraint_contains(player_id, card) {
             // Adds information to inferred constraint if it isn't already there
             self.add_inferred_player_constraint(player_id, card);
@@ -1017,7 +1013,6 @@ impl CompressedCollectiveConstraint {
         self.generate_inferred_constraints();
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
-        // TODO: put a function that fits information discovery here
     }
     /// When called looks at all the public, inferred, and group constraints to determine new inferred constraints
     pub fn generate_inferred_constraints(&mut self) {
