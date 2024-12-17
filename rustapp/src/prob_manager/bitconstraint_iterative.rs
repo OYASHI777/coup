@@ -1015,11 +1015,15 @@ impl CompressedCollectiveConstraint {
         // [THOT] So one might be able to learn information about the hands of other players?
     }
     /// When called looks at all the public, inferred, and group constraints to determine new inferred constraints
+    /// Updates all items that need to be tracked
     pub fn generate_inferred_constraints(&mut self) {
         todo!()
     }
     // TODO: [THEORY CHECK]
     // TODO: [TEST] 
+    // TODO: [TODO] separating the dilution of information by creating 2 functions, both call the same mixing, but call different dilution steps
+    // e.g. reveal_redraw => that called mix() then dilutes information
+    // e.g. ambassador => that calls mix() then dilutes information
     // TODO: [MOVE DOCUMENTATION] to docstring 
     /// Mixes cards.
     /// Consists of 2 steps:
