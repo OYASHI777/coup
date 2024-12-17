@@ -494,6 +494,54 @@ impl CompressedCollectiveConstraint {
         }
         output
     }
+    /// Gets the number of dead cards a player has for a each card
+    /// NOTE:
+    /// - Not actually used except for debugging
+    pub fn player_dead_card_counts(&self, player_id: usize) -> [u8; 5] {
+        let mut output: [u8; 5] = [0; 5];
+        if let Some(card) = self.public_single_constraints[player_id] {
+            output[card as usize] += 1;
+        }
+        if let Some(card) = self.public_joint_constraints[player_id][0] {
+            output[card as usize] += 1;
+        }
+        if let Some(card) = self.public_joint_constraints[player_id][1] {
+            output[card as usize] += 1;
+        }
+        output
+    }
+    /// Gets the number of known alive cards a player has for a particular card
+    /// NOTE:
+    /// - Not actually used except for debugging
+    pub fn player_alive_card_count(&self, player_id: usize, card: Card) -> u8 {
+        let mut output: u8 = 0;
+        if self.inferred_single_constraints[player_id] == Some(card) {
+            output += 1;
+        }
+        if self.inferred_joint_constraints[player_id][0] == Some(card) {
+            output += 1;
+        }
+        if self.inferred_joint_constraints[player_id][1] == Some(card) {
+            output += 1;
+        }
+        output
+    }
+    /// Gets array of counts of known alive cards a player has for each card
+    /// NOTE:
+    /// - Not actually used except for debugging
+    pub fn player_alive_card_counts(&self, player_id: usize) -> [u8; 5] {
+        let mut output: [u8; 5] = [0; 5];
+        if let Some(card) = self.inferred_single_constraints[player_id] {
+            output[card as usize] += 1;
+        }
+        if let Some(card) = self.inferred_joint_constraints[player_id][0] {
+            output[card as usize] += 1;
+        }
+        if let Some(card) = self.inferred_joint_constraints[player_id][1] {
+            output[card as usize] += 1;
+        }
+        output
+    }
     pub fn dead_card_count(&self) -> &[u8; 5] {
         &self.dead_card_count
     }
@@ -867,6 +915,10 @@ impl CompressedCollectiveConstraint {
         }
         self.group_redundant_prune();
     }
+    /// This function is used when a player looks at a pile and sees the cards
+    pub fn peek_pile(&mut self, cards: [Card; 2]) {
+        todo!()
+    }
     // TODO: [THEORY CHECK]
     // TODO: CHECK A Reflect how inferred groups is updated by this reveal
     // - !!! If already inside, should not add. because the player could just be reveal info we already know
@@ -888,136 +940,88 @@ impl CompressedCollectiveConstraint {
     ///     - This new information is reflected in changed in inferred constraint, and PRUNES, not addition to groups (as new information is not a set)
     ///     - Calls a function that mines the information to generate all other inferred information, which may add groups
     /// - Does not reflect information change from swapping of cards in Ambassador and RevealRedraw
+    /// 1) ADDS inferred info
+    /// 2) Prunes group based on inferred info
     /// CASES:
     /// We update group_constraints where player_id flag is true only
     /// group constraints with group.card() == A
     ///      - Reveal A => (alive, alive) [A, B] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
     ///      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => remove
     ///      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 3 => flag = false and count_alive - 2
-    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
+    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 3 => no change leave untouched
+    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 2 => no change leave untouched
+    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 1 => remove
+    ///      - Reveal A => (alive, alive) [A, !A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
     ///      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
     ///      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
     ///      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
     ///      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
+    /// CONCLUSION 1: If all of the player's cards are known, since revealed card is alive, we can change flag to false and subtract the number of alive cards and dead cards
+    /// CONCLUSION 2: If all flags 0 => remove | If alive_count less than equals to 0 => remove
+    /// CONCLUSION 3: If not all of a player's cards are known, leave then unchanged
     /// group constraints with group.card() != A | (d0a3 -> dead 0 alive 3)
     ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d0a3 => flag = false, count_alive - 1
     ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d0a2 => flag = false, count_alive - 1
     ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d0a1 => flag = false, count_alive - 1
     ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d1a2 => flag = false, count_alive - 1
     ///      - Reveal A => (alive, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d2a1 => remove
+    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] C d?a? => unchanged => prune cases that add info to inferred group are handled later
     ///      - Reveal A => (dead, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d1a2 => flag = false, count_dead - 1
     ///      - Reveal A => (dead, alive) [C, A] and a group with [1 0 0 0 0 0 1] C d1a1 => flag = false, count_dead - 1
-    /// group constraints with group.card() not in player inferred constraints
-    ///      - Reveal A => (dead, alive) [C, A] and a group with [1 0 0 0 0 0 1] B d{0,1,2}a{3,2,1} => flag = false
-    /// CONCLUSION 1: If all flags 0 => remove | If alive_count less than equals to 0 => remove
-    /// CONCLUSION 2: subtract all card information in inferred group from group_constraint if player_flag = true
+    /// CONCLUSION 1: If all of the player's cards are known, since revealed card is alive, we can change flag to false and subtract the number of alive cards and dead cards
+    /// CONCLUSION 2: If all flags 0 => remove | If alive_count less than equals to 0 => remove
+    /// CONCLUSION 3: If not all of a player's cards are known, leave then unchanged
+    /// CONCLUSION 4: Groups where player_id is 0 are unaffected. They will be handled later in generate inferred constraints, and any further redundant pruning.
+    /// FINAL CONCLUSION: Its the same treatment regardless of what card the group is, because we really are comparing a player's hand to the groups.
+    ///                   The algo is less about a reveal and more about how to update groups after new information is added from the reveal.
     pub fn reveal(&mut self, player_id: usize, card: Card) {
-        let mut change_flag: bool = false;
         let count = 1;
         let player_card_count: u8 = count + (self.public_single_constraints[player_id] == Some(card)) as u8;
         // You can DO need this as the mixer will mix this info too!
-        if self.inferred_player_constraint_contains(player_id, card) {
+        if !self.inferred_player_constraint_contains(player_id, card) {
             // Adds information to inferred constraint if it isn't already there
             self.add_inferred_player_constraint(player_id, card);
         }
+        let player_alive_card_count: [u8; 5] = self.player_alive_card_counts(player_id);
+        let player_dead_card_count: [u8; 5] = self.player_dead_card_counts(player_id);
         let mut i: usize = 0;
         while i < self.group_constraints.len() {
             let group: &mut CompressedGroupConstraint = &mut self.group_constraints[i];
             // Update only groups affected by the revealed information => i.e. those with player_id flag as true
             if group.get_player_flag(player_id)  {
-                // TODO: Check if need initial prune
-                // TODO: Maybe rearrange group.player flag and pile flag
-                // META-CASE 1
-                // In these examples, player_id == 2, player_flag == true, pile_flag in {true, false}, player alive card always >= 1, group.card() == card == Duke
-                // CASE 1: player has 2 Duke (dead, alive) = (1, 1)
-                // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => GROUP INCLUDES PLAYER WHO HAS ALIVE=0, (0, n) => GROUP INCLUDES PLAYER WHO HAS DEAD CARD, (1, 1) => PRUNE, (1, 2) => Handle here, (2, 1) => PRUNE
-                // PRUNED because what we add at the end is at least better information
-                // CASE 2: player has 1 Duke (dead, alive) = (0, 1), 1 alive other card, 
-                // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => GROUP INCLUDES PLAYER WHO HAS ALIVE=0, (0, 1) => PRUNE, (0, 2) => HANDLE, (0, 3) => HANDLE, (1, 1) => PRUNE, (1, 2) => HANDLE, (2, 1) => PRUNE
-                // CASE 3: player has 1 Duke (dead, alive) = (0, 1), 1 dead other card
-                // [0, 0, 1, 0, 0, 1, 0] Duke where (dead, alive) = (n, 0) => GROUP INCLUDES PLAYER WHO HAS ALIVE=0, (0, 1) => PRUNE, (0, 2) => HANDLE, (0, 3) => HANDLE, (1, 1) => PRUNE, (1, 2) => HANDLE, (2, 1) => PRUNE
-                // CASE IGNORE: 2 Dead Duke, 2 Alive Duke, Not a possible to reach here!
-                // CONCLUSION 1: Seems like we PRUNE when group.alive_count() == 1 (Like in add_public_constraint)
-
-                // META-CASE 2
-                // In these examples, player_id == 2, player_flag == true, pile_flag in {true, false}, player alive card always >= 1, group.card() != card, card == Duke
-                // In some cases, this revelation might tell us, certain players DONT have card, and so allow us to update the LEGAL CARD LIST
-                // If pile_flag == false make it true, if pile_flag == true, leave it
-                // player_flag = false, if both player cards are known! KNOWN => player has dead card, and current card, KNOWN => we know player current card and unrevealed card
-                // TODO: [IMPLEMENT] save private inferred info => single and joint, can store there if inferred for quicker access
-                // CASE 1: player has 2 Duke (dead, alive) = (1, 1)
-                // CASE 2: player has 1 Duke (dead, alive) = (0, 1), 1 alive other card, 
-                // If pile_flag == false make it true, if pile_flag == true, leave it
-                // group.card() != Duke where (dead, alive) = (n, 0) => GROUP ALIVE_COUNT > 0, (0, n) => MIX
-                // CASE 3: player has 1 Duke (dead, alive) = (0, 1), 1 dead other card
-                // If pile_flag == false make it true, if pile_flag == true, leave it
-                // TODO: [THEORY CHECK] all cases, merge with below
-                // TODO: THEN split by whether pile flag true/false
-                if group.card() == card {
-                    if group.count_alive() == 1 {
-                        // [PLAYER ONLY PRUNE] knowing the player had the card now makes this group obsolete | all possible alive cards in the group are with the player
-                        // No need to modify this as the information from the player's pile swap gets added at the end
+                let group_card = group.card();
+                if group.count_alive() <= player_alive_card_count[group_card as usize] {
+                    // [PLAYER ONLY PRUNE] knowing the player had the card now makes this group obsolete | all possible alive cards in the group are with the player
+                    // No need to modify this as the information from the player's pile swap gets added at the end
+                    self.group_constraints.swap_remove(i);
+                    continue;
+                } else if !(self.inferred_joint_constraints[player_id] == [None; 2] && self.public_single_constraints[player_id] == None){
+                    // if we know both of a player's cards (player has at least 1 alive cos reveal)
+                    // if !(we only know 1 of the player's cards)
+                    group.set_player_flag(player_id, false);
+                    if group.none_in() {
                         self.group_constraints.swap_remove(i);
                         continue;
                     }
-                    // [AUDIT] What if revealed card is in inferred_joint_constraint, in this case it does not just remove one card
-                    //      - Reveal A => (alive, alive) [A, B] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
-                    //      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => remove
-                    //      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 3 => flag = false and count_alive - 2
-                    //      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
-                    //      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
-                    //      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
-                    //      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
-                    //      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
-                    //      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] !A 1 => flag = false
-                } else {
-                    // Or if temporarily, all player's card is known, whether if 1 is dead, or other known card is different
-                    if let Some(dead_card) = self.public_single_constraints[player_id] {
-                        // [PLAYER CARDS KNOWN PRUNE] all player cards are known and not group.card() 
-                        // Handle case where dead_card == group.card()
-                        group.set_player_flag(player_id, false);
-                        if group.none_in() {
-                            self.group_constraints.swap_remove(i);
-                            continue;
-                        }
-                        if group.card() == dead_card {
-                            group.sub_dead_count(1);
-                        }
-                        change_flag = true;
-                    } else if !self.inferred_joint_constraints[player_id].contains(&Some(group.card())) {
-
-                        // [PLAYER CARDS KNOWN PRUNE] all player cards are now known and are not group.card() 
-                        group.set_player_flag(player_id, false);
-                        if group.none_in() {
-                            self.group_constraints.swap_remove(i);
-                            continue;
-                        }
-                        change_flag = true;
-                    } else if self.inferred_joint_constraints[player_id].contains(&Some(group.card())) {
-                        // [PLAYER CARDS KNOWN PRUNE] all player cards are now known and are not group.card() 
-                        group.set_player_flag(player_id, false);
-                        // Since card != group.card(), there can only be one card inside that == group.card()
-                        // If we are consistent this should not happen as this group should already have been pruned elsewhere, when original inferred group was addede
-                        // But we handle it just in case
-                        if group.none_in() || group.count_alive() < 2{
-                            self.group_constraints.swap_remove(i);
-                            continue;
-                        }
-                        group.count_alive_subtract(1);
-                        debug_assert!(false, "We were inconsistent TT, subtract should have been done when original inferred constraint was added");
-                        change_flag = true;
-                    }
+                    group.count_alive_subtract(player_alive_card_count[group_card as usize]);
+                    group.count_dead_subtract(player_dead_card_count[group_card as usize]);
                 }
             }
             i += 1;
         }
-        if change_flag {
-            // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
-            self.group_redundant_prune();
-        } 
+        // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
+        // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
+        //      - like if inferred info reflects the same thing as group constraint
+        // QUESTION: How does inferred constraints help in determining if group is redundant? Should this be pruned above?
+        self.group_redundant_prune();
+        self.generate_inferred_constraints();
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
         // TODO: put a function that fits information discovery here
+    }
+    /// When called looks at all the public, inferred, and group constraints to determine new inferred constraints
+    pub fn generate_inferred_constraints(&mut self) {
+        todo!()
     }
     // TODO: [THEORY CHECK]
     // TODO: [TEST] 
