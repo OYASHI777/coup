@@ -18,7 +18,11 @@ use super::constraint::GroupConstraint;
 pub struct CompressedGroupConstraint(u16);
 
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
-// [FIRST GLANCE PRIORITY]      - Work on mix edge cases
+// [FIRST GLANCE PRIORITY]      - mix => Seperate into abstractions of redraw(), ambassador(), mix()
+// [FIRST GLANCE PRIORITY]      - add_public_constraint => rename and apply same method to determine how to handle it
+// [FIRST GLANCE PRIORITY]      - generate_inferred_constraints => create this
+// [FIRST GLANCE PRIORITY]      - remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred?
+// [FIRST GLANCE PRIORITY]      - peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
 // [FIRST GLANCE PRIORITY] Add inferred_card_count
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 impl CompressedGroupConstraint {
