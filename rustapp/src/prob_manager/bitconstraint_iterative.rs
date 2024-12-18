@@ -22,7 +22,8 @@ pub struct CompressedGroupConstraint(u16);
 // [FIRST GLANCE PRIORITY]      - remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred?
 // [FIRST GLANCE PRIORITY]      - peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
 // [FIRST GLANCE PRIORITY]      - generate_inferred_constraints => create this
-// [FIRST GLANCE PRIORITY] Combine single and joint constraint into just one, abtract some function like is_empty() to check if nothing inside
+// [FIRST GLANCE PRIORITY] Abtract some function like is_empty() to check if nothing inside
+// [FIRST GLANCE PRIORITY] Combine single, joint, inferred single and inferred joint into 1 array. Add an array with true/false to indicate dead or alive
 // [FIRST GLANCE PRIORITY] Add inferred_card_count
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
