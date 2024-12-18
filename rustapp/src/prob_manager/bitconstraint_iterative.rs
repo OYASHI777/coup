@@ -934,6 +934,7 @@ impl CompressedCollectiveConstraint {
                     continue;
                 } else if !(self.inferred_joint_constraints[player_id] == [None; 2] && self.public_single_constraints[player_id] == None){
                     // if we know both of a player's cards (player has at least 1 alive cos reveal)
+                    // TODO: This might be an || not &&?
                     // if !(we only know 1 of the player's cards)
                     group.set_player_flag(player_id, false);
                     if group.none_in() {
