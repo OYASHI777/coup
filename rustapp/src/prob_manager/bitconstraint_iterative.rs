@@ -24,6 +24,8 @@ pub struct CompressedGroupConstraint(u16);
 // [FIRST GLANCE PRIORITY]      - remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred?
 // [FIRST GLANCE PRIORITY]      - peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
 // [FIRST GLANCE PRIORITY] Add inferred_card_count
+// [FIRST GLANCE PRIORITY] Combine single and joint constraint into just one, abtract some function like is_empty() to check if nothing inside
+// [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 impl CompressedGroupConstraint {
     const START_FLAGS: [u16; 6] = [0b0000_0000_0100_0001, 0b0000_0000_0100_0010, 0b0000_0000_0100_0100, 0b0000_0000_0100_1000, 0b0000_0000_0101_0000, 0b0000_0000_0110_0000,];
@@ -607,7 +609,7 @@ impl CompressedCollectiveConstraint {
     }
     /// Return true if inferred pile constraint contains a particular card 
     pub fn inferred_pile_constraint_contains(&self, card: Card) -> bool {
-        self.inferred_pile_constraints.containts(Some(card))
+        self.inferred_pile_constraints[card as usize] != 0
     }
     /// Calculates all the known cards that are within player and pile
     /// - Assumption here is that there are no solo group constraints that represent 1 player only!
@@ -632,181 +634,7 @@ impl CompressedCollectiveConstraint {
         }
         output
     }
-    // TODO: [TEST]
-    // TODO: [THEORY REVIEW] Read through and theory check
-    // TODO: Investigate Initial group prune relevance here
-    // TODO: Investigate if how inferred groups can be produced here 
-    // TODO: CHECK how it updates inferred group => If last group, all inferred should be removed. If first card dead, remove one from inferred.
-    /// Adds a public constraint, and prunes group constraints that are redundant
-    /// NOTE:
-    /// - Assumes no group is redundant before adding
-    /// - Assumes no dead player info is in groups before adding
-    /// - Leaves no group redundant after adding
-    /// - Leaves no dead player info in groups
-    /// CASES:
-    /// We update group_constraints where player_id flag is true only
-    /// Player dies and reveal card A
-    /// group constraints with group.card() == A
-    ///      - Reveal A => (alive, alive) [A, !A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1, inferred A - 1
-    ///      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 2, inferred A - 1
-    ///      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 3 => flag = false and count_alive - 2, inferred A - 1
-    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 3 => count_alive - 1, count_dead + 1, inferred A - 1
-    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 2 => count_alive - 1, count_dead + 1, inferred A + 1
-    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 1 => remove
-    ///      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
-    ///      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
-    ///      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1, count_dead - 1
-    ///      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
-    /// CONCLUSION 1: If all of the player's cards are known, since revealed card is dead, we can change flag to false and subtract the number of alive cards and dead cards
-    /// CONCLUSION 2: Remove one of dead card from inferred group if it is inside
-    /// CONCLUSION 2: If all flags 0 => remove | If alive_count less than equals to 0 => remove
-    /// group constraints with group.card() != A | (d0a3 -> dead 0 alive 3)
-    ///      - Reveal A => (alive, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d0a3 => flag = false, count_alive - 1
-    ///      - Reveal A => (alive, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d0a2 => flag = false, count_alive - 1
-    ///      - Reveal A => (alive, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d0a1 => remove
-    ///      - Reveal A => (alive, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d1a2 => flag = false, count_alive - 1
-    ///      - Reveal A => (alive, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d2a1 => remove
-    ///      - Reveal A => (now dead, alive) [A, X] and a group with [1 0 0 0 0 0 1] C d?a? => unchanged => prune cases that add info to inferred group are handled later
-    ///      - Reveal A => (dead, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d1a2 => flag = false, count_dead - 1
-    ///      - Reveal A => (dead, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d1a1 => flag = false, count_dead - 1
-    /// CONCLUSION 1: If all of the player's cards are known, since revealed card is alive, we can change flag to false and subtract the number of alive cards and dead cards
-    /// CONCLUSION 2: If all flags 0 => remove | If alive_count less than equals to 0 => remove
-    /// CONCLUSION 3: If not all of a player's cards are known, leave then unchanged
-    /// CONCLUSION 4: Groups where player_id is 0 are unaffected. They will be handled later in generate inferred constraints, and any further redundant pruning.
-    /// FINAL CONCLUSION: Its the same treatment regardless of what card the group is, because we really are comparing a player's hand to the groups.
-    ///                   The algo is less about a reveal and more about how to update groups after new information is added from the reveal.
-    /// TODO: Exact same as reveal except you add to public constraint
-    pub fn add_public_constraint(&mut self, player_id: usize, card: Card) {
-        self.dead_card_count[card as usize] += 1;
-        debug_assert!(self.dead_card_count[card as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", card, self.dead_card_count[card as usize]);
-        let dead_card_flag: bool = self.dead_card_count[card as usize] == 3;
-        let mut dead_player_flag: bool = false;
-        let mut dead_player_card_vec: [Option<Card>; 2] = [None; 2];
-        let current = self.public_single_constraints[player_id];
-        match current {
-            None => self.public_single_constraints[player_id] = Some(card),
-            Some(dead_card) => {
-                self.public_single_constraints[player_id] = None;
-                dead_player_flag = true;
-                dead_player_card_vec = [Some(dead_card), Some(card)];
-                self.public_joint_constraints[player_id] = match dead_card < card {
-                    true => {
-                        [Some(dead_card), Some(card)]
-                    },
-                    false => {
-                        [Some(card), Some(dead_card)]
-                    },
-                };
-            },
-        }
-        let mut i: usize = 0;
-        let mut change_flag: bool = false;
-        if !dead_player_flag {
-            let mut count_same_card_groups: u16 = 0;
-            'outer: while i < self.group_constraints.len() {
-                let group = &mut self.group_constraints[i];
-                if group.card() == card {
-                    count_same_card_groups += 1;
-                    if dead_card_flag {
-                        // [DEAD PRUNE] Prune group is all cards have been shown to be dead for some card.
-                        self.group_constraints.swap_remove(i);
-                        continue 'outer;
-                    }
-                    if group.get_player_flag(player_id) {
-                        if group.count_alive() != 1 {
-                            group.count_dead_add(1);
-                            group.count_alive_subtract(1);
-                            change_flag = true;
-                        } else {
-                            // [NO ALIVE PRUNE] count_alive == 0, so group is effectively useless as info is captured in public and joint constraints
-                            self.group_constraints.swap_remove(i);
-                            continue 'outer;
-                        }
-                    }
-                }
-                if self.is_complement_of_pcjc(&self.group_constraints[i]) {
-                    // [COMPLEMENT PRUNE] if group union (all public) union (joint constraint) is a full set it just means the card could be anywhere
-                    // This should be done for ALL groups, as adding a public constraint card can make any group complement regardless of card type
-                    self.group_constraints.swap_remove(i);
-                    continue 'outer;
-                }
-                i += 1;
-            }
-            if change_flag && count_same_card_groups > 1{
-                // Redundancy is assumed at the beginning, so if no change, nothing needs to be checked
-                // Redundancy only occurs if cards of both groups are the same.
-                // If no player dies, only groups with the same card are affected by changes
-                // so no need to run redundant prune to compare groups with different cards
-                // This is O(n) and you could make it better, but would require memory allocation. For simplicity and dud to small len() of vec we use O(n^2)
-                self.group_redundant_prune();
-            }
-        } else {
-            'outer: while i < self.group_constraints.len() {
-                let group = &mut self.group_constraints[i];
-                if group.card() == card {
-                    if dead_card_flag {
-                        // [DEAD PRUNE] Prune group is all cards have been shown to be dead for some card.
-                        self.group_constraints.swap_remove(i);
-                        continue 'outer;
-                    }
-                }
-                if group.indicator(player_id) {
-                    // [DEAD PLAYER PRUNE] 
-                    group.group_subtract(player_id);
-                    // Get dead players cards and deal with it
-                    if Some(group.card()) == dead_player_card_vec[0] {
-                        if dead_player_card_vec[0] == dead_player_card_vec[1] {
-                            // Remove dead player information from group since its stored in public/joint constraints
-                            // Player's dead card before this was the same card
-                            // Now remove alive card (to reflect it as dead) and so remove both dead cards from group 
-                            if group.count_alive() == 1 {
-                                // [NO ALIVE PRUNE]
-                                self.group_constraints.swap_remove(i);
-                                continue;
-                            }
-                            // Remove current card then became dead
-                            group.count_alive_subtract(1);
-                            // Remove previous card that was dead
-                            group.count_dead_subtract(1);
-                        } else {
-                            // Player's dead card before this was a different card
-                            if group.count_alive() == 1 {
-                                // [NO ALIVE PRUNE]
-                                self.group_constraints.swap_remove(i);
-                                continue;
-                            }
-                            // Remove current card then became dead
-                            group.count_alive_subtract(1);
-                        }
-                    } else if Some(group.card()) == dead_player_card_vec[1] {
-                        // Player's dead card before this was a different card
-                        if group.count_alive() == 1 {
-                            // [NO ALIVE PRUNE]
-                            self.group_constraints.swap_remove(i);
-                            continue;
-                        }
-                        // Remove current card then became dead
-                        group.count_alive_subtract(1);
-                    }
-                    change_flag = true;
-                }
-                // Might still need to handle same case as above since may not always subtract indicator
-                if self.is_complement_of_pcjc(&self.group_constraints[i]) {
-                    // [COMPLEMENT PRUNE] if group union (all public) union (joint constraint) is a full set it just means the card could be anywhere
-                    // This should be done for ALL groups, as adding a public constraint card can make any group complement regardless of card type
-                    self.group_constraints.swap_remove(i);
-                    continue 'outer;
-                }
-                i += 1;
-            }
-            if change_flag {
-                // Redundancy is assumed at the beginning, so if no change, nothing needs to be checked
-                // If a player dies, all card groups can be affected by changes
-                // This is O(n) and you could make it better, but would require memory allocation. For simplicity and dud to small len() of vec we use O(n^2)
-                self.group_redundant_prune();
-            }
-        }
-    }
+
     /// Removes a public constraint, and adjust the public_constraints and joint_constraints appropriately
     /// NOTE:
     /// - This does not modify the group_constraints that have dead_counts
@@ -956,6 +784,69 @@ impl CompressedCollectiveConstraint {
     pub fn peek_pile(&mut self, cards: [Card; 2]) {
         todo!()
     }
+        // TODO: [TEST]
+    // TODO: [THEORY REVIEW] Read through and theory check
+    // TODO: Investigate Initial group prune relevance here
+    // TODO: Investigate if how inferred groups can be produced here 
+    // TODO: CHECK how it updates inferred group => If last group, all inferred should be removed. If first card dead, remove one from inferred.
+    /// Adds a public constraint, and prunes group constraints that are redundant
+    /// NOTE:
+    /// - Assumes no group is redundant before adding
+    /// - Assumes no dead player info is in groups before adding
+    /// - Leaves no group redundant after adding
+    /// - Leaves no dead player info in groups
+    /// CASES:
+    /// We update group_constraints where player_id flag is true only
+    /// Player dies and reveal card A
+    /// group constraints with group.card() == A
+    ///      - Reveal A => (alive, alive) [A, !A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1, inferred A - 1
+    ///      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 2, inferred A - 1
+    ///      - Reveal A => (alive, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 3 => flag = false and count_alive - 2, inferred A - 1
+    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 3 => count_alive - 1, count_dead + 1, inferred A - 1
+    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 2 => count_alive - 1, count_dead + 1, inferred A + 1
+    ///      - Reveal A => (alive, alive) [A, X] and a group with [1 0 0 0 0 0 1] A 1 => remove
+    ///      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1
+    ///      - Reveal A => (dead, alive) [!A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
+    ///      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 2 => flag = false and count_alive - 1, count_dead - 1
+    ///      - Reveal A => (dead, alive) [A, A] and a group with [1 0 0 0 0 0 1] A 1 => remove
+    /// CONCLUSION 1: If all of the player's cards are known, since revealed card is dead, we can change flag to false and subtract the number of alive cards and dead cards
+    /// CONCLUSION 2: Remove one of dead card from inferred group if it is inside
+    /// CONCLUSION 2: If all flags 0 => remove | If alive_count less than equals to 0 => remove
+    /// group constraints with group.card() != A | (d0a3 -> dead 0 alive 3)
+    ///      - Reveal A => (alive, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d0a3 => flag = false, count_alive - 1
+    ///      - Reveal A => (alive, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d0a2 => flag = false, count_alive - 1
+    ///      - Reveal A => (alive, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d0a1 => remove
+    ///      - Reveal A => (alive, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d1a2 => flag = false, count_alive - 1
+    ///      - Reveal A => (alive, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d2a1 => remove
+    ///      - Reveal A => (now dead, alive) [A, X] and a group with [1 0 0 0 0 0 1] C d?a? => unchanged => prune cases that add info to inferred group are handled later
+    ///      - Reveal A => (dead, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d1a2 => flag = false, count_dead - 1
+    ///      - Reveal A => (dead, now dead) [C, A] and a group with [1 0 0 0 0 0 1] C d1a1 => flag = false, count_dead - 1
+    /// CONCLUSION 1: If all of the player's cards are known, since revealed card is alive, we can change flag to false and subtract the number of alive cards and dead cards
+    /// CONCLUSION 2: If all flags 0 => remove | If alive_count less than equals to 0 => remove
+    /// CONCLUSION 3: If not all of a player's cards are known, leave then unchanged
+    /// CONCLUSION 4: Groups where player_id is 0 are unaffected. They will be handled later in generate inferred constraints, and any further redundant pruning.
+    /// FINAL CONCLUSION: Its the same treatment regardless of what card the group is, because we really are comparing a player's hand to the groups.
+    ///                   The algo is less about a reveal and more about how to update groups after new information is added from the reveal.
+    /// TODO: Exact same as reveal except you add to public constraint
+    pub fn death(&mut self, player_id: usize, card: Card) {
+        self.dead_card_count[card as usize] += 1;
+        debug_assert!(self.dead_card_count[card as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", card, self.dead_card_count[card as usize]);
+        match self.public_single_constraints[player_id] {
+            None => self.public_single_constraints[player_id] = Some(card),
+            Some(dead_card) => {
+                self.public_single_constraints[player_id] = None;
+                // NOTE: Eventually ill combine single & joint constraint so no sorting here
+                self.public_joint_constraints[player_id] = [Some(dead_card), Some(card)];
+            },
+        }
+        self.reveal_group_adjustment(player_id);
+        // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
+        // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
+        //      - like if inferred info reflects the same thing as group constraint
+        // QUESTION: How does inferred constraints help in determining if group is redundant? Should this be pruned above?
+        self.group_redundant_prune();
+        self.generate_inferred_constraints();
+    }
     // TODO: [THEORY CHECK]
     // - !!! If already inside, should not add. because the player could just be reveal info we already know
     // [THOT]: Information only gets added if the "wave function collapses"-ish, when any particular set of players' cards are fully determined
@@ -1015,6 +906,19 @@ impl CompressedCollectiveConstraint {
             // Adds information to inferred constraint if it isn't already there
             self.add_inferred_player_constraint(player_id, card);
         }
+        self.reveal_group_adjustment(player_id);
+
+        // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
+        // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
+        //      - like if inferred info reflects the same thing as group constraint
+        // QUESTION: How does inferred constraints help in determining if group is redundant? Should this be pruned above?
+        self.group_redundant_prune();
+        self.generate_inferred_constraints();
+        // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
+        // [THOT] So one might be able to learn information about the hands of other players?
+    }
+    /// See documentation in reveal and death
+    pub fn reveal_group_adjustment(&mut self, player_id: usize) {
         let player_alive_card_count: [u8; 5] = self.player_alive_card_counts(player_id);
         let player_dead_card_count: [u8; 5] = self.player_dead_card_counts(player_id);
         let mut i: usize = 0;
@@ -1042,14 +946,6 @@ impl CompressedCollectiveConstraint {
             }
             i += 1;
         }
-        // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
-        // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
-        //      - like if inferred info reflects the same thing as group constraint
-        // QUESTION: How does inferred constraints help in determining if group is redundant? Should this be pruned above?
-        self.group_redundant_prune();
-        self.generate_inferred_constraints();
-        // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
-        // [THOT] So one might be able to learn information about the hands of other players?
     }
     /// When called looks at all the public, inferred, and group constraints to determine new inferred constraints
     /// Updates all items that need to be tracked
