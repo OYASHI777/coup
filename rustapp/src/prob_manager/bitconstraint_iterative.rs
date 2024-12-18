@@ -18,7 +18,7 @@ use super::constraint::GroupConstraint;
 pub struct CompressedGroupConstraint(u16);
 
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
-// [FIRST GLANCE PRIORITY]      - mix && other abstraction=> docstrings assumptions before and after state
+// [FIRST GLANCE PRIORITY]      - mix && other abstraction=> docstrings assumptions before and after state => move counts out
 // [FIRST GLANCE PRIORITY]      - remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred?
 // [FIRST GLANCE PRIORITY]      - peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
 // [FIRST GLANCE PRIORITY]      - generate_inferred_constraints => create this
@@ -932,7 +932,7 @@ impl CompressedCollectiveConstraint {
                     // No need to modify this as the information from the player's pile swap gets added at the end
                     self.group_constraints.swap_remove(i);
                     continue;
-                } else if !(self.inferred_joint_constraints[player_id] == [None; 2] || self.public_single_constraints[player_id] == None){
+                } else if !(self.inferred_joint_constraints[player_id] == [None; 2] && self.public_single_constraints[player_id] == None){
                     // if we know both of a player's cards (player has at least 1 alive cos reveal)
                     // if !(we only know 1 of the player's cards)
                     group.set_player_flag(player_id, false);
@@ -1008,6 +1008,7 @@ impl CompressedCollectiveConstraint {
                             group.add_dead_count(1);
                         }
                     }
+                    // TODO: Calculate count once outside the for loop
                     let single_count: u8 = if self.inferred_single_constraints[player_id] == Some(group_card) { 1 } else { 0 };
                     let joint_count: u8 = self.inferred_joint_constraints[player_id]
                     .iter()
