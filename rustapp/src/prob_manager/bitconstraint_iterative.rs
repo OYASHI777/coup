@@ -18,13 +18,13 @@ use super::constraint::GroupConstraint;
 pub struct CompressedGroupConstraint(u16);
 
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
-// [FIRST GLANCE PRIORITY]      - mix && other abstraction=> docstrings assumptions before and after state
-// [FIRST GLANCE PRIORITY]      - remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred? repeated groups?
-// [FIRST GLANCE PRIORITY]      - peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
-// [FIRST GLANCE PRIORITY]      - generate_inferred_constraints => create this
-// [FIRST GLANCE PRIORITY]      - add_group_constraints => should not add a redundant group, if it is added remove the groups made redundant by it
-// [FIRST GLANCE PRIORITY] Combine single, joint, inferred single and inferred joint into 1 array. array should contain tuples of (Card, bool) => more cache friendly
-// [FIRST GLANCE PRIORITY] Add inferred_card_count
+// [FIRST GLANCE PRIORITY]      - D mix && other abstraction=> docstrings assumptions before and after state
+// [FIRST GLANCE PRIORITY]      - B remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred? repeated groups?
+// [FIRST GLANCE PRIORITY]      - A peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
+// [FIRST GLANCE PRIORITY]      - S generate_inferred_constraints => create this
+// [FIRST GLANCE PRIORITY]      - C add_group_constraints => should not add a redundant group, if it is added remove the groups made redundant by it
+// [FIRST GLANCE PRIORITY] B Combine single, joint, inferred single and inferred joint into 1 array. array should contain tuples of (Card, bool) => more cache friendly
+// [FIRST GLANCE PRIORITY] E Add inferred_card_count
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 impl CompressedGroupConstraint {
