@@ -19,11 +19,11 @@ pub struct CompressedGroupConstraint(u16);
 
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
 // [FIRST GLANCE PRIORITY]      - mix && other abstraction=> docstrings assumptions before and after state
-// [FIRST GLANCE PRIORITY]      - remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred?
+// [FIRST GLANCE PRIORITY]      - remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred? repeated groups?
 // [FIRST GLANCE PRIORITY]      - peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
 // [FIRST GLANCE PRIORITY]      - generate_inferred_constraints => create this
-// [FIRST GLANCE PRIORITY] Abtract some function like is_empty() to check if nothing inside
-// [FIRST GLANCE PRIORITY] Combine single, joint, inferred single and inferred joint into 1 array. Add an array with true/false to indicate dead or alive
+// [FIRST GLANCE PRIORITY]      - add_group_constraints => should not add a redundant group, if it is added remove the groups made redundant by it
+// [FIRST GLANCE PRIORITY] Combine single, joint, inferred single and inferred joint into 1 array. array should contain tuples of (Card, bool) => more cache friendly
 // [FIRST GLANCE PRIORITY] Add inferred_card_count
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
@@ -551,6 +551,27 @@ impl CompressedCollectiveConstraint {
     pub fn dead_card_count(&self) -> &[u8; 5] {
         &self.dead_card_count
     }
+    /// Returns number of a player's cards are known, i.e. Dead or inferred
+    pub fn player_cards_known(&self, player_id: usize) -> u8 {
+        let mut output: u8 = 0;
+        if self.public_single_constraints[player_id] != None {
+            output += 1;
+        }
+        for item in self.public_joint_constraints[player_id] {
+            if item.is_some() {
+                output += 1;
+            }
+        }
+        if self.inferred_single_constraints[player_id] != None {
+            output += 1;
+        }
+        for item in self.inferred_joint_constraints[player_id] {
+            if item.is_some() {
+                output += 1;
+            }
+        }
+        output
+    }
 }
 /// Adds a public constraint without pruning group constraints that are redundant
 impl CompressedCollectiveConstraint {
@@ -848,6 +869,7 @@ impl CompressedCollectiveConstraint {
         // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
         //      - like if inferred info reflects the same thing as group constraint
         // QUESTION: How does inferred constraints help in determining if group is redundant? Should this be pruned above?
+        // TODO: Needs to do dead player prune
         self.group_redundant_prune();
         self.generate_inferred_constraints();
     }
@@ -925,6 +947,7 @@ impl CompressedCollectiveConstraint {
     pub fn reveal_group_adjustment(&mut self, player_id: usize) {
         let player_alive_card_count: [u8; 5] = self.player_alive_card_counts(player_id);
         let player_dead_card_count: [u8; 5] = self.player_dead_card_counts(player_id);
+        let player_cards_known = self.player_cards_known(player_id);
         let mut i: usize = 0;
         while i < self.group_constraints.len() {
             let group: &mut CompressedGroupConstraint = &mut self.group_constraints[i];
@@ -936,9 +959,8 @@ impl CompressedCollectiveConstraint {
                     // No need to modify this as the information from the player's pile swap gets added at the end
                     self.group_constraints.swap_remove(i);
                     continue;
-                } else if !(self.inferred_joint_constraints[player_id] == [None; 2] && self.public_single_constraints[player_id] == None){
-                    // if we know both of a player's cards (player has at least 1 alive cos reveal)
-                    // if !(we only know 1 of the player's cards)
+                } else if player_cards_known == 2 {
+                    // if we know both of a player's cards including the revealed card (player has at least 1 alive cos reveal)
                     group.set_player_flag(player_id, false);
                     if group.none_in() {
                         self.group_constraints.swap_remove(i);
@@ -983,19 +1005,6 @@ impl CompressedCollectiveConstraint {
         // But odds are, there is some set where player flag is 0 so we will need to do it anyways
         debug_assert!(self.public_joint_constraints[player_id] == [None; 2], "Dead player cant do things man");
         // [MIXING] groups so a union between player and pile is formed
-        // TODO: How does this relate to adding groups for inferred information? Seems like over here im modifying groups but excluding inferred information from all the groups?
-        // TODO: But i do so later on. Can I merge them into just one?
-        // QUESTION: Can i just add them as per below, and remove all the redundant ones later? no as some will not be subsets, need to mix them somehow...
-        // POSTULATE: I think when mixing a group, in reality, what we need to do is to update the set from [0 1 0 0 1 0 1] to [0 1 0 1 1 0 1] by reflecting all the new information in this set
-        // POSTULATE: Maybe we do so by considering all circulating cards and the dead cards, and adding the group based on new info?.. But we changing an individual group while iterating over... and referencing all group for information
-        // Actually just need to add the old information captured in pile + player or just pile or just player.
-        // Or can I just mix the sets superficially then add the new information after?
-        // FAILED IDEA: Or can I just add the new information then mix the sets superficially? Im thinking this?
-        //      because then step 1 involves putting all info into group constraint, then step 2 just updates existing without worrying about information loss
-        // But consider this case, [1 0 0 0 0 0 1] A 1 we know player 4 has 2 A
-        // This should give us an updated [1 0 0 0 1 0 1] A 3 and an additional group of [0 0 0 0 1 0 1] 2 A.
-        // So we cannot first add information group then mix, because we lose this information that should have been updated.
-        // Seems like CONCLUSION will be to update then add group.
         // IDEA: So i guess updating would be taking missing information known from pile or player and adding it in? pile info wont be loss, player info wont be loss, pile & player info will be added in later 
         
         // [MIXING] Here we add information to current groups that gain it from the mix e.g. groups where player is 0 and pile is 1 or vice versa
@@ -1103,6 +1112,7 @@ impl CompressedCollectiveConstraint {
             if card_counts[inferred_card as usize] > 0 {
                 // Adding Dissipated information to groups appropriately
                 let dead_count = (self.public_single_constraints[player_id] == Some(inferred_card)) as u8;
+                // TODO: Add method to add groups only if it is not already inside
                 self.group_constraints.push(CompressedGroupConstraint::new(player_id, inferred_card, dead_count, card_counts[inferred_card as usize]));
             }
         }
@@ -1152,6 +1162,7 @@ impl CompressedCollectiveConstraint {
             self.inferred_pile_constraints[inferred_card as usize] = total_circulating_card_counts[inferred_card as usize] - player_lives;
             // Add group constraints
             let dead_cards_count = (Some(inferred_card) == self.public_single_constraints[player_id]) as u8;
+            // TODO: Add method to add groups only if it is not already inside
             self.group_constraints.push(CompressedGroupConstraint::new(player_id, inferred_card, dead_cards_count, total_circulating_card_counts[inferred_card as usize]));
         }
     }
