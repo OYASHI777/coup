@@ -17,13 +17,12 @@ use super::constraint::GroupConstraint;
 #[derive(PartialEq, Eq)]
 pub struct CompressedGroupConstraint(u16);
 
+// [FIRST GLANCE PRIORITY] 1B Combine single, joint, inferred single and inferred joint into 1 array. array should contain tuples of (Card, bool) => more cache friendly
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
-// [FIRST GLANCE PRIORITY]      - D mix && other abstraction=> docstrings assumptions before and after state
 // [FIRST GLANCE PRIORITY]      - 2B remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred? repeated groups?
 // [FIRST GLANCE PRIORITY]      - 3C add_group_constraints => should not add a redundant group, if it is added remove the groups made redundant by it | replace addition of groups in dilution to this!
 // [FIRST GLANCE PRIORITY]      - 4S generate_inferred_constraints => create this
 // [FIRST GLANCE PRIORITY]      - 5A peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
-// [FIRST GLANCE PRIORITY] 1B Combine single, joint, inferred single and inferred joint into 1 array. array should contain tuples of (Card, bool) => more cache friendly
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 impl CompressedGroupConstraint {
@@ -763,6 +762,7 @@ impl CompressedCollectiveConstraint {
     /// - This is only intended to be used for simple debugging
     /// - This should handle the group_constraints if it is intended to be used algorithmically 
     pub fn remove_constraints(&mut self, player_id: usize) {
+        // [COMBINE SJ]
         if let Some(card) = self.public_single_constraints[player_id] {
             self.dead_card_count[card as usize] -= 1;
             self.public_single_constraints[player_id] = None;
@@ -805,6 +805,7 @@ impl CompressedCollectiveConstraint {
     pub fn group_initial_prune(&mut self, player_id: usize, card: Card, count: usize, bool_card_dead: bool) {
         debug_assert!(player_id <= 6, "Player ID Wrong");
         // The assumption here is that this will only be called by an alive player.
+        // [COMBINE SJ]
         let player_dead_count: usize = count + (self.public_single_constraints[player_id] == Some(card)) as usize; 
         debug_assert!(self.public_joint_constraints[player_id] == [None, None], "Impossible Case Reached! The assumption here is that this will only be called by an alive player.");
         let mut i: usize = 0;
@@ -1074,6 +1075,7 @@ impl CompressedCollectiveConstraint {
                     // Here player is 0 and pile is 1
                     // We add player information that it is originally missing
                     group.set_player_flag(player_id, true);
+                    // [COMBINE SJ]
                     if let Some(dead_card) = self.public_single_constraints[player_id] {
                         if group_card == dead_card {
                             group.add_dead_count(1);
@@ -1169,6 +1171,7 @@ impl CompressedCollectiveConstraint {
             }
             if card_counts[inferred_card as usize] > 0 {
                 // Adding Dissipated information to groups appropriately
+                // [COMBINE SJ]
                 let dead_count = (self.public_single_constraints[player_id] == Some(inferred_card)) as u8;
                 // TODO: Add method to add groups only if it is not already inside
                 self.group_constraints.push(CompressedGroupConstraint::new(player_id, inferred_card, dead_count, card_counts[inferred_card as usize]));
@@ -1214,6 +1217,7 @@ impl CompressedCollectiveConstraint {
         // Here we Manage the dissipation of inferred information by:
         // - Properly subtracting the appropriate amount from inferred pile constraint
         // - Adding the information into the group constraints => on how the known cards have "spread" from player or pile or BOTH (player union pile) 
+        // [COMBINE SJ]
         let player_lives: u8 = match self.public_single_constraints[player_id].is_some() {
             true => 1, // This function cannot be called if player is dead
             false => 2,
