@@ -18,9 +18,9 @@ use super::constraint::GroupConstraint;
 pub struct CompressedGroupConstraint(u16);
 
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
-// [FIRST GLANCE PRIORITY]      - 2C add_group_constraints => should not add a redundant group, if it is added remove the groups made redundant by it | replace addition of groups in dilution to this!
 // [FIRST GLANCE PRIORITY]      - 3S generate_inferred_constraints => create this, probably will need to remove redundant groups when inferred constraints are added, use reveal?
 // [FIRST GLANCE PRIORITY]      - 4A peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
+// [FIRST GLANCE PRIORITY]      - 5S All card combos: POSTULATE: clearly if A is possible, B is possible unless player can have only either A or B but not both
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 impl CompressedGroupConstraint {
@@ -1010,6 +1010,7 @@ impl CompressedCollectiveConstraint {
     }
     /// When called looks at all the public, inferred, and group constraints to determine new inferred constraints
     /// Updates all items that need to be tracked
+    /// Will likely call reveal and recurse, or use the same mechanism, to add multiple inferred before recursing
     pub fn generate_inferred_constraints(&mut self) {
         todo!()
     }
@@ -1153,7 +1154,8 @@ impl CompressedCollectiveConstraint {
                 // [COMBINE SJ]
                 let dead_count = (self.get_dead_card(player_id, 0) == Some(inferred_card)) as u8;
                 // TODO: Add method to add groups only if it is not already inside
-                self.group_constraints.push(CompressedGroupConstraint::new(player_id, inferred_card, dead_count, card_counts[inferred_card as usize]));
+                let group = CompressedGroupConstraint::new(player_id, inferred_card, dead_count, card_counts[inferred_card as usize]);
+                self.add_group_constraint(group);
             }
         }
         // Get pile counts
@@ -1205,7 +1207,8 @@ impl CompressedCollectiveConstraint {
             // Add group constraints
             let dead_cards_count = (Some(inferred_card) == self.get_dead_card(player_id, 0)) as u8;
             // TODO: Add method to add groups only if it is not already inside
-            self.group_constraints.push(CompressedGroupConstraint::new(player_id, inferred_card, dead_cards_count, total_circulating_card_counts[inferred_card as usize]));
+            let group = CompressedGroupConstraint::new(player_id, inferred_card, dead_cards_count, total_circulating_card_counts[inferred_card as usize]);
+            self.add_group_constraint(group);
         }
     }
     /// Function to call for move RevealRedraw
@@ -1369,18 +1372,39 @@ impl CompressedCollectiveConstraint {
     //         }
     //     }
     // }
+    // TODO: [TEST]
     /// Adds a group => consisting of player and pile, as well as the card
     /// - checks if anything in the group_constraints makes it redundant
     /// - checks if it makes anything in group_constraints redundant
-    /// [CONSIDER] what assumptions
-    /// - Should it assume all are not redundant internally?
-    ///     - If its redundant, don't add
-    ///     - If its other group is redundant, remove group and add it in
-    /// - Should it assume some are redundant internally?
-    /// If its redundant, don't add it in
-    /// If group in group_constraints is redundant, remove that group (assuming redundancy is transitive)
+    /// NOTE:
+    /// - Assumes the group constraints and internally consistent, and no particular group makes another group redundant
+    /// - If group constraints are internally consistent, this leaves it internally consistent
+    /// - If group constraints may be internally inconsistent, this may leave it internally inconsistent
+    /// - Assumes redundancy is transitive, 
+    ///     which is important as it allows us to remove a stored group j knowing that if the added group is found to be redundant later, 
+    ///     both groups would still be redundant
+    /// - group passed in should include the relevant dead_counts too 
+    /// - Leaves self.group_constraint internally consistent
     pub fn add_group_constraint(&mut self, group: CompressedGroupConstraint) {
-        todo!()
+        if self.is_known_information(&group) {
+            return
+        }
+        let mut j: usize = 0;
+        while j < self.group_constraints.len() {
+            if group.get_card() == self.group_constraints[j].get_card() {
+                if self.group_constraints[j].part_list_is_subset_of(&group) &&
+                group.count_alive() <= self.group_constraints[j].count_alive() {
+                    return
+                }
+                if group.part_list_is_subset_of(&self.group_constraints[j]) &&
+                self.group_constraints[j].count_alive() <= group.count_alive() {
+                    self.group_constraints.swap_remove(j);
+                    continue;
+                }
+            }
+            j += 1;
+        }
+        self.group_constraints.push(group);
     }
     // TODO: [TEST]
     /// Loops through group_constraints, and removes redundant constraints
@@ -1425,6 +1449,7 @@ impl CompressedCollectiveConstraint {
         }
     }
     // TODO: [ALT] Make alternate version of this that adds with 2n checks for when you use it with a particular group added in mind.
+    // Or just use reveal LMAO, bacause thats what reveal does?
     pub fn add_inferred_groups(&mut self) {
         todo!("maybe?")
     }
