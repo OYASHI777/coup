@@ -439,6 +439,7 @@ impl CompressedCollectiveConstraint {
     // TODO: [TEST] this with random game generator
     // TODO: [OPTIMIZE] Perhaps can use bits to do this faster?
     /// "Is Group Complement of self's public constraints and joint constraints?"
+    /// [DEPRECATING]if player 0, hasa dead card, knowing every other player has ata least 2 of that card, means player  0 cant have that card, and its not redundant
     /// Tells us if information in a group is exactly mutually exclusive from information in public_constraint and joint_constraint
     /// Group is mutually exclusive if all public_constraints and joint_constraints that have the same Card as the GroupConstraint's Card
     /// apply to players not represented in the participation list (false)
@@ -459,9 +460,27 @@ impl CompressedCollectiveConstraint {
             return false
         }
         // If you reach here, its basically true just dependent on the center pile (player 6)
+        panic!("Deprecated");
         participation_list[6]
     }
-
+    /// Returns true if redundant on basis of inferred and public info
+    /// 
+    /// NOTE:
+    /// EXAMPLE:
+    /// - part list includes every alive players
+    pub fn is_known_information(&self, group: &CompressedGroupConstraint) -> bool {
+        let participation_list: [bool; 7] = group.get_list();
+        for player_id in 0..6 as usize {
+            if !participation_list[player_id] && self.public_constraints[player_id].contains(&None){
+                // if not in group and player is alive
+                return false
+            }
+        }
+        // Returns true if all players outside group are dead
+        // i.e. all players alive are inside the group 
+        // Group must include pile or it is false
+        participation_list[6]
+    }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn get_jc_hm(&self) -> &HashMap<usize, Vec<Card>> {
     // pub fn joint_constraints(&self) -> &[[Option<Card>; 2]; 6] {
