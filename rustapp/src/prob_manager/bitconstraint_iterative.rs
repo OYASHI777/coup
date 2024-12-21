@@ -18,6 +18,9 @@ use super::constraint::GroupConstraint;
 pub struct CompressedGroupConstraint(u16);
 
 // [FIRST GLANCE PRIORITY] 1B Combine single, joint, inferred single and inferred joint into 1 array. array should contain tuples of (Card, bool) => more cache friendly
+// [FIRST GLANCE PRIORITY]      - First combine single & joint for both public and inferred
+// [FIRST GLANCE PRIORITY]          - New methods need: if_single_dead_card, if double_dead_card etc.. 
+// [FIRST GLANCE PRIORITY]      - Then assess if should combine public and inferred into a [[(Card, bool); 2]; 6]
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
 // [FIRST GLANCE PRIORITY]      - 2B remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred? repeated groups?
 // [FIRST GLANCE PRIORITY]      - 3C add_group_constraints => should not add a redundant group, if it is added remove the groups made redundant by it | replace addition of groups in dilution to this!
@@ -389,10 +392,8 @@ impl CompressedGroupConstraint {
 /// A struct that helps in card counting. Stores all information known about cards by a particular player.
 pub struct CompressedCollectiveConstraint {
     // TODO: [OPTIMIZE] Consider if can just combine public and joint constraints
-    public_single_constraints: [Option<Card>; 6], // Stores all the dead cards of players with 1 dead card
-    public_joint_constraints:[[Option<Card>; 2]; 6], // Stores all the dead cards of dead players 
-    inferred_single_constraints: [Option<Card>; 6], // Stores all the inferred known cards of players with 1 card known
-    inferred_joint_constraints:[[Option<Card>; 2]; 6], // Stores all the dead cards of dead players 
+    public_constraints:[[Option<Card>; 2]; 6], // Stores all the dead cards of dead players, None are all behind
+    inferred_constraints:[[Option<Card>; 2]; 6], // Stores all the dead cards of dead players 
     inferred_pile_constraints: [u8; 5], // Stores number of each card where card as usize is the index
     // [ALT] TODO: Change group_constraints to by card so Vec<Vec<CompressedGroupConstraint>> ... maybe remove Card from it? or make this an object?
     group_constraints: Vec<CompressedGroupConstraint>, // Stores all the known group constraints
@@ -404,32 +405,39 @@ impl CompressedCollectiveConstraint {
     /// Constructor that returns an empty CompressedCollectiveConstraint
     pub fn new() -> Self {
         // [COMBINE SJ]
-        let public_single_constraints: [Option<Card>; 6] = [None; 6];
-        let public_joint_constraints: [[Option<Card>; 2]; 6] = [[None; 2]; 6];
+        let public_constraints: [[Option<Card>; 2]; 6] = [[None; 2]; 6];
         // [COMBINE SJ]
-        let inferred_single_constraints: [Option<Card>; 6] = [None; 6];
-        let inferred_joint_constraints: [[Option<Card>; 2]; 6] = [[None; 2]; 6];
+        let inferred_constraints: [[Option<Card>; 2]; 6] = [[None; 2]; 6];
         let inferred_pile_constraints: [u8; 5] = [0; 5];
         let group_constraints: Vec<CompressedGroupConstraint> = Vec::with_capacity(15);
         let dead_card_count: [u8; 5] = [0; 5];
         let inferred_card_count: [u8; 5] = [0; 5];
         // TODO: Add inferred_card_count
         Self {
-            public_single_constraints,
-            public_joint_constraints,
-            inferred_single_constraints,
-            inferred_joint_constraints,
+            public_constraints,
+            inferred_constraints,
             inferred_pile_constraints,
             group_constraints,
             dead_card_count,
             inferred_card_count,
         }
     }
+    /// Returns Some(card) for a particular index if it exists
+    #[inline]
+    pub fn get_dead_card(&self, player_id: usize, index: usize) -> Option<Card> {
+        self.public_constraints[player_id][index]
+    }
+    /// Returns Some(card) for a particular index if it exists
+    #[inline]
+    pub fn get_inferred_card(&self, player_id: usize, index: usize) -> Option<Card> {
+        self.inferred_constraints[player_id][index]
+    }
     /// Returns true if there are no constraints
     pub fn is_empty(&self) -> bool {
         // [COMBINE SJ]
-        self.public_single_constraints == [None; 6] && 
-        self.public_joint_constraints == [[None; 2]; 6] && 
+        self.public_constraints == [[None; 2]; 6] && 
+        self.inferred_constraints == [[None; 2]; 6] && 
+        self.inferred_pile_constraints == [0; 5] &&
         self.group_constraints.is_empty()
     }
     // TODO: [TEST] this with random game generator
@@ -449,8 +457,7 @@ impl CompressedCollectiveConstraint {
         for player in 0..6 as usize {
             // [COMBINE SJ]
             if participation_list[player] || 
-            self.public_single_constraints[player] == Some(group.card()) || 
-            self.public_joint_constraints[player].contains(&Some(group.card())){
+            self.public_constraints[player].contains(&Some(group.card())){
                 continue;
             }
             return false
@@ -461,16 +468,16 @@ impl CompressedCollectiveConstraint {
 
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn get_jc_hm(&self) -> &HashMap<usize, Vec<Card>> {
-    pub fn joint_constraints(&self) -> &[[Option<Card>; 2]; 6] {
-        // [COMBINE SJ] DELETE
-        &self.public_joint_constraints
-    }
+    // pub fn joint_constraints(&self) -> &[[Option<Card>; 2]; 6] {
+    //     // [COMBINE SJ] DELETE
+    //     &self.public_joint_constraints
+    // }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn get_pc_hm(&self) -> &HashMap<usize, Card> {
-    pub fn public_constraints(&self) -> &[Option<Card>; 6] {
-        // [COMBINE SJ] DELETE
-        &self.public_single_constraints
-    }
+    // pub fn public_constraints(&self) -> &[Option<Card>; 6] {
+    //     // [COMBINE SJ] DELETE
+    //     &self.public_single_constraints
+    // }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn get_gc_vec(&self) -> &Vec<GroupConstraint>{
     pub fn group_constraints(&self) -> &Vec<CompressedGroupConstraint>{
@@ -478,16 +485,16 @@ impl CompressedCollectiveConstraint {
     }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn jc_hm(&mut self) -> &mut HashMap<usize, Vec<Card>> {
-    pub fn joint_constraints_mut(&mut self) -> &mut [[Option<Card>; 2]; 6] {
-        // [COMBINE SJ] DELETE
-        &mut self.public_joint_constraints
-    }
+    // pub fn joint_constraints_mut(&mut self) -> &mut [[Option<Card>; 2]; 6] {
+    //     // [COMBINE SJ] DELETE
+    //     &mut self.public_joint_constraints
+    // }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn pc_hm(&mut self) -> &mut HashMap<usize, Card> {
-    pub fn public_constraints_mut(&mut self) -> &mut [Option<Card>; 6] {
-        // [COMBINE SJ] DELETE
-        &mut self.public_single_constraints
-    }
+    // pub fn public_constraints_mut(&mut self) -> &mut [Option<Card>; 6] {
+    //     // [COMBINE SJ] DELETE
+    //     &mut self.public_single_constraints
+    // }
     // TODO: [REFACTOR] Consider not exposing inner item
     // pub fn gc_vec(&mut self) -> &mut Vec<GroupConstraint>{
     pub fn group_constraints_mut(&mut self) -> &mut Vec<CompressedGroupConstraint>{
@@ -499,14 +506,25 @@ impl CompressedCollectiveConstraint {
     pub fn player_dead_card_count(&self, player_id: usize, card: Card) -> u8 {
         let mut output: u8 = 0;
         // [COMBINE SJ]
-        if self.public_single_constraints[player_id] == Some(card) {
+        if self.get_dead_card(player_id, 0) == Some(card) {
             output += 1;
         }
-        if self.public_joint_constraints[player_id][0] == Some(card) {
+        if self.get_dead_card(player_id, 1) == Some(card) {
             output += 1;
         }
-        if self.public_joint_constraints[player_id][1] == Some(card) {
-            output += 1;
+        output
+    }
+    /// Gets the number of dead cards a player has for a particular card
+    /// NOTE:
+    /// - Not actually used except for debugging
+    pub fn player_lives(&self, player_id: usize) -> u8 {
+        let mut output: u8 = 2;
+        // [COMBINE SJ]
+        if self.get_dead_card(player_id, 0).is_some() {
+            output -= 1;
+        }
+        if self.get_dead_card(player_id, 1).is_some() {
+            output -= 1;
         }
         output
     }
@@ -516,13 +534,10 @@ impl CompressedCollectiveConstraint {
     pub fn player_dead_card_counts(&self, player_id: usize) -> [u8; 5] {
         let mut output: [u8; 5] = [0; 5];
         // [COMBINE SJ]
-        if let Some(card) = self.public_single_constraints[player_id] {
+        if let Some(card) = self.get_dead_card(player_id, 0) {
             output[card as usize] += 1;
         }
-        if let Some(card) = self.public_joint_constraints[player_id][0] {
-            output[card as usize] += 1;
-        }
-        if let Some(card) = self.public_joint_constraints[player_id][1] {
+        if let Some(card) = self.get_dead_card(player_id, 1) {
             output[card as usize] += 1;
         }
         output
@@ -533,13 +548,10 @@ impl CompressedCollectiveConstraint {
     pub fn player_alive_card_count(&self, player_id: usize, card: Card) -> u8 {
         let mut output: u8 = 0;
         // [COMBINE SJ]
-        if self.inferred_single_constraints[player_id] == Some(card) {
+        if self.get_inferred_card(player_id, 0) == Some(card) {
             output += 1;
         }
-        if self.inferred_joint_constraints[player_id][0] == Some(card) {
-            output += 1;
-        }
-        if self.inferred_joint_constraints[player_id][1] == Some(card) {
+        if self.get_inferred_card(player_id, 1) == Some(card) {
             output += 1;
         }
         output
@@ -550,13 +562,10 @@ impl CompressedCollectiveConstraint {
     pub fn player_alive_card_counts(&self, player_id: usize) -> [u8; 5] {
         let mut output: [u8; 5] = [0; 5];
         // [COMBINE SJ]
-        if let Some(card) = self.inferred_single_constraints[player_id] {
+        if let Some(card) = self.get_inferred_card(player_id, 0) {
             output[card as usize] += 1;
         }
-        if let Some(card) = self.inferred_joint_constraints[player_id][0] {
-            output[card as usize] += 1;
-        }
-        if let Some(card) = self.inferred_joint_constraints[player_id][1] {
+        if let Some(card) = self.get_inferred_card(player_id, 1) {
             output[card as usize] += 1;
         }
         output
@@ -567,22 +576,18 @@ impl CompressedCollectiveConstraint {
     /// Returns number of a player's cards are known, i.e. Dead or inferred
     pub fn player_cards_known(&self, player_id: usize) -> u8 {
         let mut output: u8 = 0;
-        // [COMBINE SJ]
-        if self.public_single_constraints[player_id] != None {
+        // [COMBINE SJ] just do a for loop
+        if self.get_dead_card(player_id, 0).is_some() {
             output += 1;
         }
-        for item in self.public_joint_constraints[player_id] {
-            if item.is_some() {
-                output += 1;
-            }
-        }
-        if self.inferred_single_constraints[player_id] != None {
+        if self.get_dead_card(player_id, 1).is_some() {
             output += 1;
         }
-        for item in self.inferred_joint_constraints[player_id] {
-            if item.is_some() {
-                output += 1;
-            }
+        if self.get_inferred_card(player_id, 0).is_some() {
+            output += 1;
+        }
+        if self.get_inferred_card(player_id, 1).is_some() {
+            output += 1;
         }
         output
     }
@@ -598,25 +603,22 @@ impl CompressedCollectiveConstraint {
         debug_assert!(self.dead_card_count[card as usize] < 3, "Too many cards in dead_card_count for card: {:?}, found: {}", card, self.dead_card_count[card as usize]);
         self.dead_card_count[card as usize] += 1;
         // [COMBINE SJ]
-        match self.public_single_constraints[player_id] {
-            None => self.public_single_constraints[player_id] = Some(card),
-            Some(dead_card) => {
-                self.public_single_constraints[player_id] = None;
-                // NOTE: Eventually ill combine single & joint constraint so no sorting here
-                self.public_joint_constraints[player_id] = [Some(dead_card), Some(card)];
-            },
+        if self.public_constraints[player_id][0].is_none() {
+            self.public_constraints[player_id][0] = Some(card)
+        } else {
+            self.public_constraints[player_id][1] = Some(card)
         }
     }
     /// Adds to tracked inferred constraints
     pub fn add_inferred_player_constraint(&mut self, player_id: usize, card: Card) {
         debug_assert!(player_id < 6, "Use proper player_id thats not pile");
-        debug_assert!(!(self.inferred_joint_constraints[player_id][0].is_some() && self.inferred_joint_constraints[player_id][1].is_some()), "Adding inferred knowledge to fully known player!");
+        debug_assert!(!(self.inferred_constraints[player_id][0].is_some() && self.inferred_constraints[player_id][1].is_some()), "Adding inferred knowledge to fully known player!");
         self.inferred_card_count[card as usize] += 1;
         // [COMBINE SJ]
-        if self.inferred_single_constraints[player_id].is_none() {
-            self.inferred_single_constraints[player_id] = Some(card);
+        if self.inferred_constraints[player_id][0].is_none() { // If player has only 1 inferred card, it would be at index 0
+            self.inferred_constraints[player_id][0] = Some(card);
         } else {
-            self.inferred_joint_constraints[player_id] = [self.inferred_single_constraints[player_id], Some(card)];
+            self.inferred_constraints[player_id][1] = Some(card);
         }
     }
     /// Removes a specific card from the inferred player constraints if it exists
@@ -624,19 +626,13 @@ impl CompressedCollectiveConstraint {
     ///     - Only subtracts from inferred_card_count if card actually exists
     pub fn subtract_inferred_player_constraints(&mut self, player_id: usize, card: Card) {
         // [COMBINE SJ]
-        if self.inferred_single_constraints[player_id] == Some(card) {
-            self.inferred_single_constraints[player_id] = None;
+        if self.inferred_constraints[player_id][1] == Some(card){
+            self.inferred_constraints[player_id][1] = None;
             self.inferred_card_count[card as usize] -= 1;
-        } else if self.inferred_joint_constraints[player_id] != [None; 2] {
-            if self.inferred_joint_constraints[player_id][0] == Some(card) {
-                self.inferred_single_constraints[player_id] = self.inferred_joint_constraints[player_id][1];
-                self.inferred_joint_constraints[player_id] = [None; 2];
-                self.inferred_card_count[card as usize] -= 1;
-            } else if self.inferred_joint_constraints[player_id][1] == Some(card) {
-                self.inferred_single_constraints[player_id] = self.inferred_joint_constraints[player_id][0];
-                self.inferred_joint_constraints[player_id] = [None; 2];
-                self.inferred_card_count[card as usize] -= 1;
-            }
+        } else if self.inferred_constraints[player_id][0] == Some(card) {
+            self.inferred_constraints[player_id][0] = self.inferred_constraints[player_id][1];
+            self.inferred_constraints[player_id][1] = None;
+            self.inferred_card_count[card as usize] -= 1;
         }
     }
     #[inline]
@@ -659,17 +655,12 @@ impl CompressedCollectiveConstraint {
     pub fn empty_inferred_player_constraints(&mut self, player_id: usize) {
         debug_assert!(player_id < 6, "Use proper player_id thats not pile");
         // [COMBINE SJ]
-        if let Some(card) = self.inferred_single_constraints[player_id] {
-            self.inferred_card_count[card as usize] -= 1;
-        }
-        for item in self.inferred_joint_constraints[player_id].iter() {
+        for item in self.inferred_constraints[player_id] {
             if let Some(card) = item {
-                self.inferred_card_count[*card as usize] -= 1;
+                self.inferred_card_count[card as usize] -= 1;
             }
         }
-        // [COMBINE SJ]
-        self.inferred_single_constraints[player_id] = None;
-        self.inferred_joint_constraints[player_id] = [None; 2];
+        self.inferred_constraints[player_id] = [None; 2];
     }
 
     #[inline]
@@ -682,8 +673,8 @@ impl CompressedCollectiveConstraint {
     }
     /// Return true if inferred player constraint contains a particular card 
     pub fn inferred_player_constraint_contains(&self, player_id: usize, card: Card) -> bool {
-        // [COMBINE SJ]
-        self.inferred_single_constraints[player_id] == Some(card) || self.inferred_joint_constraints[player_id].contains(&Some(card))
+        // [COMBINE SJ] rewrite
+        self.inferred_constraints[player_id].contains(&Some(card))
     }
     /// Return true if inferred pile constraint contains a particular card 
     pub fn inferred_pile_constraint_contains(&self, card: Card) -> bool {
@@ -691,14 +682,10 @@ impl CompressedCollectiveConstraint {
     }
     /// Calculates all the known cards that are within player and pile
     /// - Assumption here is that there are no solo group constraints that represent 1 player only!
-    pub fn total_alive_with_player_and_pile(&mut self, player_id: usize) -> [u8; 5] {
+    pub fn total_known_alive_with_player_and_pile(&mut self, player_id: usize) -> [u8; 5] {
         let mut output: [u8; 5] = [0; 5];
         // [COMBINE SJ]
-        if let Some(card) = self.inferred_single_constraints[player_id] {
-            output[card as usize] += 1;
-        }
-        // [COMBINE SJ]
-        for possible_card in self.inferred_joint_constraints[player_id] {
+        for possible_card in self.inferred_constraints[player_id] {
             if let Some(card) = possible_card {
                 output[card as usize] += 1;
             }
@@ -721,40 +708,15 @@ impl CompressedCollectiveConstraint {
     /// - This is only intended to be used for simple debugging
     /// - This should handle the group_constraints if it is intended to be used algorithmically 
     pub fn remove_public_constraint(&mut self, player_id: usize, card: Card) {
-        debug_assert!(self.public_single_constraints[player_id].is_none() || self.public_single_constraints[player_id] == Some(card), "Removing card constraint that does not exist in public_constraints");
+        debug_assert!(self.public_constraints[player_id].contains(&Some(card)), "Removing card constraint that does not exist in public_constraints");
         // [COMBINE SJ] DELETE
-        if self.public_single_constraints[player_id] == Some(card) {
-            self.public_single_constraints[player_id] = None;
-            self.dead_card_count[card as usize] -= 1;
-            return;
-        } 
-        if self.public_joint_constraints[player_id][0] == Some(card) {
-            self.public_single_constraints[player_id] = self.public_joint_constraints[player_id][1];
-            self.public_joint_constraints[player_id] = [None; 2];
-            self.dead_card_count[card as usize] -= 1; 
-            return;
+        if self.public_constraints[player_id][1] == Some(card) {
+            self.public_constraints[player_id][1] = None;
+        } else if self.public_constraints[player_id][0] == Some(card) {
+            self.public_constraints[player_id][0] = self.public_constraints[player_id][0];
+            self.public_constraints[player_id][1] = None;
         }
-        if self.public_joint_constraints[player_id][1] == Some(card) {
-            self.public_single_constraints[player_id] = self.public_joint_constraints[player_id][0];
-            self.public_joint_constraints[player_id] = [None; 2];
-            self.dead_card_count[card as usize] -= 1; 
-        }
-    }
-    // TODO: [TEST]
-    /// Adds a joint constraint for some player and calls group_dead_player_prune
-    pub fn add_joint_constraint(&mut self, player_id: usize, cards: [Card; 2]) {
-        // [COMBINE SJ] DELETE
-        debug_assert!(self.public_single_constraints[player_id].is_none(), "Player already half dead, how to die again??");
-        debug_assert!(self.public_joint_constraints[player_id][0].is_none() && self.public_joint_constraints[player_id][1].is_none(), "Player already dead, how to die again??");
-        self.dead_card_count[cards[0] as usize] += 1;
-        self.dead_card_count[cards[1] as usize] += 1;
-        debug_assert!(self.dead_card_count[cards[0] as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", cards[0], self.dead_card_count[cards[0] as usize]);
-        debug_assert!(self.dead_card_count[cards[0] as usize] < 4, "Too many cards in dead_card_count for card: {:?}, found: {}", cards[1], self.dead_card_count[cards[1] as usize]);
-        self.public_joint_constraints[player_id] = match cards[0] < cards[1] {
-            true => [Some(cards[0]), Some(cards[1])],
-            false => [Some(cards[1]), Some(cards[0])],
-        };
-        self.group_dead_player_prune(player_id, cards);
+        self.dead_card_count[card as usize] -= 1; 
     }
     /// Removes all the constraints for a particular player and updates dead_card_count
     /// NOTE:
@@ -763,17 +725,20 @@ impl CompressedCollectiveConstraint {
     /// - This should handle the group_constraints if it is intended to be used algorithmically 
     pub fn remove_constraints(&mut self, player_id: usize) {
         // [COMBINE SJ]
-        if let Some(card) = self.public_single_constraints[player_id] {
-            self.dead_card_count[card as usize] -= 1;
-            self.public_single_constraints[player_id] = None;
-        }
-        if let Some(card) = self.public_joint_constraints[player_id][0] {
+        if let Some(card) = self.public_constraints[player_id][0] {
             self.dead_card_count[card as usize] -= 1;
         }
-        if let Some(card) = self.public_joint_constraints[player_id][1] {
+        if let Some(card) = self.public_constraints[player_id][1] {
             self.dead_card_count[card as usize] -= 1;
         }
-        self.public_joint_constraints[player_id] = [None; 2];
+        if let Some(card) = self.inferred_constraints[player_id][0] {
+            self.inferred_card_count[card as usize] -= 1;
+        }
+        if let Some(card) = self.inferred_constraints[player_id][1] {
+            self.inferred_card_count[card as usize] -= 1;
+        }
+        self.public_constraints[player_id] = [None; 2];
+        self.inferred_constraints[player_id] = [None; 2];
     }
     // TODO: [ALT] Make this a check whenever inserting a group or modifying a group to avoid this disgusting mess 
     // It may also be that a HashSet is too slow as its not cache efficient
@@ -802,68 +767,68 @@ impl CompressedCollectiveConstraint {
     /// - Refers to the number of cards revealed
     /// Pruning:
     /// - [INITIAL PRUNE] if player 0 revealredraws a Duke, we prune the groups that had player 0 duke and oldcount <= newcount
-    pub fn group_initial_prune(&mut self, player_id: usize, card: Card, count: usize, bool_card_dead: bool) {
-        debug_assert!(player_id <= 6, "Player ID Wrong");
-        // The assumption here is that this will only be called by an alive player.
-        // [COMBINE SJ]
-        let player_dead_count: usize = count + (self.public_single_constraints[player_id] == Some(card)) as usize; 
-        debug_assert!(self.public_joint_constraints[player_id] == [None, None], "Impossible Case Reached! The assumption here is that this will only be called by an alive player.");
-        let mut i: usize = 0;
-        while i < self.group_constraints.len() {
-            let group = &mut self.group_constraints[i];
-            if group.card() == card && group.get_player_flag(player_id) {
-                if group.count() <= player_dead_count as u8 {
-                    self.group_constraints.swap_remove(i);
-                    continue;
-                } else if bool_card_dead {
-                    group.count_dead_add(count as u8);
-                    group.count_alive_subtract(count as u8);
-                    i += 1;
-                    continue;
-                }
-            }
-            if self.is_complement_of_pcjc(&self.group_constraints[i]) {
-                self.group_constraints.swap_remove(i);
-                continue;
-            }
-            i += 1;
-        }
-    }
+    // pub fn group_initial_prune(&mut self, player_id: usize, card: Card, count: usize, bool_card_dead: bool) {
+    //     debug_assert!(player_id <= 6, "Player ID Wrong");
+    //     // The assumption here is that this will only be called by an alive player.
+    //     // [COMBINE SJ]
+    //     let player_dead_count: usize = count + (self.public_single_constraints[player_id] == Some(card)) as usize; 
+    //     debug_assert!(self.public_joint_constraints[player_id] == [None, None], "Impossible Case Reached! The assumption here is that this will only be called by an alive player.");
+    //     let mut i: usize = 0;
+    //     while i < self.group_constraints.len() {
+    //         let group = &mut self.group_constraints[i];
+    //         if group.card() == card && group.get_player_flag(player_id) {
+    //             if group.count() <= player_dead_count as u8 {
+    //                 self.group_constraints.swap_remove(i);
+    //                 continue;
+    //             } else if bool_card_dead {
+    //                 group.count_dead_add(count as u8);
+    //                 group.count_alive_subtract(count as u8);
+    //                 i += 1;
+    //                 continue;
+    //             }
+    //         }
+    //         if self.is_complement_of_pcjc(&self.group_constraints[i]) {
+    //             self.group_constraints.swap_remove(i);
+    //             continue;
+    //         }
+    //         i += 1;
+    //     }
+    // }
     // TODO: [ALT] to see if swap_remove checks can be in the if group.indicator(player_id) under a different paradigm
     // TODO: [CHECK THEORY]
     /// Assumes group_initial_prune was used before this
     /// Prunes a group constraints based on a dead player's cards (I think? TODO: Validate)
-    pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: [Card; 2]) {
-        // ??? Referenced implementation Assumes group_initial_prune was used before this
-        // [NEW]
-        let mut i: usize = 0;
-        let mut bool_subtract: bool = false;
-        while i < self.group_constraints.len() {
-            let group: &mut CompressedGroupConstraint = &mut self.group_constraints[i];
-            let card: Card = group.card();
-            if group.indicator(player_id) {
-                group.group_subtract(player_id);
-                bool_subtract = true;
-                if card_vec.contains(&card) {
-                    let subtract_count: u8 = match (card_vec[0] == card_vec[1]) {
-                        true => 2,
-                        false => 1,
-                    };
-                    group.count_dead_subtract(subtract_count);
-                    debug_assert!(group.count() == 0, "Unexpected 0 found!");
-                }
-            }
-            if group.count_alive() == 0 || //
-            self.dead_card_count[card as usize] == 3 || // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
-            self.is_complement_of_pcjc(&self.group_constraints[i]) // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
-            {
-                self.group_constraints.swap_remove(i);
-                continue;
-            }
-            i += 1;
-        }
-        self.group_redundant_prune();
-    }
+    // pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: [Card; 2]) {
+    //     // ??? Referenced implementation Assumes group_initial_prune was used before this
+    //     // [NEW]
+    //     let mut i: usize = 0;
+    //     let mut bool_subtract: bool = false;
+    //     while i < self.group_constraints.len() {
+    //         let group: &mut CompressedGroupConstraint = &mut self.group_constraints[i];
+    //         let card: Card = group.card();
+    //         if group.indicator(player_id) {
+    //             group.group_subtract(player_id);
+    //             bool_subtract = true;
+    //             if card_vec.contains(&card) {
+    //                 let subtract_count: u8 = match (card_vec[0] == card_vec[1]) {
+    //                     true => 2,
+    //                     false => 1,
+    //                 };
+    //                 group.count_dead_subtract(subtract_count);
+    //                 debug_assert!(group.count() == 0, "Unexpected 0 found!");
+    //             }
+    //         }
+    //         if group.count_alive() == 0 || //
+    //         self.dead_card_count[card as usize] == 3 || // [DEAD PRUNE] Prune group if all cards have been shown dead for some card. There are only 3 of each card
+    //         self.is_complement_of_pcjc(&self.group_constraints[i]) // [COMPLEMENT PRUNE] if group union all public union joint constraint is a full set it just means the card could be anywhere
+    //         {
+    //             self.group_constraints.swap_remove(i);
+    //             continue;
+    //         }
+    //         i += 1;
+    //     }
+    //     self.group_redundant_prune();
+    // }
     /// This function is used when a player looks at a pile and sees the cards
     pub fn peek_pile(&mut self, cards: [Card; 2]) {
         todo!()
@@ -1059,7 +1024,7 @@ impl CompressedCollectiveConstraint {
     pub fn mix(&mut self, player_id: usize) {
         // Now I could selectively check if there are changes, and choose to redundant prune only sometimes
         // But odds are, there is some set where player flag is 0 so we will need to do it anyways
-        debug_assert!(self.public_joint_constraints[player_id] == [None; 2], "Dead player cant do things man");
+        debug_assert!(self.public_constraints[player_id].contains(&None), "Dead player cant do things man");
         // [MIXING] groups so a union between player and pile is formed
         // IDEA: So i guess updating would be taking missing information known from pile or player and adding it in? pile info wont be loss, player info wont be loss, pile & player info will be added in later 
         
@@ -1076,7 +1041,7 @@ impl CompressedCollectiveConstraint {
                     // We add player information that it is originally missing
                     group.set_player_flag(player_id, true);
                     // [COMBINE SJ]
-                    if let Some(dead_card) = self.public_single_constraints[player_id] {
+                    if let Some(dead_card) = self.public_constraints[player_id][0] {
                         if group_card == dead_card {
                             group.add_dead_count(1);
                         }
@@ -1172,7 +1137,7 @@ impl CompressedCollectiveConstraint {
             if card_counts[inferred_card as usize] > 0 {
                 // Adding Dissipated information to groups appropriately
                 // [COMBINE SJ]
-                let dead_count = (self.public_single_constraints[player_id] == Some(inferred_card)) as u8;
+                let dead_count = (self.get_dead_card(player_id, 0) == Some(inferred_card)) as u8;
                 // TODO: Add method to add groups only if it is not already inside
                 self.group_constraints.push(CompressedGroupConstraint::new(player_id, inferred_card, dead_count, card_counts[inferred_card as usize]));
             }
@@ -1218,16 +1183,13 @@ impl CompressedCollectiveConstraint {
         // - Properly subtracting the appropriate amount from inferred pile constraint
         // - Adding the information into the group constraints => on how the known cards have "spread" from player or pile or BOTH (player union pile) 
         // [COMBINE SJ]
-        let player_lives: u8 = match self.public_single_constraints[player_id].is_some() {
-            true => 1, // This function cannot be called if player is dead
-            false => 2,
-        };
-        let total_circulating_card_counts: [u8; 5] = self.total_alive_with_player_and_pile(player_id);
+        let player_lives: u8 = self.player_lives(player_id);
+        let total_circulating_card_counts: [u8; 5] = self.total_known_alive_with_player_and_pile(player_id);
         for inferred_card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
             // TODO: [CHANGE] Adding of group constraints should be for all inferred cards in the player union pile + dead cards
             self.inferred_pile_constraints[inferred_card as usize] = total_circulating_card_counts[inferred_card as usize] - player_lives;
             // Add group constraints
-            let dead_cards_count = (Some(inferred_card) == self.public_single_constraints[player_id]) as u8;
+            let dead_cards_count = (Some(inferred_card) == self.get_dead_card(player_id, 0)) as u8;
             // TODO: Add method to add groups only if it is not already inside
             self.group_constraints.push(CompressedGroupConstraint::new(player_id, inferred_card, dead_cards_count, total_circulating_card_counts[inferred_card as usize]));
         }
