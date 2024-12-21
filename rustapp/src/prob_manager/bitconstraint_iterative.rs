@@ -17,15 +17,11 @@ use super::constraint::GroupConstraint;
 #[derive(PartialEq, Eq)]
 pub struct CompressedGroupConstraint(u16);
 
-// [FIRST GLANCE PRIORITY] 1B Combine single, joint, inferred single and inferred joint into 1 array. array should contain tuples of (Card, bool) => more cache friendly
-// [FIRST GLANCE PRIORITY]      - First combine single & joint for both public and inferred
-// [FIRST GLANCE PRIORITY]          - New methods need: if_single_dead_card, if double_dead_card etc.. 
-// [FIRST GLANCE PRIORITY]      - Then assess if should combine public and inferred into a [[(Card, bool); 2]; 6]
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
-// [FIRST GLANCE PRIORITY]      - 2B remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred? repeated groups?
-// [FIRST GLANCE PRIORITY]      - 3C add_group_constraints => should not add a redundant group, if it is added remove the groups made redundant by it | replace addition of groups in dilution to this!
-// [FIRST GLANCE PRIORITY]      - 4S generate_inferred_constraints => create this
-// [FIRST GLANCE PRIORITY]      - 5A peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
+// [FIRST GLANCE PRIORITY]      - 1B remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred? repeated groups?
+// [FIRST GLANCE PRIORITY]      - 2C add_group_constraints => should not add a redundant group, if it is added remove the groups made redundant by it | replace addition of groups in dilution to this!
+// [FIRST GLANCE PRIORITY]      - 3S generate_inferred_constraints => create this
+// [FIRST GLANCE PRIORITY]      - 4A peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 impl CompressedGroupConstraint {
