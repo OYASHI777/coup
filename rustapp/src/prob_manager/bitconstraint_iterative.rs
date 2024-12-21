@@ -18,9 +18,8 @@ use super::constraint::GroupConstraint;
 pub struct CompressedGroupConstraint(u16);
 
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
-// [FIRST GLANCE PRIORITY]      - 1B remove_redundant_groups => think more about how a group might be redundant based on inferred information, not just other groups. pcjc complement? info implied by inferred? repeated groups?
 // [FIRST GLANCE PRIORITY]      - 2C add_group_constraints => should not add a redundant group, if it is added remove the groups made redundant by it | replace addition of groups in dilution to this!
-// [FIRST GLANCE PRIORITY]      - 3S generate_inferred_constraints => create this
+// [FIRST GLANCE PRIORITY]      - 3S generate_inferred_constraints => create this, probably will need to remove redundant groups when inferred constraints are added, use reveal?
 // [FIRST GLANCE PRIORITY]      - 4A peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
@@ -1383,7 +1382,11 @@ impl CompressedCollectiveConstraint {
     pub fn add_group_constraint(&mut self, group: CompressedGroupConstraint) {
         todo!()
     }
+    // TODO: [TEST]
     /// Loops through group_constraints, and removes redundant constraints
+    /// NOTE:
+    /// - Assumes groups where all of a particular card is dead will not exist before this as they are implicitly pruned in
+    ///   reveal_group_adjustment 
     pub fn group_redundant_prune(&mut self) {
         if self.group_constraints.len() < 1 {
             return
@@ -1392,17 +1395,30 @@ impl CompressedCollectiveConstraint {
         let mut j: usize = 0;
         'outer:  while i < self.group_constraints.len() - 1 {
             j = i + 1;
+            if self.is_known_information(&self.group_constraints[i]) {
+                self.group_constraints.swap_remove(i);
+                continue 'outer;
+            }
             'inner: while j < self.group_constraints.len() {
-                let group_i = &self.group_constraints[i];
-                let group_j = &self.group_constraints[j];
-                // TODO: [OPTIMIZE]... can do some common checks to reduce by 2 branches...
-                if group_i.is_redundant(group_j) {
+                // If group i is == group j
+                if self.group_constraints[i] == self.group_constraints[j] {
                     self.group_constraints.swap_remove(i);
                     continue 'outer;
-                } else if group_j.is_redundant(group_i) {
-                    self.group_constraints.swap_remove(j);
-                    continue 'inner;
-                } 
+                }
+                if self.group_constraints[i].get_card() == self.group_constraints[j].get_card() {
+                    // If group i is made redundant by group j
+                    if self.group_constraints[j].part_list_is_subset_of(&self.group_constraints[i]) &&
+                    self.group_constraints[i].count_alive() <= self.group_constraints[j].count_alive() {
+                        self.group_constraints.swap_remove(i);
+                        continue 'outer;
+                    }
+                    // If group j is made redundant by group i
+                    if self.group_constraints[i].part_list_is_subset_of(&self.group_constraints[j]) &&
+                    self.group_constraints[j].count_alive() <= self.group_constraints[i].count_alive() {
+                        self.group_constraints.swap_remove(j);
+                        continue 'inner;
+                    }
+                }
                 j += 1;
             }
             i += 1;
