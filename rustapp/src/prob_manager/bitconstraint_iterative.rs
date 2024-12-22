@@ -1451,6 +1451,18 @@ impl CompressedCollectiveConstraint {
     // TODO: [ALT] Make alternate version of this that adds with 2n checks for when you use it with a particular group added in mind.
     // Or just use reveal LMAO, bacause thats what reveal does?
     pub fn add_inferred_groups(&mut self) {
+        // DATA STRUCTURE: STORING IMPOSSIBLE ALIVE STATES
+        // CASE 1: All cards are dead => No one else can have that card alive
+        // CASE 2: All cards are dead or known => No one else can have that card alive
+        // CASE 3: All cards are dead or known in some set of players => No one else outside that set can have that card alive
+        // CASE 4: All cards are known in some set of players => No player in that set can have a alive card that is outside of the alive cards in that set
+        // CASE 5: Some cards are known for 2 players => Let s_min be the amount of lives for the player with the least lives.
+        //         If the set contains n_i alive cards for the ith card. The other player must have at least (n_i - s_min) of the ith card.
+        //       e.g. [1 0 0 0 0 0 1] has 3 alive Dukes. Player 0 has a dead captain. Therefore, pile must have at least 3 - 1 = 2 Dukes.
+        //          This is represented as pile having 2 Dukes in inferred constraints, and [1 0 0 0 0 0 1] 3 Alive Dukes. [0 0 0 0 0 0 1] 2 Alive Dukes is redundant.
+        // Case 5 cont: Some cards are known for n players. => Let total lives for any player in the set, except player j be s_-j. For each card i in the group. 
+        //              Each player j, must have at least (alive_count_i - s_-j)^+ cards 
+        //       e.g. 2 players are known to have 3 Dukes and 1 Captain all alive. Each have at least 1 Duke
         todo!("maybe?")
     }
     /// General method that considers the entire Collective Constraint and generates/updates the card state
