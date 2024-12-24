@@ -394,6 +394,7 @@ pub struct CompressedCollectiveConstraint {
     inferred_pile_constraints: [u8; 5], // Stores number of each card where card as usize is the index
     // [ALT] TODO: Change group_constraints to by card so Vec<Vec<CompressedGroupConstraint>> ... maybe remove Card from it? or make this an object?
     group_constraints: Vec<CompressedGroupConstraint>, // Stores all the known group constraints
+    impossible_constraints: [[bool; 5]; 7], // For each player store an array of bool where each index is a Card, this represents whether a player cannot have a card true => cannot
     dead_card_count: [u8; 5], // each index represents the number of dead cards for the Card enum corresponding to that index
     inferred_card_count: [u8; 5], // each index represents the number of inferred cards for the Card enum
 }
@@ -407,6 +408,7 @@ impl CompressedCollectiveConstraint {
         let inferred_constraints: [[Option<Card>; 2]; 6] = [[None; 2]; 6];
         let inferred_pile_constraints: [u8; 5] = [0; 5];
         let group_constraints: Vec<CompressedGroupConstraint> = Vec::with_capacity(15);
+        let impossible_constraints: [[bool; 5]; 7] = [[false; 5]; 7];
         let dead_card_count: [u8; 5] = [0; 5];
         let inferred_card_count: [u8; 5] = [0; 5];
         // TODO: Add inferred_card_count
@@ -415,6 +417,7 @@ impl CompressedCollectiveConstraint {
             inferred_constraints,
             inferred_pile_constraints,
             group_constraints,
+            impossible_constraints,
             dead_card_count,
             inferred_card_count,
         }
@@ -1083,6 +1086,12 @@ impl CompressedCollectiveConstraint {
                 }
             }
             i += 1;
+        }
+        // OR operation on the false booleans of impossible constraints => AND operation on true
+        // When player and pile mix if the other party's can have impossible card, it becomes possible for the referenced party
+        for (a, b) in self.impossible_constraints[player_id].iter_mut().zip(self.impossible_constraints[6].iter_mut()) {
+            *a = *a && *b;
+            *b = *a;
         }
     }
     /// RevealRedraw dilution of inferred information
