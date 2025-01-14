@@ -24,7 +24,7 @@ pub struct CompressedGroupConstraint(u16);
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 // [FIRST GLANCE PRIORITY] Consider processing all new items to add with redundant checks in bulk
-// [FIRST GLANCE PRIORITY] Check redundant addition process. New item can make more than 1 item redundant
+// [FIRST GLANCE PRIORITY] Check redundant addition process. New item can make more than 1 item redundant. e.g. [1 0 0 0 0 0 0] 2 cards makes both [1 0 1 0 0 0 0] 1 cards and [1 1 0 0 0 0 0] 1 cards redundant
 impl CompressedGroupConstraint {
     const START_FLAGS: [u16; 6] = [0b0000_0000_0100_0001, 0b0000_0000_0100_0010, 0b0000_0000_0100_0100, 0b0000_0000_0100_1000, 0b0000_0000_0101_0000, 0b0000_0000_0110_0000,];
     const PLAYER_BITS: u16 = 0b0000_0000_0111_1111; // Bits 0-6
