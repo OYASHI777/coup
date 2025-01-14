@@ -19,8 +19,6 @@ pub struct CompressedGroupConstraint(u16);
 
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
 // [FIRST GLANCE PRIORITY]      - 3S generate_inferred_constraints => create this, probably will need to remove redundant groups when inferred constraints are added, use reveal?
-// [FIRST GLANCE PRIORITY]          - I realise I have no way of adding a 2nd inferred constraint when i know the player has 2 of the same card .__.
-// [FIRST GLANCE PRIORITY]          - add proper updating of it to mix
 // [FIRST GLANCE PRIORITY]      - 4A peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
 // [FIRST GLANCE PRIORITY]      - 5S All card combos: POSTULATE: clearly if A is possible, B is possible unless player can have only either A or B but not both
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
@@ -1045,6 +1043,7 @@ impl CompressedCollectiveConstraint {
         // Now I could selectively check if there are changes, and choose to redundant prune only sometimes
         // But odds are, there is some set where player flag is 0 so we will need to do it anyways
         debug_assert!(self.public_constraints[player_id].contains(&None), "Dead player cant do things man");
+        debug_assert!(player_id != 6, "Player_id here cannot be pile!");
         // [MIXING] groups so a union between player and pile is formed
         // IDEA: So i guess updating would be taking missing information known from pile or player and adding it in? pile info wont be loss, player info wont be loss, pile & player info will be added in later 
         
@@ -1089,9 +1088,10 @@ impl CompressedCollectiveConstraint {
         }
         // OR operation on the false booleans of impossible constraints => AND operation on true
         // When player and pile mix if the other party's can have impossible card, it becomes possible for the referenced party
-        for (a, b) in self.impossible_constraints[player_id].iter_mut().zip(self.impossible_constraints[6].iter_mut()) {
-            *a = *a && *b;
-            *b = *a;
+        // for (a, b) i
+        for i in 0..5 {
+            self.impossible_constraints[player_id][i] &= self.impossible_constraints[6][i];
+            self.impossible_constraints[6][i] = self.impossible_constraints[player_id][i];
         }
     }
     /// RevealRedraw dilution of inferred information
@@ -1464,7 +1464,7 @@ impl CompressedCollectiveConstraint {
     pub fn add_inferred_groups(&mut self) {
         // DATA STRUCTURE: STORING IMPOSSIBLE ALIVE STATES
         // CASE 1: All cards are dead => No one else can have that card alive
-        // CASE 2: All cards are dead or known => No one else can have that card alive
+        // CASE 2: All cards are dead or known in inferred constraints => No one else can have that card alive
         // CASE 3: All cards are dead or known in some set of players => No one else outside that set can have that card alive
         // CASE 4: All cards are known in some set of players => No player in that set can have a alive card that is outside of the alive cards in that set
         // CASE 5: Some cards are known for 2 players => Let s_min be the amount of lives for the player with the least lives.
@@ -1473,7 +1473,69 @@ impl CompressedCollectiveConstraint {
         //          This is represented as pile having 2 Dukes in inferred constraints, and [1 0 0 0 0 0 1] 3 Alive Dukes. [0 0 0 0 0 0 1] 2 Alive Dukes is redundant.
         // Case 5 cont: Some cards are known for n players. => Let total lives for any player in the set, except player j be s_-j. For each card i in the group. 
         //              Each player j, must have at least (alive_count_i - s_-j)^+ cards 
-        //       e.g. 2 players are known to have 3 Dukes and 1 Captain all alive. Each have at least 1 Duke
+        //       e.g. 2 players are known to have 3 Dukes and 1 Captain all alive. Each have at least 1 
+        // Case 5 QN: Need to further consider that we inferred the cards for some players
+        //       e.g. [1 0 0 0 0 0 1] has 3 alive Dukes. 
+        //              - Player 0 has an inferred Duke. Therefore, pile must have at least 3 - 1 - 1 = 1 Dukes.
+        //              - Player 0 has an inferred Captain. Therefore, pile must have at least 3 - 0 - 1 = 2 Dukes.
+        //          3 - inferred alive of player 0 - alive unknown card space
+        // Case 5 cont: Some cards are known for n players. => 
+        //              Let total alive unknown card space for any player in the set, except player j be s_-j. 
+        //              Let inferred alive card count for any player in the set, except player j be inf_-j. For each card i in the group. 
+        //              Each player j, must have at least (alive_count_i - s_-j - inf_-j)^+ cards 
+        //       e.g. 2 players are known to have 3 Dukes and 1 Captain all alive. Each have at least 1 
+
+        // Handle Case 5
+        let mut inferred_groups: Vec<CompressedGroupConstraint> = Vec::with_capacity(15);
+        let mut alive_card_counts: [u8; 5];
+        let mut dead_card_counts: [u8; 5];
+        let mut i: usize = 0;
+        while i < self.group_constraints.len() {
+            // Init alive card_counts from inferred groups
+            alive_card_counts = [0;5];
+            let player_flags = self.group_constraints[i].get_set_players();
+            for player in 0..6 as usize {
+                if player_flags[player] {
+                    for some_card in self.inferred_constraints[player] {
+                        if let Some(card) = some_card {
+                            alive_card_counts[card as usize] += 1;
+                        }
+                    }
+                }
+            }
+            // Adding counts in pile to alive card counts
+            alive_card_counts.iter_mut().zip(self.inferred_pile_constraints.iter()).for_each(|(alive_count, pile_count)| {*alive_count += *pile_count});
+            // Init dead card_counts from inferred groups
+            dead_card_counts = [0;5];
+            let player_flags = self.group_constraints[i].get_set_players();
+            for player in 0..6 as usize {
+                if player_flags[player] {
+                    for some_card in self.inferred_constraints[player] {
+                        if let Some(card) = some_card {
+                            dead_card_counts[card as usize] += 1;
+                        }
+                    }
+                }
+            }
+            // Adding counts in pile to dead card counts
+            dead_card_counts.iter_mut().zip(self.inferred_pile_constraints.iter()).for_each(|(dead_count, pile_count)| {*dead_count += *pile_count});
+
+            // Adding counts of groups that have a participation list that are a subset of i's list to the counting array
+            let mut j: usize = 0;
+            while j < self.group_constraints.len() {
+                if j != i && 
+                self.group_constraints[j].part_list_is_subset_of(&self.group_constraints[i]) && 
+                self.group_constraints[j].count_alive() > alive_card_counts[self.group_constraints[j].card() as usize]{
+
+                    alive_card_counts[self.group_constraints[j].card() as usize] = self.group_constraints[j].count_alive();
+                }
+                j += 1;
+            }
+
+            // Add inferred groups
+
+            i += 1;
+        }
         todo!("maybe?")
     }
     /// General method that considers the entire Collective Constraint and generates/updates the card state
