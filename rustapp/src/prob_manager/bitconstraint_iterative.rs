@@ -21,6 +21,8 @@ pub struct CompressedGroupConstraint(u16);
 // [FIRST GLANCE PRIORITY]      - 3S generate_inferred_constraints => create this, probably will need to remove redundant groups when inferred constraints are added, use reveal?
 // [FIRST GLANCE PRIORITY]      - 4A peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
 // [FIRST GLANCE PRIORITY]      - 5S All card combos: POSTULATE: clearly if A is possible, B is possible unless player can have only either A or B but not both
+// [FIRST GLANCE PRIORITY] Store the counts in self array data structure to avoid multiple redundant counts
+
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 // [FIRST GLANCE PRIORITY] Consider processing all new items to add with redundant checks in bulk
@@ -1482,60 +1484,69 @@ impl CompressedCollectiveConstraint {
         //              - Player 0 has an inferred Captain. Therefore, pile must have at least 3 - 0 - 1 = 2 Dukes.
         //          3 - inferred alive of player 0 - alive unknown card space
         // Case 5 cont: Some cards are known for n players. => 
-        //              Let total alive unknown card space for any player in the set, except player j be s_-j. 
+        //              Let total alive and unknown card space for any player in the set, except player j be s_-j = total alive cards - known alive cards 
         //              Let inferred alive card count for any player in the set, except player j be inf_-j. For each card i in the group. 
         //              Each player j, must have at least (alive_count_i - s_-j - inf_-j)^+ cards 
         //       e.g. 2 players are known to have 3 Dukes and 1 Captain all alive. Each have at least 1 
+        // Does this continue for also further sub groups, for all combinations of 1 that are subset of [1 0 0 0 0 0 1]? => dynamic programming
+        // Store visited sets in a vec
 
         // Handle Case 5
         let mut inferred_groups: Vec<CompressedGroupConstraint> = Vec::with_capacity(15);
-        let mut alive_card_counts: [u8; 5];
-        let mut dead_card_counts: [u8; 5];
+        let mut union_alive_card_counts: [u8; 5];
+        let mut union_dead_card_counts: [u8; 5];
+        let mut union_inferred_card_counts: [u8; 5];
+        // TODO: Store these in self instead! and merge with pile_constraint
+        let mut player_dead_card_counts: [[u8; 5]; 7];
+        let mut player_inferred_card_counts: [[u8; 5]; 7];
+        // TODO: Store the counts in self array data structure to avoid multiple redundant counts
         let mut i: usize = 0;
         while i < self.group_constraints.len() {
             // Init alive card_counts from inferred groups
-            alive_card_counts = [0;5];
+            union_inferred_card_counts = [0;5];
             let player_flags = self.group_constraints[i].get_set_players();
             for player in 0..6 as usize {
                 if player_flags[player] {
                     for some_card in self.inferred_constraints[player] {
                         if let Some(card) = some_card {
-                            alive_card_counts[card as usize] += 1;
+                            union_inferred_card_counts[card as usize] += 1;
                         }
                     }
                 }
             }
             // Adding counts in pile to alive card counts
-            alive_card_counts.iter_mut().zip(self.inferred_pile_constraints.iter()).for_each(|(alive_count, pile_count)| {*alive_count += *pile_count});
+            union_inferred_card_counts.iter_mut().zip(self.inferred_pile_constraints.iter()).for_each(|(alive_count, pile_count)| {*alive_count += *pile_count});
             // Init dead card_counts from inferred groups
-            dead_card_counts = [0;5];
+            union_dead_card_counts = [0;5];
             let player_flags = self.group_constraints[i].get_set_players();
             for player in 0..6 as usize {
                 if player_flags[player] {
                     for some_card in self.inferred_constraints[player] {
                         if let Some(card) = some_card {
-                            dead_card_counts[card as usize] += 1;
+                            union_dead_card_counts[card as usize] += 1;
                         }
                     }
                 }
             }
-            // Adding counts in pile to dead card counts
-            dead_card_counts.iter_mut().zip(self.inferred_pile_constraints.iter()).for_each(|(dead_count, pile_count)| {*dead_count += *pile_count});
-
+            
+            union_alive_card_counts = union_inferred_card_counts.clone();
             // Adding counts of groups that have a participation list that are a subset of i's list to the counting array
             let mut j: usize = 0;
             while j < self.group_constraints.len() {
                 if j != i && 
                 self.group_constraints[j].part_list_is_subset_of(&self.group_constraints[i]) && 
-                self.group_constraints[j].count_alive() > alive_card_counts[self.group_constraints[j].card() as usize]{
+                self.group_constraints[j].count_alive() > union_alive_card_counts[self.group_constraints[j].card() as usize]{
 
-                    alive_card_counts[self.group_constraints[j].card() as usize] = self.group_constraints[j].count_alive();
+                    union_alive_card_counts[self.group_constraints[j].card() as usize] = self.group_constraints[j].count_alive();
                 }
                 j += 1;
             }
 
             // Add inferred groups
-
+            // Get the part list and all the cards counts inside
+            // Consider all the possible ways excluding some amount of players
+                // Function that Calculate alive counts to be added, by subtracting inferred counts and lives left, doing so for all relevant cards
+                // Adds group or inferred_card in as discovered
             i += 1;
         }
         todo!("maybe?")
