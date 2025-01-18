@@ -1,7 +1,7 @@
 use rayon::join;
 
 use crate::history_public::Card;
-use std::collections::HashSet;
+use std::collections::VecDeque;
 use super::constraint::GroupConstraint;
 
 // TODO: public constraint as a u32 3 bits per card x 6 players? Or probably better to just have a Vec that reserves space and reduces need for conversion
@@ -343,6 +343,18 @@ impl CompressedGroupConstraint {
         // Checks if self participation list is a subset of group's participation list
         (group.0 & Self::PLAYER_BITS) == (self.0 & Self::PLAYER_BITS) | (group.0 & Self::PLAYER_BITS)
     }
+    /// Returns true if self's partipation list is subset of the input group's participation list
+    /// Returns true if both participation lists are equal
+    pub fn part_list_is_subset_of_arr(&self, arr: &[bool; 7]) -> bool {
+        // Checks if self participation list is a subset of group's participation list
+        !((self.get_player_flag(0) & !arr[0]) |
+        (self.get_player_flag(1) & !arr[1]) |
+        (self.get_player_flag(2) & !arr[2]) |
+        (self.get_player_flag(3) & !arr[3]) |
+        (self.get_player_flag(4) & !arr[4]) |
+        (self.get_player_flag(5) & !arr[5]) |
+        (self.get_player_flag(6) & !arr[6]))
+    }
     /// Returns true if the participation lists of self and group are mutually exclusive
     pub fn part_list_is_mut_excl(&self, group: &Self) -> bool {
         // Checks if the groups are mutually exclusive
@@ -437,6 +449,20 @@ impl CompressedCollectiveConstraint {
             dead_card_count,
             inferred_card_count,
         }
+    }
+    fn group_constraints(&self) -> [&Vec<CompressedGroupConstraint>;5] {
+        [&self.group_constraints_amb, 
+        &self.group_constraints_ass, 
+        &self.group_constraints_cap, 
+        &self.group_constraints_duk, 
+        &self.group_constraints_con]
+    }
+    fn group_constraints_mut(&mut self) -> [&mut Vec<CompressedGroupConstraint>;5] {
+        [&mut self.group_constraints_amb, 
+        &mut self.group_constraints_ass, 
+        &mut self.group_constraints_cap, 
+        &mut self.group_constraints_duk, 
+        &mut self.group_constraints_con]
     }
     #[inline]
     pub fn player_is_alive(&self, player_id: usize) -> bool {
@@ -1514,72 +1540,57 @@ impl CompressedCollectiveConstraint {
         // Get info for the 1 player removal case, for each one, add the removal part list in, if necessary add new information in
         //  - Add info that is not redundant
         //  - Let it remove info that is redundant
+        //  - Inferred cards basically only added in the 2 player part list removal case
+        // NOTE: In a sense after processing [0 1 1 1 1 1 1], [1 0 1 1 1 1 1] might add [0 0 1 1 1 1 1] info that may be relevant to the first part list, which may warrant recursion
+        //      - But the point of this is not to create the perfect function, but to have impossible cases and assured cases accurately reflected
+        //      - Also you realise that each inferred group only results in needing to check 1 other broader group, in this case [0 1 1 1 1 1 1] so we could just add that in again?
+        // IMPOSSIBLE CASES => Group outside of player has all the cards, so if any group has all the cards, all players outside will be updated to not having it
         // Repeat
         // Store visited sets in a vec
         // Maybe to avoid running this function, having new groups added, then running again, I can get the superset of part lists, then dynamically work downwards from there?
         // CASE 6: Many cards are known and the remaining players form a group because of the constraints
         // Handle Case 5
-        let mut inferred_groups: Vec<CompressedGroupConstraint> = Vec::with_capacity(15);
-        let mut union_alive_card_counts: [u8; 5];
-        let mut union_dead_card_counts: [u8; 5];
-        let mut union_inferred_card_counts: [u8; 5];
-        // TODO: Store these in self instead! and merge with pile_constraint
-        let mut player_dead_card_counts: [[u8; 5]; 7];
-        let mut player_inferred_card_counts: [[u8; 5]; 7];
-        // TODO: Store the counts in self array data structure to avoid multiple redundant counts
-        let mut i: usize = 0;
-        // while i < self.group_constraints.len() {
-        //     // Init alive card_counts from inferred groups
-        //     union_inferred_card_counts = [0;5];
-        //     let player_flags = self.group_constraints[i].get_set_players();
-        //     for player in 0..6 as usize {
-        //         if player_flags[player] {
-        //             for card in self.inferred_constraints[player].iter() {
-        //                 union_inferred_card_counts[*card as usize] += 1;
-        //             }
-        //         }
-        //     }
-        //     // Adding counts in pile to alive card counts
-        //     union_inferred_card_counts.iter_mut().zip(self.inferred_pile_constraints.iter()).for_each(|(alive_count, pile_count)| {*alive_count += *pile_count});
-        //     // Init dead card_counts from inferred groups
-        //     union_dead_card_counts = [0;5];
-        //     let player_flags = self.group_constraints[i].get_set_players();
-        //     for player in 0..6 as usize {
-        //         if player_flags[player] {
-        //             for card in self.inferred_constraints[player].iter() {
-        //                 union_dead_card_counts[*card as usize] += 1;
-        //             }
-        //         }
-        //     }
-            
-        //     union_alive_card_counts = union_inferred_card_counts.clone();
-        //     // Adding counts of groups that have a participation list that are a subset of i's list to the counting array
-        //     let mut j: usize = 0;
-        //     while j < self.group_constraints.len() {
-        //         if j != i && 
-        //         self.group_constraints[j].part_list_is_subset_of(&self.group_constraints[i]) && 
-        //         self.group_constraints[j].count_alive() > union_alive_card_counts[self.group_constraints[j].card() as usize]{
-
-        //             union_alive_card_counts[self.group_constraints[j].card() as usize] = self.group_constraints[j].count_alive();
-        //         }
-        //         j += 1;
-        //     }
-        //     // Calculated required data structures for refactoring
-        //     // Get super union => Bit way, 
-        //     // TODO: Total alive for union can be done bit way as well
-        //     // Consider calculating over storing data?
-        //     // TODO: Use a Vec instead of an array of counts since more will need to be allocated that way
-        //     // Recursively get the counts for each subgroup in the superunion
-        //     //      For each subgroup 
-        //     //          Calculate subgroup numbers
-        //     //          infer cards by recursively choosing who to exclude
-        //     // Add inferred groups
-        //     // Get the part list and all the cards counts inside
-        //     // Consider all the possible ways excluding some amount of players
-        //         // Function that Calculate alive counts to be added, by subtracting inferred counts and lives left, doing so for all relevant cards
-        //         // Adds group or inferred_card in as discovered
-        //     i += 1;
-        // }
+        if self.group_constraints_amb.len() + 
+        self.group_constraints_ass.len() + 
+        self.group_constraints_cap.len() + 
+        self.group_constraints_con.len() + 
+        self.group_constraints_duk.len() < 2 {
+            return
+        }
+        let mut base_group: CompressedGroupConstraint = CompressedGroupConstraint(0);
+        for group_constraint in self.group_constraints() {
+            for group in group_constraint {
+                base_group.0 |= group.0;
+            }
+        }
+        let mut queue: VecDeque<[bool; 7]> = VecDeque::with_capacity(128);
+        queue.push_back(base_group.get_set_players());
+        while queue.len() > 0 {
+            let part_list = queue.pop_front().unwrap(); // unwrap here is fine as len > 0 is guaranteed
+            // Get group counts for current part list
+            let mut group_counts_alive: [u8;5] = [0; 5];
+            let mut group_counts_dead: [u8;5] = [0; 5];
+            // [1 1 0 0 0 0 0], [0 1 0 0 0 0 1] are mutually exclusive and should count
+            // - Idea: we could combine mutually exclusive groups and add them in
+            // - Pruning: Find max possible alive in set, based on outside set
+            //      - If we know from inferred cards that max is known continue
+            //      - If any group has that amount continue
+            //      - If all cards outside group is known => 3
+            // If group has 0, 1 => doesnt matter as they won't generate any inference
+            // If group has 2 => can generate inference if at least 1 player has <2 life
+            // If group has 3 => can generate inference if some player has 1, 2 life (this probably happens at game start already)
+            for (card_num, group_constraint) in self.group_constraints().iter().enumerate() {
+                for group in group_constraint.iter() {
+                    if group.part_list_is_subset_of_arr(&part_list) {
+                        todo!("Figure out the mutually exclusive problem")
+                    }
+                }
+            }
+            // Conduct 1 removal inference
+            // Add inferred groups in
+            // Add next groups to check in
+            // Update impossibles
+        }
         todo!("maybe?")
     }
     /// General method that considers the entire Collective Constraint and generates/updates the card state
