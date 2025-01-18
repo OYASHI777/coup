@@ -1591,9 +1591,62 @@ impl CompressedCollectiveConstraint {
             }
         }
 
+        // TODO: You can optimize space usage by not adding groups that that are redundant cos of self
+        // Compares new_groups and self_groups and removes redundancies before combining them
+        for (card_num, groups_to_add) in new_groups.iter_mut().enumerate() {
+            let self_groups: &mut Vec<CompressedGroupConstraint> = self.group_constraints_mut()[card_num];
+            let mut i: usize = 0;
+            let mut j: usize = 0;
+            'groups_to_add: while i < groups_to_add.len() {
+                'self_groups: while j < self_groups.len() {
+                    if self_groups[j].part_list_is_subset_of(&groups_to_add[i]) &&
+                    groups_to_add[i].count_alive() <= self_groups[j].count_alive() {
+                        // groups_to_add is redundant
+                        groups_to_add.swap_remove(i);
+                        continue 'groups_to_add;
+                    }
+                    if groups_to_add[i].part_list_is_subset_of(&self_groups[j]) &&
+                    self_groups[j].count_alive() <= groups_to_add[i].count_alive() {
+                        // self_groups is redundant
+                        self_groups.swap_remove(j);
+                        continue 'self_groups;
+                    }
+                    
+                    j += 1;
+                }
+                i += 1;
+            }
+        }
+
+        // Add group_constraints_to_add to self_groups and inferred constraints
+        for (card_num, groups_to_add) in new_groups.iter_mut().enumerate() {
+            'card_groups: for group in groups_to_add.iter() {
+                let mut count: u8 = 0;
+                let mut flag_index: usize = 0;
+                for (index, flag) in  group.get_set_players().iter().enumerate() {
+                    if *flag {
+                        count += 1;
+                        flag_index = index;
+                    }
+                    if count > 1 {
+                        // Adding group constraint
+                        self.group_constraints_mut()[card_num].push(*group);
+                        continue 'card_groups;
+                    }
+                }
+                // Adding inferred constraint
+                if count == 1 && !self.inferred_player_constraint_contains(flag_index, Card::try_from(card_num as u8).unwrap()){
+                    self.add_inferred_player_constraint(flag_index, Card::try_from(card_num as u8).unwrap());
+                }
+            }
+        }
+
         // TODO: Run this check before adding them in
-        if new_groups.iter().map(|v| v.len()).sum::<usize>() > 0 {
-            todo!("Call recursive function")
+        let bool_recurse = new_groups.iter().map(|v| v.len()).sum::<usize>() > 0;
+        // Sets to Vec with 0 capacity, which is ok since its never used
+        new_groups = Vec::new();
+        if bool_recurse {
+            self.add_inferred_groups();
         }
         // Conduct 1 removal inference
         // Add inferred groups in
@@ -1640,7 +1693,7 @@ impl CompressedCollectiveConstraint {
         if group_constraints_to_add.iter().map(|v| v.len()).sum::<usize>() == 0 {
             return
         }
-
+        // TODO: You can optimize space usage by not adding groups that that are redundant cos of self
         // Compares groups_to_add and self_groups and removes redundancies before combining them
         for (card_num, groups_to_add) in group_constraints_to_add.iter_mut().enumerate() {
             let self_groups: &mut Vec<CompressedGroupConstraint> = self.group_constraints_mut()[card_num];
