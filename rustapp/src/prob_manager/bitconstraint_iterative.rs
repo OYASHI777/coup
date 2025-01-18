@@ -1379,6 +1379,7 @@ impl CompressedCollectiveConstraint {
     //     }
     // }
     // TODO: [TEST]
+    // TODO: This here gives reason to seperate group constraints by cards
     /// Adds a group => consisting of player and pile, as well as the card
     /// - checks if anything in the group_constraints makes it redundant
     /// - checks if it makes anything in group_constraints redundant
@@ -1458,6 +1459,8 @@ impl CompressedCollectiveConstraint {
     // Or just use reveal LMAO, bacause thats what reveal does?
     pub fn add_inferred_groups(&mut self) {
         // DATA STRUCTURE: STORING IMPOSSIBLE ALIVE STATES
+        // CASE 0: Player cannot have 4 cards
+        // CASE 0b: Player cannot have 3 types of cards and there is only 1 of each remaining card left and player has 2 lives
         // CASE 1: All cards are dead => No one else can have that card alive
         // CASE 2: All cards are dead or known in inferred constraints => No one else can have that card alive
         // CASE 3: All cards are dead or known in some set of players => No one else outside that set can have that card alive
@@ -1479,10 +1482,19 @@ impl CompressedCollectiveConstraint {
         //              Let inferred alive card count for any player in the set, except player j be inf_-j. For each card i in the group. 
         //              Each player j, must have at least (alive_count_i - s_-j - inf_-j)^+ cards 
         //       e.g. 2 players are known to have 3 Dukes and 1 Captain all alive. Each have at least 1 
+        //       NOTE: This can be done recursively based on the 1 player removal case, wont ever have to check the subtract 3 case...
         // Does this continue for also further sub groups, for all combinations of 1 that are subset of [1 0 0 0 0 0 1]? => dynamic programming
+        // [1 1 0 0 0 1 0] => splits into [0 1 0 0 0 1 0], [1 0 0 0 0 1 0], [1 1 0 0 0 0 0] which we can add to a queue and further process?
+        // == ALGO DRAFT ==
+        // Start with a queue of part list, fill it with the super union one
+        // Get info for the first part list in the queue
+        // Get info for the 1 player removal case, for each one, add the removal part list in, if necessary add new information in
+        //  - Add info that is not redundant
+        //  - Let it remove info that is redundant
+        // Repeat
         // Store visited sets in a vec
         // Maybe to avoid running this function, having new groups added, then running again, I can get the superset of part lists, then dynamically work downwards from there?
-
+        // CASE 6: Many cards are known and the remaining players form a group because of the constraints
         // Handle Case 5
         let mut inferred_groups: Vec<CompressedGroupConstraint> = Vec::with_capacity(15);
         let mut union_alive_card_counts: [u8; 5];
