@@ -1505,6 +1505,7 @@ impl CompressedCollectiveConstraint {
         }
     }
     // TODO: [ALT] Make alternate version of this that adds with 2n checks for when you use it with a particular group added in mind.
+    // TODO: Theory Check & Document
     // Or just use reveal LMAO, bacause thats what reveal does?
     /// Im assuming self.group_constraints is not internally redundant
     pub fn add_inferred_groups(&mut self) {
