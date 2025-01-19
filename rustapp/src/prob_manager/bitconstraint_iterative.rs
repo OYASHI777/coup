@@ -356,7 +356,7 @@ impl CompressedGroupConstraint {
         (self.get_player_flag(6) & !arr[6]))
     }
     /// Returns true if the participation lists of self and group are mutually exclusive
-    pub fn part_list_is_mut_excl(&self, group: &Self) -> bool {
+    pub fn part_list_is_mut_excl(&self, group: Self) -> bool {
         // Checks if the groups are mutually exclusive
         ((self.0 & Self::PLAYER_BITS) & (group.0 & Self::PLAYER_BITS)) == 0
     }
@@ -397,6 +397,18 @@ impl CompressedGroupConstraint {
             }
         }
         false
+    }
+    /// Get union of 2 mutually exclusive CompressedGroupConstraint
+    pub fn mutually_exclusive_union(group_i: CompressedGroupConstraint, group_j: CompressedGroupConstraint) -> CompressedGroupConstraint {
+        debug_assert!(group_i.part_list_is_mut_excl(group_j), "Part List of groups must be mutually exclusive! Current groups are i:{:016b}, j: {:016b}", group_i.0, group_j.0);
+        let mut new_group: CompressedGroupConstraint = CompressedGroupConstraint(group_i.0 | group_j.0);
+        // TODO: Implement a Union
+        let total_dead = group_i.count_dead() + group_j.count_dead();
+        let total_alive = group_i.count_alive() + group_j.count_alive();
+        new_group.set_dead_count(total_dead);
+        new_group.set_alive_count(total_alive);
+        new_group.set_total_count(total_alive + total_dead);
+        new_group
     }
 }
 
@@ -1561,7 +1573,7 @@ impl CompressedCollectiveConstraint {
             for group in group_constraint.iter() {
                 // Get inferred groups, add then to new_groups
                 let part_list: [bool; 7] = group.get_set_players();
-                if part_list.iter().map(|b| *b as u8).sum::<u8>() > 1 {
+                if part_list.iter().filter(|b| **b).count() as u8 > 1 {
                     // Creation of new groups (may have only 1 player_flag)
                     // group => [1 1 0 1 0 0 1], add [0 1 0 1 0 0 1], [1 0 0 1 0 0 1], [1 1 0 0 0 0 1], []
                     for (player, player_flag) in part_list.iter().enumerate() {
@@ -1744,6 +1756,77 @@ impl CompressedCollectiveConstraint {
         }
         // Find new inferred groups from self (function above)
         // recurse
+    }
+    /// Adds groups from the union of Mutually Exclusive Groups
+    /// Helps the build the maximal informative unions
+    /// Cow?
+    /// Assumes reference_group_constraints is not internally redundant
+    /// Assumes self.group_constraints is not internally redundant
+    /// Assumes self has been compared with self already
+    /// Flow:
+    /// - Compares self with self adds to new_groups
+    /// - Recurses with new_groups being the reference group
+    ///     - Compares self with new_groups adds to new_new_groups
+    ///     - Compares new_groups with new_groups adds to new_new_groups
+    ///     - Adds to self
+    ///     - Recurses with new_new_groups being the reference group
+    pub fn add_mutually_exclusive_unions_recurse(&mut self, reference_group_constraints: Vec<Vec<CompressedGroupConstraint>>) {
+        if reference_group_constraints.iter().map(|v| v.len()).sum::<usize>() == 0 {
+            return
+        }
+        let mut new_group_constraints: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
+        // Find new groups and add to the new_group_constraints Vec
+        for (card_num, group_constraints) in reference_group_constraints.iter().enumerate() {
+            for reference_group_i in group_constraints.iter() {
+                // Compare reference group with self.group_constraints
+                for self_group in self.group_constraints_mut()[card_num].iter() {
+                    if self_group.part_list_is_mut_excl(*reference_group_i) {
+                        // Add in
+                        let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *self_group);
+                        // TODO: Change new_group to a union
+                        Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
+                    }
+                }
+                // Compare reference group with reference group
+                for reference_group_j in reference_group_constraints[card_num].iter() {
+                    if reference_group_i.part_list_is_mut_excl(*reference_group_j) {
+                        // Bitwise Union is a fast way to get their
+                        let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *reference_group_j);
+                        Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
+                    }
+                }
+                // Compare reference group with inferred groups
+                for (player_id, &player_flag) in reference_group_i.get_set_players().iter().enumerate() {
+                    if !player_flag {
+                        let same_alive_card_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                        if same_alive_card_count > 0 {
+                            let same_dead_card_count: u8 = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                            let mut new_group: CompressedGroupConstraint = *reference_group_i;
+                            new_group.set_player_flag(player_id, true);
+                            new_group.add_alive_count(same_alive_card_count);
+                            new_group.add_dead_count(same_dead_card_count);
+                            new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
+                            Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
+                        }
+                    }
+                }
+            }
+        }
+        // Add reference group to self if not redundant
+        let mut self_groups = self.group_constraints_mut();
+        for (card_num, group_constraints) in new_group_constraints.iter_mut().enumerate() {
+            while let Some(group) = group_constraints.pop() {
+                Self::non_redundant_push(&mut self_groups[card_num], group);
+            }
+        }
+        // Self group is not internally redundant as all groups added were through non_redundant_push
+        // New_group_constraints is not internally redundant, as it has been added through non_redundant_push
+        // This satisfies the assumptions for recursion
+        // Recurse
+        self.add_mutually_exclusive_unions_recurse(new_group_constraints);
+    }
+    pub fn add_mutually_exclusive_unions(&mut self) {
+        todo!("Compare self with self, add to newgroup and recurse with new group as reference group")
     }
     /// General method that considers the entire Collective Constraint and generates/updates the card state
     pub fn update_legal_cards_state(&mut self) {
