@@ -1757,19 +1757,19 @@ impl CompressedCollectiveConstraint {
         // Find new inferred groups from self (function above)
         // recurse
     }
-    /// Adds groups from the union of Mutually Exclusive Groups
+    /// Recursively Adds groups from the union of Mutually Exclusive Groups
     /// Helps the build the maximal informative unions
-    /// Cow?
+    /// 
+    /// Assumptions:
     /// Assumes reference_group_constraints is not internally redundant
     /// Assumes self.group_constraints is not internally redundant
     /// Assumes self has been compared with self already
+    /// 
     /// Flow:
-    /// - Compares self with self adds to new_groups
-    /// - Recurses with new_groups being the reference group
-    ///     - Compares self with new_groups adds to new_new_groups
-    ///     - Compares new_groups with new_groups adds to new_new_groups
-    ///     - Adds to self
-    ///     - Recurses with new_new_groups being the reference group
+    /// - Compares self with reference_group_constraints and adds ME unions to new_groups
+    /// - Compares reference_group_constraints with reference_group_constraints adds ME unions to new_groups
+    ///     - Adds reference_group_constraints to self
+    ///     - Recurses with new_groups being the new reference_group_constraints
     pub fn add_mutually_exclusive_unions_recurse(&mut self, reference_group_constraints: Vec<Vec<CompressedGroupConstraint>>) {
         if reference_group_constraints.iter().map(|v| v.len()).sum::<usize>() == 0 {
             return
@@ -1825,6 +1825,21 @@ impl CompressedCollectiveConstraint {
         // Recurse
         self.add_mutually_exclusive_unions_recurse(new_group_constraints);
     }
+    /// Adds mutually exclusive unions to self.group_constraints
+    /// - mutually exclusive unions are unions of 2 mutually exclusive group_constraints
+    ///     - May combine group_constraints with inferred_constraints that are mutually exclusive
+    ///     - Combines only 2 groups, but iteratively does so until no new group needs to be added.
+    ///       In doing so, will add all larger groups too, that could be done by combining multiple ME groups
+    /// Flow:
+    /// === This Function ===
+    /// - Compares self.group_constraints with self.group_constraints and adds mutually exclusive unions to new_groups
+    /// - Starts recursion with new_groups as reference_group_constraint
+    /// === Recursive Function ===
+    /// - Recurses with new_groups being the reference group
+    ///     - Compares self with new_groups and adds ME unions to new_new_groups
+    ///     - Compares new_groups with new_groups adds ME unions to new_new_groups
+    ///     - Adds new_groups to self
+    ///     - Recurses with new_new_groups being the new reference group
     pub fn add_mutually_exclusive_unions(&mut self) {
         todo!("Compare self with self, add to newgroup and recurse with new group as reference group")
     }
