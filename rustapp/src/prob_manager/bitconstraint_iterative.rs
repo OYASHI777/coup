@@ -21,6 +21,8 @@ pub struct CompressedGroupConstraint(u16);
 // [FIRST GLANCE PRIORITY]      - 3S generate_inferred_constraints => create this, probably will need to remove redundant groups when inferred constraints are added, use reveal?
 // [FIRST GLANCE PRIORITY]      - 4A peek_pile and or swap => to think about how to account for private ambassador info. Add all into inferred, prune then swap based on private info? (private info mix) 
 // [FIRST GLANCE PRIORITY]      - 5S All card combos: POSTULATE: clearly if A is possible, B is possible unless player can have only either A or B but not both
+// [FIRST GLANCE PRIORITY]      - 0B Combine ME Union and sub union additions into single function
+// [FIRST GLANCE PRIORITY]      - ?  Consider overall design flow from reveal to end, to ensure it makes sense for a sufficient unopt 1st version
 // [FIRST GLANCE PRIORITY] Consider if counts should be stored at all
 
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
@@ -1825,11 +1827,16 @@ impl CompressedCollectiveConstraint {
         // Recurse
         self.add_mutually_exclusive_unions_recurse(new_group_constraints);
     }
+    // TODO: Fill function and assumptions
     /// Adds mutually exclusive unions to self.group_constraints
     /// - mutually exclusive unions are unions of 2 mutually exclusive group_constraints
     ///     - May combine group_constraints with inferred_constraints that are mutually exclusive
     ///     - Combines only 2 groups, but iteratively does so until no new group needs to be added.
     ///       In doing so, will add all larger groups too, that could be done by combining multiple ME groups
+    /// 
+    /// Assumptions:
+    /// Assumes self.group_constraints is not internally redundant
+    /// 
     /// Flow:
     /// === This Function ===
     /// - Compares self.group_constraints with self.group_constraints and adds mutually exclusive unions to new_groups
@@ -1841,7 +1848,41 @@ impl CompressedCollectiveConstraint {
     ///     - Adds new_groups to self
     ///     - Recurses with new_new_groups being the new reference group
     pub fn add_mutually_exclusive_unions(&mut self) {
-        todo!("Compare self with self, add to newgroup and recurse with new group as reference group")
+        let mut new_group_constraints: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
+        // Find new groups and add to the new_group_constraints Vec
+        let reference_group_constraints = self.group_constraints();
+        for (card_num, group_constraints) in reference_group_constraints.iter().enumerate() {
+            for reference_group_i in group_constraints.iter() {
+                // Compare reference group (self) with reference group (self)
+                for reference_group_j in reference_group_constraints[card_num].iter() {
+                    if reference_group_i.part_list_is_mut_excl(*reference_group_j) {
+                        // Bitwise Union is a fast way to get their
+                        let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *reference_group_j);
+                        Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
+                    }
+                }
+                // Compare reference group with inferred groups
+                for (player_id, &player_flag) in reference_group_i.get_set_players().iter().enumerate() {
+                    if !player_flag {
+                        let same_alive_card_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                        if same_alive_card_count > 0 {
+                            let same_dead_card_count: u8 = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                            let mut new_group: CompressedGroupConstraint = *reference_group_i;
+                            new_group.set_player_flag(player_id, true);
+                            new_group.add_alive_count(same_alive_card_count);
+                            new_group.add_dead_count(same_dead_card_count);
+                            new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
+                            Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
+                        }
+                    }
+                }
+            }
+        }
+        // Self group is not internally redundant as all groups added were through non_redundant_push
+        // New_group_constraints is not internally redundant, as it has been added through non_redundant_push
+        // This satisfies the assumptions for recursion
+        // Recurse
+        self.add_mutually_exclusive_unions_recurse(new_group_constraints);
     }
     /// General method that considers the entire Collective Constraint and generates/updates the card state
     pub fn update_legal_cards_state(&mut self) {
