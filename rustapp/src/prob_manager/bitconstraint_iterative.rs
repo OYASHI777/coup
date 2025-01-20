@@ -1574,105 +1574,20 @@ impl CompressedCollectiveConstraint {
         // Handle Case 5
         // Get group counts for current part list
         // Creating and adding new inferred groups
-        let mut new_groups: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
-
-        for (card_num, group_constraint) in self.group_constraints().iter().enumerate() {
-            for group in group_constraint.iter() {
-                // Get inferred groups, add then to new_groups
-                let part_list: [bool; 7] = group.get_set_players();
-                if part_list.iter().filter(|b| **b).count() as u8 > 1 {
-                    // Creation of new groups (may have only 1 player_flag)
-                    // group => [1 1 0 1 0 0 1], add [0 1 0 1 0 0 1], [1 0 0 1 0 0 1], [1 1 0 0 0 0 1], []
-                    for (player, player_flag) in part_list.iter().enumerate() {
-                        if *player_flag {
-                            let player_lives: u8 = 2 - self.public_constraints[player].len() as u8;
-                            let player_inferred_cards: u8 = self.inferred_constraints[player].iter().map(|c| (*c as usize == card_num) as u8).sum();
-                            if group.count_alive() > player_lives - player_inferred_cards {
-                                // Cards contained is n - player_lives + player_inferred_cards for new group
-                                let mut new_group: CompressedGroupConstraint = *group;
-                                new_group.set_player_flag(player, false);
-                                for card in self.public_constraints[player].iter() {
-                                    if *card as usize == card_num {
-                                        new_group.sub_dead_count(1);
-                                    }
-                                }
-                                for card in self.inferred_constraints[player].iter() {
-                                    if *card as usize == card_num {
-                                        new_group.set_alive_count(group.count_alive() - player_lives + player_inferred_cards);
-                                    }
-                                }
-                                new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
-                                // Required to meet assumptions of recursive function
-                                CompressedCollectiveConstraint::non_redundant_push(&mut new_groups[card_num], new_group);
-                            }
-                        }
-                    }
-                }
+        // Runs both
+        let mut bool_continue = self.add_subset_groups() || self.add_mutually_exclusive_unions();
+        // Then runs one if the other is still true
+        // idea here is that subset groups adds all the smaller groups, mut excl adds the larger groups
+        //      - we get smaller groups from larger groups, so if no new larger groups added, no new smaller groups can be inferred
+        //      - we get larger groups from smaller groups, so if no new smaller groups added, no new larger groups can be inferred
+        //      - Technically the functions also add inferred groups, so if no inferred groups added, no new information added, no need to run either  
+        while bool_continue {
+            // Runs a
+            bool_continue = self.add_subset_groups();
+            if bool_continue {
+                bool_continue = self.add_mutually_exclusive_unions();
             }
         }
-
-        // TODO: You can optimize space usage by not adding groups that that are redundant cos of self
-        // Compares new_groups and self_groups and removes redundancies before combining them
-        for (card_num, groups_to_add) in new_groups.iter_mut().enumerate() {
-            let self_groups: &mut Vec<CompressedGroupConstraint> = self.group_constraints_mut()[card_num];
-            let mut i: usize = 0;
-            let mut j: usize = 0;
-            'groups_to_add: while i < groups_to_add.len() {
-                'self_groups: while j < self_groups.len() {
-                    if self_groups[j].part_list_is_subset_of(&groups_to_add[i]) &&
-                    groups_to_add[i].count_alive() <= self_groups[j].count_alive() {
-                        // groups_to_add is redundant
-                        groups_to_add.swap_remove(i);
-                        continue 'groups_to_add;
-                    }
-                    if groups_to_add[i].part_list_is_subset_of(&self_groups[j]) &&
-                    self_groups[j].count_alive() <= groups_to_add[i].count_alive() {
-                        // self_groups is redundant
-                        self_groups.swap_remove(j);
-                        continue 'self_groups;
-                    }
-                    
-                    j += 1;
-                }
-                i += 1;
-            }
-        }
-
-        // Add group_constraints_to_add to self_groups and inferred constraints
-        for (card_num, groups_to_add) in new_groups.iter_mut().enumerate() {
-            'card_groups: for group in groups_to_add.iter() {
-                let mut count: u8 = 0;
-                let mut flag_index: usize = 0;
-                for (index, flag) in  group.get_set_players().iter().enumerate() {
-                    if *flag {
-                        count += 1;
-                        flag_index = index;
-                    }
-                    if count > 1 {
-                        // Adding group constraint
-                        self.group_constraints_mut()[card_num].push(*group);
-                        continue 'card_groups;
-                    }
-                }
-                // Adding inferred constraint
-                if count == 1 && !self.inferred_player_constraint_contains(flag_index, Card::try_from(card_num as u8).unwrap()){
-                    self.add_inferred_player_constraint(flag_index, Card::try_from(card_num as u8).unwrap());
-                }
-            }
-        }
-
-        // TODO: Run this check before adding them in
-        let bool_recurse = new_groups.iter().map(|v| v.len()).sum::<usize>() > 0;
-        // Sets to Vec with 0 capacity, which is ok since its never used
-        new_groups = Vec::new();
-        if bool_recurse {
-            self.add_inferred_groups();
-        }
-        // Conduct 1 removal inference
-        // Add inferred groups in
-        // Add next groups to check in
-        // Update impossibles
-            
     }
     /// Assumes groups in vec all have same card as group input
     /// Assumes vec is not internally redundant
@@ -2084,7 +1999,7 @@ impl CompressedCollectiveConstraint {
     ///     - Combines only 2 groups, but iteratively does so until no new group needs to be added.
     ///       In doing so, will add all larger groups too, that could be done by combining multiple ME groups
     /// Returns:
-    /// - bool => representing whether any changes were made
+    /// - bool => Represents whether any additional information was added to self.group_constraints
     /// 
     /// Assumptions:
     /// Assumes self.group_constraints is not internally redundant
