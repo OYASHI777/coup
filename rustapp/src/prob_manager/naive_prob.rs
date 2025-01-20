@@ -1459,7 +1459,77 @@ impl<'a> NaiveProb<'a> {
     /// Returns all the cards for each player that we are certain they have
     /// Assumes calculates states align with latest constraints
     pub fn validated_inferred_constraints(&self) -> Vec<Vec<Card>> {
-        todo!()
+        let mut result = [[0; 5]; 7];
+    
+        let player_indices = vec![
+            vec![0, 1],      // Player 0
+            vec![2, 3],      // Player 1
+            vec![4, 5],      // Player 2
+            vec![6, 7],      // Player 3
+            vec![8, 9],      // Player 4
+            vec![10, 11],    // Player 5
+            vec![12, 13, 14] // Player 6
+        ];
+        
+        // For each player, we'll go through all possible cards (0..4 if 5 card variants),
+        // and compute how many times that card appears in the player's bag for each state.
+        // The smallest count across *all* states is the guaranteed number of that card.
+        for (player_id, indices) in player_indices.iter().enumerate() {
+            for card_val in 0..5 {
+                // We start with a very large minimum. We'll keep track of
+                // the least number of occurrences across all states.
+                let mut min_count = u8::MAX;
+                
+                for state in &self.calculated_states {
+                    // Count how many times this card appears in the indices for the current state
+                    let count_in_bag = indices.iter()
+                        .filter(|&&idx| {
+                            let c = state.chars().nth(idx).unwrap();
+                            Card::char_to_card(c) as usize == card_val
+                        })
+                        .count() as u8;
+                    
+                    // Update the minimum
+                    min_count = min_count.min(count_in_bag);
+                    if min_count == 0 {
+                        break;
+                    }
+                }
+                
+                // The smallest count across all states is how many times
+                // we know for sure the player has this card.
+                result[player_id][card_val] = min_count;
+            }
+        }
+        let mut dead_result: [[u8; 5]; 7] = [[0; 5]; 7];
+        let latest_constraint = self.latest_constraint();
+        let public_constraint = latest_constraint.get_pc_hm();
+        let joint_constraint = latest_constraint.get_jc_hm();
+        for player_id in 0..6 as usize {
+            if let Some(card) = public_constraint.get(&player_id) {
+                dead_result[player_id][*card as usize] += 1;
+            }
+            if let Some(thing) = joint_constraint.get(&player_id) {
+                for card in thing {
+                    dead_result[player_id][*card as usize] += 1;
+                }
+            }
+        }
+        let mut alive_result: [[u8; 5]; 7] = [[0; 5]; 7];
+        for (player_id, (res, dead_res)) in result.iter().zip(dead_result.iter()).enumerate() {
+            for card_idx in 0..5 {
+                alive_result[player_id][card_idx] = res[card_idx] - dead_res[card_idx];
+            }
+        }
+        let mut output: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        for (player_id, counts) in alive_result.iter().enumerate() {
+            for (card_num, amount) in counts.iter().enumerate() {
+                for _ in 0..*amount {
+                    output[player_id].push(Card::try_from(card_num as u8).unwrap());
+                }
+            }
+        }
+        output
     }
     /// Returns all the cards for each player that we are certain they have
     /// Assumes calculates states align with latest constraints
