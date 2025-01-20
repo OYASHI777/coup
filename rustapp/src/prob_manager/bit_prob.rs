@@ -5,73 +5,29 @@
 // Tried instead to save into hashmap and store in bson
 
 use crate::history_public::{Card, AOName, ActionObservation};
-use super::permutation_generator::{gen_table_combinations, gen_bag_combinations};
-use super::coup_const::{BAG_SIZES, TOKENS, MAX_PERM_STATES};
-use super::naive_sampler::{self, NaiveSampler};
 use super::bitconstraint_iterative::CompressedCollectiveConstraint;
-use std::collections::{HashMap, HashSet};
-// use core::hash::Hasher;
-use std::hash::{Hash, Hasher};
 use std::usize;
-use rand::Rng;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Instant;
-use serde::{Serialize, Deserialize};
-use serde_json;
-use super::loader::{load_initial_hashmap, save_bson_hashmap};
-use rand::prelude::SliceRandom;
-use std::sync::Mutex;
-use core::sync::atomic::AtomicBool;
 
-pub struct BitCardCountManager<'a> {
+pub struct BitCardCountManager {
     // a vec of constraints to push and pop
     // dead cards to push or pop
     // Will not locally store game history, jsut the constraint history
     constraint_history: Vec<Option<CompressedCollectiveConstraint>>, // I think None is stored if there are no changes
-    all_states: Vec<String>,
     // distfromlast tells u how far away to fetch the last constraint_history
     dist_from_last: Vec<usize>,
-    calculated_states: Vec<String>,
-    index_start_arr: [usize; 7],
-    index_end_arr: [usize; 7],
-    card_list: [Card; 5],
-    set_store: Vec<HashMap<String, HashSet<String>>>,
-    belief_hm: HashMap<String, Vec<f64>>,
-    unique_2p_hands: Vec<String>,
-    unique_3p_hands: Vec<String>,
-    naive_sampler: NaiveSampler<'a>,
 }
-impl<'a> BitCardCountManager<'a> {
+impl BitCardCountManager {
     /// Constructor
     pub fn new() -> Self {
-        let unique_2p_hands: Vec<String> = gen_bag_combinations(TOKENS, &2);
-        let unique_3p_hands: Vec<String> = gen_bag_combinations(TOKENS, &3);
-        let mut all_states: Vec<String> = gen_table_combinations(TOKENS, &BAG_SIZES);
-        let mut rng = rand::thread_rng();
-        all_states.shuffle(&mut rng); // Shuffle in place
-        let naive_sampler: NaiveSampler = NaiveSampler::new();
         BitCardCountManager{
             constraint_history: Vec::with_capacity(240),
-            all_states,
             dist_from_last:Vec::with_capacity(240),
-            calculated_states: Vec::with_capacity(MAX_PERM_STATES),
-            index_start_arr: [0, 2, 4, 6, 8, 10, 12],
-            index_end_arr: [2, 4, 6, 8, 10, 12, 15],
-            card_list: [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa],
-            set_store: vec![HashMap::new(); 6],
-            belief_hm: HashMap::new(),
-            unique_2p_hands,
-            unique_3p_hands,
-            naive_sampler,
         }
     }
     /// Returns everything to original state
     pub fn reset(&mut self) {
         self.constraint_history = Vec::with_capacity(240);
         self.dist_from_last = Vec::with_capacity(240);
-        self.calculated_states = Vec::with_capacity(MAX_PERM_STATES)
     }
     /// Returns how far away to look to find the last constraint_history
     pub fn prev_index(&self) -> usize {
@@ -96,18 +52,6 @@ impl<'a> BitCardCountManager<'a> {
             latest_constraint.printlog();
         }
         // log::info!("{}", format!("Set Size: {}", self.calculated_states.len()));
-    }
-    /// Gets len of self.calculated_states
-    pub fn calc_state_len(&self) -> usize {
-        self.calculated_states.len()
-    }
-    /// Logs length for self.calculated_states
-    pub fn log_calc_state_len(&self){
-        log::trace!("{}", format!("Calculated_State Length: {}", self.calculated_states.len()));
-    }
-    /// Logs all the calculated states in self.calculated_states
-    pub fn log_calc_state(&self){
-        log::info!("{}", format!("Calculated_State: {:?}", self.calculated_states));
     }
     /// Gets the Latest Constraint
     pub fn latest_constraint(&self) -> CompressedCollectiveConstraint {

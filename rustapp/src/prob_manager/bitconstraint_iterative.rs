@@ -551,6 +551,20 @@ impl CompressedCollectiveConstraint {
             inferred_card_count,
         }
     }
+    pub fn sorted_public_constraints(&self) -> Self {
+        let mut output = self.clone();
+        for constraints in output.public_constraints.iter_mut() {
+            constraints.sort_unstable()
+        }
+        output
+    }
+    pub fn sorted_inferred_constraints(&self) -> Self {
+        let mut output = self.clone();
+        for constraints in output.inferred_constraints.iter_mut() {
+            constraints.sort_unstable()
+        }
+        output
+    }
     fn group_constraints(&self) -> [&Vec<CompressedGroupConstraint>;5] {
         [&self.group_constraints_amb, 
         &self.group_constraints_ass, 
