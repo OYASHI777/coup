@@ -2,13 +2,20 @@
 use log::LevelFilter;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use rustapp::history_public::{AOName, ActionObservation, Card, History};
+use rustapp::history_public::{AOName, ActionObservation, History};
 use rustapp::prob_manager::naive_prob::NaiveProb;
 use rustapp::prob_manager::bit_prob::BitCardCountManager;
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+use std::fs::File;
+use std::io::Write;
+use env_logger::{Builder, Env, Target};
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 fn main() {
+    let game_no = 1;
+    let log_bool = true;
+    let bool_know_priv_info = false;
+    game_rnd_constraint(game_no, bool_know_priv_info, log_bool);
 }
-pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
+pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, log_bool: bool){
     if log_bool{
         logger(LOG_LEVEL);
     }
@@ -20,7 +27,6 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     let mut inferred_constraints_correct: usize = 0;
     let mut impossible_constraints_correct: usize = 0;
     let mut total_tries: usize = 0;
-    let bool_know_priv_info: bool = true;
     while game < game_no {
         log::info!("Game : {}", game);
         let mut hh = History::new(0);
@@ -76,10 +82,19 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
                         break    
                     }
                 } 
-                total_tries += 1;
                 hh.push_ao(output);
                 prob.push_ao(&output, bool_know_priv_info);
                 bit_prob.push_ao(&output, bool_know_priv_info);
+                let validated_public_constraints = prob.validated_public_constraints();
+                let validated_inferred_constraints = prob.validated_inferred_constraints();
+                let validated_impossible_constraints = prob.validated_impossible_constraints();
+                let test_public_constraints = bit_prob.latest_constraint().sorted_public_constraints();
+                let test_inferred_constraints = bit_prob.latest_constraint().sorted_inferred_constraints();
+                let test_impossible_constraints = bit_prob.latest_constraint().generate_one_card_impossibilities_player_card_indexing();
+                public_constraints_correct += (validated_public_constraints == test_public_constraints) as usize;
+                inferred_constraints_correct += (validated_inferred_constraints == test_inferred_constraints) as usize;
+                impossible_constraints_correct += (validated_impossible_constraints == test_impossible_constraints) as usize;
+                total_tries += 1;
             } else {
                 log::trace!("Pushed bad move somewhere earlier!");
                 break;
@@ -112,7 +127,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
 pub fn logger(level: LevelFilter){
     // let log_file = File::create("app.log").unwrap();
 
-    let log_file = File::create("rustapp.log").expect("Failed to create log file");
+    let log_file = File::create("card_count_validation.log").expect("Failed to create log file");
 
     // Initialize the env_logger builder with custom format
     Builder::from_env(Env::default().default_filter_or("info"))

@@ -5,7 +5,6 @@ pub mod constraint;
 pub mod loader;
 mod coup_const;
 pub mod bit_prob;
-pub mod brute_prob;
 pub mod bitconstraint;
 pub mod bitconstraint_iterative;
 pub mod naive_sampler;

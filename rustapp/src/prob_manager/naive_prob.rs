@@ -1529,6 +1529,9 @@ impl<'a> NaiveProb<'a> {
                 }
             }
         }
+        for card_vec in output.iter_mut() {
+            card_vec.sort_unstable();
+        }
         output
     }
     /// Returns all the cards for each player that we are certain they have
@@ -1585,6 +1588,9 @@ impl<'a> NaiveProb<'a> {
                     output[player_id].push(*card);
                 }
             }
+        }
+        for card_vec in output.iter_mut() {
+            card_vec.sort_unstable();
         }
         output
     }
