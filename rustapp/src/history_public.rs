@@ -29,23 +29,20 @@ impl Card {
         }
     }
     pub fn card_to_char(&self) -> char {
-        match self {
-            Card::Ambassador => 'A',
-            Card::Assassin => 'B',
-            Card::Captain => 'C',
-            Card::Duke => 'D',
-            Card::Contessa => 'E',
-        }
+        // Ambassador => A
+        // Assassin => B
+        // Captain => C
+        // Duke => D
+        // Contessa => E
+        (b'A' + *self as u8) as char
     }
     pub fn char_to_card(card_char: char) -> Card {
-        match card_char {
-            'A' => Card::Ambassador,
-            'B' => Card::Assassin,
-            'C' => Card::Captain,
-            'D' => Card::Duke,
-            'E' => Card::Contessa,
-            _ => panic!("Invalid input provided!"),
-        }
+        // Ambassador <= A
+        // Assassin <= B
+        // Captain <= C
+        // Duke <= D
+        // Contessa <= E
+        Card::try_from(card_char as u8 - b'A').unwrap()
     }
     pub fn str_to_card(card_str: &str) -> Card {
         match card_str {

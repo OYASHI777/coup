@@ -33,7 +33,7 @@ pub struct NaiveProb<'a> {
     all_states: Vec<String>,
     // distfromlast tells u how far away to fetch the last constraint_history
     dist_from_last: Vec<usize>,
-    calculated_states: Vec<String>,
+    calculated_states: Vec<String>, // All the states that fulfil current constraints
     index_start_arr: [usize; 7],
     index_end_arr: [usize; 7],
     card_list: [Card; 5],
@@ -1448,5 +1448,74 @@ impl<'a> NaiveProb<'a> {
                 .collect();
         }
     }
-
+    // Simply updates calculated states to align with the latest constraints
+    pub fn update_calculated_states(&mut self) {
+        let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
+        self.calculated_states = self.all_states.par_iter()
+        .filter(|state| self.state_satisfies_constraints(state, &latest_constraint))
+        .cloned()
+        .collect();
+    }
+    /// Returns all the cards for each player that we are certain they have
+    /// Assumes calculates states align with latest constraints
+    pub fn validated_inferred_constraints(&self) -> Vec<Vec<Card>> {
+        todo!()
+    }
+    /// Returns all the cards for each player that we are certain they have
+    /// Assumes calculates states align with latest constraints
+    pub fn validated_impossible_constraints(&self) -> [[bool; 5]; 7] {
+        let mut result = [[true; 5]; 7];
+        for permutation in self.calculated_states.iter() {
+            let card_idx = Card::char_to_card(permutation.chars().nth(0).unwrap()) as usize;
+            result[0][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(1).unwrap()) as usize;
+            result[0][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(2).unwrap()) as usize;
+            result[1][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(3).unwrap()) as usize;
+            result[1][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(4).unwrap()) as usize;
+            result[2][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(5).unwrap()) as usize;
+            result[2][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(6).unwrap()) as usize;
+            result[3][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(7).unwrap()) as usize;
+            result[3][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(8).unwrap()) as usize;
+            result[4][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(9).unwrap()) as usize;
+            result[4][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(10).unwrap()) as usize;
+            result[5][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(11).unwrap()) as usize;
+            result[5][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(12).unwrap()) as usize;
+            result[6][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(13).unwrap()) as usize;
+            result[6][card_idx] = false;
+            let card_idx = Card::char_to_card(permutation.chars().nth(14).unwrap()) as usize;
+            result[6][card_idx] = false;
+        }
+        result
+    }
+    /// Returns all the dead cards for each player that we are certain they have
+    /// Assumes calculates states align with latest constraints
+    pub fn validated_public_constraints(&self) -> Vec<Vec<Card>> {
+        let mut output: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let latest_constraint = self.latest_constraint();
+        let public_constraint = latest_constraint.get_pc_hm();
+        let joint_constraint = latest_constraint.get_jc_hm();
+        for player_id in 0..6 as usize {
+            if let Some(card) = public_constraint.get(&player_id) {
+                output[player_id].push(*card);
+            }
+            if let Some(thing) = joint_constraint.get(&player_id) {
+                for card in thing {
+                    output[player_id].push(*card);
+                }
+            }
+        }
+        output
+    }
 }

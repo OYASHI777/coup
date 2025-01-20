@@ -1,7 +1,8 @@
 use rayon::join;
 
 use crate::history_public::Card;
-use std::collections::VecDeque;
+use core::fmt;
+use std::{collections::VecDeque, fmt::Display, fmt::Debug};
 use super::constraint::GroupConstraint;
 
 // TODO: public constraint as a u32 3 bits per card x 6 players? Or probably better to just have a Vec that reserves space and reduces need for conversion
@@ -16,6 +17,42 @@ use super::constraint::GroupConstraint;
 /// Bits 14..=15 represent total count = dead + alive 1..=3
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub struct CompressedGroupConstraint(u16);
+
+impl Display for CompressedGroupConstraint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{{ Card: {:?}, Flags: [{} {} {} {} {} {} {}], {} dead {} alive {} total}}", 
+            self.card(), 
+            self.get_player_flag(0),
+            self.get_player_flag(1),
+            self.get_player_flag(2),
+            self.get_player_flag(3),
+            self.get_player_flag(4),
+            self.get_player_flag(5),
+            self.get_player_flag(6),
+            self.count_dead(), 
+            self.count_alive(), 
+            self.count(),
+        )
+    }
+}
+
+impl Debug for CompressedGroupConstraint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{{ Card: {:?}, Flags: [{} {} {} {} {} {} {}], {} dead {} alive {} total}}", 
+            self.card(), 
+            self.get_player_flag(0),
+            self.get_player_flag(1),
+            self.get_player_flag(2),
+            self.get_player_flag(3),
+            self.get_player_flag(4),
+            self.get_player_flag(5),
+            self.get_player_flag(6),
+            self.count_dead(), 
+            self.count_alive(), 
+            self.count(),
+        )
+    }
+}
 
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
 // [FIRST GLANCE PRIORITY]      - 3S generate_inferred_constraints => create this, probably will need to remove redundant groups when inferred constraints are added, use reveal?
@@ -419,6 +456,7 @@ impl CompressedGroupConstraint {
     }
 }
 
+#[derive(Clone)]
 /// A struct that helps in card counting. Stores all information known about cards by a particular player.
 pub struct CompressedCollectiveConstraint {
     // TODO: [OPTIMIZE] Consider if can just combine public and joint constraints
@@ -451,6 +489,50 @@ impl CompressedCollectiveConstraint {
         let group_constraints_cap: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let group_constraints_duk: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let group_constraints_con: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
+        let impossible_constraints: [[bool; 5]; 7] = [[false; 5]; 7];
+        let dead_card_count: [u8; 5] = [0; 5];
+        let inferred_card_count: [u8; 5] = [0; 5];
+        // TODO: Add inferred_card_count
+        Self {
+            public_constraints,
+            inferred_constraints,
+            inferred_pile_constraints,
+            group_constraints_amb,
+            group_constraints_ass,
+            group_constraints_cap,
+            group_constraints_duk,
+            group_constraints_con,
+            impossible_constraints,
+            dead_card_count,
+            inferred_card_count,
+        }
+    }
+    /// Constructor that returns an CompressedCollectiveConstraint at start of game
+    pub fn game_start() -> Self {
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let inferred_pile_constraints: [u8; 5] = [0; 5];
+        let mut group_constraints_amb: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
+        let mut group_constraints_ass: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
+        let mut group_constraints_cap: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
+        let mut group_constraints_duk: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
+        let mut group_constraints_con: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
+        let mut card_num_constraint: CompressedGroupConstraint = CompressedGroupConstraint(0);
+        for i in 0..6 {
+            card_num_constraint.set_player_flag(i, true);
+        }
+        card_num_constraint.set_alive_count(3);
+        card_num_constraint.set_total_count(3);
+        card_num_constraint.set_card(Card::Ambassador);
+        group_constraints_amb.push(card_num_constraint);
+        card_num_constraint.set_card(Card::Assassin);
+        group_constraints_ass.push(card_num_constraint);
+        card_num_constraint.set_card(Card::Captain);
+        group_constraints_cap.push(card_num_constraint);
+        card_num_constraint.set_card(Card::Duke);
+        group_constraints_duk.push(card_num_constraint);
+        card_num_constraint.set_card(Card::Contessa);
+        group_constraints_con.push(card_num_constraint);
         let impossible_constraints: [[bool; 5]; 7] = [[false; 5]; 7];
         let dead_card_count: [u8; 5] = [0; 5];
         let inferred_card_count: [u8; 5] = [0; 5];
@@ -544,40 +626,17 @@ impl CompressedCollectiveConstraint {
         // Group must include pile or it is false
         participation_list[6]
     }
-    // TODO: [REFACTOR] Consider not exposing inner item
-    // pub fn get_jc_hm(&self) -> &HashMap<usize, Vec<Card>> {
-    // pub fn joint_constraints(&self) -> &[[Option<Card>; 2]; 6] {
-    //     // [COMBINE SJ] DELETE
-    //     &self.public_joint_constraints
-    // }
-    // TODO: [REFACTOR] Consider not exposing inner item
-    // pub fn get_pc_hm(&self) -> &HashMap<usize, Card> {
-    // pub fn public_constraints(&self) -> &[Option<Card>; 6] {
-    //     // [COMBINE SJ] DELETE
-    //     &self.public_single_constraints
-    // }
-    // TODO: [REFACTOR] Consider not exposing inner item
-    // pub fn get_gc_vec(&self) -> &Vec<GroupConstraint>{
-    // pub fn group_constraints(&self) -> &Vec<CompressedGroupConstraint>{
-    //     &self.group_constraints
-    // }
-    // TODO: [REFACTOR] Consider not exposing inner item
-    // pub fn jc_hm(&mut self) -> &mut HashMap<usize, Vec<Card>> {
-    // pub fn joint_constraints_mut(&mut self) -> &mut [[Option<Card>; 2]; 6] {
-    //     // [COMBINE SJ] DELETE
-    //     &mut self.public_joint_constraints
-    // }
-    // TODO: [REFACTOR] Consider not exposing inner item
-    // pub fn pc_hm(&mut self) -> &mut HashMap<usize, Card> {
-    // pub fn public_constraints_mut(&mut self) -> &mut [Option<Card>; 6] {
-    //     // [COMBINE SJ] DELETE
-    //     &mut self.public_single_constraints
-    // }
-    // TODO: [REFACTOR] Consider not exposing inner item
-    // pub fn gc_vec(&mut self) -> &mut Vec<GroupConstraint>{
-    // pub fn group_constraints_mut(&mut self) -> &mut Vec<CompressedGroupConstraint>{
-    //     &mut self.group_constraints
-    // }
+    /// Logs the state
+    pub fn printlog(&self) {
+        log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));
+        log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints));
+        log::info!("{}", format!("Group Constraints:"));
+        log::info!("{}", format!("\t AMB: {:?}", self.group_constraints_amb));
+        log::info!("{}", format!("\t ASS: {:?}", self.group_constraints_ass));
+        log::info!("{}", format!("\t CAP: {:?}", self.group_constraints_cap));
+        log::info!("{}", format!("\t DUK: {:?}", self.group_constraints_duk));
+        log::info!("{}", format!("\t CON: {:?}", self.group_constraints_con));
+    }
     /// Gets the number of dead cards a player has for a particular card
     /// NOTE:
     /// - Not actually used except for debugging
@@ -961,7 +1020,7 @@ impl CompressedCollectiveConstraint {
         // QUESTION: How does inferred constraints help in determining if group is redundant? Should this be pruned above?
         // TODO: Needs to do dead player prune
         self.group_redundant_prune();
-        self.generate_inferred_constraints();
+        self.add_inferred_groups();
     }
     // TODO: [THEORY CHECK]
     // - !!! If already inside, should not add. because the player could just be reveal info we already know
@@ -1029,7 +1088,7 @@ impl CompressedCollectiveConstraint {
         //      - like if inferred info reflects the same thing as group constraint
         // QUESTION: How does inferred constraints help in determining if group is redundant? Should this be pruned above?
         self.group_redundant_prune();
-        self.generate_inferred_constraints();
+        self.add_inferred_groups();
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
     }
