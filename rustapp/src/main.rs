@@ -117,8 +117,8 @@ use cfr::explorer::{cfr_test, mccfr_test, cfr_prune_test, mccfr_prune_test, pmcc
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 fn main() {
 
-    // game_rnd(1000, true);
-    test_satis();
+    game_rnd(1000, true);
+    // test_satis();
     // game_rnd_constraint(100, true);
     // cfr_test();
     // cfr_prune_test();

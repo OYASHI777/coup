@@ -445,6 +445,7 @@ impl CompressedGroupConstraint {
     pub fn mutually_exclusive_union(group_i: CompressedGroupConstraint, group_j: CompressedGroupConstraint) -> CompressedGroupConstraint {
         debug_assert!(group_i.part_list_is_mut_excl(group_j), "Part List of groups must be mutually exclusive! Current groups are i:{:016b}, j: {:016b}", group_i.0, group_j.0);
         debug_assert!(group_i.card() == group_j.card(), "Cannot make a union of groups with different cards! i: {:?}, j: {:?}", group_i.card(), group_j.card());
+        log::trace!("In mutually_exclusive_union");
         let mut new_group: CompressedGroupConstraint = CompressedGroupConstraint(group_i.0 | group_j.0);
         // TODO: Implement a Union
         new_group.set_card(group_i.card());
@@ -750,6 +751,9 @@ impl CompressedCollectiveConstraint {
         //     self.public_constraints[player_id][1] = Some(card)
         // }
         self.public_constraints[player_id].push(card);
+        if let Some(pos) = self.inferred_constraints[player_id].iter().position(|&c| c == card) {
+            self.inferred_constraints[player_id].swap_remove(pos);
+        }
         let mut i: usize = 0;
         let group_constraints = &mut self.group_constraints_mut()[card as usize];
         while i < group_constraints.len() {
@@ -1035,6 +1039,7 @@ impl CompressedCollectiveConstraint {
     ///                   The algo is less about a reveal and more about how to update groups after new information is added from the reveal.
     /// TODO: Exact same as reveal except you add to public constraint
     pub fn death(&mut self, player_id: usize, card: Card) {
+        log::trace!("In death");
         self.add_dead_player_constraint(player_id, card);
         // i think dont need this reveal_group_adjustment for death?
         // self.reveal_group_adjustment(player_id);
@@ -1101,6 +1106,7 @@ impl CompressedCollectiveConstraint {
     /// FINAL CONCLUSION: Its the same treatment regardless of what card the group is, because we really are comparing a player's hand to the groups.
     ///                   The algo is less about a reveal and more about how to update groups after new information is added from the reveal.
     pub fn reveal(&mut self, player_id: usize, card: Card) {
+        log::trace!("In reveal");
         if !self.inferred_player_constraint_contains(player_id, card) {
             // Adds information to inferred constraint if it isn't already there
             self.add_inferred_player_constraint(player_id, card);
@@ -1124,6 +1130,7 @@ impl CompressedCollectiveConstraint {
     /// - Only modifies and removes groups that are affected or have become redundant after reveal
     /// - May leave groups that are redundant when compared with other groups
     pub fn reveal_group_adjustment(&mut self, player_id: usize) {
+        log::trace!("In reveal_group_adjustment");
         let player_alive_card_count: [u8; 5] = self.player_alive_card_counts(player_id);
         let player_dead_card_count: [u8; 5] = self.player_dead_card_counts(player_id);
         let player_cards_known = self.player_cards_known(player_id);
@@ -1190,6 +1197,7 @@ impl CompressedCollectiveConstraint {
         // IDEA: So i guess updating would be taking missing information known from pile or player and adding it in? pile info wont be loss, player info wont be loss, pile & player info will be added in later 
         
         // [MIXING] Here we add information to current groups that gain it from the mix e.g. groups where player is 0 and pile is 1 or vice versa
+        log::trace!("In mix");
         let player_alive_card_count: [u8; 5] = self.player_alive_card_counts(player_id);
         let mut i: usize = 0;
         for (card_num, group_constraints) in [&mut self.group_constraints_amb, &mut self.group_constraints_ass, &mut self.group_constraints_cap, &mut self.group_constraints_duk, &mut self.group_constraints_con].iter_mut().enumerate() {
@@ -1293,6 +1301,7 @@ impl CompressedCollectiveConstraint {
         // Here we Manage the dissipation of inferred information by:
         // - Properly subtracting the appropriate amount from inferred pile constraint
         // - Adding the information into the group constraints => on how the known cards have "spread" from player or pile or BOTH (player union pile) 
+        log::trace!("In dilution_reveal");
         let mut card_counts: [u8; 5] = self.get_inferred_card_counts(6);
         card_counts[card as usize] += 1;
         // only subtract 1 card here as only 1 is revealed and moved out of player's hand 
@@ -1831,6 +1840,8 @@ impl CompressedCollectiveConstraint {
                     }
                 },
                 _ => {
+                    log::trace!("group: {}", single_flag_group);
+                    log::trace!("alive_count: {}", alive_count);
                     debug_assert!(false, "You really should not be here... there should only be alive_count of 2 or 1 for a single player!");
                 }
             }
@@ -1973,6 +1984,8 @@ impl CompressedCollectiveConstraint {
                     }
                 },
                 _ => {
+                    log::trace!("group: {}", single_flag_group);
+                    log::trace!("alive_count: {}", alive_count);
                     debug_assert!(false, "You really should not be here... there should only be alive_count of 2 or 1 for a single player!");
                 }
             }
@@ -1988,14 +2001,14 @@ impl CompressedCollectiveConstraint {
         // Ensures no inferred constraint makes a group redundant
         for (card_num, changes) in card_changes.iter().enumerate() {
             let mut i: usize = 0;
-            while i < self_groups[card_num].len() {
+            'group_removal: while i < self_groups[card_num].len() {
                 for &player_id in changes {
                     // If player flag is true and number of cards player now has
                     if self_groups[card_num][i].get_player_flag(player_id) {
                         let count_alive = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                         if count_alive >= self_groups[card_num][i].count_alive() {
                             self_groups[card_num].swap_remove(i);
-                            continue;
+                            continue 'group_removal;
                         }
                     }
                 }
@@ -2134,6 +2147,8 @@ impl CompressedCollectiveConstraint {
                         let same_dead_card_count: u8 = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                         if same_alive_card_count + same_dead_card_count > 0 {
                             let mut new_group: CompressedGroupConstraint = *reference_group_i;
+                            log::trace!("In inferred + public");
+                            log::trace!("Initial group: {}, same_alive_card_count: {}, same_dead_card_count: {}", new_group, same_alive_card_count, same_dead_card_count);
                             new_group.set_player_flag(player_id, true);
                             new_group.add_alive_count(same_alive_card_count);
                             new_group.add_dead_count(same_dead_card_count);
