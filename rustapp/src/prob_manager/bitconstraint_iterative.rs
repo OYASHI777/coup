@@ -23,6 +23,7 @@ pub struct CompressedGroupConstraint(u16);
 // [FIRST GLANCE PRIORITY]      - 5S All card combos: POSTULATE: clearly if A is possible, B is possible unless player can have only either A or B but not both
 // [FIRST GLANCE PRIORITY]      - 0B Combine ME Union and sub union additions into single function
 // [FIRST GLANCE PRIORITY]      - ?  Consider overall design flow from reveal to end, to ensure it makes sense for a sufficient unopt 1st version
+// [FIRST GLANCE PRIORITY]      - 6S If it works consider storing impossibilities externally / not storing at all, seperate group_constraints with 3 to a different Vec?
 // [FIRST GLANCE PRIORITY] Consider if counts should be stored at all
 
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
@@ -1775,7 +1776,7 @@ impl CompressedCollectiveConstraint {
     ///     - Adds reference_group_constraints to self
     ///     - Recurses with new_groups being the new reference_group_constraints
     pub fn add_mutually_exclusive_unions_recurse(&mut self, reference_group_constraints: Vec<Vec<CompressedGroupConstraint>>) {
-        if reference_group_constraints.iter().map(|v| v.len()).sum::<usize>() == 0 {
+        if reference_group_constraints.iter().all(|v| v.is_empty()) {
             return
         }
         let mut new_group_constraints: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
@@ -1850,6 +1851,9 @@ impl CompressedCollectiveConstraint {
     ///     - Adds new_groups to self
     ///     - Recurses with new_new_groups being the new reference group
     pub fn add_mutually_exclusive_unions(&mut self) {
+        if self.group_constraints().iter().all(|v| v.is_empty()) {
+            return
+        }
         let mut new_group_constraints: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
         // Find new groups and add to the new_group_constraints Vec
         let reference_group_constraints = self.group_constraints();
