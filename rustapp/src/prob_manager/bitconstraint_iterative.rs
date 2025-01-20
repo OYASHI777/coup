@@ -1693,11 +1693,38 @@ impl CompressedCollectiveConstraint {
             }
             i += 1;
         }
+        vec.push(group);
+    }
+    /// Assumes groups in vec all have same card as group input
+    /// Assumes vec is not internally redundant
+    /// adds group into vec, if it is not redundant.
+    /// Maintains internal non-redundancy of vec
+    /// Returns true if anything was added were made
+    fn non_redundant_push_tracked(vec: &mut Vec<CompressedGroupConstraint>, group: CompressedGroupConstraint) -> bool {
+        let mut i: usize = 0;
+        while i < vec.len() {
+            if group.part_list_is_subset_of(&vec[i]) && 
+            group.count_alive() <= vec[i].count_alive() {
+                // group is redundant
+                return false
+            }
+            if vec[i].part_list_is_subset_of(&group) &&
+            vec[i].count_alive() <= group.count_alive() {
+                vec.swap_remove(i);
+                continue;
+            }
+            i += 1;
+        }
+        vec.push(group);
+        true
     }
     /// Adds subset groups to self.group_constraints
     /// 
     /// Assumptions:
     /// Assumes self.group_constraints is not internally redundant
+    /// 
+    /// Returns:
+    /// - bool => Represents whether any additional information was added to self.group_constraints
     /// 
     /// Flow:
     /// === This Function ===
@@ -1712,12 +1739,12 @@ impl CompressedCollectiveConstraint {
     ///     - Adds inferred constraints in new_groups to self.inferred_constraints
     ///     - Removes redundant groups in self.group_constraint as a result of new inferred_constraints
     ///     - Recurses with new_new_groups being the new reference group
-    pub fn add_subset_groups(&mut self) {
+    pub fn add_subset_groups(&mut self) -> bool {
         // There technically is alot of repeated code, but i want to be able to pass ownership through the recursed input instead of just a &mut to reduce memory usage
         // In addition the first step should not add groups, so to not make use of branches, its seperated as such
         // Recursion stops of no more groups to add
         if self.group_constraints().iter().all(|v| v.is_empty()) {
-            return
+            return false
         }
         // TODO: You can optimiz
         let mut new_groups: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
@@ -1824,7 +1851,10 @@ impl CompressedCollectiveConstraint {
             }
         }
         // recurse, new_groups should not be internally redundant, self.group_constraints should not be internally redundant
-        self.add_subset_groups_recurse(new_groups);
+        if card_changes.iter().any(|v| !v.is_empty()) {
+            return self.add_subset_groups_recurse(new_groups);
+        } 
+        false
     }
     /// Recursively Adds groups from the inferred subset of another gorup
     /// - e.g. [1 1 0 0 0 0 0] 2 Duke and player 0 has 1 life, player 2 has 2 lives. We know player 2 has at least 1 Duke. As player 1 can have at most 1 Duke.
@@ -1834,6 +1864,9 @@ impl CompressedCollectiveConstraint {
     ///     - or 3 - 2 lives + 1 Number of Dukes
     /// Helps infer all possible subgroups iteratively
     /// - By generating subgroups, adding the new subgroups in, and repeating the process on the new subgroups we eventually infer all the possible subgroups
+    /// 
+    /// Returns:
+    /// - bool => Represents whether any additional information was added to self.group_constraints
     /// 
     /// Assumptions:
     /// Assumes reference_group_constraints is not internally redundant
@@ -1845,12 +1878,8 @@ impl CompressedCollectiveConstraint {
     /// - Compares reference_group_constraints with reference_group_constraints adds ME unions to new_groups
     ///     - Adds reference_group_constraints to self
     ///     - Recurses with new_groups being the new reference_group_constraints
-    fn add_subset_groups_recurse(&mut self, mut reference_group_constraints: Vec<Vec<CompressedGroupConstraint>>) {
+    fn add_subset_groups_recurse(&mut self, mut reference_group_constraints: Vec<Vec<CompressedGroupConstraint>>) -> bool {
 
-        // Recursion stops of no more groups to add
-        if reference_group_constraints.iter().all(|v| v.is_empty()) {
-            return
-        }
         // TODO: You can optimiz
         let mut new_groups: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
         let mut new_inferred_constraints: Vec<CompressedGroupConstraint> = Vec::with_capacity(3);
@@ -1899,9 +1928,10 @@ impl CompressedCollectiveConstraint {
         // Add reference group to self if not redundant
         // Ensures self.group_constraints is not internally redundant
         let mut self_groups = self.group_constraints_mut();
+        let mut bool_changes = false;
         for (card_num, group_constraints) in reference_group_constraints.iter_mut().enumerate() {
             while let Some(group) = group_constraints.pop() {
-                Self::non_redundant_push(&mut self_groups[card_num], group);
+                bool_changes = Self::non_redundant_push_tracked(&mut self_groups[card_num], group) || bool_changes;
             }
         }
         let mut card_changes: Vec<Vec<usize>> = vec![Vec::with_capacity(2); 5]; // Store (player_id, bool_counts => false: 1, true: 2)
@@ -1963,7 +1993,13 @@ impl CompressedCollectiveConstraint {
             }
         }
         // recurse, new_groups should not be internally redundant, self.group_constraints should not be internally redundant
-        self.add_subset_groups_recurse(new_groups);
+        if new_groups.iter().any(|v| !v.is_empty()) || 
+        card_changes.iter().any(|v| !v.is_empty()) {
+            return self.add_subset_groups_recurse(new_groups) || true;
+        } else {
+            // Returns true if any additions to self.group_constraints were made
+            return bool_changes
+        }
     }
     /// Recursively Adds groups from the union of Mutually Exclusive Groups
     /// - e.g. [1 1 0 0 0 0 0] 1 Duke and [0 0 1 1 0 0 0] 1 Duke => [1 1 1 1 0 0 0] 2 Duke
@@ -1971,6 +2007,9 @@ impl CompressedCollectiveConstraint {
     /// Helps the build the maximally informative unions
     /// - By combining 2 ME groups, adding the new groups in, and combining new groups with existing ones we eventually build up the set that properly combines all info within it
     /// - e.g. [1 1 0 0 0 0 0] 1 Duke, [0 0 1 1 0 0 0] 1 Duke, [0 1 1 0 0 0 0] 1 Duke, a simple union would miss out the inferred [1 1 1 1 0 0 0] 2 Duke 
+    /// 
+    /// Returns:
+    /// - bool => Represents whether any additional information was added to self.group_constraints
     /// 
     /// Assumptions:
     /// Assumes reference_group_constraints is not internally redundant
@@ -1982,9 +2021,9 @@ impl CompressedCollectiveConstraint {
     /// - Compares reference_group_constraints with reference_group_constraints adds ME unions to new_groups
     ///     - Adds reference_group_constraints to self
     ///     - Recurses with new_groups being the new reference_group_constraints
-    pub fn add_mutually_exclusive_unions_recurse(&mut self, mut reference_group_constraints: Vec<Vec<CompressedGroupConstraint>>) {
+    pub fn add_mutually_exclusive_unions_recurse(&mut self, mut reference_group_constraints: Vec<Vec<CompressedGroupConstraint>>) -> bool {
         if reference_group_constraints.iter().all(|v| v.is_empty()) {
-            return
+            return false
         }
         let mut new_group_constraints: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
         // Find new groups and add to the new_group_constraints Vec
@@ -2026,16 +2065,17 @@ impl CompressedCollectiveConstraint {
         }
         // Add reference group to self if not redundant
         let mut self_groups = self.group_constraints_mut();
+        let mut bool_changes = false;
         for (card_num, group_constraints) in reference_group_constraints.iter_mut().enumerate() {
             while let Some(group) = group_constraints.pop() {
-                Self::non_redundant_push(&mut self_groups[card_num], group);
+                bool_changes = Self::non_redundant_push_tracked(&mut self_groups[card_num], group) || bool_changes;
             }
         }
         // Self group is not internally redundant as all groups added were through non_redundant_push
         // New_group_constraints is not internally redundant, as it has been added through non_redundant_push
         // This satisfies the assumptions for recursion
         // Recurse
-        self.add_mutually_exclusive_unions_recurse(new_group_constraints);
+        return self.add_mutually_exclusive_unions_recurse(new_group_constraints) || bool_changes;
     }
     // TODO: Fill function and assumptions
     /// Adds mutually exclusive unions to self.group_constraints
@@ -2043,6 +2083,8 @@ impl CompressedCollectiveConstraint {
     ///     - May combine group_constraints with inferred_constraints that are mutually exclusive
     ///     - Combines only 2 groups, but iteratively does so until no new group needs to be added.
     ///       In doing so, will add all larger groups too, that could be done by combining multiple ME groups
+    /// Returns:
+    /// - bool => representing whether any changes were made
     /// 
     /// Assumptions:
     /// Assumes self.group_constraints is not internally redundant
@@ -2057,9 +2099,9 @@ impl CompressedCollectiveConstraint {
     ///     - Compares new_groups with new_groups adds ME unions to new_new_groups
     ///     - Adds new_groups to self
     ///     - Recurses with new_new_groups being the new reference group
-    pub fn add_mutually_exclusive_unions(&mut self) {
+    pub fn add_mutually_exclusive_unions(&mut self) -> bool {
         if self.group_constraints().iter().all(|v| v.is_empty()) {
-            return
+            return false
         }
         let mut new_group_constraints: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
         // Find new groups and add to the new_group_constraints Vec
@@ -2095,7 +2137,10 @@ impl CompressedCollectiveConstraint {
         // New_group_constraints is not internally redundant, as it has been added through non_redundant_push
         // This satisfies the assumptions for recursion
         // Recurse
-        self.add_mutually_exclusive_unions_recurse(new_group_constraints);
+        return self.add_mutually_exclusive_unions_recurse(new_group_constraints);
+    }
+    pub fn add_subset_and_mutually_exclusive_unions(&mut self) {
+        todo!()
     }
     /// General method that considers the entire Collective Constraint and generates/updates the card state
     pub fn update_legal_cards_state(&mut self) {
