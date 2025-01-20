@@ -1961,12 +1961,12 @@ impl CompressedCollectiveConstraint {
                         Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
                     }
                 }
-                // Compare reference group with inferred groups
+                // Compare reference group with inferred constraints and public constraints
                 for (player_id, &player_flag) in reference_group_i.get_set_players().iter().enumerate() {
                     if !player_flag {
                         let same_alive_card_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
-                        if same_alive_card_count > 0 {
-                            let same_dead_card_count: u8 = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                        let same_dead_card_count = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                        if same_alive_card_count + same_dead_card_count > 0 {
                             let mut new_group: CompressedGroupConstraint = *reference_group_i;
                             new_group.set_player_flag(player_id, true);
                             new_group.add_alive_count(same_alive_card_count);
@@ -1992,7 +1992,6 @@ impl CompressedCollectiveConstraint {
         // Recurse
         return self.add_mutually_exclusive_unions_recurse(new_group_constraints) || bool_changes;
     }
-    // TODO: Fill function and assumptions
     /// Adds mutually exclusive unions to self.group_constraints
     /// - mutually exclusive unions are unions of 2 mutually exclusive group_constraints
     ///     - May combine group_constraints with inferred_constraints that are mutually exclusive
@@ -2031,12 +2030,12 @@ impl CompressedCollectiveConstraint {
                         Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
                     }
                 }
-                // Compare reference group with inferred groups
+                // Compare reference group with inferred constraints and public constraints
                 for (player_id, &player_flag) in reference_group_i.get_set_players().iter().enumerate() {
                     if !player_flag {
                         let same_alive_card_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
-                        if same_alive_card_count > 0 {
-                            let same_dead_card_count: u8 = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                        let same_dead_card_count: u8 = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                        if same_alive_card_count + same_dead_card_count > 0 {
                             let mut new_group: CompressedGroupConstraint = *reference_group_i;
                             new_group.set_player_flag(player_id, true);
                             new_group.add_alive_count(same_alive_card_count);
@@ -2054,8 +2053,38 @@ impl CompressedCollectiveConstraint {
         // Recurse
         return self.add_mutually_exclusive_unions_recurse(new_group_constraints);
     }
-    pub fn add_subset_and_mutually_exclusive_unions(&mut self) {
-        todo!()
+    /// Returns an array indexed by [player][card] that indicates if a player can have a particular card
+    /// true => impossible
+    /// false => possible
+    pub fn generate_one_card_impossibilities_player_card_indexing(&mut self) -> [[bool; 5]; 7] {
+        let mut impossible_cards: [[bool; 5]; 7] = [[false; 5]; 7];
+        for (card_num, group_constraints) in self.group_constraints().iter().enumerate() {
+            for group in group_constraints.iter() {
+                if group.count() == 3 {
+                    for player_id in 0..7 as usize {
+                        if !group.get_player_flag(player_id) {
+                            impossible_cards[player_id][card_num] = true;
+                        }
+                    }
+                }
+            }
+        }
+        impossible_cards
+    }
+    pub fn generate_one_card_impossibilities_card_player_indexing(&mut self) -> [[bool; 7]; 5] {
+        let mut impossible_cards: [[bool; 7]; 5] = [[false; 7]; 5];
+        for (card_num, group_constraints) in self.group_constraints().iter().enumerate() {
+            for group in group_constraints.iter() {
+                if group.count() == 3 {
+                    for player_id in 0..7 as usize {
+                        if !group.get_player_flag(player_id) {
+                            impossible_cards[card_num][player_id] = true;
+                        }
+                    }
+                }
+            }
+        }
+        impossible_cards
     }
     /// General method that considers the entire Collective Constraint and generates/updates the card state
     pub fn update_legal_cards_state(&mut self) {
