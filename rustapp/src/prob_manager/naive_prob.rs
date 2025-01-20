@@ -1575,7 +1575,7 @@ impl<'a> NaiveProb<'a> {
     /// Returns all the dead cards for each player that we are certain they have
     /// Assumes calculates states align with latest constraints
     pub fn validated_public_constraints(&self) -> Vec<Vec<Card>> {
-        let mut output: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let mut output: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
         let latest_constraint = self.latest_constraint();
         let public_constraint = latest_constraint.get_pc_hm();
         let joint_constraint = latest_constraint.get_jc_hm();

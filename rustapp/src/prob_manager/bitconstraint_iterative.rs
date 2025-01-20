@@ -479,10 +479,8 @@ pub struct CompressedCollectiveConstraint {
 impl CompressedCollectiveConstraint {
     /// Constructor that returns an empty CompressedCollectiveConstraint
     pub fn new() -> Self {
-        // [COMBINE SJ]
-        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7]; //temp 7
-        // [COMBINE SJ]
-        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
         let group_constraints_amb: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let group_constraints_ass: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let group_constraints_cap: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
@@ -507,8 +505,8 @@ impl CompressedCollectiveConstraint {
     }
     /// Constructor that returns an CompressedCollectiveConstraint at start of game
     pub fn game_start() -> Self {
-        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7]; // temp 7
-        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
         let mut group_constraints_amb: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let mut group_constraints_ass: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let mut group_constraints_cap: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
@@ -752,11 +750,19 @@ impl CompressedCollectiveConstraint {
         //     self.public_constraints[player_id][1] = Some(card)
         // }
         self.public_constraints[player_id].push(card);
-        for group in self.group_constraints_mut()[card as usize].iter() {
-            if group.get_player_flag(player_id) {
-                group.add_dead_count(1);
-                group.sub_alive_count(1);
+        let mut i: usize = 0;
+        let group_constraints = &mut self.group_constraints_mut()[card as usize];
+        while i < group_constraints.len() {
+            if group_constraints[i].get_player_flag(player_id) {
+                if group_constraints[i].count_alive() > 1 {
+                    group_constraints[i].add_dead_count(1);
+                    group_constraints[i].sub_alive_count(1);
+                } else {
+                    group_constraints.swap_remove(i);
+                    continue;
+                }
             }
+            i += 1;
         }
     }
     /// Adds to tracked inferred constraints
@@ -1030,7 +1036,8 @@ impl CompressedCollectiveConstraint {
     /// TODO: Exact same as reveal except you add to public constraint
     pub fn death(&mut self, player_id: usize, card: Card) {
         self.add_dead_player_constraint(player_id, card);
-        self.reveal_group_adjustment(player_id);
+        // i think dont need this reveal_group_adjustment for death?
+        // self.reveal_group_adjustment(player_id);
         // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
         // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
         //      - like if inferred info reflects the same thing as group constraint
@@ -1577,7 +1584,7 @@ impl CompressedCollectiveConstraint {
         let mut i: usize = 0;
         let mut j: usize = 0;
         for group_constraints in [&mut self.group_constraints_amb, &mut self.group_constraints_ass, &mut self.group_constraints_cap, &mut self.group_constraints_duk, &mut self.group_constraints_con].iter_mut() {
-            'outer:  while i < group_constraints.len() - 1 {
+            'outer:  while i < group_constraints.len() {
                 j = i + 1;
                 // Holding out on this cause of not being able to borrow self as immutable
                 // if self.is_known_information(&group_constraints[i]) {

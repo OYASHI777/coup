@@ -8,14 +8,15 @@ use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use std::fs::File;
 use std::io::Write;
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 fn main() {
-    let game_no = 1;
+    let game_no = 50;
     let log_bool = true;
     let bool_know_priv_info = false;
-    game_rnd_constraint(game_no, bool_know_priv_info, log_bool);
+    let print_frequency: usize = 10;
+    game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
 }
-pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, log_bool: bool){
+pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool){
     if log_bool{
         logger(LOG_LEVEL);
     }
@@ -33,7 +34,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, log_bool: 
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
         // if game % (game_no / 10) == 0 {
-        if game % (5000) == 0 {
+        if game % print_frequency == 0 {
             println!("Game: {}", game);
             println!("Public Constraints Correct: {}/{}", public_constraints_correct, total_tries);
             println!("Inferred Constraints Correct: {}/{}", inferred_constraints_correct, total_tries);
@@ -88,15 +89,37 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, log_bool: 
                 hh.push_ao(output);
                 prob.push_ao(&output, bool_know_priv_info);
                 bit_prob.push_ao(&output, bool_know_priv_info);
+                prob.update_calculated_states();
                 let validated_public_constraints = prob.validated_public_constraints();
                 let validated_inferred_constraints = prob.validated_inferred_constraints();
                 let validated_impossible_constraints = prob.validated_impossible_constraints();
                 let test_public_constraints = bit_prob.latest_constraint().sorted_public_constraints();
                 let test_inferred_constraints = bit_prob.latest_constraint().sorted_inferred_constraints();
                 let test_impossible_constraints = bit_prob.latest_constraint().generate_one_card_impossibilities_player_card_indexing();
-                public_constraints_correct += (validated_public_constraints == test_public_constraints) as usize;
-                inferred_constraints_correct += (validated_inferred_constraints == test_inferred_constraints) as usize;
-                impossible_constraints_correct += (validated_impossible_constraints == test_impossible_constraints) as usize;
+                log::info!("validated_public_constraints: {:?}", validated_public_constraints);
+                log::info!("test_public_constraints: {:?}", test_public_constraints);
+                let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
+                log::info!("public_constraints: {}", match pass_public_constraints {
+                    true => "PASSED",
+                    false => "FAILED",
+                });
+                log::info!("validated_inferred_constraints: {:?}", validated_inferred_constraints);
+                log::info!("test_inferred_constraints: {:?}", test_inferred_constraints);
+                let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
+                log::info!("inferred_constraints: {}", match pass_inferred_constraints {
+                    true => "PASSED",
+                    false => "FAILED",
+                });
+                log::info!("validated_impossible_constraints: {:?}", validated_impossible_constraints);
+                log::info!("test_impossible_constraints: {:?}", test_impossible_constraints);
+                let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
+                log::info!("impossible_constraints: {}", match pass_impossible_constraints {
+                    true => "PASSED",
+                    false => "FAILED",
+                });
+                public_constraints_correct += pass_public_constraints as usize;
+                inferred_constraints_correct += pass_inferred_constraints as usize;
+                impossible_constraints_correct += pass_impossible_constraints as usize;
                 total_tries += 1;
             } else {
                 log::trace!("Pushed bad move somewhere earlier!");
