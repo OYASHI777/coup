@@ -22,13 +22,13 @@ impl Display for CompressedGroupConstraint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{{ Card: {:?}, Flags: [{} {} {} {} {} {} {}], {} dead {} alive {} total}}", 
             self.card(), 
-            self.get_player_flag(0),
-            self.get_player_flag(1),
-            self.get_player_flag(2),
-            self.get_player_flag(3),
-            self.get_player_flag(4),
-            self.get_player_flag(5),
-            self.get_player_flag(6),
+            self.get_player_flag(0) as u8,
+            self.get_player_flag(1) as u8,
+            self.get_player_flag(2) as u8,
+            self.get_player_flag(3) as u8,
+            self.get_player_flag(4) as u8,
+            self.get_player_flag(5) as u8,
+            self.get_player_flag(6) as u8,
             self.count_dead(), 
             self.count_alive(), 
             self.count(),
@@ -40,13 +40,13 @@ impl Debug for CompressedGroupConstraint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{{ Card: {:?}, Flags: [{} {} {} {} {} {} {}], {} dead {} alive {} total}}", 
             self.card(), 
-            self.get_player_flag(0),
-            self.get_player_flag(1),
-            self.get_player_flag(2),
-            self.get_player_flag(3),
-            self.get_player_flag(4),
-            self.get_player_flag(5),
-            self.get_player_flag(6),
+            self.get_player_flag(0) as u8,
+            self.get_player_flag(1) as u8,
+            self.get_player_flag(2) as u8,
+            self.get_player_flag(3) as u8,
+            self.get_player_flag(4) as u8,
+            self.get_player_flag(5) as u8,
+            self.get_player_flag(6) as u8,
             self.count_dead(), 
             self.count_alive(), 
             self.count(),
@@ -64,7 +64,7 @@ impl Debug for CompressedGroupConstraint {
 // [FIRST GLANCE PRIORITY]      - 6S Dead count can be stored externally to this and generated when required
 // [FIRST GLANCE PRIORITY]      - 6S inferred counts can generated when required instead of always being allocated
 // [FIRST GLANCE PRIORITY] Consider if counts should be stored at all
-
+// TODO: Look into death() mechanism and how it removes redundant and updates groups because of death
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 // [FIRST GLANCE PRIORITY] Consider processing all new items to add with redundant checks in bulk
@@ -161,8 +161,9 @@ impl CompressedGroupConstraint {
     }
 
     fn sub_dead_count(&mut self, amount: u8) {
+        log::trace!("group to sub_dead_count: {}", &self);
         let dead_bits = (self.0 & Self::DEAD_COUNT_MASK) >> Self::DEAD_COUNT_SHIFT;
-        debug_assert!(dead_bits >= amount as u16, "Dead count would go below zero");
+        debug_assert!(dead_bits >= amount as u16, "Dead count would go below zero dead_bits: {}, amount {}", dead_bits, amount);
         self.0 = (self.0 & !Self::DEAD_COUNT_MASK) | ((dead_bits - amount as u16) << Self::DEAD_COUNT_SHIFT);
     }
 
@@ -479,9 +480,9 @@ impl CompressedCollectiveConstraint {
     /// Constructor that returns an empty CompressedCollectiveConstraint
     pub fn new() -> Self {
         // [COMBINE SJ]
-        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7]; //temp 7
         // [COMBINE SJ]
-        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
         let group_constraints_amb: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let group_constraints_ass: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let group_constraints_cap: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
@@ -506,8 +507,8 @@ impl CompressedCollectiveConstraint {
     }
     /// Constructor that returns an CompressedCollectiveConstraint at start of game
     pub fn game_start() -> Self {
-        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
-        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7]; // temp 7
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
         let mut group_constraints_amb: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let mut group_constraints_ass: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let mut group_constraints_cap: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
@@ -751,6 +752,12 @@ impl CompressedCollectiveConstraint {
         //     self.public_constraints[player_id][1] = Some(card)
         // }
         self.public_constraints[player_id].push(card);
+        for group in self.group_constraints_mut()[card as usize].iter() {
+            if group.get_player_flag(player_id) {
+                group.add_dead_count(1);
+                group.sub_alive_count(1);
+            }
+        }
     }
     /// Adds to tracked inferred constraints
     pub fn add_inferred_player_constraint(&mut self, player_id: usize, card: Card) {
@@ -1102,12 +1109,12 @@ impl CompressedCollectiveConstraint {
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
     }
-    /// Updates groups affected by revealing of information in death/reveal
+    /// Updates groups affected by revealing of information in reveal
     /// SPECIFICS:
-    /// - See documentation in reveal and death
+    /// - See documentation in reveal
     /// NOTE:
     /// - Assumes there may be groups that became redundant after information is revealed
-    /// - Only modifies and removes groups that are affected or have become redundant after death/reveal
+    /// - Only modifies and removes groups that are affected or have become redundant after reveal
     /// - May leave groups that are redundant when compared with other groups
     pub fn reveal_group_adjustment(&mut self, player_id: usize) {
         let player_alive_card_count: [u8; 5] = self.player_alive_card_counts(player_id);
@@ -1653,6 +1660,7 @@ impl CompressedCollectiveConstraint {
         // Get group counts for current part list
         // Creating and adding new inferred groups
         // Runs both
+        log::trace!("In add_inferred_groups");
         let mut bool_continue = self.add_subset_groups() || self.add_mutually_exclusive_unions();
         // Then runs one if the other is still true
         // idea here is that subset groups adds all the smaller groups, mut excl adds the larger groups
@@ -1736,6 +1744,7 @@ impl CompressedCollectiveConstraint {
         // There technically is alot of repeated code, but i want to be able to pass ownership through the recursed input instead of just a &mut to reduce memory usage
         // In addition the first step should not add groups, so to not make use of branches, its seperated as such
         // Recursion stops of no more groups to add
+        log::trace!("In add_subset_groups");
         if self.group_constraints().iter().all(|v| v.is_empty()) {
             return false
         }
@@ -1760,6 +1769,7 @@ impl CompressedCollectiveConstraint {
                                 // Cards contained is n - player_lives + player_inferred_cards for new group
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
+                                log::trace!("self.public_constraints[{player}]: {:?}", self.public_constraints[player]);
                                 for card in self.public_constraints[player].iter() {
                                     if *card as usize == card_num {
                                         new_group.sub_dead_count(1);
@@ -1872,7 +1882,7 @@ impl CompressedCollectiveConstraint {
     ///     - Adds reference_group_constraints to self
     ///     - Recurses with new_groups being the new reference_group_constraints
     fn add_subset_groups_recurse(&mut self, mut reference_group_constraints: Vec<Vec<CompressedGroupConstraint>>) -> bool {
-
+        log::trace!("In add_subset_groups_recurse");
         // TODO: You can optimiz
         let mut new_groups: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
         let mut new_inferred_constraints: Vec<CompressedGroupConstraint> = Vec::with_capacity(3);
@@ -2015,6 +2025,7 @@ impl CompressedCollectiveConstraint {
     ///     - Adds reference_group_constraints to self
     ///     - Recurses with new_groups being the new reference_group_constraints
     pub fn add_mutually_exclusive_unions_recurse(&mut self, mut reference_group_constraints: Vec<Vec<CompressedGroupConstraint>>) -> bool {
+        log::trace!("In add_mutually_exclusive_unions_recurse");
         if reference_group_constraints.iter().all(|v| v.is_empty()) {
             return false
         }
@@ -2092,6 +2103,7 @@ impl CompressedCollectiveConstraint {
     ///     - Adds new_groups to self
     ///     - Recurses with new_new_groups being the new reference group
     pub fn add_mutually_exclusive_unions(&mut self) -> bool {
+        log::trace!("In add_mutually_exclusive_unions");
         if self.group_constraints().iter().all(|v| v.is_empty()) {
             return false
         }

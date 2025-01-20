@@ -1521,7 +1521,7 @@ impl<'a> NaiveProb<'a> {
                 alive_result[player_id][card_idx] = res[card_idx] - dead_res[card_idx];
             }
         }
-        let mut output: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let mut output: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
         for (player_id, counts) in alive_result.iter().enumerate() {
             for (card_num, amount) in counts.iter().enumerate() {
                 for _ in 0..*amount {
