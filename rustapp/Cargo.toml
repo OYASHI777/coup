@@ -43,6 +43,10 @@ path = "src/main.rs"
 name = "constraint_test"
 path = "src/bin/constraint_test.rs"
 
+[[bin]]
+name = "card_count_validation"
+path = "src/bin/card_count_validation.rs"
+
 [build]
 target-dir = "D:/stuff/Code Project Folder/Coup AI/rustapp"
 
