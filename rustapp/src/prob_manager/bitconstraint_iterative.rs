@@ -403,8 +403,10 @@ impl CompressedGroupConstraint {
     /// Get union of 2 mutually exclusive CompressedGroupConstraint
     pub fn mutually_exclusive_union(group_i: CompressedGroupConstraint, group_j: CompressedGroupConstraint) -> CompressedGroupConstraint {
         debug_assert!(group_i.part_list_is_mut_excl(group_j), "Part List of groups must be mutually exclusive! Current groups are i:{:016b}, j: {:016b}", group_i.0, group_j.0);
+        debug_assert!(group_i.card() == group_j.card(), "Cannot make a union of groups with different cards! i: {:?}, j: {:?}", group_i.card(), group_j.card());
         let mut new_group: CompressedGroupConstraint = CompressedGroupConstraint(group_i.0 | group_j.0);
         // TODO: Implement a Union
+        new_group.set_card(group_i.card());
         let total_dead = group_i.count_dead() + group_j.count_dead();
         let total_alive = group_i.count_alive() + group_j.count_alive();
         new_group.set_dead_count(total_dead);
