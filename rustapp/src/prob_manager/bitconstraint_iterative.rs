@@ -1780,28 +1780,28 @@ impl CompressedCollectiveConstraint {
                     for (player, player_flag) in part_list.iter().enumerate() {
                         if *player_flag {
                             let player_lives: u8 = 2 - self.public_constraints[player].len() as u8;
-                            let player_inferred_cards: u8 = self.inferred_constraints[player].iter().map(|c| (*c as usize == card_num) as u8).sum();
-                            if group.count_alive() > player_lives - player_inferred_cards {
+                            let player_inferred_diff_cards: u8 = self.inferred_constraints[player].iter().filter(|c| **c as usize != card_num).count() as u8;
+                            if group.count_alive() + player_inferred_diff_cards > player_lives{
                                 // Cards contained is n - player_lives + player_inferred_cards for new group
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
-                                log::trace!("self.public_constraints[{player}]: {:?}", self.public_constraints[player]);
                                 for card in self.public_constraints[player].iter() {
                                     if *card as usize == card_num {
                                         new_group.sub_dead_count(1);
                                     }
                                 }
-                                for card in self.inferred_constraints[player].iter() {
-                                    if *card as usize == card_num {
-                                        new_group.set_alive_count(group.count_alive() - player_lives + player_inferred_cards);
-                                    }
-                                }
+                                new_group.set_alive_count(group.count_alive() - player_lives + player_inferred_diff_cards);
                                 new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
                                 // Required to meet assumptions of recursive function
+                                log::trace!("add_subset_groups parent group: {}", group);
+                                log::trace!("add_subset_groups public_constraints: {:?}", self.public_constraints);
+                                log::trace!("add_subset_groups inferred_constraints: {:?}", self.inferred_constraints);
                                 if flags_count > 2 {
+                                    log::trace!("add_subset_groups found group for new_groups: {}", new_group);
                                     CompressedCollectiveConstraint::non_redundant_push(&mut new_groups[card_num], new_group);
                                 } else {
                                     // only 1 flag after removal, and so should be added to inferred constraints later
+                                    log::trace!("add_subset_groups found group for new_inferred_constraints: {}", new_group);
                                     CompressedCollectiveConstraint::non_redundant_push(&mut new_inferred_constraints, new_group);
                                 }
                             }
@@ -1882,7 +1882,8 @@ impl CompressedCollectiveConstraint {
     /// - e.g. [1 0 0 0 0 0 1] has 3 alive Dukes. 
     ///     - Player 0 has an inferred Duke. Therefore, pile must have at least 3 - 1 - 1 = 1 Dukes.
     ///     - Player 0 has an inferred Captain. Therefore, pile must have at least 3 - 0 - 1 = 2 Dukes.
-    ///     - or 3 - 2 lives + 1 Number of Dukes
+    ///     - or 3 - 2 lives + 0 Number of non-Dukes
+    ///     - or 3 - 2 lives + 1 Number of non-Dukes
     /// Helps infer all possible subgroups iteratively
     /// - By generating subgroups, adding the new subgroups in, and repeating the process on the new subgroups we eventually infer all the possible subgroups
     /// 
@@ -1917,8 +1918,8 @@ impl CompressedCollectiveConstraint {
                     for (player, player_flag) in part_list.iter().enumerate() {
                         if *player_flag {
                             let player_lives: u8 = 2 - self.public_constraints[player].len() as u8;
-                            let player_inferred_cards: u8 = self.inferred_constraints[player].iter().map(|c| (*c as usize == card_num) as u8).sum();
-                            if group.count_alive() > player_lives - player_inferred_cards {
+                            let player_inferred_diff_cards: u8 = self.inferred_constraints[player].iter().filter(|c| **c as usize != card_num).count() as u8;
+                            if group.count_alive() + player_inferred_diff_cards > player_lives {
                                 // Cards contained is n - player_lives + player_inferred_cards for new group
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
@@ -1927,17 +1928,18 @@ impl CompressedCollectiveConstraint {
                                         new_group.sub_dead_count(1);
                                     }
                                 }
-                                for card in self.inferred_constraints[player].iter() {
-                                    if *card as usize == card_num {
-                                        new_group.set_alive_count(group.count_alive() - player_lives + player_inferred_cards);
-                                    }
-                                }
+                                new_group.set_alive_count(group.count_alive() - player_lives + player_inferred_diff_cards);
                                 new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
                                 // Required to meet assumptions of recursive function
+                                log::trace!("add_subset_groups_recurse parent group: {}", group);
+                                log::trace!("add_subset_groups_recurse public_constraints: {:?}", self.public_constraints);
+                                log::trace!("add_subset_groups_recurse inferred_constraints: {:?}", self.inferred_constraints);
                                 if flags_count > 2 {
+                                    log::trace!("add_subset_groups found group for new_groups: {}", new_group);
                                     CompressedCollectiveConstraint::non_redundant_push(&mut new_groups[card_num], new_group);
                                 } else {
                                     // only 1 flag after removal, and so should be added to inferred constraints later
+                                    log::trace!("add_subset_groups found group for new_inferred_constraints: {}", new_group);
                                     CompressedCollectiveConstraint::non_redundant_push(&mut new_inferred_constraints, new_group);
                                 }
                             }
@@ -2057,7 +2059,9 @@ impl CompressedCollectiveConstraint {
                 for self_group in self.group_constraints_mut()[card_num].iter() {
                     if self_group.part_list_is_mut_excl(*reference_group_i) {
                         // Add in
+                        log::trace!("add_mutually_exclusive_unions_recurse: group_i: {}, self_group: {}", reference_group_i, self_group);
                         let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *self_group);
+                        log::trace!("add_mutually_exclusive_unions_recurse: group_i + self_group = new_group: {}", new_group);
                         // TODO: Change new_group to a union
                         Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
                     }
@@ -2066,7 +2070,9 @@ impl CompressedCollectiveConstraint {
                 for reference_group_j in reference_group_constraints[card_num].iter() {
                     if reference_group_i.part_list_is_mut_excl(*reference_group_j) {
                         // Bitwise Union is a fast way to get their
+                        log::trace!("add_mutually_exclusive_unions_recurse: group_i: {}, group_j: {}", reference_group_i, reference_group_j);
                         let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *reference_group_j);
+                        log::trace!("add_mutually_exclusive_unions_recurse: group_i + group_j = new_group: {}", new_group);
                         Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
                     }
                 }
@@ -2076,11 +2082,15 @@ impl CompressedCollectiveConstraint {
                         let same_alive_card_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                         let same_dead_card_count = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                         if same_alive_card_count + same_dead_card_count > 0 {
+                            log::trace!("add_mutually_exclusive_unions_recurse public_constraints: {:?}, inferred_constraints: {:?}", self.public_constraints, self.inferred_constraints);
+                            log::trace!("add_mutually_exclusive_unions_recurse reference_group_i: {}, player_id: {}, player_flag: {}", reference_group_i, player_id, player_flag);
+                            log::trace!("add_mutually_exclusive_unions_recurse same_alive_card_count: {}, same_dead_card_count: {}", same_alive_card_count, same_dead_card_count);
                             let mut new_group: CompressedGroupConstraint = *reference_group_i;
                             new_group.set_player_flag(player_id, true);
                             new_group.add_alive_count(same_alive_card_count);
                             new_group.add_dead_count(same_dead_card_count);
                             new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
+                            log::trace!("add_mutually_exclusive_unions_recurse new_group: {}", new_group);
                             Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
                         }
                     }
@@ -2136,7 +2146,9 @@ impl CompressedCollectiveConstraint {
                 for reference_group_j in reference_group_constraints[card_num].iter() {
                     if reference_group_i.part_list_is_mut_excl(*reference_group_j) {
                         // Bitwise Union is a fast way to get their
+                        log::trace!("add_mutually_exclusive_unions: group_i: {}, group_j: {}", reference_group_i, reference_group_j);
                         let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *reference_group_j);
+                        log::trace!("add_mutually_exclusive_unions: group_i + group_j = new_group: {}", new_group);
                         Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
                     }
                 }
@@ -2148,6 +2160,9 @@ impl CompressedCollectiveConstraint {
                         if same_alive_card_count + same_dead_card_count > 0 {
                             let mut new_group: CompressedGroupConstraint = *reference_group_i;
                             log::trace!("In inferred + public");
+                            log::trace!("add_mutually_exclusive_unions public_constraints: {:?}", self.public_constraints);
+                            log::trace!("add_mutually_exclusive_unions inferred_constraints: {:?}", self.inferred_constraints);
+                            log::trace!("add_mutually_exclusive_unions reference_group_i: {}, player_id: {}, player_flag: {}", reference_group_i, player_id, player_flag);
                             log::trace!("Initial group: {}, same_alive_card_count: {}, same_dead_card_count: {}", new_group, same_alive_card_count, same_dead_card_count);
                             new_group.set_player_flag(player_id, true);
                             new_group.add_alive_count(same_alive_card_count);
