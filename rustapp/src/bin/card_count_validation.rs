@@ -10,6 +10,7 @@ use std::io::Write;
 use env_logger::{Builder, Env, Target};
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
+// ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 fn main() {
     let game_no = 50;
     let log_bool = true;
