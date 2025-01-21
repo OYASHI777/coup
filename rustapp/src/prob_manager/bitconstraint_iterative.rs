@@ -1781,7 +1781,7 @@ impl CompressedCollectiveConstraint {
                         if *player_flag {
                             let player_lives: u8 = 2 - self.public_constraints[player].len() as u8;
                             let player_inferred_diff_cards: u8 = self.inferred_constraints[player].iter().filter(|c| **c as usize != card_num).count() as u8;
-                            if group.count_alive() + player_inferred_diff_cards > player_lives{
+                            if group.count_alive() + player_inferred_diff_cards > player_lives {
                                 // Cards contained is n - player_lives + player_inferred_cards for new group
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
@@ -1822,10 +1822,15 @@ impl CompressedCollectiveConstraint {
                 2 => {
                     // Both cards known
                     if self.inferred_constraints[player_id] != vec![card; 2] {
+                        log::trace!("add_sub_groups adding 2 cards single_flag_group: {}", single_flag_group);
+                        log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
                         self.inferred_constraints[player_id].clear();
                         self.inferred_constraints[player_id].push(card);
                         self.inferred_constraints[player_id].push(card);
                         card_changes[card as usize].push(player_id);
+                        log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
                         // TODO: Needs to prune the groups too... some batch function that prunes groups based on changes?
                     }
                     // TODO: Adjust counts properly too... or remove inferred_counts
@@ -1833,8 +1838,13 @@ impl CompressedCollectiveConstraint {
                 1 => {
                     // One card known
                     if !self.inferred_constraints[player_id].contains(&card) {
+                        log::trace!("add_sub_groups adding 1 card single_flag_group: {}", single_flag_group);
+                        log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
                         self.inferred_constraints[player_id].push(card);
                         card_changes[card as usize].push(player_id);
+                        log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
                         // TODO: Needs to prune the groups too...
                         // TODO: Adjust counts properly too... or remove inferred_counts
                     }
@@ -1968,10 +1978,15 @@ impl CompressedCollectiveConstraint {
                 2 => {
                     // Both cards known
                     if self.inferred_constraints[player_id] != vec![card; 2] {
+                        log::trace!("add_sub_groups_recurse adding 2 cards single_flag_group: {}", single_flag_group);
+                        log::trace!("add_sub_groups_recurse Before self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups_recurse Before self.inferred_constraints: {:?}", self.inferred_constraints);
                         self.inferred_constraints[player_id].clear();
                         self.inferred_constraints[player_id].push(card);
                         self.inferred_constraints[player_id].push(card);
                         card_changes[card as usize].push(player_id);
+                        log::trace!("add_sub_groups_recurse After self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups_recurse After self.inferred_constraints: {:?}", self.inferred_constraints);
                         // TODO: Needs to prune the groups too... some batch function that prunes groups based on changes?
                     }
                     // TODO: Adjust counts properly too... or remove inferred_counts
@@ -1979,8 +1994,13 @@ impl CompressedCollectiveConstraint {
                 1 => {
                     // One card known
                     if !self.inferred_constraints[player_id].contains(&card) {
+                        log::trace!("add_sub_groups_recurse adding 1 card single_flag_group: {}", single_flag_group);
+                        log::trace!("add_sub_groups_recurse Before self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups_recurse Before self.inferred_constraints: {:?}", self.inferred_constraints);
                         self.inferred_constraints[player_id].push(card);
                         card_changes[card as usize].push(player_id);
+                        log::trace!("add_sub_groups_recurse After self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups_recurse After self.inferred_constraints: {:?}", self.inferred_constraints);
                         // TODO: Needs to prune the groups too...
                         // TODO: Adjust counts properly too... or remove inferred_counts
                     }

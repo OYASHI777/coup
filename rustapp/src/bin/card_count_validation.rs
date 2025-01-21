@@ -8,7 +8,7 @@ use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use std::fs::File;
 use std::io::Write;
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 fn main() {
     let game_no = 50;
     let log_bool = true;

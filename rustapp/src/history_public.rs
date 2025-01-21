@@ -412,6 +412,7 @@ impl History {
         // in the 1 case it is the first move of the game and should be initialise already and not required to copy
     }
     pub fn log_state(&self){
+        log::info!("Current move: {}", self.store_len());
         log::info!("{}", format!("Current_player_turn: {:?}", self.current_player_turn));
         log::info!("{}", format!("Influence: {:?}", self.latest_influence()));
         log::info!("{}", format!("Coins: {:?}", self.latest_coins()));
