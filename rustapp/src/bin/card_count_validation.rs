@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io::Write;
 use env_logger::{Builder, Env, Target};
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
+// CURRENT BUG: add_subset_group never adds
 fn main() {
     let game_no = 50;
     let log_bool = true;

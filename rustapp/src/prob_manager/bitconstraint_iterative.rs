@@ -1683,11 +1683,14 @@ impl CompressedCollectiveConstraint {
         //      - we get smaller groups from larger groups, so if no new larger groups added, no new smaller groups can be inferred
         //      - we get larger groups from smaller groups, so if no new smaller groups added, no new larger groups can be inferred
         //      - Technically the functions also add inferred groups, so if no inferred groups added, no new information added, no need to run either  
+        
         while bool_continue {
             // Runs a
             bool_continue = self.add_subset_groups();
+            log::info!("add_subset_groups added groups: {}", bool_continue);
             if bool_continue {
                 bool_continue = self.add_mutually_exclusive_unions();
+                log::info!("add_smutually_exclusive_unions added groups: {}", bool_continue);
             }
         }
     }
@@ -1723,6 +1726,7 @@ impl CompressedCollectiveConstraint {
             if group.part_list_is_subset_of(&vec[i]) && 
             group.count_alive() <= vec[i].count_alive() {
                 // group is redundant
+                log::trace!("non_redundant_push_tracked did not add group: {} in vec: {:?}", group, vec);
                 return false
             }
             if vec[i].part_list_is_subset_of(&group) &&
@@ -1732,6 +1736,7 @@ impl CompressedCollectiveConstraint {
             }
             i += 1;
         }
+        log::trace!("non_redundant_push_tracked added group: {} in vec: {:?}", group, vec);
         vec.push(group);
         true
     }
@@ -1891,8 +1896,8 @@ impl CompressedCollectiveConstraint {
     /// - e.g. [1 1 0 0 0 0 0] 2 Duke and player 0 has 1 life, player 2 has 2 lives. We know player 2 has at least 1 Duke. As player 1 can have at most 1 Duke.
     /// - e.g. [1 0 0 0 0 0 1] has 3 alive Dukes. 
     ///     - Player 0 has an inferred Duke. Therefore, pile must have at least 3 - 1 - 1 = 1 Dukes.
-    ///     - Player 0 has an inferred Captain. Therefore, pile must have at least 3 - 0 - 1 = 2 Dukes.
     ///     - or 3 - 2 lives + 0 Number of non-Dukes
+    ///     - Player 0 has an inferred Captain. Therefore, pile must have at least 3 - 0 - 1 = 2 Dukes.
     ///     - or 3 - 2 lives + 1 Number of non-Dukes
     /// Helps infer all possible subgroups iteratively
     /// - By generating subgroups, adding the new subgroups in, and repeating the process on the new subgroups we eventually infer all the possible subgroups
