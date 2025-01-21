@@ -514,7 +514,7 @@ impl CompressedCollectiveConstraint {
         let mut group_constraints_duk: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let mut group_constraints_con: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
         let mut card_num_constraint: CompressedGroupConstraint = CompressedGroupConstraint(0);
-        for i in 0..6 {
+        for i in 0..7 {
             card_num_constraint.set_player_flag(i, true);
         }
         card_num_constraint.set_alive_count(3);
@@ -1702,12 +1702,12 @@ impl CompressedCollectiveConstraint {
         let mut i: usize = 0;
         while i < vec.len() {
             if group.part_list_is_subset_of(&vec[i]) && 
-            group.count_alive() <= vec[i].count_alive() {
+            group.count_alive() >= vec[i].count_alive() {
                 // group is redundant
                 return
             }
             if vec[i].part_list_is_subset_of(&group) &&
-            vec[i].count_alive() <= group.count_alive() {
+            vec[i].count_alive() >= group.count_alive() {
                 vec.swap_remove(i);
                 continue;
             }
@@ -1720,23 +1720,28 @@ impl CompressedCollectiveConstraint {
     /// adds group into vec, if it is not redundant.
     /// Maintains internal non-redundancy of vec
     /// Returns true if anything was added were made
+    /// This is more relaxed in that it won't consider redundant if [1 1 0 0 0 0 0] 2 vs [1 1 1 0 0 0 0] 2, as we need this ??
+    /// can be more relaxed with >, 
+    /// >= is stricter and makes more redundant
     fn non_redundant_push_tracked(vec: &mut Vec<CompressedGroupConstraint>, group: CompressedGroupConstraint) -> bool {
         let mut i: usize = 0;
         while i < vec.len() {
             if group.part_list_is_subset_of(&vec[i]) && 
-            group.count_alive() <= vec[i].count_alive() {
+            group.count_alive() >= vec[i].count_alive() {
                 // group is redundant
-                log::trace!("non_redundant_push_tracked did not add group: {} in vec: {:?}", group, vec);
+                log::trace!("non_redundant_push_tracked did not add group: {}", group);
+                log::trace!("non_redundant_push_tracked in vec: {:?}", vec);
                 return false
             }
             if vec[i].part_list_is_subset_of(&group) &&
-            vec[i].count_alive() <= group.count_alive() {
+            vec[i].count_alive() >= group.count_alive() {
                 vec.swap_remove(i);
                 continue;
             }
             i += 1;
         }
-        log::trace!("non_redundant_push_tracked added group: {} in vec: {:?}", group, vec);
+        log::trace!("non_redundant_push_tracked added group: {}", group);
+        log::trace!("non_redundant_push_tracked in vec: {:?}", vec);
         vec.push(group);
         true
     }
