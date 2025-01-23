@@ -1360,9 +1360,11 @@ impl<'a> NaiveProb<'a> {
         // > 20µs up to 500µs
         let mut latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
         latest_constraint.add_raw_public_constraint(player_id, *card);
-        if self.naive_sampler.par_constructor(&latest_constraint).is_none(){
+        let output = self.naive_sampler.par_constructor(&latest_constraint);
+        if output.is_none() {
             return false
         } else {
+            log::info!("Possible Combo: {}", output.unwrap());
             return true
         }
     }

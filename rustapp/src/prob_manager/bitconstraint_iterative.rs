@@ -756,6 +756,12 @@ impl CompressedCollectiveConstraint {
         if let Some(pos) = self.inferred_constraints[player_id].iter().position(|&c| c == card) {
             self.inferred_constraints[player_id].swap_remove(pos);
         }
+        if self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>() + 
+        self.inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>() == 3{
+            // Clears group_constraints if all cards are known
+            self.group_constraints_mut()[card as usize].clear();
+            return
+        }
         let mut i: usize = 0;
         let group_constraints = &mut self.group_constraints_mut()[card as usize];
         while i < group_constraints.len() {
@@ -1050,6 +1056,8 @@ impl CompressedCollectiveConstraint {
         //      - like if inferred info reflects the same thing as group constraint
         // QUESTION: How does inferred constraints help in determining if group is redundant? Should this be pruned above?
         // TODO: Needs to do dead player prune
+        log::trace!("After add_dead_player_constraint");
+        self.printlog();
         self.group_redundant_prune();
         self.add_inferred_groups();
     }
@@ -1109,6 +1117,7 @@ impl CompressedCollectiveConstraint {
     ///                   The algo is less about a reveal and more about how to update groups after new information is added from the reveal.
     pub fn reveal(&mut self, player_id: usize, card: Card) {
         log::trace!("In reveal");
+        // TODO: Combine adjustment and addition to constraint to allow clear() like in death()
         if !self.inferred_player_constraint_contains(player_id, card) {
             // Adds information to inferred constraint if it isn't already there
             self.add_inferred_player_constraint(player_id, card);
@@ -1796,7 +1805,11 @@ impl CompressedCollectiveConstraint {
                     // group => [1 1 0 1 0 0 1], add [0 1 0 1 0 0 1], [1 0 0 1 0 0 1], [1 1 0 0 0 0 1], []
                     for (player, player_flag) in part_list.iter().enumerate() {
                         if *player_flag {
-                            let player_lives: u8 = 2 - self.public_constraints[player].len() as u8;
+                            let player_lives: u8 = if player != 6 {
+                                2 - self.public_constraints[player].len() as u8
+                            } else {
+                                3 // Not 0
+                            };
                             let player_inferred_diff_cards: u8 = self.inferred_constraints[player].iter().filter(|c| **c as usize != card_num).count() as u8;
                             // log::trace!("player: {}, player_lives: {}, player_inferred_diff_cards: {}, group.count_alive(): {}", player, player_lives, player_inferred_diff_cards, group.count_alive());
                             if group.count_alive() + player_inferred_diff_cards > player_lives {
@@ -1930,6 +1943,12 @@ impl CompressedCollectiveConstraint {
     ///     - or 3 - 2 lives + 0 Number of non-Dukes
     ///     - Player 0 has an inferred Captain. Therefore, pile must have at least 3 - 0 - 1 = 2 Dukes.
     ///     - or 3 - 2 lives + 1 Number of non-Dukes
+    /// - e.g. [1 1 0 0 0 0 1] 3 Duke
+    /// - e.g. [1 1 0 0 0 0 0] has 3 alive Dukes. 
+    ///     - Player 6 has an inferred Duke. Therefore, pile must have at least 3 - 3 = 0 Dukes.
+    ///     - or 3 - 3 lives + 0 Number of non-Dukes
+    ///     - Player 6 has an inferred Captain. Therefore, pile must have at least 3 - 3 + 1 = 1 Dukes.
+    ///     - or 3 - 3 lives + 1 Number of non-Dukes
     /// Helps infer all possible subgroups iteratively
     /// - By generating subgroups, adding the new subgroups in, and repeating the process on the new subgroups we eventually infer all the possible subgroups
     /// 
@@ -1963,7 +1982,11 @@ impl CompressedCollectiveConstraint {
                     // group => [1 1 0 1 0 0 1], add [0 1 0 1 0 0 1], [1 0 0 1 0 0 1], [1 1 0 0 0 0 1], []
                     for (player, player_flag) in part_list.iter().enumerate() {
                         if *player_flag {
-                            let player_lives: u8 = 2 - self.public_constraints[player].len() as u8;
+                            let player_lives: u8 = if player != 6 {
+                                2 - self.public_constraints[player].len() as u8
+                            } else {
+                                3 // Not 0
+                            };
                             let player_inferred_diff_cards: u8 = self.inferred_constraints[player].iter().filter(|c| **c as usize != card_num).count() as u8;
                             if group.count_alive() + player_inferred_diff_cards > player_lives {
                                 // Cards contained is n - player_lives + player_inferred_cards for new group
@@ -2156,7 +2179,8 @@ impl CompressedCollectiveConstraint {
                         if same_alive_card_count + same_dead_card_count > 0 {
                             log::trace!("");
                             log::trace!("=== add_mutually_exclusive_unions_recurse ref vs inferred & public");
-                            log::trace!("add_mutually_exclusive_unions_recurse public_constraints: {:?}, inferred_constraints: {:?}", self.public_constraints, self.inferred_constraints);
+                            log::trace!("add_mutually_exclusive_unions_recurse public_constraints: {:?}", self.public_constraints);
+                            log::trace!("add_mutually_exclusive_unions_recurse inferred_constraints: {:?}", self.inferred_constraints);
                             log::trace!("add_mutually_exclusive_unions_recurse reference_group_i: {}, player_id: {}, player_flag: {}", reference_group_i, player_id, player_flag);
                             log::trace!("add_mutually_exclusive_unions_recurse same_alive_card_count: {}, same_dead_card_count: {}", same_alive_card_count, same_dead_card_count);
                             let mut new_group: CompressedGroupConstraint = *reference_group_i;
@@ -2312,5 +2336,37 @@ impl CompressedCollectiveConstraint {
         //        Regardless, AMB is trivially easy to update
         // TODO: IMPLEMENT private single and joint constraint, which would be helpful if somehow we discover players can have a particular card!
         todo!()
+    }
+    pub fn debug_panicker(&self) {
+
+        for player in 0..6 {
+            if self.public_constraints[player].len() + self.inferred_constraints[player].len() > 2 {
+                self.printlog();
+                debug_assert!(false, "invalid state reached!");
+            }
+        }
+        if self.public_constraints[6].len() != 0 {
+            self.printlog();
+            debug_assert!(false, "invalid state reached!");
+        }
+        if self.inferred_constraints[6].len() > 3 {
+            self.printlog();
+            debug_assert!(false, "invalid state reached!");
+        }
+        let mut card_counts: [u8; 5] = [0; 5];
+        for player in 0..7 {
+            for card in self.public_constraints[player].iter() {
+                card_counts[*card as usize] += 1;
+            }
+            for card in self.inferred_constraints[player].iter() {
+                card_counts[*card as usize] += 1;
+            }
+        }
+        if card_counts.iter().any(|amt| *amt > 3) {
+            log::trace!("Too many cards! card_counts: {:?}", card_counts);
+            self.printlog();
+            debug_assert!(false, "invalid state reached!");
+            
+        }
     }
 }

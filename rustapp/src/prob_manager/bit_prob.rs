@@ -325,4 +325,7 @@ impl BitCardCountManager {
     //     let latest_constraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
     //     latest_constraint.player_can_have_active_cards(player_id, cards)
     // }
+    pub fn debug_panicker(&self) {
+        self.latest_constraint().debug_panicker();
+    }
 }

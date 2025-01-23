@@ -11,6 +11,8 @@ use env_logger::{Builder, Env, Target};
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
+// ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
+// ANOTHER BUG: weird all cards [1 1 1 1 1 1 0] 3 at start of game
 fn main() {
     let game_no = 50;
     let log_bool = true;
@@ -127,6 +129,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 log::trace!("Pushed bad move somewhere earlier!");
                 break;
             }
+            bit_prob.debug_panicker();
             step += 1;
             if step > 1000 {
                 break;
@@ -183,6 +186,8 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, print_frequency: usiz
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
             new_moves = hh.generate_legal_moves();
+            let test_impossible_constraints = bit_prob.latest_constraint().generate_one_card_impossibilities_player_card_indexing();
+            log::info!("Impossible cards before choosing move: {:?}", test_impossible_constraints);
             if new_moves[0].name() != AOName::CollectiveChallenge {
                 log::info!("{}", format!("Legal Moves: {:?}", new_moves));
             } else {
