@@ -17,8 +17,9 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 // FIX => Make sure redundant does not prune alive count of 0! => should we add subset groups that have 0 alive?
 // Likely not subset or mutually excl additions, but updating of current groups that has a problem
 // Ok so we isolated it to revealredraw
+// Its in add_dead_player_constraint
 fn main() {
-    let game_no = 1000;
+    let game_no = 100000;
     let log_bool = true;
     let bool_know_priv_info = false;
     let print_frequency: usize = 10;

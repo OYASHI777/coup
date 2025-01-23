@@ -756,7 +756,9 @@ impl CompressedCollectiveConstraint {
         if let Some(pos) = self.inferred_constraints[player_id].iter().position(|&c| c == card) {
             self.inferred_constraints[player_id].swap_remove(pos);
         }
-        self.clear_group_constraints(card);
+        if self.clear_group_constraints(card) {
+            return
+        }
         let mut i: usize = 0;
         let group_constraints = &mut self.group_constraints_mut()[card as usize];
         while i < group_constraints.len() {
@@ -775,7 +777,7 @@ impl CompressedCollectiveConstraint {
     /// Removes all group_constraints that have particular card and replace with another group with total_count == 3 if all cards are known
     /// in either inferred_constraints or public_constraints
     /// We need the 3 group to stay, for impossible cases
-    pub fn clear_group_constraints(&mut self, card: Card) {
+    pub fn clear_group_constraints(&mut self, card: Card) -> bool {
         // TODO: Don't Clear() all, you still want to keep the group that has all 3, for impossible testing
         // TODO: Maybe clear if not 3 idk... or add in just 1 group
         // TODO: Clear() and add 1 group if all dead, else i guess just leave them?
@@ -799,8 +801,9 @@ impl CompressedCollectiveConstraint {
             group.set_alive_count(total_alive_known);
             group.set_total_count(3);
             self.group_constraints_mut()[card as usize].push(group);
-            return
+            return true
         }
+        false
     }
     /// Adds to tracked inferred constraints
     pub fn add_inferred_player_constraint(&mut self, player_id: usize, card: Card) {
@@ -1841,11 +1844,8 @@ impl CompressedCollectiveConstraint {
                                 log::trace!("add_subset_groups inferred_constraints: {:?}", self.inferred_constraints);
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
-                                for card in self.public_constraints[player].iter() {
-                                    if *card as usize == card_num {
-                                        new_group.sub_dead_count(1);
-                                    }
-                                }
+                                let dead_card_count = self.public_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
+                                new_group.sub_dead_count(dead_card_count);
                                 new_group.set_alive_count(group.count_alive() + player_inferred_diff_cards - player_lives );
                                 new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
                                 // Required to meet assumptions of recursive function
