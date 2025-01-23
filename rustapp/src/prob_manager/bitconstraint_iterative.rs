@@ -65,6 +65,7 @@ impl Debug for CompressedGroupConstraint {
 // [FIRST GLANCE PRIORITY]      - 6S inferred counts can generated when required instead of always being allocated
 // [FIRST GLANCE PRIORITY] Consider if counts should be stored at all
 // TODO: Look into death() mechanism and how it removes redundant and updates groups because of death
+// TODO: Look into entire flow and see if redundant_group_add makes sense
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 // [FIRST GLANCE PRIORITY] Consider processing all new items to add with redundant checks in bulk
@@ -1322,6 +1323,9 @@ impl CompressedCollectiveConstraint {
                 let dead_count = self.player_dead_card_count(player_id, inferred_card);
                 // TODO: Add method to add groups only if it is not already inside
                 let group = CompressedGroupConstraint::new(player_id, inferred_card, dead_count, card_counts[inferred_card as usize]);
+                log::trace!("");
+                log::trace!("=== dilution_reveal dissipated information");
+                log::trace!("added group: {}", group);
                 self.add_group_constraint(group);
             }
         }
@@ -1333,6 +1337,7 @@ impl CompressedCollectiveConstraint {
         // player inferred A - 1
         self.subtract_inferred_player_constraints(player_id, card);
     }
+    // TODO: Review group_constraint addition method
     /// Ambassador Dilution of inferred knowledge
     /// Adjust inferred knowledge
     /// NOTE:
@@ -1701,13 +1706,13 @@ impl CompressedCollectiveConstraint {
     fn non_redundant_push(vec: &mut Vec<CompressedGroupConstraint>, group: CompressedGroupConstraint) {
         let mut i: usize = 0;
         while i < vec.len() {
-            if group.part_list_is_subset_of(&vec[i]) && 
-            group.count_alive() >= vec[i].count_alive() {
+            if vec[i].part_list_is_subset_of(&group) && 
+            group.count_alive() <= vec[i].count_alive() {
                 // group is redundant
                 return
             }
-            if vec[i].part_list_is_subset_of(&group) &&
-            vec[i].count_alive() >= group.count_alive() {
+            if group.part_list_is_subset_of(&vec[i]) &&
+            vec[i].count_alive() <= group.count_alive() {
                 vec.swap_remove(i);
                 continue;
             }
@@ -1726,15 +1731,15 @@ impl CompressedCollectiveConstraint {
     fn non_redundant_push_tracked(vec: &mut Vec<CompressedGroupConstraint>, group: CompressedGroupConstraint) -> bool {
         let mut i: usize = 0;
         while i < vec.len() {
-            if group.part_list_is_subset_of(&vec[i]) && 
-            group.count_alive() >= vec[i].count_alive() {
+            if vec[i].part_list_is_subset_of(&group) && 
+            group.count_alive() <= vec[i].count_alive() {
                 // group is redundant
                 log::trace!("non_redundant_push_tracked did not add group: {}", group);
                 log::trace!("non_redundant_push_tracked in vec: {:?}", vec);
                 return false
             }
-            if vec[i].part_list_is_subset_of(&group) &&
-            vec[i].count_alive() >= group.count_alive() {
+            if group.part_list_is_subset_of(&vec[i]) &&
+            vec[i].count_alive() <= group.count_alive() {
                 vec.swap_remove(i);
                 continue;
             }
@@ -1770,10 +1775,10 @@ impl CompressedCollectiveConstraint {
         // There technically is alot of repeated code, but i want to be able to pass ownership through the recursed input instead of just a &mut to reduce memory usage
         // In addition the first step should not add groups, so to not make use of branches, its seperated as such
         // Recursion stops of no more groups to add
-        log::trace!("In add_subset_groups");
         if self.group_constraints().iter().all(|v| v.is_empty()) {
             return false
         }
+        log::trace!("In add_subset_groups");
         // TODO: You can optimiz
         let mut new_groups: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
         let mut new_inferred_constraints: Vec<CompressedGroupConstraint> = Vec::with_capacity(3);
@@ -1784,6 +1789,7 @@ impl CompressedCollectiveConstraint {
                 // Get inferred groups, add then to new_groups
                 let part_list: [bool; 7] = group.get_set_players();
                 let flags_count = part_list.iter().filter(|b| **b).count() as u8;
+                // log::trace!("add_subset_groups flags_count: {}", flags_count);
                 if flags_count > 1 {
                     // Creation of new groups (may have only 1 player_flag)
                     // group => [1 1 0 1 0 0 1], add [0 1 0 1 0 0 1], [1 0 0 1 0 0 1], [1 1 0 0 0 0 1], []
@@ -1791,8 +1797,15 @@ impl CompressedCollectiveConstraint {
                         if *player_flag {
                             let player_lives: u8 = 2 - self.public_constraints[player].len() as u8;
                             let player_inferred_diff_cards: u8 = self.inferred_constraints[player].iter().filter(|c| **c as usize != card_num).count() as u8;
+                            // log::trace!("player: {}, player_lives: {}, player_inferred_diff_cards: {}, group.count_alive(): {}", player, player_lives, player_inferred_diff_cards, group.count_alive());
                             if group.count_alive() + player_inferred_diff_cards > player_lives {
                                 // Cards contained is n - player_lives + player_inferred_cards for new group
+                                log::trace!("");
+                                log::trace!("=== add_subset_groups Reference === ");
+                                log::trace!("add_subset_groups player considered: {:?}", player);
+                                log::trace!("add_subset_groups parent group: {}", group);
+                                log::trace!("add_subset_groups public_constraints: {:?}", self.public_constraints);
+                                log::trace!("add_subset_groups inferred_constraints: {:?}", self.inferred_constraints);
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
                                 for card in self.public_constraints[player].iter() {
@@ -1803,9 +1816,6 @@ impl CompressedCollectiveConstraint {
                                 new_group.set_alive_count(group.count_alive() - player_lives + player_inferred_diff_cards);
                                 new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
                                 // Required to meet assumptions of recursive function
-                                log::trace!("add_subset_groups parent group: {}", group);
-                                log::trace!("add_subset_groups public_constraints: {:?}", self.public_constraints);
-                                log::trace!("add_subset_groups inferred_constraints: {:?}", self.inferred_constraints);
                                 if flags_count > 2 {
                                     log::trace!("add_subset_groups found group for new_groups: {}", new_group);
                                     CompressedCollectiveConstraint::non_redundant_push(&mut new_groups[card_num], new_group);
@@ -1832,6 +1842,9 @@ impl CompressedCollectiveConstraint {
                 2 => {
                     // Both cards known
                     if self.inferred_constraints[player_id] != vec![card; 2] {
+                        log::trace!("");
+                        log::trace!("=== add_subset_groups Inferred 2 === ");
+                        log::trace!("add_sub_groups adding player considered: {}", player_id);
                         log::trace!("add_sub_groups adding 2 cards single_flag_group: {}", single_flag_group);
                         log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -1848,6 +1861,9 @@ impl CompressedCollectiveConstraint {
                 1 => {
                     // One card known
                     if !self.inferred_constraints[player_id].contains(&card) {
+                        log::trace!("");
+                        log::trace!("=== add_subset_groups Inferred 1 === ");
+                        log::trace!("add_sub_groups adding player considered: {}", player_id);
                         log::trace!("add_sub_groups adding 1 card single_flag_group: {}", single_flag_group);
                         log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -1877,14 +1893,14 @@ impl CompressedCollectiveConstraint {
         // Ensures no inferred constraint makes a group redundant
         for (card_num, changes) in card_changes.iter().enumerate() {
             let mut i: usize = 0;
-            while i < self_groups[card_num].len() {
+            'group_removal: while i < self_groups[card_num].len() {
                 for &player_id in changes {
                     // If player flag is true and number of cards player now has
                     if self_groups[card_num][i].get_player_flag(player_id) {
                         let count_alive = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                         if count_alive >= self_groups[card_num][i].count_alive() {
                             self_groups[card_num].swap_remove(i);
-                            continue;
+                            continue 'group_removal;
                         }
                     }
                 }
@@ -1892,7 +1908,7 @@ impl CompressedCollectiveConstraint {
             }
         }
         // recurse, new_groups should not be internally redundant, self.group_constraints should not be internally redundant
-        if card_changes.iter().any(|v| !v.is_empty()) {
+        if new_groups.iter().any(|v| !v.is_empty()) || card_changes.iter().any(|v| !v.is_empty())  {
             return self.add_subset_groups_recurse(new_groups);
         } 
         false
@@ -1941,6 +1957,12 @@ impl CompressedCollectiveConstraint {
                             let player_inferred_diff_cards: u8 = self.inferred_constraints[player].iter().filter(|c| **c as usize != card_num).count() as u8;
                             if group.count_alive() + player_inferred_diff_cards > player_lives {
                                 // Cards contained is n - player_lives + player_inferred_cards for new group
+                                log::trace!("");
+                                log::trace!("=== add_subset_groups_recurse Reference === ");
+                                log::trace!("add_subset_groups_recurse adding player considered: {}", player);
+                                log::trace!("add_subset_groups_recurse parent group: {}", group);
+                                log::trace!("add_subset_groups_recurse public_constraints: {:?}", self.public_constraints);
+                                log::trace!("add_subset_groups_recurse inferred_constraints: {:?}", self.inferred_constraints);
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
                                 for card in self.public_constraints[player].iter() {
@@ -1951,9 +1973,6 @@ impl CompressedCollectiveConstraint {
                                 new_group.set_alive_count(group.count_alive() - player_lives + player_inferred_diff_cards);
                                 new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
                                 // Required to meet assumptions of recursive function
-                                log::trace!("add_subset_groups_recurse parent group: {}", group);
-                                log::trace!("add_subset_groups_recurse public_constraints: {:?}", self.public_constraints);
-                                log::trace!("add_subset_groups_recurse inferred_constraints: {:?}", self.inferred_constraints);
                                 if flags_count > 2 {
                                     log::trace!("add_subset_groups found group for new_groups: {}", new_group);
                                     CompressedCollectiveConstraint::non_redundant_push(&mut new_groups[card_num], new_group);
@@ -1988,6 +2007,9 @@ impl CompressedCollectiveConstraint {
                 2 => {
                     // Both cards known
                     if self.inferred_constraints[player_id] != vec![card; 2] {
+                        log::trace!("");
+                        log::trace!("=== add_subset_groups_recurse Inferred 2 === ");
+                        log::trace!("add_sub_groups_recurse adding player considered: {}", player_id);
                         log::trace!("add_sub_groups_recurse adding 2 cards single_flag_group: {}", single_flag_group);
                         log::trace!("add_sub_groups_recurse Before self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups_recurse Before self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -2004,6 +2026,9 @@ impl CompressedCollectiveConstraint {
                 1 => {
                     // One card known
                     if !self.inferred_constraints[player_id].contains(&card) {
+                        log::trace!("");
+                        log::trace!("=== add_subset_groups_reccurse Inferred 1 === ");
+                        log::trace!("add_sub_groups_recurse adding player considered: {}", player_id);
                         log::trace!("add_sub_groups_recurse adding 1 card single_flag_group: {}", single_flag_group);
                         log::trace!("add_sub_groups_recurse Before self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups_recurse Before self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -2079,6 +2104,7 @@ impl CompressedCollectiveConstraint {
     pub fn add_mutually_exclusive_unions_recurse(&mut self, mut reference_group_constraints: Vec<Vec<CompressedGroupConstraint>>) -> bool {
         log::trace!("In add_mutually_exclusive_unions_recurse");
         if reference_group_constraints.iter().all(|v| v.is_empty()) {
+            log::trace!("exit add_mutually_exclusive_unions_recurse");
             return false
         }
         let mut new_group_constraints: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
@@ -2089,6 +2115,8 @@ impl CompressedCollectiveConstraint {
                 for self_group in self.group_constraints_mut()[card_num].iter() {
                     if self_group.part_list_is_mut_excl(*reference_group_i) {
                         // Add in
+                        log::trace!("");
+                        log::trace!("=== add_mutually_exclusive_unions_recurse ref vs self");
                         log::trace!("add_mutually_exclusive_unions_recurse: group_i: {}, self_group: {}", reference_group_i, self_group);
                         let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *self_group);
                         log::trace!("add_mutually_exclusive_unions_recurse: group_i + self_group = new_group: {}", new_group);
@@ -2100,6 +2128,8 @@ impl CompressedCollectiveConstraint {
                 for reference_group_j in reference_group_constraints[card_num].iter() {
                     if reference_group_i.part_list_is_mut_excl(*reference_group_j) {
                         // Bitwise Union is a fast way to get their
+                        log::trace!("");
+                        log::trace!("=== add_mutually_exclusive_unions_recurse ref vs ref");
                         log::trace!("add_mutually_exclusive_unions_recurse: group_i: {}, group_j: {}", reference_group_i, reference_group_j);
                         let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *reference_group_j);
                         log::trace!("add_mutually_exclusive_unions_recurse: group_i + group_j = new_group: {}", new_group);
@@ -2112,6 +2142,8 @@ impl CompressedCollectiveConstraint {
                         let same_alive_card_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                         let same_dead_card_count = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                         if same_alive_card_count + same_dead_card_count > 0 {
+                            log::trace!("");
+                            log::trace!("=== add_mutually_exclusive_unions_recurse ref vs inferred & public");
                             log::trace!("add_mutually_exclusive_unions_recurse public_constraints: {:?}, inferred_constraints: {:?}", self.public_constraints, self.inferred_constraints);
                             log::trace!("add_mutually_exclusive_unions_recurse reference_group_i: {}, player_id: {}, player_flag: {}", reference_group_i, player_id, player_flag);
                             log::trace!("add_mutually_exclusive_unions_recurse same_alive_card_count: {}, same_dead_card_count: {}", same_alive_card_count, same_dead_card_count);
@@ -2165,6 +2197,7 @@ impl CompressedCollectiveConstraint {
     pub fn add_mutually_exclusive_unions(&mut self) -> bool {
         log::trace!("In add_mutually_exclusive_unions");
         if self.group_constraints().iter().all(|v| v.is_empty()) {
+            log::trace!("exit add_mutually_exclusive_unions");
             return false
         }
         let mut new_group_constraints: Vec<Vec<CompressedGroupConstraint>> = vec![Vec::with_capacity(3); 5];
@@ -2176,6 +2209,8 @@ impl CompressedCollectiveConstraint {
                 for reference_group_j in reference_group_constraints[card_num].iter() {
                     if reference_group_i.part_list_is_mut_excl(*reference_group_j) {
                         // Bitwise Union is a fast way to get their
+                        log::trace!("");
+                        log::trace!("=== add_mutually_exclusive_unions ref vs ref");
                         log::trace!("add_mutually_exclusive_unions: group_i: {}, group_j: {}", reference_group_i, reference_group_j);
                         let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *reference_group_j);
                         log::trace!("add_mutually_exclusive_unions: group_i + group_j = new_group: {}", new_group);
@@ -2189,7 +2224,8 @@ impl CompressedCollectiveConstraint {
                         let same_dead_card_count: u8 = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                         if same_alive_card_count + same_dead_card_count > 0 {
                             let mut new_group: CompressedGroupConstraint = *reference_group_i;
-                            log::trace!("In inferred + public");
+                            log::trace!("");
+                            log::trace!("=== add_mutually_exclusive_unions ref vs inferred & public");
                             log::trace!("add_mutually_exclusive_unions public_constraints: {:?}", self.public_constraints);
                             log::trace!("add_mutually_exclusive_unions inferred_constraints: {:?}", self.inferred_constraints);
                             log::trace!("add_mutually_exclusive_unions reference_group_i: {}, player_id: {}, player_flag: {}", reference_group_i, player_id, player_flag);

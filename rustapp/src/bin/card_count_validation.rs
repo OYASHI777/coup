@@ -8,7 +8,7 @@ use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use std::fs::File;
 use std::io::Write;
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 fn main() {
@@ -46,7 +46,6 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
         log::trace!("Game Made:");
         while !hh.game_won() {
             
-            log::trace!("Game Made:");
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
             log::info!("=== Prob ===");
