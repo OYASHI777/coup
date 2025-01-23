@@ -756,12 +756,7 @@ impl CompressedCollectiveConstraint {
         if let Some(pos) = self.inferred_constraints[player_id].iter().position(|&c| c == card) {
             self.inferred_constraints[player_id].swap_remove(pos);
         }
-        if self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>() + 
-        self.inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>() == 3{
-            // Clears group_constraints if all cards are known
-            self.group_constraints_mut()[card as usize].clear();
-            return
-        }
+        self.clear_group_constraints(card);
         let mut i: usize = 0;
         let group_constraints = &mut self.group_constraints_mut()[card as usize];
         while i < group_constraints.len() {
@@ -777,17 +772,41 @@ impl CompressedCollectiveConstraint {
             i += 1;
         }
     }
+    /// Removes all group_constraints that have particular card and replace with another group with total_count == 3 if all cards are known
+    /// in either inferred_constraints or public_constraints
+    /// We need the 3 group to stay, for impossible cases
+    pub fn clear_group_constraints(&mut self, card: Card) {
+        // TODO: Don't Clear() all, you still want to keep the group that has all 3, for impossible testing
+        // TODO: Maybe clear if not 3 idk... or add in just 1 group
+        // TODO: Clear() and add 1 group if all dead, else i guess just leave them?
+        let total_dead_known = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>();
+        let total_alive_known = self.inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>();
+        if total_dead_known + total_alive_known == 3 {
+            // Clears group_constraints if all cards are known and in inferred / dead, and leaves a 3 group for impossible_cards to check
+            self.group_constraints_mut()[card as usize].clear();
+            let mut group = CompressedGroupConstraint(0);
+            group.set_card(card);
+            for player in 0..6 {
+                if self.public_constraints[player].contains(&card) {
+                    group.set_player_flag(player, true);
+                    continue;
+                }
+                if self.inferred_constraints[player].contains(&card) {
+                    group.set_player_flag(player, true);
+                }
+            }
+            group.set_dead_count(total_dead_known);
+            group.set_alive_count(total_alive_known);
+            group.set_total_count(3);
+            self.group_constraints_mut()[card as usize].push(group);
+            return
+        }
+    }
     /// Adds to tracked inferred constraints
     pub fn add_inferred_player_constraint(&mut self, player_id: usize, card: Card) {
         debug_assert!(player_id < 6, "Use proper player_id thats not pile");
         debug_assert!(self.inferred_constraints[player_id].len() < 2, "Adding inferred knowledge to fully known player!");
         self.inferred_card_count[card as usize] += 1;
-        // [COMBINE SJ]
-        // if self.inferred_constraints[player_id][0].is_none() { // If player has only 1 inferred card, it would be at index 0
-        //     self.inferred_constraints[player_id][0] = Some(card);
-        // } else {
-        //     self.inferred_constraints[player_id][1] = Some(card);
-        // }
         self.inferred_constraints[player_id].push(card);
     }
     /// Removes a specific card from the inferred player constraints if it exists
@@ -1122,13 +1141,9 @@ impl CompressedCollectiveConstraint {
             // Adds information to inferred constraint if it isn't already there
             self.add_inferred_player_constraint(player_id, card);
         }
-        self.reveal_group_adjustment(player_id);
-
-        // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
-        // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
-        //      - like if inferred info reflects the same thing as group constraint
-        // QUESTION: How does inferred constraints help in determining if group is redundant? Should this be pruned above?
-        self.group_redundant_prune();
+        // Commented out as it removes some group required by mut excl addition
+        // self.reveal_group_adjustment(player_id);
+        self.clear_group_constraints(card);
         self.add_inferred_groups();
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
@@ -1145,8 +1160,10 @@ impl CompressedCollectiveConstraint {
         let player_alive_card_count: [u8; 5] = self.player_alive_card_counts(player_id);
         let player_dead_card_count: [u8; 5] = self.player_dead_card_counts(player_id);
         let player_cards_known = self.player_cards_known(player_id);
-        let mut i: usize = 0;
+        // Won't this remove many groups that will need to be readded by mutually exclusive additions...
+        // Removes groups that are now redundant
         for (card_num, group_constraints) in [&mut self.group_constraints_amb, &mut self.group_constraints_ass, &mut self.group_constraints_cap, &mut self.group_constraints_duk, &mut self.group_constraints_con].iter_mut().enumerate() {
+            let mut i: usize = 0;
             while i < group_constraints.len() {
                 let group: &mut CompressedGroupConstraint = &mut group_constraints[i];
                 // Update only groups affected by the revealed information => i.e. those with player_id flag as true
@@ -1257,6 +1274,91 @@ impl CompressedCollectiveConstraint {
             self.impossible_constraints[6][i] = self.impossible_constraints[player_id][i];
         }
     }
+    // TODO: [THEORY CHECK]
+    // TODO: [TEST] 
+    // TODO: [TODO] separating the dilution of information by creating 2 functions, both call the same mixing, but call different dilution steps
+    // e.g. reveal_redraw => that called redraw() then dilutes information
+    // TODO: [MOVE DOCUMENTATION] to docstring 
+    /// Mixes 1 card
+    /// Consists of 2 steps:
+    /// - Updating current groups with information inferred from the mixing player and the pile
+    /// - Dissipating information from the inferred constraints, and adding new groups to track how the cards have spread
+    /// - Removing redundant groups
+    /// 
+    /// Param details:
+    /// - Reveal_card == Some(card) for RevealRedraw 
+    /// - Reveal_card == None for Ambassador 
+    /// Assumptions:
+    /// 
+    /// - Assumes all possibly inferred information is fully reflected and stored in the inferred constraint
+    /// - Mixing adds the inferred information into groups that are affected by the mix
+    /// - Mixing adds new groups to show how cards only the pile has or only the player has are now possibly with either of them (player union pile)
+    /// - [Handled elsewhere] Information is "diluted" or "dissipated", since there is a reduction in absolutely known information about a particular player's state
+    /// - [Handled elsewhere] This should ideally still reflect all possibly inferred information!
+    pub fn redraw_group_adjustment(&mut self, player_id: usize, card: Card) {
+        // Now I could selectively check if there are changes, and choose to redundant prune only sometimes
+        // But odds are, there is some set where player flag is 0 so we will need to do it anyways
+        debug_assert!(self.player_is_alive(player_id), "Dead player cant do things man");
+        debug_assert!(player_id != 6, "Player_id here cannot be pile!");
+        // [MIXING] groups so a union between player and pile is formed
+        // IDEA: So i guess updating would be taking missing information known from pile or player and adding it in? pile info wont be loss, player info wont be loss, pile & player info will be added in later 
+        
+        // [MIXING] Here we add information to current groups that gain it from the mix e.g. groups where player is 0 and pile is 1 or vice versa
+        log::trace!("In redraw");
+        let mut i: usize = 0;
+        for (card_num, group_constraints) in [&mut self.group_constraints_amb, &mut self.group_constraints_ass, &mut self.group_constraints_cap, &mut self.group_constraints_duk, &mut self.group_constraints_con].iter_mut().enumerate() {
+            // Player adjusted by 1 if its the card the player swapped, 0 if any other card
+            let player_adjustment_count = ((card_num == card as usize) && self.inferred_constraints[player_id].contains(&Card::try_from(card_num as u8).unwrap())) as u8;
+            // Pile adjusted by 1 at most for any card
+            let pile_alive_adjustment_count = self.inferred_constraints[6].contains(&Card::try_from(card_num as u8).unwrap()) as u8;
+            while i < group_constraints.len() {
+                let group = &mut group_constraints[i];
+                // consider 2 dimensions, player_flag and pile_flag 0 1, 1 0, 1 1? no 0 0
+                if !group.get_player_flag(player_id) {
+                    if group.get_player_flag(6) {
+                        // Here player is 0 and pile is 1
+                        // We add player information that it is originally missing
+                        group.set_player_flag(player_id, true);
+                        // [COMBINE SJ]
+                        if let Some(dead_card) = self.public_constraints[player_id].get(0) {
+                            if card_num == *dead_card as usize {
+                                group.add_dead_count(1);
+                            }
+                        }
+                        // TODO: put debug_assert somewhere sensible
+                        // debug_assert!(single_count + joint_count + self.dead_card_count()[group_card as usize] < 3, "???");
+                        // FIX: min 1 because only 1 card is exchanged
+                        group.count_alive_add(player_adjustment_count);
+                    }
+                } else {
+                    if !group.get_player_flag(6) {
+                        // Here player is 1 and pile is 0
+                        // We add pile information that it is originally missing
+                        group.set_player_flag(6, true);
+                        // group.count_alive_add(self.inferred_pile_constraints[card_num]); 
+                        group.count_alive_add(pile_alive_adjustment_count); 
+                    } else {
+                        // Here player is 1 and pile is 1, we do a simple check
+                        // If somehow you have learnt of more inferred information, than prune the group
+                        // FIX: we do nth here, handle elsewhere
+                        // if player_alive_card_count[card_num] > group.count_alive() {
+                        //     group_constraints.swap_remove(i);
+                        //     continue;
+                        // }
+                    }
+                }
+                i += 1;
+            }
+        }
+        // OR operation on the false booleans of impossible constraints => AND operation on true
+        // When player and pile mix if the other party's can have impossible card, it becomes possible for the referenced party
+        // for (a, b) i
+        for i in 0..5 {
+            self.impossible_constraints[player_id][i] &= self.impossible_constraints[6][i];
+            self.impossible_constraints[6][i] = self.impossible_constraints[player_id][i];
+        }
+    }
+    /// Removes current inferred constraints and adds them to group based on mix
     /// RevealRedraw dilution of inferred information
     /// Adjust inferred constraints
     /// NOTE:
@@ -1306,13 +1408,13 @@ impl CompressedCollectiveConstraint {
     /// I guess for reveal_redraw, this should be handled in reveal, for (dead, alive) the union will collapse to be only ambassador, or clearly with player
     /// For (alive, alive)?
     /// Adding all new group to dissipate known information about player_id and pile
-    pub fn dilution_reveal(&mut self, player_id: usize, card: Card) {
+    pub fn redraw_inferred_adjustment(&mut self, player_id: usize, card: Card) {
         // [DILUTING INFERRED INFORMATION] Mixing causes the inferred constraints to be dissipated from knowing a particular player has a card
         //                                  to knowing some groups of players have a card
         // Here we Manage the dissipation of inferred information by:
         // - Properly subtracting the appropriate amount from inferred pile constraint
         // - Adding the information into the group constraints => on how the known cards have "spread" from player or pile or BOTH (player union pile) 
-        log::trace!("In dilution_reveal");
+        log::trace!("In redraw_inferred_adjustment");
         let mut card_counts: [u8; 5] = self.get_inferred_card_counts(6);
         card_counts[card as usize] += 1;
         // only subtract 1 card here as only 1 is revealed and moved out of player's hand 
@@ -1402,8 +1504,9 @@ impl CompressedCollectiveConstraint {
     pub fn reveal_redraw(&mut self, player_id: usize, card: Card) {
         // Abit dumb to seperate it like this, but if not it gets abit messy and I have more branchs :/
         self.reveal(player_id, card);
-        self.mix(player_id);
-        self.dilution_reveal(player_id, card);
+        // Actually shouldnt this only move the player's card in
+        self.redraw_group_adjustment(player_id, card);
+        self.redraw_inferred_adjustment(player_id, card);
         self.group_redundant_prune();
         // Add the stuff here
     }
@@ -1601,6 +1704,7 @@ impl CompressedCollectiveConstraint {
     }
     // TODO: [TEST]
     /// Loops through group_constraints, and removes redundant constraints
+    /// Compares them internally
     /// NOTE:
     /// - Assumes groups where all of a particular card is dead will not exist before this as they are implicitly pruned in
     ///   reveal_group_adjustment 
@@ -1851,7 +1955,7 @@ impl CompressedCollectiveConstraint {
             let alive_count = single_flag_group.count_alive();
             // Something is wrong if this panics, all groups should have a single flag, not no flags
             let player_id = single_flag_group.get_set_players().iter().position(|b| *b).unwrap();
-            let card = single_flag_group.card();
+            let card: Card = single_flag_group.card();
             match alive_count {
                 2 => {
                     // Both cards known

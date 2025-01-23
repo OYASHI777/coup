@@ -13,8 +13,12 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
 // ANOTHER BUG: weird all cards [1 1 1 1 1 1 0] 3 at start of game
+// ANOTHER BUG: groups_constraints can be empty even if all dead, but needs at least 1 3 dead set.. 3 dead is not redundant
+// FIX => Make sure redundant does not prune alive count of 0! => should we add subset groups that have 0 alive?
+// Likely not subset or mutually excl additions, but updating of current groups that has a problem
+// Ok so we isolated it to revealredraw
 fn main() {
-    let game_no = 50;
+    let game_no = 1000;
     let log_bool = true;
     let bool_know_priv_info = false;
     let print_frequency: usize = 10;
