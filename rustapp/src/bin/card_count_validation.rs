@@ -14,10 +14,7 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
 // ANOTHER BUG: weird all cards [1 1 1 1 1 1 0] 3 at start of game
 // ANOTHER BUG: groups_constraints can be empty even if all dead, but needs at least 1 3 dead set.. 3 dead is not redundant
-// FIX => Make sure redundant does not prune alive count of 0! => should we add subset groups that have 0 alive?
-// Likely not subset or mutually excl additions, but updating of current groups that has a problem
-// Ok so we isolated it to revealredraw
-// Its in add_dead_player_constraint
+// FIX: adding single group of 3 is ok in the case of pile
 fn main() {
     let game_no = 100000;
     let log_bool = true;

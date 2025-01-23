@@ -163,7 +163,6 @@ impl CompressedGroupConstraint {
     }
 
     fn sub_dead_count(&mut self, amount: u8) {
-        log::trace!("group to sub_dead_count: {}", &self);
         let dead_bits = (self.0 & Self::DEAD_COUNT_MASK) >> Self::DEAD_COUNT_SHIFT;
         debug_assert!(dead_bits >= amount as u16, "Dead count would go below zero dead_bits: {}, amount {}", dead_bits, amount);
         self.0 = (self.0 & !Self::DEAD_COUNT_MASK) | ((dead_bits - amount as u16) << Self::DEAD_COUNT_SHIFT);
@@ -1714,7 +1713,8 @@ impl CompressedCollectiveConstraint {
         // Creating and adding new inferred groups
         // Runs both
         log::trace!("In add_inferred_groups");
-        let mut bool_continue = self.add_subset_groups() || self.add_mutually_exclusive_unions();
+        self.add_subset_groups();
+        let mut bool_continue = self.add_mutually_exclusive_unions();
         // Then runs one if the other is still true
         // idea here is that subset groups adds all the smaller groups, mut excl adds the larger groups
         //      - we get smaller groups from larger groups, so if no new larger groups added, no new smaller groups can be inferred
@@ -1872,6 +1872,23 @@ impl CompressedCollectiveConstraint {
             let player_id = single_flag_group.get_set_players().iter().position(|b| *b).unwrap();
             let card: Card = single_flag_group.card();
             match alive_count {
+                1 => {
+                    // One card known
+                    if !self.inferred_constraints[player_id].contains(&card) {
+                        log::trace!("");
+                        log::trace!("=== add_subset_groups Inferred 1 === ");
+                        log::trace!("add_sub_groups adding player considered: {}", player_id);
+                        log::trace!("add_sub_groups adding 1 card single_flag_group: {}", single_flag_group);
+                        log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
+                        self.inferred_constraints[player_id].push(card);
+                        card_changes[card as usize].push(player_id);
+                        log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
+                        // TODO: Needs to prune the groups too...
+                        // TODO: Adjust counts properly too... or remove inferred_counts
+                    }
+                },
                 2 => {
                     if player_id == 6 {
                         let no_to_push = 2 - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count();
@@ -1898,32 +1915,19 @@ impl CompressedCollectiveConstraint {
                     }
                     // TODO: Adjust counts properly too... or remove inferred_counts
                 },
-                1 => {
-                    // One card known
-                    if !self.inferred_constraints[player_id].contains(&card) {
-                        log::trace!("");
-                        log::trace!("=== add_subset_groups Inferred 1 === ");
-                        log::trace!("add_sub_groups adding player considered: {}", player_id);
-                        log::trace!("add_sub_groups adding 1 card single_flag_group: {}", single_flag_group);
-                        log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
-                        log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
-                        self.inferred_constraints[player_id].push(card);
-                        card_changes[card as usize].push(player_id);
-                        log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
-                        log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
-                        // TODO: Needs to prune the groups too...
-                        // TODO: Adjust counts properly too... or remove inferred_counts
-                    }
-                },
                 3 => {
                     if player_id == 6 {
-                        self.inferred_constraints[player_id] = vec![card; 3];
+                        let no_to_push = alive_count - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
+                        for _ in 0..no_to_push {
+                            self.inferred_constraints[player_id].push(card);
+                        }
                     } else {
                         log::trace!("group: {}", single_flag_group);
                         log::trace!("alive_count: {}", alive_count);
                         debug_assert!(false, "You really should not be here... there should only be alive_count of 2 or 1 for a single player!");
                     }
-                }
+                    // TODO: Adjust counts properly too... or remove inferred_counts
+                },
                 _ => {
                     log::trace!("group: {}", single_flag_group);
                     log::trace!("alive_count: {}", alive_count);
@@ -2024,11 +2028,8 @@ impl CompressedCollectiveConstraint {
                                 log::trace!("add_subset_groups_recurse inferred_constraints: {:?}", self.inferred_constraints);
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
-                                for card in self.public_constraints[player].iter() {
-                                    if *card as usize == card_num {
-                                        new_group.sub_dead_count(1);
-                                    }
-                                }
+                                let dead_card_count = self.public_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
+                                new_group.sub_dead_count(dead_card_count);
                                 new_group.set_alive_count(group.count_alive() + player_inferred_diff_cards - player_lives );
                                 new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
                                 // Required to meet assumptions of recursive function
@@ -2057,15 +2058,33 @@ impl CompressedCollectiveConstraint {
         }
         let mut card_changes: Vec<Vec<usize>> = vec![Vec::with_capacity(2); 5]; // Store (player_id, bool_counts => false: 1, true: 2)
         // Add new_inferred_constraints
+        // FIX: Can be 3 in the case of pile
         while let Some(single_flag_group) = new_inferred_constraints.pop() {
             let alive_count = single_flag_group.count_alive();
             // Something is wrong if this panics, all groups should have a single flag, not no flags
             let player_id = single_flag_group.get_set_players().iter().position(|b| *b).unwrap();
             let card = single_flag_group.card();
             match alive_count {
+                1 => {
+                    // One card known
+                    if !self.inferred_constraints[player_id].contains(&card) {
+                        log::trace!("");
+                        log::trace!("=== add_subset_groups_recurse Inferred 1 === ");
+                        log::trace!("add_sub_groups_recurse adding player considered: {}", player_id);
+                        log::trace!("add_sub_groups_recurse adding 1 card single_flag_group: {}", single_flag_group);
+                        log::trace!("add_sub_groups_recurse Before self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups_recurse Before self.inferred_constraints: {:?}", self.inferred_constraints);
+                        self.inferred_constraints[player_id].push(card);
+                        card_changes[card as usize].push(player_id);
+                        log::trace!("add_sub_groups_recurse After self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups_recurse After self.inferred_constraints: {:?}", self.inferred_constraints);
+                        // TODO: Needs to prune the groups too...
+                        // TODO: Adjust counts properly too... or remove inferred_counts
+                    }
+                },
                 2 => {
                     if player_id == 6 {
-                        let no_to_push = 2 - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count();
+                        let no_to_push = alive_count - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
                         for _ in 0..no_to_push {
                             self.inferred_constraints[player_id].push(card);
                         }
@@ -2089,22 +2108,18 @@ impl CompressedCollectiveConstraint {
                     }
                     // TODO: Adjust counts properly too... or remove inferred_counts
                 },
-                1 => {
-                    // One card known
-                    if !self.inferred_constraints[player_id].contains(&card) {
-                        log::trace!("");
-                        log::trace!("=== add_subset_groups_recurse Inferred 1 === ");
-                        log::trace!("add_sub_groups_recurse adding player considered: {}", player_id);
-                        log::trace!("add_sub_groups_recurse adding 1 card single_flag_group: {}", single_flag_group);
-                        log::trace!("add_sub_groups_recurse Before self.public_constraints: {:?}", self.public_constraints);
-                        log::trace!("add_sub_groups_recurse Before self.inferred_constraints: {:?}", self.inferred_constraints);
-                        self.inferred_constraints[player_id].push(card);
-                        card_changes[card as usize].push(player_id);
-                        log::trace!("add_sub_groups_recurse After self.public_constraints: {:?}", self.public_constraints);
-                        log::trace!("add_sub_groups_recurse After self.inferred_constraints: {:?}", self.inferred_constraints);
-                        // TODO: Needs to prune the groups too...
-                        // TODO: Adjust counts properly too... or remove inferred_counts
+                3 => {
+                    if player_id == 6 {
+                        let no_to_push = alive_count - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
+                        for _ in 0..no_to_push {
+                            self.inferred_constraints[player_id].push(card);
+                        }
+                    } else {
+                        log::trace!("group: {}", single_flag_group);
+                        log::trace!("alive_count: {}", alive_count);
+                        debug_assert!(false, "You really should not be here... there should only be alive_count of 2 or 1 for a single player!");
                     }
+                    // TODO: Adjust counts properly too... or remove inferred_counts
                 },
                 _ => {
                     log::trace!("group: {}", single_flag_group);
