@@ -1874,7 +1874,7 @@ impl CompressedCollectiveConstraint {
             match alive_count {
                 2 => {
                     if player_id == 6 {
-                        let no_to_push = 2 - self.inferred_constraints[player_id].filter(|c| *c == card).count();
+                        let no_to_push = 2 - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count();
                         for _ in 0..no_to_push {
                             self.inferred_constraints[player_id].push(card);
                         }
@@ -2065,7 +2065,7 @@ impl CompressedCollectiveConstraint {
             match alive_count {
                 2 => {
                     if player_id == 6 {
-                        let no_to_push = 2 - self.inferred_constraints[player_id].filter(|c| *c == card).count();
+                        let no_to_push = 2 - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count();
                         for _ in 0..no_to_push {
                             self.inferred_constraints[player_id].push(card);
                         }
