@@ -66,6 +66,7 @@ impl Debug for CompressedGroupConstraint {
 // [FIRST GLANCE PRIORITY] Consider if counts should be stored at all
 // TODO: Look into death() mechanism and how it removes redundant and updates groups because of death
 // TODO: Look into entire flow and see if redundant_group_add makes sense
+// TODO: Can clear group_constraint of a card if all are dead / all cards are known
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 // [FIRST GLANCE PRIORITY] Consider processing all new items to add with redundant checks in bulk
@@ -1813,7 +1814,7 @@ impl CompressedCollectiveConstraint {
                                         new_group.sub_dead_count(1);
                                     }
                                 }
-                                new_group.set_alive_count(group.count_alive() - player_lives + player_inferred_diff_cards);
+                                new_group.set_alive_count(group.count_alive() + player_inferred_diff_cards - player_lives );
                                 new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
                                 // Required to meet assumptions of recursive function
                                 if flags_count > 2 {
@@ -1875,6 +1876,15 @@ impl CompressedCollectiveConstraint {
                         // TODO: Adjust counts properly too... or remove inferred_counts
                     }
                 },
+                3 => {
+                    if player_id == 6 {
+                        self.inferred_constraints[player_id] = vec![card; 3];
+                    } else {
+                        log::trace!("group: {}", single_flag_group);
+                        log::trace!("alive_count: {}", alive_count);
+                        debug_assert!(false, "You really should not be here... there should only be alive_count of 2 or 1 for a single player!");
+                    }
+                }
                 _ => {
                     log::trace!("group: {}", single_flag_group);
                     log::trace!("alive_count: {}", alive_count);
@@ -1970,7 +1980,7 @@ impl CompressedCollectiveConstraint {
                                         new_group.sub_dead_count(1);
                                     }
                                 }
-                                new_group.set_alive_count(group.count_alive() - player_lives + player_inferred_diff_cards);
+                                new_group.set_alive_count(group.count_alive() + player_inferred_diff_cards - player_lives );
                                 new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
                                 // Required to meet assumptions of recursive function
                                 if flags_count > 2 {
@@ -2117,7 +2127,8 @@ impl CompressedCollectiveConstraint {
                         // Add in
                         log::trace!("");
                         log::trace!("=== add_mutually_exclusive_unions_recurse ref vs self");
-                        log::trace!("add_mutually_exclusive_unions_recurse: group_i: {}, self_group: {}", reference_group_i, self_group);
+                        log::trace!("add_mutually_exclusive_unions_recurse: group_i: {}", reference_group_i);
+                        log::trace!("add_mutually_exclusive_unions_recurse: self_group: {}", self_group);
                         let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *self_group);
                         log::trace!("add_mutually_exclusive_unions_recurse: group_i + self_group = new_group: {}", new_group);
                         // TODO: Change new_group to a union
@@ -2130,7 +2141,8 @@ impl CompressedCollectiveConstraint {
                         // Bitwise Union is a fast way to get their
                         log::trace!("");
                         log::trace!("=== add_mutually_exclusive_unions_recurse ref vs ref");
-                        log::trace!("add_mutually_exclusive_unions_recurse: group_i: {}, group_j: {}", reference_group_i, reference_group_j);
+                        log::trace!("add_mutually_exclusive_unions_recurse: group_i: {}", reference_group_i);
+                        log::trace!("add_mutually_exclusive_unions_recurse: group_j: {}", reference_group_j);
                         let new_group: CompressedGroupConstraint = CompressedGroupConstraint::mutually_exclusive_union(*reference_group_i, *reference_group_j);
                         log::trace!("add_mutually_exclusive_unions_recurse: group_i + group_j = new_group: {}", new_group);
                         Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
