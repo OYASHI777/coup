@@ -744,13 +744,8 @@ impl CompressedCollectiveConstraint {
     pub fn add_dead_player_constraint(&mut self, player_id : usize, card: Card) {
         debug_assert!(self.dead_card_count[card as usize] < 3, "Too many cards in dead_card_count for card: {:?}, found: {}", card, self.dead_card_count[card as usize]);
         debug_assert!(self.player_is_alive(player_id), "Cannot add more dead cards to player that is already dead!, Current player public_constraint len: {}", self.public_constraints[player_id].len());
+        log::trace!("In add_dead_player_constraint");
         self.dead_card_count[card as usize] += 1;
-        // [COMBINE SJ]
-        // if self.public_constraints[player_id][0].is_none() {
-        //     self.public_constraints[player_id][0] = Some(card)
-        // } else {
-        //     self.public_constraints[player_id][1] = Some(card)
-        // }
         self.public_constraints[player_id].push(card);
         if let Some(pos) = self.inferred_constraints[player_id].iter().position(|&c| c == card) {
             self.inferred_constraints[player_id].swap_remove(pos);
@@ -787,7 +782,7 @@ impl CompressedCollectiveConstraint {
             self.group_constraints_mut()[card as usize].clear();
             let mut group = CompressedGroupConstraint(0);
             group.set_card(card);
-            for player in 0..6 {
+            for player in 0..7 {
                 if self.public_constraints[player].contains(&card) {
                     group.set_player_flag(player, true);
                     continue;
