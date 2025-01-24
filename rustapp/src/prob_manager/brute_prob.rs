@@ -64,7 +64,12 @@ impl BruteCardCountManager {
                 match ao.no_cards() {
                     1 => {
                         self.public_constraints[ao.player_id()].push(ao.cards()[0]);
-                        self.restrict(ao.player_id(), vec![ao.cards()[0].card_to_char()]);
+                        if self.public_constraints[ao.player_id()].len() == 2 {
+                            // Handles the case where the players' dead cards are both the same, without this, restrict won't ensure player has both cards
+                            self.restrict(ao.player_id(), self.public_constraints[ao.player_id()].clone().iter().map(|c| c.card_to_char()).collect());
+                        } else {
+                            self.restrict(ao.player_id(), vec![ao.cards()[0].card_to_char()]);
+                        }
                     }
                     2 => {
                         self.public_constraints[ao.player_id()].push(ao.cards()[0]);
@@ -373,6 +378,7 @@ impl BruteCardCountManager {
     /// This function filters out `self.calculated_states` such that only
     /// states where `player_reveal` possesses *all* cards in `card_chars` remain.
     pub fn restrict(&mut self, player_reveal: usize, card_chars: Vec<char>) {
+        log::info!("Brute Prob: Restrict Ran: player: {}, cards: {:?}", player_reveal, card_chars);
         self.calculated_states.retain(|state| {
             Self::player_has_cards(
                 state,
@@ -382,6 +388,7 @@ impl BruteCardCountManager {
                 &self.index_end_arr,
             )
         });
+        // log::info!("legal states after Restrict: {:?}", self.calculated_states);
     }
     /// This function returns true if a player can have a particular card
     pub fn player_can_have_card(&self, player_id: usize, card: Card) -> bool {
@@ -583,6 +590,28 @@ impl BruteCardCountManager {
         log::info!("Brute public constraints: {:?}", self.validated_public_constraints());
         log::info!("Brute inferred constraints: {:?}", self.validated_inferred_constraints());
         log::info!("Brute impossible cards: {:?}", self.validated_impossible_constraints());
-        // log::info!("{:?}", self.calculated_states);
+    }
+    /// Checks if calculated_states fulfils all self.public_constraints
+    pub fn validate(&self) -> bool {
+        let mut output = true;
+        for (player_id, card_vec) in self.public_constraints.iter().enumerate() {
+            let card_chars = card_vec.iter().map(|c| c.card_to_char()).collect();
+            output = self.calculated_states.iter().all(|state| Self::validate_str(state, player_id, &card_chars)) && output;
+            if !output {
+                return output
+            }
+        }
+        output
+    }
+    /// Assumes card_chars is sorted, for the love of God sort it first
+    fn validate_str(str: &str, player_id: usize, card_chars: &Vec<char>) -> bool {
+        let (index_start, index_end) = Self::player_slice_bounds(player_id);
+        if card_chars.len() == 2 {
+            let card_str: String = card_chars.iter().collect();
+            return str[index_start..index_end] == card_str;
+        } else if card_chars.len() == 1 {
+            return str[index_start..index_end].chars().nth(0) == Some(card_chars[0]) || str[index_start..index_end].chars().nth(1) == Some(card_chars[0])
+        }
+        true
     }
 }

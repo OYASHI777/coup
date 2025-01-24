@@ -65,11 +65,17 @@ impl Debug for CompressedGroupConstraint {
 // [FIRST GLANCE PRIORITY]      - 6S inferred counts can generated when required instead of always being allocated
 // [FIRST GLANCE PRIORITY] Consider if counts should be stored at all
 // TODO: mutually exclusive group additions should consider unions between individual players too? else sometimes we miss out on the 3 of a kind, when inferred are added
+//      - wait should this already consider unions with individual players? in ME Union
 // TODO: Consider that RevealRedraw multiple times provides hidden info that might be missed.
-// TODO: Consider case when group is fully filled
+// TODO: [HANDLE CASE] Consider case when group is fully filled
 // HMM: I realise if a group has all but 1 slot known, [1 1 0 0 0 0 0] 1 Duke 2 Contessa, All parties cant have both Cap and Ass
 // HMM: If a player has 1 known card, it obviously precludes many combos
-// TODO: Add the complement group to all that is known => might need to add the FullGroup
+// TODO: Add the complement group to all that is known => might need to add the FullGroup => also to add to Compressed (i guess complements with <=3 players / total unknown slots <?)
+//      - Or maybe complements of fully known players?
+//      - Dont implement this, complements should be fully implied in add_subsets
+//      - Complements are useful for impossible cases more so than inferred constraints, in that regard, only groups containing a not fully known player is useful
+//      - If you do implement it, groups can be built up from a ME way...
+// [IMPLEMENTATION NOTE]: Redundancy is currently not subset based but equality based, this allows all info to be used.
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 // [FIRST GLANCE PRIORITY] Consider processing all new items to add with redundant checks in bulk
@@ -1648,18 +1654,20 @@ impl CompressedCollectiveConstraint {
                         group_constraints.swap_remove(i);
                         continue 'outer;
                     }
+
+                    // Subset redundance
                     // If group i is made redundant by group j
-                    if group_constraints[j].part_list_is_subset_of(&group_constraints[i]) &&
-                    group_constraints[i].count_alive() <= group_constraints[j].count_alive() {
-                        group_constraints.swap_remove(i);
-                        continue 'outer;
-                    }
+                    // if group_constraints[j].part_list_is_subset_of(&group_constraints[i]) &&
+                    // group_constraints[i].count_alive() <= group_constraints[j].count_alive() {
+                    //     group_constraints.swap_remove(i);
+                    //     continue 'outer;
+                    // }
                     // If group j is made redundant by group i
-                    if group_constraints[i].part_list_is_subset_of(&group_constraints[j]) &&
-                    group_constraints[j].count_alive() <= group_constraints[i].count_alive() {
-                        group_constraints.swap_remove(j);
-                        continue 'inner;
-                    }
+                    // if group_constraints[i].part_list_is_subset_of(&group_constraints[j]) &&
+                    // group_constraints[j].count_alive() <= group_constraints[i].count_alive() {
+                    //     group_constraints.swap_remove(j);
+                    //     continue 'inner;
+                    // }
                     j += 1;
                 }
                 i += 1;
@@ -1744,15 +1752,20 @@ impl CompressedCollectiveConstraint {
     fn non_redundant_push(vec: &mut Vec<CompressedGroupConstraint>, group: CompressedGroupConstraint) {
         let mut i: usize = 0;
         while i < vec.len() {
-            if vec[i].part_list_is_subset_of(&group) && 
-            group.count_alive() <= vec[i].count_alive() {
-                // group is redundant
+            // Subset redundance
+            // if vec[i].part_list_is_subset_of(&group) && 
+            // group.count_alive() <= vec[i].count_alive() {
+            //     // group is redundant
+            //     return
+            // }
+            // if group.part_list_is_subset_of(&vec[i]) &&
+            // vec[i].count_alive() <= group.count_alive() {
+            //     vec.swap_remove(i);
+            //     continue;
+            // }
+            // Testing duplicate redundance
+            if group == vec[i] {
                 return
-            }
-            if group.part_list_is_subset_of(&vec[i]) &&
-            vec[i].count_alive() <= group.count_alive() {
-                vec.swap_remove(i);
-                continue;
             }
             i += 1;
         }
@@ -1769,17 +1782,22 @@ impl CompressedCollectiveConstraint {
     fn non_redundant_push_tracked(vec: &mut Vec<CompressedGroupConstraint>, group: CompressedGroupConstraint) -> bool {
         let mut i: usize = 0;
         while i < vec.len() {
-            if vec[i].part_list_is_subset_of(&group) && 
-            group.count_alive() <= vec[i].count_alive() {
-                // group is redundant
-                log::trace!("non_redundant_push_tracked did not add group: {}", group);
-                log::trace!("non_redundant_push_tracked in vec: {:?}", vec);
+            // Subset redundance
+            // if vec[i].part_list_is_subset_of(&group) && 
+            // group.count_alive() <= vec[i].count_alive() {
+            //     // group is redundant
+            //     log::trace!("non_redundant_push_tracked did not add group: {}", group);
+            //     log::trace!("non_redundant_push_tracked in vec: {:?}", vec);
+            //     return false
+            // }
+            // if group.part_list_is_subset_of(&vec[i]) &&
+            // vec[i].count_alive() <= group.count_alive() {
+            //     vec.swap_remove(i);
+            //     continue;
+            // }
+            // Testing duplicate redundance
+            if group == vec[i] {
                 return false
-            }
-            if group.part_list_is_subset_of(&vec[i]) &&
-            vec[i].count_alive() <= group.count_alive() {
-                vec.swap_remove(i);
-                continue;
             }
             i += 1;
         }

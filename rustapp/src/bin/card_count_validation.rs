@@ -1,4 +1,3 @@
-
 use log::LevelFilter;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
@@ -6,8 +5,8 @@ use rustapp::history_public::{AOName, ActionObservation, Card, History};
 use rustapp::prob_manager::brute_prob::BruteCardCountManager;
 use rustapp::prob_manager::naive_prob::NaiveProb;
 use rustapp::prob_manager::bit_prob::BitCardCountManager;
-use std::fs::File;
-use std::io::Write;
+use std::fs::{File, OpenOptions};
+use std::io::{Write};
 use env_logger::{Builder, Env, Target};
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
@@ -17,13 +16,14 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 // ANOTHER BUG: groups_constraints can be empty even if all dead, but needs at least 1 3 dead set.. 3 dead is not redundant
 // FIX: adding single group of 3 is ok in the case of pile
 fn main() {
-    let game_no = 100;
+    let game_no = 25;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 1;
+    let print_frequency: usize = 10;
     game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
+    // instant_delete();
 }
 pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool){
     if log_bool{
@@ -61,9 +61,12 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
             new_moves = hh.generate_legal_moves();
+            log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             new_moves.retain(|m| m.name() != AOName::RevealRedraw);
+            log::info!("{}", format!("Legal Moves Retained: {:?}", new_moves));
             if new_moves[0].name() != AOName::CollectiveChallenge {
-                log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+                // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
             } else {
                 // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
                 log::info!("{}", format!("Legal Moves: CollectiveChallenge"));
@@ -98,6 +101,13 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 hh.push_ao(output);
                 prob.push_ao(&output, bool_know_priv_info);
                 bit_prob.push_ao(&output, bool_know_priv_info);
+                match output.name() {
+                    AOName::RevealRedraw | 
+                    AOName::Discard | AOName::ExchangeDraw => {
+                        prob.print_legal_states();
+                    },
+                    _ => {},
+                }
                 let validated_public_constraints = prob.validated_public_constraints();
                 let validated_inferred_constraints = prob.validated_inferred_constraints();
                 let validated_impossible_constraints = prob.validated_impossible_constraints();
@@ -127,8 +137,14 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                     true => "PASSED",
                     false => "FAILED",
                 });
+                let pass_brute_prob_validity = prob.validate();
+                if !pass_brute_prob_validity {
+                    log::info!("Brute Prob Public Constraint Validity: FAILED");
+                }
                 if !pass_inferred_constraints {
                     prob.print_legal_states();
+                }
+                if !pass_inferred_constraints || !pass_brute_prob_validity{
                     panic!()
                 }
                 public_constraints_correct += pass_public_constraints as usize;
@@ -311,7 +327,10 @@ pub fn temp_test_brute() {
     let can_14: bool = brute_prob.player_can_have_cards(2, &vec![Card::Contessa, Card::Contessa]);
     log::info!("AA: {can_0}, AB: {can_1}, AC: {can_2}, AD: {can_3}, AE: {can_4}, BB: {can_5}, BC: {can_6}, BD: {can_7}, BE: {can_8}, CC: {can_9}, CD: {can_10}, CE: {can_11}, DD: {can_12}, DE: {can_13}, EE: {can_14}");
 }
-
+pub fn instant_delete() {
+    let output = BruteCardCountManager::player_has_cards("ABAABBCCCDDDEEE", 0, &['A', 'A'], &[0, 2, 4, 6, 8, 10, 12], &[2, 4, 6, 8, 10, 12, 15]);
+    println!("{output}");
+}
 pub fn logger(level: LevelFilter){
     // let log_file = File::create("app.log").unwrap();
 
