@@ -72,6 +72,7 @@ impl BitCardCountManager {
                         self.constraint_history.push(self.constraint_history[self.constraint_history.len() - self.prev_index()].clone());
                         if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
                             last_constraint.death(ao.player_id(), *temp_card);
+                            last_constraint.sort_unstable();
                         } else {
                             debug_assert!(false, "constraint not stored at prev_index!");
                         }
@@ -85,6 +86,7 @@ impl BitCardCountManager {
                     if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
                         last_constraint.death(ao.player_id(), temp_cards[0]);
                         last_constraint.death(ao.player_id(), temp_cards[1]);
+                        last_constraint.sort_unstable();
                     } else {
                         debug_assert!(false, "Card does not exist!!");
                     }
@@ -98,6 +100,7 @@ impl BitCardCountManager {
             self.constraint_history.push(self.constraint_history[self.constraint_history.len() - self.prev_index()].clone());
             if let Some(last_constraint) = self.constraint_history.last_mut().and_then(|opt| opt.as_mut()) {
                 last_constraint.reveal_redraw(ao.player_id(), ao.card());
+                last_constraint.sort_unstable();
             } else {
                 // Handle the case where the last element is None or the vector is empty
                 debug_assert!(false, "constraint not stored at prev_index!");
@@ -123,9 +126,11 @@ impl BitCardCountManager {
                     // }
                     // TODO: Actually store the private knowledge
                     last_constraint.ambassador_private(ao.player_id());
+                    last_constraint.sort_unstable();
                 } else {
                     // Case where adding to past history and one does not know what card is drawn in exchange draw
                     last_constraint.ambassador_public(ao.player_id());
+                    last_constraint.sort_unstable();
                 }
             } else {
                 debug_assert!(false, "constraint not stored at prev_index!");

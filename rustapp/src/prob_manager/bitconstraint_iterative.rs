@@ -653,6 +653,14 @@ impl CompressedCollectiveConstraint {
         // Group must include pile or it is false
         participation_list[6]
     }
+    pub fn sort_unstable(&mut self) {
+        for vec in self.public_constraints.iter_mut() {
+            vec.sort_unstable();
+        }
+        for vec in self.inferred_constraints.iter_mut() {
+            vec.sort_unstable();
+        }
+    }
     /// Logs the state
     pub fn printlog(&self) {
         log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));

@@ -9,7 +9,7 @@ use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use std::fs::File;
 use std::io::Write;
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
@@ -18,12 +18,13 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 // FIX: adding single group of 3 is ok in the case of pile
 fn main() {
     let game_no = 10000000;
-    let log_bool = false;
+    let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 1000;
+    let print_frequency: usize = 10;
     // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
-    temp_test_brute();
+    game_rnd_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
+    // temp_test_brute();
 }
 pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool){
     if log_bool{
@@ -287,7 +288,6 @@ pub fn game_rnd_brute(game_no: usize, bool_know_priv_info: bool, print_frequency
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
             new_moves = hh.generate_legal_moves();
-            new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             let test_impossible_constraints = bit_prob.latest_constraint().generate_one_card_impossibilities_player_card_indexing();
             log::info!("Impossible cards before choosing move: {:?}", test_impossible_constraints);
             if new_moves[0].name() != AOName::CollectiveChallenge {
@@ -358,8 +358,46 @@ pub fn temp_test_brute() {
     logger(LOG_LEVEL);
     let mut brute_prob = BruteCardCountManager::new();
     brute_prob.printlog();
-    brute_prob.push_ao(&ActionObservation::Discard { player_id: 1, card: [Card::Ambassador; 2], no_cards: 1 }, false);
+    brute_prob.restrict(0, vec!['A']);
     brute_prob.printlog();
+    brute_prob.restrict(0, vec!['B']);
+    brute_prob.printlog();
+    brute_prob.restrict(1, vec!['C', 'D']);
+    brute_prob.printlog();
+    brute_prob.reveal_redraw(2, 'A');
+    brute_prob.printlog();
+    brute_prob.reveal_redraw(2, 'C');
+    brute_prob.printlog();
+    brute_prob.reveal_redraw(2, 'E');
+    brute_prob.printlog();
+    brute_prob.reveal_redraw(2, 'B');
+    brute_prob.printlog();
+    brute_prob.reveal_redraw(2, 'B');
+    brute_prob.printlog();
+    brute_prob.ambassador(2);
+    brute_prob.printlog();
+    let can_amb: bool = brute_prob.player_can_have_card(2, Card::Ambassador);
+    let can_ass: bool = brute_prob.player_can_have_card(2, Card::Assassin);
+    let can_cap: bool = brute_prob.player_can_have_card(2, Card::Captain);
+    let can_duk: bool = brute_prob.player_can_have_card(2, Card::Duke);
+    let can_con: bool = brute_prob.player_can_have_card(2, Card::Contessa);
+    log::info!("A: {can_amb}, B: {can_ass}, C: {can_cap}, D: {can_duk}, E: {can_con}");
+    let can_0: bool = brute_prob.player_can_have_cards(2, &vec![Card::Ambassador, Card::Ambassador]);
+    let can_1: bool = brute_prob.player_can_have_cards(2, &vec![Card::Ambassador, Card::Assassin]);
+    let can_2: bool = brute_prob.player_can_have_cards(2, &vec![Card::Ambassador, Card::Captain]);
+    let can_3: bool = brute_prob.player_can_have_cards(2, &vec![Card::Ambassador, Card::Duke]);
+    let can_4: bool = brute_prob.player_can_have_cards(2, &vec![Card::Ambassador, Card::Contessa]);
+    let can_5: bool = brute_prob.player_can_have_cards(2, &vec![Card::Assassin, Card::Assassin]);
+    let can_6: bool = brute_prob.player_can_have_cards(2, &vec![Card::Assassin, Card::Captain]);
+    let can_7: bool = brute_prob.player_can_have_cards(2, &vec![Card::Assassin, Card::Duke]);
+    let can_8: bool = brute_prob.player_can_have_cards(2, &vec![Card::Assassin, Card::Contessa]);
+    let can_9: bool = brute_prob.player_can_have_cards(2, &vec![Card::Captain, Card::Captain]);
+    let can_10: bool = brute_prob.player_can_have_cards(2, &vec![Card::Captain, Card::Duke]);
+    let can_11: bool = brute_prob.player_can_have_cards(2, &vec![Card::Captain, Card::Contessa]);
+    let can_12: bool = brute_prob.player_can_have_cards(2, &vec![Card::Duke, Card::Duke]);
+    let can_13: bool = brute_prob.player_can_have_cards(2, &vec![Card::Duke, Card::Contessa]);
+    let can_14: bool = brute_prob.player_can_have_cards(2, &vec![Card::Contessa, Card::Contessa]);
+    log::info!("AA: {can_0}, AB: {can_1}, AC: {can_2}, AD: {can_3}, AE: {can_4}, BB: {can_5}, BC: {can_6}, BD: {can_7}, BE: {can_8}, CC: {can_9}, CD: {can_10}, CE: {can_11}, DD: {can_12}, DE: {can_13}, EE: {can_14}");
 }
 
 pub fn logger(level: LevelFilter){
