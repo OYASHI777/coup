@@ -52,6 +52,10 @@ impl BruteCardCountManager {
         self.inferred_constraints.push(Vec::with_capacity(3));
         self.calculated_states = self.all_states.clone().into_iter().collect();
     }
+    /// adds public constraint
+    pub fn add_public_constraint(&mut self, player_id: usize, card: Card) {
+        self.public_constraints[player_id].push(card);
+    }
     /// Modifies internal state based on latest action done by player
     pub fn push_ao(&mut self, ao: &ActionObservation, bool_know_priv_info: bool) {
         debug_assert!(!bool_know_priv_info, "Not yet supported!");
@@ -208,28 +212,30 @@ impl BruteCardCountManager {
     
         let mut result = Vec::new();
     
+        let mut revealed_player_cards = player_reveal_cards.clone();
+        // Remove the card_i from i and card_j from j
+        // (We remove only one occurrence if duplicates are present)
+        if let Some(pos_i) = revealed_player_cards.iter().position(|&c| c == card_i) {
+            revealed_player_cards.swap_remove(pos_i);
+        }
+        // Case when same card received back
+        result.push(original_str.to_string());
+
         // For each card in player_j, swap with card_i
-        for &card_j in &player_other_cards {
+        for (pos_other, &card_j) in player_other_cards.iter().enumerate() {
             // Work on local copies
-            let mut new_i_cards = player_reveal_cards.clone();
-            let mut new_j_cards = player_other_cards.clone();
+            let mut new_revealed_player_cards = revealed_player_cards.clone();
+            let mut new_other_player_cards = player_other_cards.clone();
     
-            // Remove the card_i from i and card_j from j
-            // (We remove only one occurrence if duplicates are present)
-            if let Some(pos_i) = new_i_cards.iter().position(|&c| c == card_i) {
-                new_i_cards.remove(pos_i);
-            }
-            if let Some(pos_j) = new_j_cards.iter().position(|&c| c == card_j) {
-                new_j_cards.remove(pos_j);
-            }
+            new_other_player_cards.swap_remove(pos_other);
     
             // Swap them
-            new_i_cards.push(card_j);
-            new_j_cards.push(card_i);
+            new_revealed_player_cards.push(card_j);
+            new_other_player_cards.push(card_i);
     
             // Sort each player's cards to maintain ascending order in the final string
-            new_i_cards.sort_unstable();
-            new_j_cards.sort_unstable();
+            new_revealed_player_cards.sort_unstable();
+            new_other_player_cards.sort_unstable();
     
             // Rebuild the final string
             let mut new_string = String::new();
@@ -237,9 +243,9 @@ impl BruteCardCountManager {
             for player_id in 0..7 {
                 let (start, end) = Self::player_slice_bounds(player_id);
                 if player_id == player_reveal {
-                    new_string.push_str(&new_i_cards.iter().collect::<String>());
+                    new_string.push_str(&new_revealed_player_cards.iter().collect::<String>());
                 } else if player_id == player_other {
-                    new_string.push_str(&new_j_cards.iter().collect::<String>());
+                    new_string.push_str(&new_other_player_cards.iter().collect::<String>());
                 } else {
                     // remain as in the original string
                     new_string.push_str(&original_str[start..end]);
@@ -252,6 +258,7 @@ impl BruteCardCountManager {
     
         result
     }
+    // TODO: Check if same cards can be swapped
     /// Ambassador: Mixes all the player's cards with player 6 (pile)
     /// Returns all possible outcome combinations
     pub fn mix_multiple_chars_with_player6(
@@ -331,6 +338,7 @@ impl BruteCardCountManager {
     ) {
         // Step 1: In parallel, call `mix_one_char` for each state, flatten the results
         // into a single Vec<String>.
+        self.restrict(player_reveal, vec![card_i]);
         let new_states_vec: Vec<String> = self
             .calculated_states
             .par_iter()  // parallel iteration over our existing states
@@ -565,6 +573,10 @@ impl BruteCardCountManager {
     /// Assumes calculates states align with latest constraints
     pub fn validated_inferred_constraints(&self) -> Vec<Vec<Card>> {
         self.inferred_constraints.clone()
+    }
+    /// Print Calculated States => All current possible legal states
+    pub fn print_legal_states(&self) {
+        log::info!("Brute Prob legal_states.len: {:?}", self.calculated_states);
     }
     /// Prints useful shit
     pub fn printlog(&self) {

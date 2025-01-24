@@ -17,13 +17,13 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 // ANOTHER BUG: groups_constraints can be empty even if all dead, but needs at least 1 3 dead set.. 3 dead is not redundant
 // FIX: adding single group of 3 is ok in the case of pile
 fn main() {
-    let game_no = 10000000;
+    let game_no = 10;
     let log_bool = true;
     let bool_know_priv_info = false;
     let print_frequency: usize = 1;
-    game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
+    // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
-    // temp_test_brute();
+    temp_test_brute();
 }
 pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool){
     if log_bool{
@@ -115,7 +115,9 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
                 log::info!("inferred_constraints: {}", match pass_inferred_constraints {
                     true => "PASSED",
-                    false => "FAILED",
+                    false => {
+                        "FAILED"
+                    },
                 });
                 log::info!("validated_impossible_constraints: {:?}", validated_impossible_constraints);
                 log::info!("test_impossible_constraints: {:?}", test_impossible_constraints);
@@ -124,6 +126,10 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                     true => "PASSED",
                     false => "FAILED",
                 });
+                if !pass_inferred_constraints {
+                    prob.print_legal_states();
+                    panic!()
+                }
                 public_constraints_correct += pass_public_constraints as usize;
                 inferred_constraints_correct += pass_inferred_constraints as usize;
                 impossible_constraints_correct += pass_impossible_constraints as usize;
@@ -259,23 +265,21 @@ pub fn temp_test_brute() {
     logger(LOG_LEVEL);
     let mut brute_prob = BruteCardCountManager::new();
     brute_prob.printlog();
-    brute_prob.restrict(0, vec!['A']);
+    brute_prob.add_public_constraint(0, Card::Ambassador);
+    brute_prob.add_public_constraint(0, Card::Assassin);
+    brute_prob.restrict(0, vec!['A', 'B']);
+    brute_prob.update_constraints();
     brute_prob.printlog();
-    brute_prob.restrict(0, vec!['B']);
-    brute_prob.printlog();
+    brute_prob.add_public_constraint(1, Card::Captain);
+    brute_prob.add_public_constraint(1, Card::Duke);
     brute_prob.restrict(1, vec!['C', 'D']);
+    brute_prob.update_constraints();
     brute_prob.printlog();
-    brute_prob.reveal_redraw(2, 'A');
-    brute_prob.printlog();
-    brute_prob.reveal_redraw(2, 'C');
-    brute_prob.printlog();
-    brute_prob.reveal_redraw(2, 'E');
+    brute_prob.restrict(3, vec!['B']);
+    brute_prob.update_constraints();
     brute_prob.printlog();
     brute_prob.reveal_redraw(2, 'B');
-    brute_prob.printlog();
-    brute_prob.reveal_redraw(2, 'B');
-    brute_prob.printlog();
-    brute_prob.ambassador(2);
+    brute_prob.update_constraints();
     brute_prob.printlog();
     let can_amb: bool = brute_prob.player_can_have_card(2, Card::Ambassador);
     let can_ass: bool = brute_prob.player_can_have_card(2, Card::Assassin);
