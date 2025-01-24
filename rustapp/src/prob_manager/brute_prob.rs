@@ -44,9 +44,12 @@ impl BruteCardCountManager {
     }
     /// Resets
     pub fn reset(&mut self) {
-        self.certain_cards.clear();
-        self.public_constraints.clear();
-        self.inferred_constraints.clear();
+        self.certain_cards = vec![Vec::with_capacity(2); 6];
+        self.certain_cards.push(Vec::with_capacity(3));
+        self.public_constraints = vec![Vec::with_capacity(2); 6];
+        self.public_constraints.push(Vec::with_capacity(3));
+        self.inferred_constraints = vec![Vec::with_capacity(2); 6];
+        self.inferred_constraints.push(Vec::with_capacity(3));
         self.calculated_states = self.all_states.clone().into_iter().collect();
     }
     /// Modifies internal state based on latest action done by player
@@ -91,7 +94,7 @@ impl BruteCardCountManager {
         panic!("No pops! This goes in one direction only!")
     }
     /// Returns bounds of indices for a particular player
-    fn player_slice_bounds(player_id: usize) -> (usize, usize) {
+    const fn player_slice_bounds(player_id: usize) -> (usize, usize) {
         match player_id {
             0 => (0, 2),
             1 => (2, 4),
@@ -189,19 +192,6 @@ impl BruteCardCountManager {
         player_other: usize,
         card_i: char,
     ) -> Vec<String> {
-        // Helper to determine the slice boundaries for each player's cards
-        fn player_slice_bounds(player_id: usize) -> (usize, usize) {
-            match player_id {
-                0 => (0, 2),
-                1 => (2, 4),
-                2 => (4, 6),
-                3 => (6, 8),
-                4 => (8, 10),
-                5 => (10, 12),
-                6 => (12, 15),
-                _ => panic!("Invalid player_id"),
-            }
-        }
     
         // Extract the slices from the original string
         let (start_reveal, end_reveal) = Self::player_slice_bounds(player_reveal);
@@ -245,7 +235,7 @@ impl BruteCardCountManager {
             let mut new_string = String::new();
             // For each of the 7 players, we either insert the new_i_cards, new_j_cards, or original
             for player_id in 0..7 {
-                let (start, end) = player_slice_bounds(player_id);
+                let (start, end) = Self::player_slice_bounds(player_id);
                 if player_id == player_reveal {
                     new_string.push_str(&new_i_cards.iter().collect::<String>());
                 } else if player_id == player_other {
@@ -504,7 +494,7 @@ impl BruteCardCountManager {
     ///
     /// In other words, for all states, the substring of `player_id` does not
     /// contain the corresponding card character. Hence, that player **cannot** have that card.
-    pub fn player_impossible_cards(&self) -> [[bool; 5]; 7] {
+    pub fn validated_impossible_constraints(&self) -> [[bool; 5]; 7] {
         let mut result = [[false; 5]; 7];
 
         // Early return if we have no states; then every card is impossible in all states
@@ -582,7 +572,7 @@ impl BruteCardCountManager {
         log::info!("Brute certain cards: {:?}", self.certain_cards);
         log::info!("Brute public constraints: {:?}", self.validated_public_constraints());
         log::info!("Brute inferred constraints: {:?}", self.validated_inferred_constraints());
-        log::info!("Brute impossible cards: {:?}", self.player_impossible_cards());
+        log::info!("Brute impossible cards: {:?}", self.validated_impossible_constraints());
         // log::info!("{:?}", self.calculated_states);
     }
 }

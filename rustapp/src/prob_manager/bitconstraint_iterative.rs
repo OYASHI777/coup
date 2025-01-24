@@ -65,6 +65,7 @@ impl Debug for CompressedGroupConstraint {
 // [FIRST GLANCE PRIORITY]      - 6S inferred counts can generated when required instead of always being allocated
 // [FIRST GLANCE PRIORITY] Consider if counts should be stored at all
 // TODO: mutually exclusive group additions should consider unions between individual players too? else sometimes we miss out on the 3 of a kind, when inferred are added
+// TODO: Consider that RevealRedraw multiple times provides hidden info that might be missed.
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 // [FIRST GLANCE PRIORITY] Consider processing all new items to add with redundant checks in bulk
