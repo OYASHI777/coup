@@ -258,7 +258,6 @@ impl BruteCardCountManager {
     
         result
     }
-    // TODO: Check if same cards can be swapped
     /// Ambassador: Mixes all the player's cards with player 6 (pile)
     /// Returns all possible outcome combinations
     pub fn mix_multiple_chars_with_player6(
@@ -286,7 +285,6 @@ impl BruteCardCountManager {
         // The number of cards in i_cards and j_cards
         let i_count = i_cards.len();        // typically 2 if i < 6, or 3 if i == 6
         let j_count = player_j_cards.len(); // should be 3 for player 6
-        let total = i_count + j_count;
     
         // Generate all possible ways to re-distribute these total cards
         // back into i_count for Player i and j_count for Player 6
@@ -303,7 +301,7 @@ impl BruteCardCountManager {
             // Remove exactly one occurrence of each chosen card from new_j_cards
             for c in &combo_for_i {
                 if let Some(pos) = new_j_cards.iter().position(|&x| x == *c) {
-                    new_j_cards.remove(pos);
+                    new_j_cards.swap_remove(pos);
                 }
             }
             new_j_cards.sort_unstable();

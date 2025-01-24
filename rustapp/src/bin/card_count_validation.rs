@@ -17,13 +17,13 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 // ANOTHER BUG: groups_constraints can be empty even if all dead, but needs at least 1 3 dead set.. 3 dead is not redundant
 // FIX: adding single group of 3 is ok in the case of pile
 fn main() {
-    let game_no = 10;
+    let game_no = 100;
     let log_bool = true;
     let bool_know_priv_info = false;
     let print_frequency: usize = 1;
-    // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
+    game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
-    temp_test_brute();
+    // temp_test_brute();
 }
 pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool){
     if log_bool{
@@ -61,6 +61,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
             new_moves = hh.generate_legal_moves();
+            new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             if new_moves[0].name() != AOName::CollectiveChallenge {
                 log::info!("{}", format!("Legal Moves: {:?}", new_moves));
             } else {
@@ -265,22 +266,28 @@ pub fn temp_test_brute() {
     logger(LOG_LEVEL);
     let mut brute_prob = BruteCardCountManager::new();
     brute_prob.printlog();
+
     brute_prob.add_public_constraint(0, Card::Ambassador);
     brute_prob.add_public_constraint(0, Card::Assassin);
     brute_prob.restrict(0, vec!['A', 'B']);
     brute_prob.update_constraints();
     brute_prob.printlog();
+
     brute_prob.add_public_constraint(1, Card::Captain);
     brute_prob.add_public_constraint(1, Card::Duke);
     brute_prob.restrict(1, vec!['C', 'D']);
     brute_prob.update_constraints();
     brute_prob.printlog();
+    
+    brute_prob.add_public_constraint(3, Card::Assassin);
     brute_prob.restrict(3, vec!['B']);
     brute_prob.update_constraints();
     brute_prob.printlog();
+
     brute_prob.reveal_redraw(2, 'B');
     brute_prob.update_constraints();
     brute_prob.printlog();
+
     let can_amb: bool = brute_prob.player_can_have_card(2, Card::Ambassador);
     let can_ass: bool = brute_prob.player_can_have_card(2, Card::Assassin);
     let can_cap: bool = brute_prob.player_can_have_card(2, Card::Captain);

@@ -69,6 +69,7 @@ impl Debug for CompressedGroupConstraint {
 // TODO: Consider case when group is fully filled
 // HMM: I realise if a group has all but 1 slot known, [1 1 0 0 0 0 0] 1 Duke 2 Contessa, All parties cant have both Cap and Ass
 // HMM: If a player has 1 known card, it obviously precludes many combos
+// TODO: Add the complement group to all that is known => might need to add the FullGroup
 // [FIRST GLANCE PRIORITY] Consider making a private constraint, to contain players' private information, to generate the public, and each players' understanding all at once
 // [FIRST GLANCE PRIORITY] Add inferred impossible cards for each player? Then just check inferred joint else all but impossible cards to generate?
 // [FIRST GLANCE PRIORITY] Consider processing all new items to add with redundant checks in bulk
