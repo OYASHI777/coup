@@ -10,7 +10,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{Write};
 use env_logger::{Builder, Env, Target};
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
-pub const LOG_FILE_NAME: &str = "validation_test.log";
+pub const LOG_FILE_NAME: &str = "reveal_redraw_test.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
@@ -23,8 +23,8 @@ fn main() {
     let bool_know_priv_info = false;
     let print_frequency: usize = 10;
     // (DONE) [TEST 1000] Discard + Ambassador Release farm
-    // (Running 0) Discard + RevealRedraw Release mode
-    // (Ran 90) [TEST 1000] Discard + Ambassador Debug mode
+    // [TEST 1000] Discard + RevealRedraw Release mode
+    // (Ran 210) [TEST 1000] Discard + Ambassador Debug mode
     // [TEST 1000] Discard Debug mode
     // [TEST 1000] Discard + RevealRedraw Debug mode
     // [TEST OVERNIGHT] Discard + Ambassador Debug mode
