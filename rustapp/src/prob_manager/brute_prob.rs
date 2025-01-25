@@ -345,7 +345,9 @@ impl BruteCardCountManager {
     ) {
         // Step 1: In parallel, call `mix_one_char` for each state, flatten the results
         // into a single Vec<String>.
-        self.restrict(player_reveal, vec![card_i]);
+        let mut current_dead_cards: Vec<char> = self.public_constraints[player_reveal].clone().iter().map(|c| c.card_to_char()).collect();
+        current_dead_cards.push(card_i);
+        self.restrict(player_reveal, current_dead_cards);
         let new_states_vec: Vec<String> = self
             .calculated_states
             .par_iter()  // parallel iteration over our existing states
