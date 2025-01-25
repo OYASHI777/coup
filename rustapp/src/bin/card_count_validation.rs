@@ -2,13 +2,15 @@ use log::LevelFilter;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
+use rustapp::prob_manager::bitconstraint_iterative::{CompressedCollectiveConstraint, CompressedGroupConstraint};
 use rustapp::prob_manager::brute_prob::BruteCardCountManager;
 use rustapp::prob_manager::naive_prob::NaiveProb;
 use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+pub const LOG_FILE_NAME: &str = "validation_test.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
@@ -16,10 +18,18 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 // ANOTHER BUG: groups_constraints can be empty even if all dead, but needs at least 1 3 dead set.. 3 dead is not redundant
 // FIX: adding single group of 3 is ok in the case of pile
 fn main() {
-    let game_no = 25;
+    let game_no = 100000;
     let log_bool = true;
     let bool_know_priv_info = false;
     let print_frequency: usize = 10;
+    // (DONE) [TEST 1000] Discard + Ambassador Release farm
+    // (Running 0) Discard + RevealRedraw Release mode
+    // (Ran 90) [TEST 1000] Discard + Ambassador Debug mode
+    // [TEST 1000] Discard Debug mode
+    // [TEST 1000] Discard + RevealRedraw Debug mode
+    // [TEST OVERNIGHT] Discard + Ambassador Debug mode
+    // [TEST OVERNIGHT] Discard Debug mode
+    // [TEST OVERNIGHT] Discard + Ambassador Release farm
     game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
@@ -38,6 +48,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
     let mut impossible_constraints_correct: usize = 0;
     let mut total_tries: usize = 0;
     while game < game_no {
+        clear_log().expect("failed to clear log");
         log::info!("Game : {}", game);
         let mut hh = History::new(0);
         let mut step: usize = 0;
@@ -63,7 +74,8 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
             new_moves = hh.generate_legal_moves();
             log::info!("{}", format!("Legal Moves: {:?}", new_moves));
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
-            new_moves.retain(|m| m.name() != AOName::RevealRedraw);
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
+            new_moves.retain(|m| m.name() != AOName::Exchange);
             log::info!("{}", format!("Legal Moves Retained: {:?}", new_moves));
             if new_moves[0].name() != AOName::CollectiveChallenge {
                 // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
@@ -103,8 +115,8 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 bit_prob.push_ao(&output, bool_know_priv_info);
                 match output.name() {
                     AOName::RevealRedraw | 
-                    AOName::Discard | AOName::ExchangeDraw => {
-                        prob.print_legal_states();
+                    AOName::Discard | AOName::ExchangeDraw | AOName::Exchange => {
+                        // prob.print_legal_states();
                     },
                     _ => {},
                 }
@@ -140,11 +152,16 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 let pass_brute_prob_validity = prob.validate();
                 if !pass_brute_prob_validity {
                     log::info!("Brute Prob Public Constraint Validity: FAILED");
+                } else {
+                    log::info!("Brute Prob Public Constraint Validity: PASSED");
                 }
                 if !pass_inferred_constraints {
                     prob.print_legal_states();
                 }
-                if !pass_inferred_constraints || !pass_brute_prob_validity{
+                if !pass_inferred_constraints {
+                    panic!()
+                }
+                if !pass_brute_prob_validity{
                     panic!()
                 }
                 public_constraints_correct += pass_public_constraints as usize;
@@ -328,18 +345,53 @@ pub fn temp_test_brute() {
     log::info!("AA: {can_0}, AB: {can_1}, AC: {can_2}, AD: {can_3}, AE: {can_4}, BB: {can_5}, BC: {can_6}, BD: {can_7}, BE: {can_8}, CC: {can_9}, CD: {can_10}, CE: {can_11}, DD: {can_12}, DE: {can_13}, EE: {can_14}");
 }
 pub fn instant_delete() {
-    let output = BruteCardCountManager::player_has_cards("ABAABBCCCDDDEEE", 0, &['A', 'A'], &[0, 2, 4, 6, 8, 10, 12], &[2, 4, 6, 8, 10, 12, 15]);
-    println!("{output}");
 }
-pub fn logger(level: LevelFilter){
-    // let log_file = File::create("app.log").unwrap();
+// pub fn logger(level: LevelFilter){
+//     // let log_file = File::create("app.log").unwrap();
 
-    let log_file = File::create("card_count_validation.log").expect("Failed to create log file");
+//     let log_file = File::create("card_count_validation.log").expect("Failed to create log file");
 
-    // Initialize the env_logger builder with custom format
+//     // Initialize the env_logger builder with custom format
+//     Builder::from_env(Env::default().default_filter_or("info"))
+//         .format(|buf, record| {
+//             // Custom format: Timestamp, Level, and Message
+//             writeln!(
+//                 buf,
+//                 "{} [{}] - {}",
+//                 chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
+//                 record.level(),
+//                 record.args()
+//             )
+//         })
+//         // Set log level filter; this line is optional if using default_filter_or in from_env
+//         // .filter(None, LevelFilter::Trace) // Adjust the log level as needed
+//         .filter(None, level) // Adjust the log level as needed
+//         // Direct logs to the file
+//         .target(Target::Pipe(Box::new(log_file)))
+//         // Apply the configuration
+//         .init();
+// }
+pub fn clear_log() -> std::io::Result<()> {
+    // Open file with truncate flag to clear contents
+    OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(LOG_FILE_NAME)?;
+    Ok(())
+}
+pub fn logger(level: LevelFilter) {
+    // Clear log file before initializing logger
+    
+    let _ = clear_log();
+    let log_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(true)
+        .open(LOG_FILE_NAME)
+        .expect("Failed to open log file");
+
     Builder::from_env(Env::default().default_filter_or("info"))
         .format(|buf, record| {
-            // Custom format: Timestamp, Level, and Message
             writeln!(
                 buf,
                 "{} [{}] - {}",
@@ -348,11 +400,7 @@ pub fn logger(level: LevelFilter){
                 record.args()
             )
         })
-        // Set log level filter; this line is optional if using default_filter_or in from_env
-        // .filter(None, LevelFilter::Trace) // Adjust the log level as needed
-        .filter(None, level) // Adjust the log level as needed
-        // Direct logs to the file
+        .filter(None, level)
         .target(Target::Pipe(Box::new(log_file)))
-        // Apply the configuration
         .init();
 }

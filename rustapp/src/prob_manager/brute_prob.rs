@@ -270,7 +270,7 @@ impl BruteCardCountManager {
         original_str: &str,
         player_id_mix: usize,
     ) -> Vec<String> {
-       
+        debug_assert!(player_id_mix < 6, "Pile should not be here!");
         // We'll fix the "other" player to always be player_id = 6
         // (If player_id_i == 6, then you'd be mixing with yourself, which might not make sense,
         //  but we'll keep it consistent with the request.)
@@ -283,12 +283,16 @@ impl BruteCardCountManager {
         let i_cards: Vec<char> = original_str[start_i..end_i].chars().collect();
         let player_j_cards: Vec<char> = original_str[start_j..end_j].chars().collect();
     
-        // Combine all cards (player i's plus player 6's)
+        // Combine all cards (player_id_mix's non_dead card plus player 6's)
         let mut combined_cards = i_cards.clone();
         combined_cards.extend_from_slice(&player_j_cards);
-    
+        for card in self.public_constraints[player_id_mix].iter() {
+            if let Some(pos) = combined_cards.iter().position(|ch| *ch == card.card_to_char()) {
+                combined_cards.swap_remove(pos);
+            }
+        }
         // The number of cards in i_cards and j_cards
-        let i_count = i_cards.len();        // typically 2 if i < 6, or 3 if i == 6
+        let sample_count = i_cards.len() - self.public_constraints[player_id_mix].len();        // typically 2 if i < 6, or 3 if i == 6
         let j_count = player_j_cards.len(); // should be 3 for player 6
     
         // Generate all possible ways to re-distribute these total cards
@@ -296,11 +300,11 @@ impl BruteCardCountManager {
         // i.e., we choose any subset of `i_count` from the combined list for Player i
         // and the remaining `j_count` go to Player 6.
         let mut results = Vec::new();
-        for combo_for_i in Self::combinations(&combined_cards, i_count) {
+        for combo_for_i in Self::combinations(&combined_cards, sample_count) {
             // Sort the chosen cards for i
-            let mut new_i_cards = combo_for_i.clone();
+            let mut new_i_cards: Vec<char> = self.public_constraints[player_id_mix].iter().map(|c| c.card_to_char()).collect();
+            new_i_cards.extend_from_slice(&combo_for_i);
             new_i_cards.sort_unstable();
-    
             // The leftover cards go to j
             let mut new_j_cards = combined_cards.clone();
             // Remove exactly one occurrence of each chosen card from new_j_cards

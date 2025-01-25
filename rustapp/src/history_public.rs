@@ -355,20 +355,21 @@ impl Gamestate {
         }
     }
 }
+const MAX_HISTORY_LEN: usize = 200;
 pub struct History {
-    store: [ActionObservation; 1500],
+    store: [ActionObservation; MAX_HISTORY_LEN],
     store_len: usize,
-    dist_from_turn: [usize ; 1500],
+    dist_from_turn: [usize ; MAX_HISTORY_LEN],
     // influence: [u8; 6],
     // coins: [u8; 6],
-    gamestate: [Gamestate; 1500],
+    gamestate: [Gamestate; MAX_HISTORY_LEN],
     current_player_turn: usize, 
     public_card_count: HashMap<Card, u8>,
 }
 
 impl History {
     pub fn new(starting_player: usize) -> Self {
-        let mut temp: [Gamestate; 1500] = [Gamestate::empty(); 1500];
+        let mut temp: [Gamestate; MAX_HISTORY_LEN] = [Gamestate::empty(); MAX_HISTORY_LEN];
         temp[0] = Gamestate::new();
         let mut public_card_count: HashMap<Card, u8> = HashMap::new();
         public_card_count.insert(Card::Ambassador, 0);
@@ -377,9 +378,9 @@ impl History {
         public_card_count.insert(Card::Duke, 0);
         public_card_count.insert(Card::Contessa, 0);
         History{
-            store: [ActionObservation::EmptyAO; 1500],
+            store: [ActionObservation::EmptyAO; MAX_HISTORY_LEN],
             store_len: 0,
-            dist_from_turn: [1; 1500],
+            dist_from_turn: [1; MAX_HISTORY_LEN],
             gamestate: temp,
             // influence: [2, 2, 2, 2, 2, 2],
             // coins: [2, 2, 2, 2, 2, 2],
@@ -509,7 +510,7 @@ impl History {
         self.public_card_count[card]
     } 
     pub fn get_history(&self, len: usize) -> Vec<ActionObservation> {
-        debug_assert!(len <= 5000, "Use a proper len in get_history!");
+        debug_assert!(len <= MAX_HISTORY_LEN, "Use a proper len in get_history!");
         self.store[..len].to_vec()
     }
     pub fn store_len(&self) -> usize {
@@ -526,7 +527,7 @@ impl History {
         &self.store[index]
     }
     pub fn get_dist_from_turn(&self, len: usize) -> Vec<usize> {
-        debug_assert!(len <= 5000, "Use a proper len in get_dist_from_turn!");
+        debug_assert!(len <= MAX_HISTORY_LEN, "Use a proper len in get_dist_from_turn!");
         self.dist_from_turn[..len].to_vec()
     }
     pub fn next_player(&self, player_id: usize) -> usize {

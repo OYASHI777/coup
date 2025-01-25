@@ -67,7 +67,8 @@ impl Debug for CompressedGroupConstraint {
 // TODO: mutually exclusive group additions should consider unions between individual players too? else sometimes we miss out on the 3 of a kind, when inferred are added
 //      - wait should this already consider unions with individual players? in ME Union
 // TODO: Consider that RevealRedraw multiple times provides hidden info that might be missed.
-// TODO: [HANDLE CASE] Consider case when group is fully filled
+// TODO: [HANDLE IMPOSSIBLE CASE] Consider case when group is fully filled
+// TODO: [CHECK] redraw_inferred_adjustment => determine if relevant/efficient, can compare against amb which works fine
 // HMM: I realise if a group has all but 1 slot known, [1 1 0 0 0 0 0] 1 Duke 2 Contessa, All parties cant have both Cap and Ass
 // HMM: If a player has 1 known card, it obviously precludes many combos
 // TODO: Add the complement group to all that is known => might need to add the FullGroup => also to add to Compressed (i guess complements with <=3 players / total unknown slots <?)
@@ -415,6 +416,8 @@ impl CompressedGroupConstraint {
     }
     /// Returns true if participation list is subset of a group of only player and pile as true
     pub fn part_list_is_subset_of_player_and_pile(&self, player_id: usize) -> bool {
+        // Ignores the 0 flags case, which should not exist
+        debug_assert!((self.0 & Self::PLAYER_BITS) != 0, "0 flags case should not exist");
         Self::START_FLAGS[player_id] == (self.0 & Self::PLAYER_BITS) | Self::START_FLAGS[player_id]
     }
     // TODO: [TEST]
@@ -886,9 +889,7 @@ impl CompressedCollectiveConstraint {
                 if group.part_list_is_subset_of_player_and_pile(player_id) {
                     // Technically this should only be a group of pile and player if it works properly
                     debug_assert!(group.get_player_flag(player_id) && group.get_player_flag(6), "Either Player or Pile are false, assumption failed!");
-                    if output[card_num] < group.count_alive() {
-                        output[card_num] = group.count_alive();
-                    }
+                    output[card_num] = output[card_num].max(group.count_alive());
                 }
             }
         }
@@ -1156,12 +1157,13 @@ impl CompressedCollectiveConstraint {
             self.add_inferred_player_constraint(player_id, card);
         }
         // Commented out as it removes some group required by mut excl addition
-        // self.reveal_group_adjustment(player_id);
+        self.reveal_group_adjustment(player_id);
         self.clear_group_constraints(card);
         self.add_inferred_groups();
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
     }
+    // TODO: Review the purpose of this... should I match the amb case?
     /// Updates groups affected by revealing of information in reveal
     /// SPECIFICS:
     /// - See documentation in reveal
@@ -1274,6 +1276,8 @@ impl CompressedCollectiveConstraint {
                         //     group_constraints.swap_remove(i);
                         //     continue;
                         // }
+                        // TODO [OPTIMIZE REMOVAL]: Case [1 0 0 0 0 0 1] 2 Captain, player 1 has 1 dead duke
+                        // inferred_constraint for pile => has 1 Captain no need to remove this captain
                     }
                 }
                 i += 1;
@@ -1287,6 +1291,7 @@ impl CompressedCollectiveConstraint {
             self.impossible_constraints[6][i] = self.impossible_constraints[player_id][i];
         }
     }
+    // TODO: Check if same issue is present as with ambassador, see removal iteration implementation in ambassador
     /// Removes current inferred constraints and adds them to group based on mix
     /// RevealRedraw dilution of inferred information
     /// Adjust inferred constraints
@@ -1380,7 +1385,7 @@ impl CompressedCollectiveConstraint {
     }
     // TODO: Review group_constraint addition method
     /// Ambassador Dilution of inferred knowledge
-    /// Adjust inferred knowledge
+    /// Adjust inferred knowledge and avoids having to run subset groups again
     /// NOTE:
     /// - Information is "diluted" or "dissipated", since there is a reduction in absolutely known information about a particular player's state
     /// - This should ideally still reflect all possibly inferred information!
@@ -1401,6 +1406,7 @@ impl CompressedCollectiveConstraint {
     /// CASE: (alive, alive) (X, X) Pile: (A, A, A) => pile will have >= 1 A
     /// CASE: (alive, alive) (X, X) Pile: (A, A, X) => pile will have >= 0 A
     /// CASE: (alive, alive) (X, X) Pile: (A, X, X) => pile will have >= 0 A
+    /// ADDITION: Same applies but if player || pile has that amount of alive cards, so total is not just found from inferred, but also from group_constraints
     /// CONCLUSION: Inferred pile constraint for some card A will be total circulating A - no_alive cards?
     /// TODO: might need to consider the group constraints? if they add to the total circulating?
     /// TODO: [THEORY CHECK]
@@ -1417,7 +1423,17 @@ impl CompressedCollectiveConstraint {
         for inferred_card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
             // TODO: [CHANGE] Adding of group constraints should be for all inferred cards in the player union pile + dead cards
             // Reducing by player_lives, as that is the max one can take from the pile
-            for _ in 0..player_lives {
+            // let total_remaining = total_circulating_card_counts[inferred_card as usize] - player_lives;
+            // total_removal should be total_current_inferred - total_remaining
+            // Adding then subtracting to prevent overflows
+            log::trace!("=== Ambassador_inferred_adjustment ===");
+            log::trace!("Considering player: {}", player_id);
+            log::trace!("counts: {} + player_lives: {} - circulating_counts: {}", self.inferred_constraints[player_id].iter().filter(|c| **c == inferred_card).count(), player_lives, total_circulating_card_counts[inferred_card as usize]);
+            // TODO: [REMOVE] This is here to replicate a Integer subtraction with overflow error.
+            assert!(self.inferred_constraints[6].iter().filter(|c| **c == inferred_card).count() as u8 + player_lives >= total_circulating_card_counts[inferred_card as usize], "Found your error");
+            // Removing from pile
+            let total_removal = self.inferred_constraints[6].iter().filter(|c| **c == inferred_card).count() as u8 + player_lives - total_circulating_card_counts[inferred_card as usize];
+            for _ in 0..total_removal {
                 if let Some(pos) = self.inferred_constraints[6].iter().position(|c| *c == inferred_card) {
                     self.inferred_constraints[6].swap_remove(pos);
                 }
@@ -1443,6 +1459,7 @@ impl CompressedCollectiveConstraint {
     pub fn ambassador_public(&mut self, player_id: usize) {
         self.mix(player_id);
         self.ambassador_inferred_adjustment(player_id);
+        // Some groups can be inferred even after adjustment. E.g. before mix [1 0 0 0 0 0 1] 3 Duke => inferred_pile 1 Duke
         self.group_redundant_prune();
     }
     /// Function to call for move Ambassador, when considering private information seen by the player who used Ambassador
@@ -1677,7 +1694,10 @@ impl CompressedCollectiveConstraint {
     // TODO: [ALT] Make alternate version of this that adds with 2n checks for when you use it with a particular group added in mind.
     // TODO: Theory Check & Document
     // Or just use reveal LMAO, bacause thats what reveal does?
-    /// Im assuming self.group_constraints is not internally redundant
+    /// this function adds all the groups that can be inferred
+    /// 
+    /// Assumes self.group_constraints is not internally redundant
+    /// Leaves self.group_constraint not internally redundant
     pub fn add_inferred_groups(&mut self) {
         // DATA STRUCTURE: STORING IMPOSSIBLE ALIVE STATES
         // CASE 0: Player cannot have 4 cards
