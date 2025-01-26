@@ -1092,8 +1092,6 @@ impl CompressedCollectiveConstraint {
     pub fn death(&mut self, player_id: usize, card: Card) {
         log::trace!("In death");
         self.add_dead_player_constraint(player_id, card);
-        // i think dont need this reveal_group_adjustment for death?
-        // self.reveal_group_adjustment(player_id);
         // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
         // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
         //      - like if inferred info reflects the same thing as group constraint
@@ -1202,6 +1200,7 @@ impl CompressedCollectiveConstraint {
         // Won't this remove many groups that will need to be readded by mutually exclusive additions...
         // Removes groups that are now redundant
         for (card_num, group_constraints) in [&mut self.group_constraints_amb, &mut self.group_constraints_ass, &mut self.group_constraints_cap, &mut self.group_constraints_duk, &mut self.group_constraints_con].iter_mut().enumerate() {
+            let mut groups_to_add: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
             let mut i: usize = 0;
             while i < group_constraints.len() {
                 let group: &mut CompressedGroupConstraint = &mut group_constraints[i];
@@ -1240,11 +1239,15 @@ impl CompressedCollectiveConstraint {
                         //      - as order is not preserved in subset redundancy as it can remove groups currently in group_constraints
                         let readd_group = group.clone();
                         group_constraints.swap_remove(i);
-                        Self::non_redundant_push(group_constraints, readd_group);
+                        groups_to_add.push(readd_group);
                         continue;
                     }
                 }
                 i += 1;
+            }
+            // Add to groups
+            for group in groups_to_add {
+                Self::non_redundant_push(group_constraints, group);
             }
         }
     }
@@ -1584,6 +1587,7 @@ impl CompressedCollectiveConstraint {
         log::trace!("=== After Reveal Intermediate State ===");
         self.printlog();
         self.redraw(player_id, card);
+        // TODO: add_inferred_groups() here and test if it adds anything by panicking
         // self.group_redundant_prune();
         // Add the stuff here
     }
@@ -1593,6 +1597,20 @@ impl CompressedCollectiveConstraint {
         self.ambassador_inferred_adjustment(player_id);
         // Some groups can be inferred even after adjustment. E.g. before mix [1 0 0 0 0 0 1] 3 Duke => inferred_pile 1 Duke
         self.group_redundant_prune();
+        // You might think that add_inferred_groups is not required for ambassador()
+        // There is a case, where
+        // [0 1 0 0 0 1 1] has 3 Captains, player 1 and 5 each have 1 life => inferred pile constraints has [Captain]
+        // we obviously have derived
+        // [0 0 0 0 0 1 1] has 2 Captains
+        // [0 1 0 0 0 0 1] has 2 Captains
+        // When Player 5 Exchanges, they change to the following
+        // [0 0 0 0 0 1 1] has 2 Captains
+        // [0 1 0 0 0 1 1] has 2 Captains
+        // If we do not run add_inferred_groups things seem fine, we will keep the inferred pile constraints [Captain]
+        // But if Player 1 Exchanges, since we no long have [0 1 0 0 0 0 1] has 2 Captains in group constraints
+        // inferred pile constraints loses the [Captain] and becomes empty [] even though it can still be derived from the groups
+        //      - This is because it is not picked up in self.total_known_alive_with_player_and_pile(player_id) in self.ambassador_inferred_adjustment()
+        self.add_inferred_groups(); // TODO: [OPTIMIZE] Maybe might only require add_subset groups?
     }
     /// Function to call for move Ambassador, when considering private information seen by the player who used Ambassador
     pub fn ambassador_private(&mut self, player_id: usize) {
@@ -1805,18 +1823,24 @@ impl CompressedCollectiveConstraint {
                     }
 
                     // Subset redundance
-                    // If group i is made redundant by group j
-                    // if group_constraints[j].part_list_is_subset_of(&group_constraints[i]) &&
-                    // group_constraints[i].count_alive() <= group_constraints[j].count_alive() {
-                    //     group_constraints.swap_remove(i);
-                    //     continue 'outer;
-                    // }
-                    // If group j is made redundant by group i
-                    // if group_constraints[i].part_list_is_subset_of(&group_constraints[j]) &&
-                    // group_constraints[j].count_alive() <= group_constraints[i].count_alive() {
-                    //     group_constraints.swap_remove(j);
-                    //     continue 'inner;
-                    // }
+                    // Dead has to be the same if not we remove some dead groups that we would actually need in the group
+                    // For impossibility to be determined
+                    if group_constraints[i].count_dead() == group_constraints[j].count_dead() {
+                        // If group i is made redundant by group j
+                        if group_constraints[j].part_list_is_subset_of(&group_constraints[i]) &&
+                        group_constraints[i].count_alive() < group_constraints[j].count_alive() {
+                            // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
+                            group_constraints.swap_remove(i);
+                            continue 'outer;
+                        }
+                        // If group j is made redundant by group i
+                        if group_constraints[i].part_list_is_subset_of(&group_constraints[j]) &&
+                        group_constraints[j].count_alive() < group_constraints[i].count_alive() {
+                            // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
+                            group_constraints.swap_remove(j);
+                            continue 'inner;
+                        }
+                    }
                     j += 1;
                 }
                 i += 1;
@@ -1904,20 +1928,24 @@ impl CompressedCollectiveConstraint {
     fn non_redundant_push(vec: &mut Vec<CompressedGroupConstraint>, group: CompressedGroupConstraint) {
         let mut i: usize = 0;
         while i < vec.len() {
-            // Subset redundance
-            // if vec[i].part_list_is_subset_of(&group) && 
-            // group.count_alive() <= vec[i].count_alive() {
-            //     // group is redundant
-            //     return
-            // }
-            // if group.part_list_is_subset_of(&vec[i]) &&
-            // vec[i].count_alive() <= group.count_alive() {
-            //     vec.swap_remove(i);
-            //     continue;
-            // }
             // Testing duplicate redundance
             if group == vec[i] {
                 return
+            }
+            // Subset redundance
+            if vec[i].count_dead() == group.count_dead() {
+                if vec[i].part_list_is_subset_of(&group) && 
+                group.count_alive() < vec[i].count_alive() {
+                    // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
+                    // group is redundant
+                    return
+                }
+                if group.part_list_is_subset_of(&vec[i]) &&
+                vec[i].count_alive() < group.count_alive() {
+                    // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
+                    vec.swap_remove(i);
+                    continue;
+                }
             }
             i += 1;
         }
@@ -1931,32 +1959,41 @@ impl CompressedCollectiveConstraint {
     /// This is more relaxed in that it won't consider redundant if [1 1 0 0 0 0 0] 2 vs [1 1 1 0 0 0 0] 2, as we need this ??
     /// can be more relaxed with >, 
     /// >= is stricter and makes more redundant
-    fn non_redundant_push_tracked(vec: &mut Vec<CompressedGroupConstraint>, group: CompressedGroupConstraint) -> bool {
+    /// returns (bool, bool)
+    ///     - [0] is true if group is added
+    ///     - [1] is true if vec is modified by swap_remove
+    fn non_redundant_push_tracked(vec: &mut Vec<CompressedGroupConstraint>, group: CompressedGroupConstraint) -> (bool, bool) {
         let mut i: usize = 0;
+        let mut bool_vec_modified_removed: bool = false;
         while i < vec.len() {
-            // Subset redundance
-            // if vec[i].part_list_is_subset_of(&group) && 
-            // group.count_alive() <= vec[i].count_alive() {
-            //     // group is redundant
-            //     log::trace!("non_redundant_push_tracked did not add group: {}", group);
-            //     log::trace!("non_redundant_push_tracked in vec: {:?}", vec);
-            //     return false
-            // }
-            // if group.part_list_is_subset_of(&vec[i]) &&
-            // vec[i].count_alive() <= group.count_alive() {
-            //     vec.swap_remove(i);
-            //     continue;
-            // }
             // Testing duplicate redundance
             if group == vec[i] {
-                return false
+                return (false, false)
+            }
+            // Subset redundance
+            if vec[i].count_dead() == group.count_dead() {
+                if vec[i].part_list_is_subset_of(&group) && 
+                group.count_alive() < vec[i].count_alive() {
+                    // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
+                    // group is redundant
+                    log::trace!("non_redundant_push_tracked did not add group: {}", group);
+                    log::trace!("non_redundant_push_tracked in vec: {:?}", vec);
+                    return (false, bool_vec_modified_removed)
+                }
+                if group.part_list_is_subset_of(&vec[i]) &&
+                vec[i].count_alive() < group.count_alive() {
+                    // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
+                    vec.swap_remove(i);
+                    bool_vec_modified_removed = true;
+                    continue;
+                }
             }
             i += 1;
         }
         log::trace!("non_redundant_push_tracked added group: {}", group);
         log::trace!("non_redundant_push_tracked in vec: {:?}", vec);
         vec.push(group);
-        true
+        (true, bool_vec_modified_removed)
     }
     /// Adds subset groups to self.group_constraints
     /// 
@@ -2229,7 +2266,7 @@ impl CompressedCollectiveConstraint {
         let mut bool_changes = false;
         for (card_num, group_constraints) in reference_group_constraints.iter_mut().enumerate() {
             while let Some(group) = group_constraints.pop() {
-                bool_changes = Self::non_redundant_push_tracked(&mut self_groups[card_num], group) || bool_changes;
+                bool_changes = Self::non_redundant_push_tracked(&mut self_groups[card_num], group).0 || bool_changes;
             }
         }
         let mut card_changes: Vec<Vec<usize>> = vec![Vec::with_capacity(2); 5]; // Store (player_id, bool_counts => false: 1, true: 2)
@@ -2424,7 +2461,7 @@ impl CompressedCollectiveConstraint {
         let mut bool_changes = false;
         for (card_num, group_constraints) in reference_group_constraints.iter_mut().enumerate() {
             while let Some(group) = group_constraints.pop() {
-                bool_changes = Self::non_redundant_push_tracked(&mut self_groups[card_num], group) || bool_changes;
+                bool_changes = Self::non_redundant_push_tracked(&mut self_groups[card_num], group).0 || bool_changes;
             }
         }
         // Self group is not internally redundant as all groups added were through non_redundant_push

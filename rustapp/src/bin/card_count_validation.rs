@@ -73,8 +73,8 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
             new_moves = hh.generate_legal_moves();
             log::info!("{}", format!("Legal Moves: {:?}", new_moves));
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
-            // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-            new_moves.retain(|m| m.name() != AOName::Exchange);
+            new_moves.retain(|m| m.name() != AOName::RevealRedraw);
+            // new_moves.retain(|m| m.name() != AOName::Exchange);
             log::info!("{}", format!("Legal Moves Retained: {:?}", new_moves));
             if new_moves[0].name() != AOName::CollectiveChallenge {
                 // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
