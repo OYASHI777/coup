@@ -71,6 +71,9 @@ impl Debug for CompressedGroupConstraint {
 // TODO: Consider that RevealRedraw multiple times provides hidden info that might be missed.
 // TODO: [HANDLE IMPOSSIBLE CASE] Consider case when group is fully filled
 // TODO: [CHECK] redraw_inferred_adjustment => determine if relevant/efficient, can compare against amb which works fine
+// TODO: IDEA maybe reveal_group_adjustment is not needed as it does what add_inferred_groups would do
+// TODO: IDEA what is a ME union, are there groups we can avoid adding, or make redundant to save space?
+//      - Like perhaps you don't really need a union with an individual that doenst have the same card? idk
 // HMM: I realise if a group has all but 1 slot known, [1 1 0 0 0 0 0] 1 Duke 2 Contessa, All parties cant have both Cap and Ass
 // HMM: If a player has 1 known card, it obviously precludes many combos
 // TODO: Add the complement group to all that is known => might need to add the FullGroup => also to add to Compressed (i guess complements with <=3 players / total unknown slots <?)
@@ -1166,6 +1169,8 @@ impl CompressedCollectiveConstraint {
         // Commented out as it removes some group required by mut excl addition
         log::trace!("After adding reveal inferred card");
         self.printlog();
+        // But won't this be done in subset groups?
+        // TODO: Test without reveal_group_adjustment
         self.reveal_group_adjustment(player_id);
         self.clear_group_constraints(card);
         self.add_inferred_groups();
@@ -1442,6 +1447,7 @@ impl CompressedCollectiveConstraint {
         // player false pile true => set player to true , add dead_cards
         // player false pile false => no change 
         // player true pile true => no change 
+        // TODO: Maybe we consider how this interacts with reveal adjustment
         for (card_num, card_group_constraints) in group_constraints.iter_mut().enumerate() {
             let player_dead_card_count = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
             let player_alive_card_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;

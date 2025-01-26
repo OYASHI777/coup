@@ -27,9 +27,8 @@ fn main() {
     // (Ran 210) [TEST 1000] Discard + Ambassador Debug mode
     // [TEST 1000] Discard Debug mode
     // [TEST 1000] Discard + RevealRedraw Debug mode
-    // [TEST OVERNIGHT] Discard + Ambassador Debug mode
-    // [TEST OVERNIGHT] Discard Debug mode
-    // [TEST OVERNIGHT] Discard + Ambassador Release farm
+    // [Passed 1000] Discard + Ambassador Debug mode
+    // [Passed 1100] Discard + Ambassador Release farm
     game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
