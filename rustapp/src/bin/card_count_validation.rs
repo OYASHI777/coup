@@ -80,7 +80,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 if output.name() == AOName::Discard{
                     let true_legality = if output.no_cards() == 1 {
                         // let start_time = Instant::now();
-                        prob.player_can_have_card(output.player_id(), output.cards()[0])
+                        prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
                     } else {
                         prob.player_can_have_cards(output.player_id(), output.cards())
                     };
@@ -88,7 +88,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                         break    
                     } 
                 } else if output.name() == AOName::RevealRedraw {
-                    let true_legality: bool = prob.player_can_have_card(output.player_id(), output.card());
+                    let true_legality: bool = prob.player_can_have_card_alive(output.player_id(), output.card());
                     if !true_legality{
                         break    
                     } 
@@ -202,7 +202,7 @@ pub fn replay_game_constraint(replay: Vec<ActionObservation>, bool_know_priv_inf
                 if output.name() == AOName::Discard{
                     let true_legality = if output.no_cards() == 1 {
                         // let start_time = Instant::now();
-                        prob.player_can_have_card(output.player_id(), output.cards()[0])
+                        prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
                     } else {
                         prob.player_can_have_cards(output.player_id(), output.cards())
                     };
@@ -211,7 +211,7 @@ pub fn replay_game_constraint(replay: Vec<ActionObservation>, bool_know_priv_inf
                         break    
                     } 
                 } else if output.name() == AOName::RevealRedraw {
-                    let true_legality: bool = prob.player_can_have_card(output.player_id(), output.card());
+                    let true_legality: bool = prob.player_can_have_card_alive(output.player_id(), output.card());
                     if !true_legality{
                         log::info!("Illegal Move, Ending Game");
                         break    
@@ -358,7 +358,7 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, print_frequency: usiz
                 log::info!("{}", format!("Choice: {:?}", output));
                 if output.name() == AOName::Discard{
                     let true_legality = if output.no_cards() == 1 {
-                        prob.player_can_have_card(output.player_id(), output.cards()[0])
+                        prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
                     } else {
                         prob.player_can_have_cards(output.player_id(), output.cards())
                     };
@@ -367,7 +367,7 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, print_frequency: usiz
                         break    
                     } 
                 } else if output.name() == AOName::RevealRedraw {
-                    let true_legality: bool = prob.player_can_have_card(output.player_id(), output.card());
+                    let true_legality: bool = prob.player_can_have_card_alive(output.player_id(), output.card());
                     if !true_legality{
                         log::info!("Illegal Move, Ending Game");
                         break    
