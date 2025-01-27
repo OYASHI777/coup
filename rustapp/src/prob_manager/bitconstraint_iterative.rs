@@ -66,6 +66,9 @@ impl Debug for CompressedGroupConstraint {
 // [FIRST GLANCE PRIORITY] Consider if counts should be stored at all
 // TODO: [CHECK] Data structure, should I still store counts?
 // TODO: [OPTIMIZE] If you can maintain non internal redundancy throughout, no need self.redundant_prune()
+// TODO: [OPTIMIZE / THINK] In revealredraw we dont remove groups with 3 because they are the parent group that needs to be kept for inference, but this leads to too many parent groups and slows down subset union
+//      - Do we even need this feature? Its there for now cos i thot its needed to infer other groups
+//      - If we do need a total 3 group, we only need the one with the smallest part list
 // TODO: mutually exclusive group additions should consider unions between individual players too? else sometimes we miss out on the 3 of a kind, when inferred are added
 //      - wait should this already consider unions with individual players? in ME Union
 // TODO: Consider that RevealRedraw multiple times provides hidden info that might be missed.
@@ -1165,7 +1168,7 @@ impl CompressedCollectiveConstraint {
             self.add_inferred_player_constraint(player_id, card);
         }
         // Commented out as it removes some group required by mut excl addition
-        log::trace!("After adding reveal inferred card");
+        log::info!("After adding reveal inferred card");
         self.printlog();
         // But won't this be done in subset groups?
         // TODO: Test without reveal_group_adjustment
@@ -1204,8 +1207,9 @@ impl CompressedCollectiveConstraint {
             let mut i: usize = 0;
             while i < group_constraints.len() {
                 let group: &mut CompressedGroupConstraint = &mut group_constraints[i];
+                let group_total_count = group.get_total_count();
                 // Update only groups affected by the revealed information => i.e. those with player_id flag as true
-                if group.get_player_flag(player_id)  {
+                if group.get_player_flag(player_id) && group.count_alive() > 0 {
                     // NOTE: We only have 3 dead 0 alive groups to facilitate impossible cards and no other 0 alive groups
                     // player 1 pile 0
                     // NOTE: This does not prunes [3 dead 0 alive] because a player cant reveal and alive card if all 3 cards are dead
@@ -1224,23 +1228,25 @@ impl CompressedCollectiveConstraint {
                         log::trace!("=== Reveal Group Adjustment player_cards_known == 2 === ");
                         log::trace!("Original Group: {}", group);
                         log::trace!("Player {player_id} public_constraints: {:?}, inferred_constraints: {:?}", self.public_constraints[player_id], self.inferred_constraints[player_id]);
-                        group.set_player_flag(player_id, false);
-                        if group.none_in() {
-                            log::trace!("removing empty group: {}", group);
-                            group_constraints.swap_remove(i);
+                        let mut readd_group = group.clone();
+                        readd_group.set_player_flag(player_id, false);
+                        if readd_group.none_in() {
+                                log::trace!("removing empty group: {}", group);
+                                group_constraints.swap_remove(i);
                             continue;
                         }
-                        group.count_alive_subtract(player_alive_card_count[card_num]);
-                        group.count_dead_subtract(player_dead_card_count[card_num]);
-                        group.set_total_count(group.count_alive() + group.count_dead());
+                        readd_group.count_alive_subtract(player_alive_card_count[card_num]);
+                        readd_group.count_dead_subtract(player_dead_card_count[card_num]);
+                        readd_group.set_total_count(readd_group.count_alive() + readd_group.count_dead());
                         log::trace!("Group adjusted for re-adding to: {}", group);
                         // repushing 
                         //      - only works for duplicate redundancy, not subset redundancy 
                         //      - as order is not preserved in subset redundancy as it can remove groups currently in group_constraints
-                        let readd_group = group.clone();
-                        group_constraints.swap_remove(i);
                         groups_to_add.push(readd_group);
-                        continue;
+                        // if group_total_count != 3 {
+                            group_constraints.swap_remove(i);
+                            continue;
+                        // }
                     }
                 }
                 i += 1;
@@ -1250,6 +1256,8 @@ impl CompressedCollectiveConstraint {
                 Self::non_redundant_push(group_constraints, group);
             }
         }
+        log::info!("=== After Reveal Group Adjustment ===");
+        self.printlog();
     }
     /// When called looks at all the public, inferred, and group constraints to determine new inferred constraints
     /// Updates all items that need to be tracked
@@ -1588,6 +1596,7 @@ impl CompressedCollectiveConstraint {
         self.printlog();
         self.redraw(player_id, card);
         // TODO: add_inferred_groups() here and test if it adds anything by panicking
+        // self.add_inferred_groups();
         // self.group_redundant_prune();
         // Add the stuff here
     }

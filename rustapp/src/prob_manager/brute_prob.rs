@@ -349,16 +349,18 @@ impl BruteCardCountManager {
         current_dead_cards.push(card_i);
         self.restrict(player_reveal, current_dead_cards);
         let new_states_vec: Vec<String> = self
-            .calculated_states
-            .par_iter()  // parallel iteration over our existing states
-            .flat_map(|state| self.mix_one_char(state, player_reveal, 6, card_i))
-            .collect();
-
+        .calculated_states
+        .par_iter()  // parallel iteration over our existing states
+        .flat_map(|state| self.mix_one_char(state, player_reveal, 6, card_i))
+        .collect();
+    
         // Step 2: Convert that Vec<String> into a new AHashSet to remove duplicates.
         let new_states: AHashSet<String> = new_states_vec.into_iter().collect();
-
+        
         // Finally, assign this new set back to `self.calculated_states`.
         self.calculated_states = new_states;
+        log::info!("Brute Prob Redraw:");
+        self.print_legal_states();
     }
     /// Use Rayon to parallelize the process of running `mix_one_char` on
     /// each state in `self.calculated_states`, collecting all results
@@ -385,6 +387,8 @@ impl BruteCardCountManager {
     /// states where `player_reveal` possesses *all* cards in `card_chars` remain.
     pub fn restrict(&mut self, player_reveal: usize, card_chars: Vec<char>) {
         log::info!("Brute Prob: Restrict Ran: player: {}, cards: {:?}", player_reveal, card_chars);
+        log::info!("Before Restrict");
+        self.print_legal_states();
         self.calculated_states.retain(|state| {
             Self::player_has_cards(
                 state,
@@ -394,6 +398,8 @@ impl BruteCardCountManager {
                 &self.index_end_arr,
             )
         });
+        log::info!("After Restrict");
+        self.print_legal_states();
         // log::info!("legal states after Restrict: {:?}", self.calculated_states);
     }
     /// This function returns true if a player can have a particular card
