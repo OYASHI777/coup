@@ -1675,6 +1675,7 @@ impl CompressedCollectiveConstraint {
                                 log::trace!("add_subset_groups inferred_constraints: {:?}", self.inferred_constraints);
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
+                                new_group.set_single_card_flag(player, false);
                                 let dead_card_count = self.public_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
                                 new_group.sub_dead_count(dead_card_count);
                                 new_group.set_alive_count(group.count_alive() + player_inferred_diff_cards - player_lives );
