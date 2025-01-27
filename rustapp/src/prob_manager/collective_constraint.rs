@@ -873,6 +873,8 @@ impl CompressedCollectiveConstraint {
                         // Here player is 0 and pile is 1
                         // We add player information that it is originally missing
                         group.set_player_flag(player_id, true);
+                        // Since both parts now participated in the mix, we can erase the 1 card participation status for player
+                        group.set_single_card_flag(player_id, false);
                         group.add_dead_count(player_dead_count);
                         // TODO: put debug_assert somewhere sensible
                         // debug_assert!(single_count + joint_count + self.dead_card_count()[group_card as usize] < 3, "???");
@@ -1859,6 +1861,7 @@ impl CompressedCollectiveConstraint {
                                 log::trace!("add_subset_groups_recurse inferred_constraints: {:?}", self.inferred_constraints);
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
+                                new_group.set_single_card_flag(player, false);
                                 let dead_card_count = self.public_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
                                 new_group.sub_dead_count(dead_card_count);
                                 new_group.set_alive_count(group.count_alive() + player_inferred_diff_cards - player_lives);
@@ -1890,11 +1893,11 @@ impl CompressedCollectiveConstraint {
         let mut card_changes: Vec<Vec<usize>> = vec![Vec::with_capacity(2); 5]; // Store (player_id, bool_counts => false: 1, true: 2)
         // Add new_inferred_constraints
         // FIX: Can be 3 in the case of pile
-        while let Some(single_flag_group) = new_inferred_constraints.pop() {
-            let alive_count = single_flag_group.count_alive();
+        while let Some(single_true_group) = new_inferred_constraints.pop() {
+            let alive_count = single_true_group.count_alive();
             // Something is wrong if this panics, all groups should have a single flag, not no flags
-            let player_id = single_flag_group.get_set_players().iter().position(|b| *b).unwrap();
-            let card = single_flag_group.card();
+            let player_id = single_true_group.get_set_players().iter().position(|b| *b).unwrap();
+            let card = single_true_group.card();
             match alive_count {
                 1 => {
                     // One card known
@@ -1902,7 +1905,7 @@ impl CompressedCollectiveConstraint {
                         log::trace!("");
                         log::trace!("=== add_subset_groups_recurse Inferred 1 === ");
                         log::trace!("add_sub_groups_recurse adding player considered: {}", player_id);
-                        log::trace!("add_sub_groups_recurse adding 1 card single_flag_group: {}", single_flag_group);
+                        log::trace!("add_sub_groups_recurse adding 1 card single_flag_group: {}", single_true_group);
                         log::trace!("add_sub_groups_recurse Before self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups_recurse Before self.inferred_constraints: {:?}", self.inferred_constraints);
                         self.inferred_constraints[player_id].push(card);
@@ -1925,7 +1928,7 @@ impl CompressedCollectiveConstraint {
                             log::trace!("");
                             log::trace!("=== add_subset_groups_recurse Inferred 2 === ");
                             log::trace!("add_sub_groups_recurse adding player considered: {}", player_id);
-                            log::trace!("add_sub_groups_recurse adding 2 cards single_flag_group: {}", single_flag_group);
+                            log::trace!("add_sub_groups_recurse adding 2 cards single_flag_group: {}", single_true_group);
                             log::trace!("add_sub_groups_recurse Before self.public_constraints: {:?}", self.public_constraints);
                             log::trace!("add_sub_groups_recurse Before self.inferred_constraints: {:?}", self.inferred_constraints);
                             self.inferred_constraints[player_id].clear();
@@ -1946,14 +1949,14 @@ impl CompressedCollectiveConstraint {
                             self.inferred_constraints[player_id].push(card);
                         }
                     } else {
-                        log::trace!("group: {}", single_flag_group);
+                        log::trace!("group: {}", single_true_group);
                         log::trace!("alive_count: {}", alive_count);
                         debug_assert!(false, "You really should not be here... there should only be alive_count of 2 or 1 for a single player!");
                     }
                     // TODO: Adjust counts properly too... or remove inferred_counts
                 },
                 _ => {
-                    log::trace!("group: {}", single_flag_group);
+                    log::trace!("group: {}", single_true_group);
                     log::trace!("alive_count: {}", alive_count);
                     debug_assert!(false, "You really should not be here... there should only be alive_count of 2 or 1 for a single player!");
                 }
