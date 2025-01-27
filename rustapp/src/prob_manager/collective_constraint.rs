@@ -734,8 +734,9 @@ impl CompressedCollectiveConstraint {
         // But won't this be done in subset groups?
         // TODO: Test without reveal_group_adjustment
         self.reveal_group_adjustment(player_id);
-        self.clear_group_constraints(card);
+        // TODO: [TEST] Can this add_inferred_groups go above?
         self.add_inferred_groups();
+        self.clear_group_constraints(card);
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
     }
@@ -790,6 +791,7 @@ impl CompressedCollectiveConstraint {
                         log::trace!("Player {player_id} public_constraints: {:?}, inferred_constraints: {:?}", self.public_constraints[player_id], self.inferred_constraints[player_id]);
                         let mut readd_group = group.clone();
                         readd_group.set_player_flag(player_id, false);
+                        readd_group.set_single_card_flag(player_id, false);
                         if readd_group.none_in() {
                                 log::trace!("removing empty group: {}", group);
                                 group_constraints.swap_remove(i);
@@ -1037,6 +1039,7 @@ impl CompressedCollectiveConstraint {
                         if card_group_constraints[i].get_player_flag(6) {
                             let mut readd_group = card_group_constraints[i].clone();
                             readd_group.set_player_flag(player_id, true);
+                            readd_group.set_single_card_flag(player_id, true);
                             readd_group.add_dead_count(player_dead_card_count);
                             readd_group.add_alive_count(player_alive_card_count);
                             readd_group.add_total_count(player_dead_card_count + player_alive_card_count);
@@ -1053,6 +1056,7 @@ impl CompressedCollectiveConstraint {
                     if !card_group_constraints[i].get_player_flag(player_id) && card_group_constraints[i].get_player_flag(6){
                         let mut readd_group = card_group_constraints[i].clone();
                         readd_group.set_player_flag(player_id, true);
+                        readd_group.set_single_card_flag(player_id, true);
                         readd_group.add_dead_count(player_dead_card_count);
                         readd_group.add_alive_count(player_alive_card_count);
                         readd_group.add_total_count(player_dead_card_count + player_alive_card_count);
@@ -1529,8 +1533,9 @@ impl CompressedCollectiveConstraint {
             if group == vec[i] {
                 return
             }
+            // TODO: Think abit more about what makes single_card_flags redundant
             // Subset redundance
-            if vec[i].count_dead() == group.count_dead() {
+            if vec[i].single_card_flags_equal(group) && vec[i].count_dead() == group.count_dead() {
                 if vec[i].part_list_is_subset_of(&group) && 
                 group.count_alive() < vec[i].count_alive() {
                     // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
@@ -1568,7 +1573,7 @@ impl CompressedCollectiveConstraint {
                 return (false, false)
             }
             // Subset redundance
-            if vec[i].count_dead() == group.count_dead() {
+            if vec[i].single_card_flags_equal(group) && vec[i].count_dead() == group.count_dead() {
                 if vec[i].part_list_is_subset_of(&group) && 
                 group.count_alive() < vec[i].count_alive() {
                     // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
@@ -1638,7 +1643,7 @@ impl CompressedCollectiveConstraint {
                     for (player, player_flag) in part_list.iter().enumerate() {
                         if *player_flag {
                             let player_lives: u8 = if player != 6 {
-                                2 - self.public_constraints[player].len() as u8
+                                2 - (self.public_constraints[player].len() as u8).max(group.get_single_card_flag(player) as u8)
                             } else {
                                 3 // Not 0
                             };
@@ -1823,7 +1828,9 @@ impl CompressedCollectiveConstraint {
                     for (player, player_flag) in part_list.iter().enumerate() {
                         if *player_flag {
                             let player_lives: u8 = if player != 6 {
-                                2 - self.public_constraints[player].len() as u8
+                                // Adjusted for single card flag
+                                // TODO: Document this
+                                2 - (self.public_constraints[player].len() as u8).max(group.get_single_card_flag(player) as u8)
                             } else {
                                 3 // Not 0
                             };
@@ -1840,15 +1847,15 @@ impl CompressedCollectiveConstraint {
                                 new_group.set_player_flag(player, false);
                                 let dead_card_count = self.public_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
                                 new_group.sub_dead_count(dead_card_count);
-                                new_group.set_alive_count(group.count_alive() + player_inferred_diff_cards - player_lives );
+                                new_group.set_alive_count(group.count_alive() + player_inferred_diff_cards - player_lives);
                                 new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
                                 // Required to meet assumptions of recursive function
                                 if flags_count > 2 {
-                                    log::trace!("add_subset_groups found group for new_groups: {}", new_group);
+                                    log::trace!("add_subset_groups added to new_groups: {}", new_group);
                                     CompressedCollectiveConstraint::non_redundant_push(&mut new_groups[card_num], new_group);
                                 } else {
                                     // only 1 flag after removal, and so should be added to inferred constraints later
-                                    log::trace!("add_subset_groups found group for new_inferred_constraints: {}", new_group);
+                                    log::trace!("add_subset_groups added to new_inferred_constraints: {}", new_group);
                                     CompressedCollectiveConstraint::non_redundant_push(&mut new_inferred_constraints, new_group);
                                 }
                             }
@@ -2123,11 +2130,11 @@ impl CompressedCollectiveConstraint {
                             log::trace!("add_mutually_exclusive_unions public_constraints: {:?}", self.public_constraints);
                             log::trace!("add_mutually_exclusive_unions inferred_constraints: {:?}", self.inferred_constraints);
                             log::trace!("add_mutually_exclusive_unions reference_group_i: {}, player_id: {}, player_flag: {}", reference_group_i, player_id, player_flag);
-                            log::trace!("Initial group: {}, same_alive_card_count: {}, same_dead_card_count: {}", new_group, same_alive_card_count, same_dead_card_count);
                             new_group.set_player_flag(player_id, true);
                             new_group.add_alive_count(same_alive_card_count);
                             new_group.add_dead_count(same_dead_card_count);
                             new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
+                            log::trace!("Adding group: {}, same_alive_card_count: {}, same_dead_card_count: {}", new_group, same_alive_card_count, same_dead_card_count);
                             Self::non_redundant_push(&mut new_group_constraints[card_num], new_group);
                         }
                     }

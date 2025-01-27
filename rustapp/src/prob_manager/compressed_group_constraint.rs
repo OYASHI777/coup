@@ -18,6 +18,7 @@ use std::{fmt::Display, fmt::Debug};
 /// From right to left, where 0 represents the last item
 /// Bits 0..=6 represent boolean flags indicating which players are involved
 /// Bits 7..=13 represent boolean flags indicating whether only 1 of a player's card is involved b0 => 2 cards involved, b1 => 1 card involved
+///     - e.g. if a player reveal_redraw, only 1 card of the player is part of the mix, but all are for the pile as no one knows what card comes from the pile
 /// Bits 14..=16 represent the Card number from 0..=4
 /// Bits 17..=18 represent the dead count 0..=2
 /// Bits 19..=20 represent the alive count 1..=3
@@ -274,13 +275,44 @@ impl CompressedGroupConstraint {
             self.0 &= !(1 << bit);
         }
     }
-    /// Sets the flag for single cards
+    /// Gets the flag for a particular player
     /// false => includes both of the players' cards
     /// true => includes 1 of the players' cards
     pub fn get_single_card_flag(&self, player_id: usize) -> bool {
         debug_assert!(player_id < 7, "Player ID out of bounds for single card flags");
         let bit = Self::SINGLE_CARD_FLAGS_SHIFT + player_id;
         (self.0 & (1 << bit)) != 0
+    }
+    /// Retrieves all set single card player as a fixed-size array of boolean values.
+    ///
+    /// Each element in the returned array corresponds to a player.
+    /// The array will have exactly 7 elements, where each index (0-6) represents a player.
+    pub fn get_single_card_flags(&self, player_id: usize) -> [bool; 7] {
+        [
+            self.get_single_card_flag(0),
+            self.get_single_card_flag(1),
+            self.get_single_card_flag(2),
+            self.get_single_card_flag(3),
+            self.get_single_card_flag(4),
+            self.get_single_card_flag(5),
+            self.get_single_card_flag(6),
+        ]
+    }
+    /// Returns true if all are single card flags are the same
+    pub fn single_card_flags_equal(&self, other_group: Self) -> bool {
+        self.0 & Self::SINGLE_CARD_MASK == other_group.0 & Self::SINGLE_CARD_MASK
+    }
+    /// Returns true if self group is a subset of other_group
+    /// NOTE:
+    /// - Subset here does not refer to a SET subset
+    /// - It refers to an informational subset
+    /// - [0 0 0 0 0 0 0] is subset of [0 1 0 0 0 0 0] because having a single card flag is more restrictive, and tells us more
+    /// - [0 1 0 0 0 0 0] is a subset of [0 1 0 0 0 0 0] as this is not a "strict" subset
+    /// - [0 1 0 0 0 0 0] is a subset of [0 1 0 1 0 0 0]
+    /// - [0 1 0 1 0 0 0] is not a subset of [0 1 0 1 0 0 0]
+    /// - [0 1 0 1 0 0 0] is not a subset of [0 0 0 1 0 1 0] and vice versa
+    pub fn single_card_flags_is_subset_of(&self, other_group: Self) -> bool {
+        (self.0 & Self::SINGLE_CARD_MASK) == (self.0 & other_group.0 & Self::SINGLE_CARD_MASK)
     }
 }
 impl CompressedGroupConstraint {
@@ -424,6 +456,8 @@ impl CompressedGroupConstraint {
     /// Returns true if both participation lists are equal
     pub fn part_list_is_subset_of(&self, group: &Self) -> bool {
         // Checks if self participation list is a subset of group's participation list
+        // TODO: Cant u just use
+        // self.0 & Self::PLAYER_BITS == self.0 & group.0 & Self::PLAYER_BITS
         (group.0 & Self::PLAYER_BITS) == (self.0 & Self::PLAYER_BITS) | (group.0 & Self::PLAYER_BITS)
     }
     /// Returns true if self's partipation list is subset of the input group's participation list
