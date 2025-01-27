@@ -1207,7 +1207,6 @@ impl CompressedCollectiveConstraint {
             let mut i: usize = 0;
             while i < group_constraints.len() {
                 let group: &mut CompressedGroupConstraint = &mut group_constraints[i];
-                let group_total_count = group.get_total_count();
                 // Update only groups affected by the revealed information => i.e. those with player_id flag as true
                 if group.get_player_flag(player_id) && group.count_alive() > 0 {
                     // NOTE: We only have 3 dead 0 alive groups to facilitate impossible cards and no other 0 alive groups
@@ -1856,6 +1855,34 @@ impl CompressedCollectiveConstraint {
             }
         }
     }
+    /// This is a temporary function that removes unneeded groups with total_count == 3
+    /// This should be modified in future such that we simply do not add such groups in
+    /// This reduces errors for some reason
+    pub fn temp_remove_redundant_three_groups(&mut self) {
+        for group in self.group_constraints_mut().iter_mut() {
+            let mut i: usize = 0;
+            'outer: while i < group.len() {
+                let mut j: usize = i + 1;
+                if group[i].get_total_count() == 3 {
+                    'inner: while j < group.len() {
+                        if group[j].get_total_count() == 3 {
+                            log::trace!("Temp remove comparing i: {i}. j: {j}");
+                            if group[j].part_list_is_subset_of(&group[i]) {
+                                group.swap_remove(i);
+                                continue 'outer;
+                            }
+                            if group[i].part_list_is_subset_of(&group[j]) {
+                                group.swap_remove(j);
+                                continue 'inner;
+                            }
+                        }
+                        j += 1;
+                    }
+                }
+                i += 1;
+            }
+        }
+    }
     // TODO: [ALT] Make alternate version of this that adds with 2n checks for when you use it with a particular group added in mind.
     // TODO: Theory Check & Document
     // Or just use reveal LMAO, bacause thats what reveal does?
@@ -1911,6 +1938,7 @@ impl CompressedCollectiveConstraint {
         // Get group counts for current part list
         // Creating and adding new inferred groups
         // Runs both
+        self.temp_remove_redundant_three_groups();
         log::trace!("In add_inferred_groups");
         self.add_subset_groups();
         let mut bool_continue = self.add_mutually_exclusive_unions();
