@@ -6,8 +6,8 @@ pub mod loader;
 mod coup_const;
 pub mod bit_prob;
 pub mod brute_prob;
-pub mod bitconstraint;
-pub mod bitconstraint_iterative;
+pub mod compressed_group_constraint;
+pub mod collective_constraint;
 pub mod naive_sampler;
 
 // pub mod best_response_policy;

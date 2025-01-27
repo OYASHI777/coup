@@ -40,10 +40,6 @@ name = "rustapp"
 path = "src/main.rs"
 
 [[bin]]
-name = "constraint_test"
-path = "src/bin/constraint_test.rs"
-
-[[bin]]
 name = "card_count_validation"
 path = "src/bin/card_count_validation.rs"
 

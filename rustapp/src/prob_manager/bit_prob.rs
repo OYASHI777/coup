@@ -5,7 +5,7 @@
 // Tried instead to save into hashmap and store in bson
 
 use crate::history_public::{Card, AOName, ActionObservation};
-use super::bitconstraint_iterative::CompressedCollectiveConstraint;
+use super::collective_constraint::CompressedCollectiveConstraint;
 use std::usize;
 
 pub struct BitCardCountManager {

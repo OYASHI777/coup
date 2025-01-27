@@ -5,8 +5,8 @@
 // Tried instead to save into hashmap and store in bson
 
 use crate::history_public::{Card, AOName, ActionObservation};
-use super::permutation_generator::{gen_table_combinations, gen_bag_combinations};
-use super::coup_const::{BAG_SIZES, TOKENS, MAX_PERM_STATES};
+use super::permutation_generator::{gen_table_combinations};
+use super::coup_const::{BAG_SIZES, TOKENS};
 // use core::hash::Hasher;
 use std::usize;
 use ahash::{AHashMap, AHashSet};
