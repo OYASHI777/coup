@@ -791,6 +791,7 @@ impl CompressedCollectiveConstraint {
                         log::trace!("Player {player_id} public_constraints: {:?}, inferred_constraints: {:?}", self.public_constraints[player_id], self.inferred_constraints[player_id]);
                         let mut readd_group = group.clone();
                         readd_group.set_player_flag(player_id, false);
+                        // Indicate that only 1 of the players' card was revealed, and used in the redraw
                         readd_group.set_single_card_flag(player_id, false);
                         if readd_group.none_in() {
                                 log::trace!("removing empty group: {}", group);
@@ -1039,6 +1040,7 @@ impl CompressedCollectiveConstraint {
                         if card_group_constraints[i].get_player_flag(6) {
                             let mut readd_group = card_group_constraints[i].clone();
                             readd_group.set_player_flag(player_id, true);
+                            // Indicate that only 1 of the players' card was revealed, and used in the redraw
                             readd_group.set_single_card_flag(player_id, true);
                             readd_group.add_dead_count(player_dead_card_count);
                             readd_group.add_alive_count(player_alive_card_count);
@@ -1056,6 +1058,7 @@ impl CompressedCollectiveConstraint {
                     if !card_group_constraints[i].get_player_flag(player_id) && card_group_constraints[i].get_player_flag(6){
                         let mut readd_group = card_group_constraints[i].clone();
                         readd_group.set_player_flag(player_id, true);
+                        // Indicate that only 1 of the players' card was revealed, and used in the redraw
                         readd_group.set_single_card_flag(player_id, true);
                         readd_group.add_dead_count(player_dead_card_count);
                         readd_group.add_alive_count(player_alive_card_count);
@@ -1642,6 +1645,17 @@ impl CompressedCollectiveConstraint {
                     // group => [1 1 0 1 0 0 1], add [0 1 0 1 0 0 1], [1 0 0 1 0 0 1], [1 1 0 0 0 0 1], []
                     for (player, player_flag) in part_list.iter().enumerate() {
                         if *player_flag {
+                            // Lets say we know this
+                            // Player 0 has a dead captain
+                            // Group: Card: Captain, Flags: [0 0 0 0 1 0 1], 0 dead 1 alive 1 total
+                            // If Player 5 RevealRedraw Captain
+                            // Group: Card: Captain, Flags: [0 0 0 0 1 1 1], 0 dead 2 alive 2 total
+                            // However, only 1 of player 5's cards actually gets mixed into the pile
+                            // When Player 4 discards contessa and is completely dead this reduces to
+                            // Group: Card: Captain, Flags: [0 0 0 0 0 1 1], 0 dead 2 alive 2 total
+                            // But since only 1 of player 5's card is actually part of this mix
+                            // We can conclude that the pile must have 2-1 = 1 Captain!
+                            // Because Player 5 can have at most 1 Captain! not 2!
                             let player_lives: u8 = if player != 6 {
                                 2 - (self.public_constraints[player].len() as u8).max(group.get_single_card_flag(player) as u8)
                             } else {
