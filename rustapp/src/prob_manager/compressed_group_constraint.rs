@@ -263,6 +263,10 @@ impl CompressedGroupConstraint {
             self.get_player_flag(6),
         ]
     }
+    /// Returns Self but with all 0s except the part_list
+    pub fn get_blank_part_list(&self) -> Self {
+        Self(self.0 & Self::PLAYER_BITS)
+    }
     /// Sets the flag for single cards
     /// false => includes both of the players' cards
     /// true => includes 1 of the players' cards
@@ -452,6 +456,26 @@ impl CompressedGroupConstraint {
     pub fn card(&self) -> Card {
         self.get_card()
     } 
+    /// Returns number of players in part list
+    pub fn part_list_count(&self) -> u8 {
+        // TODO: [OPTIMIZE] Save this in u32 to avoid recalculations
+        (self.get_player_flag(0) as u8)
+        + (self.get_player_flag(1) as u8)
+        + (self.get_player_flag(2) as u8)
+        + (self.get_player_flag(3) as u8)
+        + (self.get_player_flag(4) as u8)
+        + (self.get_player_flag(5) as u8)
+        + (self.get_player_flag(6) as u8)
+    }
+    /// Returns total number of card slots for players in the group
+    /// Includes dead card slots
+    pub fn max_spaces(&self) -> u8 {
+        if self.get_player_flag(6) {
+            (self.part_list_count() - 1) * 2 + 3
+        } else {
+            (self.part_list_count() - 1) * 2
+        }
+    }
     /// Returns true if self's partipation list is subset of the input group's participation list
     /// Returns true if both participation lists are equal
     pub fn part_list_is_subset_of(&self, group: &Self) -> bool {

@@ -2248,6 +2248,107 @@ impl CompressedCollectiveConstraint {
         // Recurse
         return self.add_mutually_exclusive_unions_recurse(new_group_constraints);
     }
+    /// Adds inferred constraints based on algo that checks cards in group "except" player
+    /// Assumes:
+    /// - The maximally informative group can be found through just finding the largest counts in the group excluding the player
+    ///     - This should be met if add_subset and add_mutually_exclusive are done
+    /// e.g.
+    /// [0 1 0 0 0 1 1] 
+    /// Alive: 3 Amb, 2 Cap, 1 Cont
+    /// Dead: 1 Ass
+    /// Player 5 cannot have Captain from a group that has both Captains outside 5 [0 1 0 0 0 0 1] 2 Captain
+    /// If pile has 1 Captain,
+    /// AMB = 3 - max holdable outside player 5
+    /// max holdable = (2 + 3) - (1 Dead Ass) - (2 Captain)
+    ///              = 2
+    /// Player 5 therefore has 3 - 2 = 1 AMB
+    /// or 3 + (1 Dead Ass) + 2 Captain from sub group - 5 spaces outside player
+    /// We can just loop through every group after we have done subset group + mut excl union since we keep basically all the groups
+    /// So i guess we could also infer at the end, if group count == 3?
+    /// for some player i
+    ///     find max holdable alive count and death outside that player
+    ///     if condition met:
+    ///         add to inferred group (if not already there)
+    /// if something changed, recurse entire inferred
+    ///     - Since adding inferred did not update all the groups
+    /// Can we get more info from impossible groups
+    /// Consider maximal subset redundance in future?
+    ///     - subset but also single_flags considered
+    ///     - both death and alive must be lower than or equal to it
+    pub fn add_inferred_except_player(&mut self) {
+        // TODO: [OPTIMIZE / THINK] Consider there is just a generalised subset prune, and you can just put this in subset prune!
+        // TODO: [OPTIMIZE / THINK] I wonder if there would be groups implied by the case where its outside a group rather than a player...
+        let mut players: Vec<usize> = Vec::with_capacity(7);
+        for i in 0..7 {
+            // Only consider for players that can be inferred about
+            if self.public_constraints[i].len() + self.inferred_constraints[i].len() < 2 {
+                players.push(i);
+            }
+        }
+        for (card_num, groups) in [&self.group_constraints_amb, 
+            &self.group_constraints_ass, 
+            &self.group_constraints_cap, 
+            &self.group_constraints_duk, 
+            &self.group_constraints_con]
+            .iter().enumerate() {
+            for group in groups.iter() {
+                // If count == 1, no one else other than player inside
+                // If count == 2, then it would have been inferrable with subset as there is only 1 group outside
+                let group_alive_count = group.count_alive();
+                if group.part_list_count() > 2 && group_alive_count > 1{
+                    // for player 
+                    let mut player_index: usize = 0;
+                    while player_index < players.len() {
+                        let player = players[player_index];
+                        if group.get_player_flag(player) {
+                            let mut complement_part_list: CompressedGroupConstraint = group.get_blank_part_list();
+                            complement_part_list.set_player_flag(player, false);
+                            // Gets maximal holdable number of cards in the group outside of the player
+                            let mut maximal_dead_card_counts: [u8; 5] = [0; 5];
+                            let mut maximal_alive_card_counts: [u8; 5] = [0; 5];
+                            for (card_num_inner, complement_groups) in self.group_constraints().iter().enumerate() {
+                                if card_num_inner != card_num {
+                                    for complement_group in complement_groups.iter() {
+                                        // See Assumptions! This requires add_subsets and add_mut excl unions to be ran for this to work
+                                        if complement_group.part_list_is_subset_of(&complement_part_list) {
+                                            maximal_alive_card_counts[card_num_inner] = std::cmp::max(maximal_alive_card_counts[card_num_inner], complement_group.count_alive());
+                                            maximal_dead_card_counts[card_num_inner] = std::cmp::max(maximal_dead_card_counts[card_num_inner], complement_group.count_dead());
+                                        }
+                                    }
+                                }
+                            }
+                            // We have got the
+                            let maximal_holdable_alive = maximal_alive_card_counts.iter().sum::<u8>();
+                            // All dead other than player
+                            let complement_maximal_holdable_dead = maximal_dead_card_counts.iter().sum::<u8>();
+                            // All spaces other than player
+                            let complement_maximal_holdable_spaces = complement_part_list.max_spaces();
+                            // This should not overflow as spaces should always be > both
+                            let max_free_spaces = complement_maximal_holdable_spaces - complement_maximal_holdable_dead - maximal_holdable_alive; 
+                            if group_alive_count > max_free_spaces {
+                                let inferred_counts = group_alive_count - max_free_spaces;
+                                let known_counts= self.inferred_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
+                                if inferred_counts > known_counts {
+                                    for _ in 0..(inferred_counts - known_counts) {
+                                        self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                                    }
+                                    if self.public_constraints[player].len() + self.inferred_constraints[player].len() == 2 {
+                                        // Removing player from search list if all is known
+                                        // Alternatively u could just recurse here, because u need to recurse for the new inferred constraint anyways
+                                        // [OPTIMIZE]
+                                        if let Some(pos) = players.iter().position(|p| *p == player) {
+                                            players.swap_remove(pos);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        player_index += 1;
+                    }
+                }
+            }
+        }
+    }
     /// Returns an array indexed by [player][card] that indicates if a player can have a particular card
     /// true => impossible
     /// false => possible
