@@ -236,6 +236,8 @@ pub fn replay_game_constraint(replay: Vec<ActionObservation>, bool_know_priv_inf
                     },
                     _ => {},
                 }
+                log::info!("Just before validation");
+                bit_prob.printlog();
                 let validated_public_constraints = prob.validated_public_constraints();
                 let validated_inferred_constraints = prob.validated_inferred_constraints();
                 let validated_impossible_constraints = prob.validated_impossible_constraints();

@@ -109,7 +109,7 @@ impl CompressedGroupConstraint {
         output.set_card(card);
         output.set_alive_count(count_alive);
         output.set_dead_count(count_dead);
-        output.set_total_count((count_dead + count_alive));
+        output.set_total_count(count_dead + count_alive);
         output
     }
     pub fn zero() -> Self {
