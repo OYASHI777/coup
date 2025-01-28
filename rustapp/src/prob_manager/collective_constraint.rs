@@ -1074,6 +1074,7 @@ impl CompressedCollectiveConstraint {
         for (card_num, card_group_constraints) in group_constraints.iter_mut().enumerate() {
             let player_dead_card_count = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
             // TODO: [PROBLEM] Determine if alive_counts here should use the pre or post mix adjusted inferred_card_counts
+            // Consider using the alive_count before subtraction, and consider using player + pile alive count, and use max of that or current group alive count
             // Alive here applies in the player false pile true case, so should it include the revealed card?
             //          Should it apply the counts before subtraction? I think yes?
             // Like if pile + player had more alive, then should use that amount!
