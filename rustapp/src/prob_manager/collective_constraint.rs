@@ -1042,7 +1042,7 @@ impl CompressedCollectiveConstraint {
             if card_counts[inferred_card as usize] > 0 {
                 // Adding Dissipated information to groups appropriately
                 // TODO: Add method to add groups only if it is not already inside
-                let group = CompressedGroupConstraint::new_with_pile(player_id, inferred_card, dead_counts[player_id], card_counts[inferred_card as usize]);
+                let group = CompressedGroupConstraint::new_with_pile(player_id, inferred_card, dead_counts[inferred_card as usize], card_counts[inferred_card as usize]);
                 log::trace!("");
                 log::trace!("=== dilution_reveal dissipated information");
                 log::trace!("added group: {}", group);
