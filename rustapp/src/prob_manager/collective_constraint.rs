@@ -1592,21 +1592,33 @@ impl CompressedCollectiveConstraint {
         // Runs both
         self.temp_remove_redundant_three_groups();
         log::trace!("In add_inferred_groups");
-        self.add_subset_groups();
-        let mut bool_continue = self.add_mutually_exclusive_unions();
+        let mut bool_continue = false;
+        let add_subset =self.add_subset_groups();
+        let mut_excl_changes = self.add_mutually_exclusive_unions();
+        let mut inf_exc_pl = self.add_inferred_except_player();
+        bool_continue = add_subset || mut_excl_changes || inf_exc_pl;
         // Then runs one if the other is still true
         // idea here is that subset groups adds all the smaller groups, mut excl adds the larger groups
         //      - we get smaller groups from larger groups, so if no new larger groups added, no new smaller groups can be inferred
         //      - we get larger groups from smaller groups, so if no new smaller groups added, no new larger groups can be inferred
         //      - Technically the functions also add inferred groups, so if no inferred groups added, no new information added, no need to run either  
         
-        while bool_continue {
+        while inf_exc_pl {
             // Runs a
-            bool_continue = self.add_subset_groups();
-            log::info!("add_subset_groups added groups: {}", bool_continue);
-            if bool_continue {
-                bool_continue = self.add_mutually_exclusive_unions();
-                log::info!("add_smutually_exclusive_unions added groups: {}", bool_continue);
+            println!("Running again");
+            let add_subset = self.add_subset_groups();
+            log::info!("add_subset_groups added groups: {}", add_subset);
+            if add_subset {
+                let mut_excl_changes = self.add_mutually_exclusive_unions();
+                log::info!("add_mutually_exclusive_unions added groups: {}", mut_excl_changes);
+                if mut_excl_changes {
+                    inf_exc_pl = self.add_inferred_except_player();
+                    log::info!("add_inferred_except_player added groups: {}", inf_exc_pl);
+                } else {
+                    inf_exc_pl = false;
+                }
+            } else {
+                inf_exc_pl = false;
             }
         }
     }
@@ -2275,10 +2287,12 @@ impl CompressedCollectiveConstraint {
     /// Consider maximal subset redundance in future?
     ///     - subset but also single_flags considered
     ///     - both death and alive must be lower than or equal to it
-    pub fn add_inferred_except_player(&mut self) {
+    pub fn add_inferred_except_player(&mut self) -> bool {
         // TODO: [OPTIMIZE / THINK] Consider there is just a generalised subset prune, and you can just put this in subset prune!
         // TODO: [OPTIMIZE / THINK] I wonder if there would be groups implied by the case where its outside a group rather than a player...
+        log::trace!("In add_inferred_except_player");
         let mut players: Vec<usize> = Vec::with_capacity(7);
+        let mut bool_change = false;
         for i in 0..7 {
             // Only consider for players that can be inferred about
             if self.public_constraints[i].len() + self.inferred_constraints[i].len() < 2 {
@@ -2318,25 +2332,41 @@ impl CompressedCollectiveConstraint {
                                 }
                             }
                             // We have got the
-                            let maximal_holdable_alive = maximal_alive_card_counts.iter().sum::<u8>();
+                            let complement_maximal_holdable_alive = maximal_alive_card_counts.iter().sum::<u8>();
                             // All dead other than player
                             let complement_maximal_holdable_dead = maximal_dead_card_counts.iter().sum::<u8>();
                             // All spaces other than player
                             let complement_maximal_holdable_spaces = complement_part_list.max_spaces();
                             // This should not overflow as spaces should always be > both
-                            let max_free_spaces = complement_maximal_holdable_spaces - complement_maximal_holdable_dead - maximal_holdable_alive; 
+                            let max_free_spaces = complement_maximal_holdable_spaces - complement_maximal_holdable_dead - complement_maximal_holdable_alive; 
                             if group_alive_count > max_free_spaces {
                                 let inferred_counts = group_alive_count - max_free_spaces;
                                 let known_counts= self.inferred_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
                                 if inferred_counts > known_counts {
+                                    log::info!("=== add_inferred_except_player discovery ===");
+                                    log::info!("Parent Group: {}", group);
+                                    log::info!("Complement part list: {}, count: {}", complement_part_list, complement_part_list.part_list_count());
+                                    log::info!("Current Player: {}", player);
+                                    log::info!("Max_free_spaces: {} = complement_maximal_holdable_spaces: {} - complement_maximal_holdable_dead: {} - complement_maximal_holdable_alive: {}", max_free_spaces, complement_maximal_holdable_spaces, complement_maximal_holdable_dead, complement_maximal_holdable_alive);
+                                    log::info!("Complement_max_dead array: {:?}", maximal_dead_card_counts);
+                                    log::info!("Complement_max_alive array: {:?}", maximal_alive_card_counts);
+                                    log::info!("Complement_max_dead: {}", complement_maximal_holdable_dead);
+                                    log::info!("Complement_max_alive: {}", complement_maximal_holdable_alive);
+                                    log::info!("inferred_counts: {} = group_alive_count: {} - max_free_spaces: {}", inferred_counts, group_alive_count, max_free_spaces);
+                                    log::info!("add_inferred_except_player discovered player: {player} has card: {:?}", Card::try_from(card_num as u8).unwrap());
                                     for _ in 0..(inferred_counts - known_counts) {
                                         self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                                        bool_change = true;
                                     }
-                                    if self.public_constraints[player].len() + self.inferred_constraints[player].len() == 2 {
+                                    if player < 6 && self.public_constraints[player].len() + self.inferred_constraints[player].len() == 2 {
                                         // Removing player from search list if all is known
                                         // Alternatively u could just recurse here, because u need to recurse for the new inferred constraint anyways
                                         // [OPTIMIZE]
                                         if let Some(pos) = players.iter().position(|p| *p == player) {
+                                            players.swap_remove(pos);
+                                        }
+                                    } else if player == 6 && self.inferred_constraints[player].len() == 3 {
+                                        if let Some(pos) = players.iter().position(|p| *p == 6) {
                                             players.swap_remove(pos);
                                         }
                                     }
@@ -2348,6 +2378,7 @@ impl CompressedCollectiveConstraint {
                 }
             }
         }
+        bool_change
     }
     /// Returns an array indexed by [player][card] that indicates if a player can have a particular card
     /// true => impossible

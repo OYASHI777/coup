@@ -473,7 +473,7 @@ impl CompressedGroupConstraint {
         if self.get_player_flag(6) {
             (self.part_list_count() - 1) * 2 + 3
         } else {
-            (self.part_list_count() - 1) * 2
+            self.part_list_count() * 2
         }
     }
     /// Returns true if self's partipation list is subset of the input group's participation list

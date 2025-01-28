@@ -9,7 +9,7 @@ use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 pub const LOG_FILE_NAME: &str = "full_test.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
