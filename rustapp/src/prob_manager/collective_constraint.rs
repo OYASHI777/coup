@@ -1,5 +1,5 @@
 use crate::history_public::Card;
-use super::compressed_group_constraint::CompressedGroupConstraint;
+use super::{compressed_group_constraint::CompressedGroupConstraint, constraint::GroupConstraint};
 
 // [FIRST GLANCE PRIORITY] Let death, revealredraw, ambassador mechanisms handle redundancies. Let seperate method do inference.
 // [FIRST GLANCE PRIORITY]      - 3S generate_inferred_constraints => create this, probably will need to remove redundant groups when inferred constraints are added, use reveal?
@@ -1467,6 +1467,12 @@ impl CompressedCollectiveConstraint {
     /// NOTE:
     /// - Assumes groups where all of a particular card is dead will not exist before this as they are implicitly pruned in
     ///   reveal_group_adjustment 
+    /// [B] is not informational subset of [A]
+    /// [A] Card: Captain, Flags: [0 1 1 0 1 0 1], Single Card Flags: [0 0 0 0 0 0 0], 1 dead 2 alive 3 total
+    /// [B] Card: Captain, Flags: [1 1 1 1 1 1 1], Single Card Flags: [0 0 1 0 0 0 0], 1 dead 1 alive 2 total
+    /// TODO: [REDUNDANCY OPTIMIZE] Consider that in this case [B] should prob be info subset of A since the single flag B has is not even in A part list
+    /// [A] Card: Captain, Flags: [0 1 0 0 1 0 1], Single Card Flags: [0 0 0 0 0 0 0], 1 dead 2 alive 3 total
+    /// [B] Card: Captain, Flags: [1 1 1 1 1 1 1], Single Card Flags: [0 0 1 0 0 0 0], 1 dead 1 alive 2 total
     pub fn group_redundant_prune(&mut self) {
         let mut i: usize = 0;
         let mut j: usize = 0;
@@ -1492,7 +1498,7 @@ impl CompressedCollectiveConstraint {
                         // If group i is made redundant by group j
                         if group_constraints[j].part_list_is_subset_of(&group_constraints[i]) &&
                         group_constraints[i].count_alive() < group_constraints[j].count_alive() 
-                        && group_constraints[i].single_card_flags_is_subset_of(group_constraints[j]) 
+                        // && group_constraints[i].single_card_flags_is_subset_of(group_constraints[j]) 
                         {
                             // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                             // I set to <= tee hee
@@ -1502,7 +1508,7 @@ impl CompressedCollectiveConstraint {
                         // If group j is made redundant by group i
                         if group_constraints[i].part_list_is_subset_of(&group_constraints[j]) &&
                         group_constraints[j].count_alive() < group_constraints[i].count_alive() 
-                        && group_constraints[j].single_card_flags_is_subset_of(group_constraints[i])
+                        // && group_constraints[j].single_card_flags_is_subset_of(group_constraints[i])
                         {
                             // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                             // I set to <= tee hee
@@ -1646,7 +1652,7 @@ impl CompressedCollectiveConstraint {
             if vec[i].single_card_flags_equal(group) && vec[i].count_dead() == group.count_dead() {
                 if vec[i].part_list_is_subset_of(&group) && 
                 group.count_alive() < vec[i].count_alive() 
-                && group.single_card_flags_is_subset_of(vec[i])
+                // && group.single_card_flags_is_subset_of(vec[i])
                 {
                     // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                     // group is redundant
@@ -1654,7 +1660,7 @@ impl CompressedCollectiveConstraint {
                 }
                 if group.part_list_is_subset_of(&vec[i]) &&
                 vec[i].count_alive() < group.count_alive() 
-                && vec[i].single_card_flags_is_subset_of(group)
+                // && vec[i].single_card_flags_is_subset_of(group)
                 {
                     // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                     vec.swap_remove(i);
@@ -1688,7 +1694,7 @@ impl CompressedCollectiveConstraint {
             if vec[i].single_card_flags_equal(group) && vec[i].count_dead() == group.count_dead() {
                 if vec[i].part_list_is_subset_of(&group) && 
                 group.count_alive() < vec[i].count_alive() 
-                && group.single_card_flags_is_subset_of(vec[i])
+                // && group.single_card_flags_is_subset_of(vec[i])
                 {
                     // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                     // group is redundant
@@ -1698,7 +1704,7 @@ impl CompressedCollectiveConstraint {
                 }
                 if group.part_list_is_subset_of(&vec[i]) &&
                 vec[i].count_alive() < group.count_alive() 
-                && vec[i].single_card_flags_is_subset_of(group)
+                // && vec[i].single_card_flags_is_subset_of(group)
                 {
                     // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                     vec.swap_remove(i);
@@ -2517,4 +2523,17 @@ impl CompressedCollectiveConstraint {
             
         }
     }
+    pub fn check_three(&self) {
+        for (card_num, groups) in self.group_constraints().iter().enumerate() {
+            let mut temp_bool = true;
+            for item in groups.iter() {
+                if item.count() == 3 {
+                    temp_bool = false;
+                }
+            }
+            if temp_bool {
+                panic!("card_num: {} lost its threes", card_num);
+            }
+        }
+    } 
 }
