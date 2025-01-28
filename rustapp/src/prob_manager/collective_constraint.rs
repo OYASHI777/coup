@@ -13,6 +13,8 @@ use super::compressed_group_constraint::CompressedGroupConstraint;
 // [FIRST GLANCE PRIORITY] Consider if counts should be stored at all
 // TODO: [CHECK] Data structure, should I still store counts?
 // TODO: [OPTIMIZE] If you can maintain non internal redundancy throughout, no need self.redundant_prune()
+// TODO: [OPTIMIZE] Why do you have full groups with less than 3 total => redundant
+// TODO: [OPTIMIZE] Why do you have groups with same info just with 1 for single flags => redundant
 // TODO: [OPTIMIZE / THINK] In revealredraw we dont remove groups with 3 because they are the parent group that needs to be kept for inference, but this leads to too many parent groups and slows down subset union
 //      - Do we even need this feature? Its there for now cos i thot its needed to infer other groups
 //      - Actually prevents some errors
@@ -1489,15 +1491,19 @@ impl CompressedCollectiveConstraint {
                     if group_constraints[i].count_dead() == group_constraints[j].count_dead() {
                         // If group i is made redundant by group j
                         if group_constraints[j].part_list_is_subset_of(&group_constraints[i]) &&
-                        group_constraints[i].count_alive() < group_constraints[j].count_alive() {
+                        group_constraints[i].count_alive() < group_constraints[j].count_alive() &&
+                        group_constraints[i].single_card_flags_is_subset_of(group_constraints[j]) {
                             // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
+                            // I set to <= tee hee
                             group_constraints.swap_remove(i);
                             continue 'outer;
                         }
                         // If group j is made redundant by group i
                         if group_constraints[i].part_list_is_subset_of(&group_constraints[j]) &&
-                        group_constraints[j].count_alive() < group_constraints[i].count_alive() {
+                        group_constraints[j].count_alive() < group_constraints[i].count_alive() &&
+                        group_constraints[j].single_card_flags_is_subset_of(group_constraints[i]){
                             // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
+                            // I set to <= tee hee
                             group_constraints.swap_remove(j);
                             continue 'inner;
                         }

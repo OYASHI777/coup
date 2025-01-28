@@ -29,7 +29,7 @@ fn main() {
     // [TEST 1000] Discard + RevealRedraw Debug mode
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
-    // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
+    game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
     // {
     //     use ActionObservation::*;
     //     use Card::*;
@@ -39,7 +39,7 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    test();
+    // test();
 }
 pub fn test() {
     {
@@ -181,7 +181,9 @@ pub fn replay_game_constraint(replay: Vec<ActionObservation>, bool_know_priv_inf
     let game_no = 1;
     let print_frequency = 1;
     while game < game_no {
-        clear_log().expect("failed to clear log");
+        if log_bool {
+            clear_log().expect("failed to clear log");
+        }
         log::info!("Game : {}", game);
         let mut hh = History::new(0);
         let mut step: usize = 0;
