@@ -1815,6 +1815,7 @@ impl CompressedCollectiveConstraint {
 
         let mut card_changes: Vec<Vec<usize>> = vec![Vec::with_capacity(2); 5]; // Store (player_id, bool_counts => false: 1, true: 2)
         // Add new_inferred_constraints
+        // TODO: [FIX] Adding new_inferred constraints requires reconsidering the entire group_constraints list not just the new_groups
         while let Some(single_flag_group) = new_inferred_constraints.pop() {
             let alive_count = single_flag_group.count_alive();
             // Something is wrong if this panics, all groups should have a single flag, not no flags
@@ -2378,7 +2379,7 @@ impl CompressedCollectiveConstraint {
                                 let known_counts= self.inferred_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
                                 log::info!("inferred_counts: {} = group_alive_count: {} - max_free_spaces: {}", inferred_counts, group_alive_count, max_free_spaces);
                                 if inferred_counts > known_counts {
-                                    log::info!("add_inferred_except_player discovered player: {player} has card: {:?}", Card::try_from(card_num as u8).unwrap());
+                                    log::info!("add_inferred_except_player DISCOVERED player: {player} has card: {:?}", Card::try_from(card_num as u8).unwrap());
                                     for _ in 0..(inferred_counts - known_counts) {
                                         self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
                                         bool_change = true;
