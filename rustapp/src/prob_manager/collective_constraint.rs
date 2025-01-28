@@ -2290,6 +2290,7 @@ impl CompressedCollectiveConstraint {
     pub fn add_inferred_except_player(&mut self) -> bool {
         // TODO: [OPTIMIZE / THINK] Consider there is just a generalised subset prune, and you can just put this in subset prune!
         // TODO: [OPTIMIZE / THINK] I wonder if there would be groups implied by the case where its outside a group rather than a player...
+        // TODO: [OPTIMIZE / THINK] IntSet to skip some looked over items i guess? or just not have redundant shit bro
         log::trace!("In add_inferred_except_player");
         let mut players: Vec<usize> = Vec::with_capacity(7);
         let mut bool_change = false;
@@ -2318,7 +2319,6 @@ impl CompressedCollectiveConstraint {
                             let mut complement_part_list: CompressedGroupConstraint = group.get_blank_part_list();
                             complement_part_list.set_player_flag(player, false);
                             // Gets maximal holdable number of cards in the group outside of the player
-                            let mut maximal_dead_card_counts: [u8; 5] = [0; 5];
                             let mut maximal_alive_card_counts: [u8; 5] = [0; 5];
                             for (card_num_inner, complement_groups) in self.group_constraints().iter().enumerate() {
                                 if card_num_inner != card_num {
@@ -2326,15 +2326,19 @@ impl CompressedCollectiveConstraint {
                                         // See Assumptions! This requires add_subsets and add_mut excl unions to be ran for this to work
                                         if complement_group.part_list_is_subset_of(&complement_part_list) {
                                             maximal_alive_card_counts[card_num_inner] = std::cmp::max(maximal_alive_card_counts[card_num_inner], complement_group.count_alive());
-                                            maximal_dead_card_counts[card_num_inner] = std::cmp::max(maximal_dead_card_counts[card_num_inner], complement_group.count_dead());
                                         }
                                     }
                                 }
                             }
+                            // All dead other than player
+                            let mut complement_maximal_holdable_dead: u8 = 0;
+                            for i in 0..7 as usize {
+                                if group.get_player_flag(i) && i != player {
+                                    complement_maximal_holdable_dead += self.public_constraints[i].len() as u8;
+                                }
+                            }
                             // We have got the
                             let complement_maximal_holdable_alive = maximal_alive_card_counts.iter().sum::<u8>();
-                            // All dead other than player
-                            let complement_maximal_holdable_dead = maximal_dead_card_counts.iter().sum::<u8>();
                             // All spaces other than player
                             let complement_maximal_holdable_spaces = complement_part_list.max_spaces();
                             // This should not overflow as spaces should always be > both
@@ -2344,7 +2348,6 @@ impl CompressedCollectiveConstraint {
                             log::info!("Complement part list: {}, count: {}", complement_part_list, complement_part_list.part_list_count());
                             log::info!("Current Player: {}", player);
                             log::info!("Max_free_spaces: {} = complement_maximal_holdable_spaces: {} - complement_maximal_holdable_dead: {} - complement_maximal_holdable_alive: {}", max_free_spaces, complement_maximal_holdable_spaces, complement_maximal_holdable_dead, complement_maximal_holdable_alive);
-                            log::info!("Complement_max_dead array: {:?}", maximal_dead_card_counts);
                             log::info!("Complement_max_alive array: {:?}", maximal_alive_card_counts);
                             log::info!("Complement_max_dead: {}", complement_maximal_holdable_dead);
                             log::info!("Complement_max_alive: {}", complement_maximal_holdable_alive);
