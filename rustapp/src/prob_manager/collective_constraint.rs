@@ -1015,41 +1015,57 @@ impl CompressedCollectiveConstraint {
         // Adjust groups
         // CASE revealed card
         // player true pile false => set pile to true 
-        // player false pile true => set player to true , add dead_cards too
+        // player false pile true => set player to true, single_flags true , add dead_cards too
         // player false pile false => no change 
-        // player true pile true => no change 
+        // player true pile true => if 1 alive, set single_flags true, if 2 alive u can't simply set single_flags to true
         // CASE other card
-        // player true pile false => no change, as it was not the card that was exchange 
+        // player true pile false => no change as it was not the card that move with the pile 
         // player false pile true => set player to true , add dead_cards
         // player false pile false => no change 
-        // player true pile true => no change 
+        // player true pile true => set single_flags false? 
         // TODO: Maybe we consider how this interacts with reveal adjustment
         for (card_num, card_group_constraints) in group_constraints.iter_mut().enumerate() {
             let player_dead_card_count = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
             let player_alive_card_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+            // let mut add_groups: Vec<CompressedGroupConstraint> = Vec::with_capacity(card_group_constraints.len());
             if card_num == card as usize {
                 let mut i: usize = 0;
                 while i < card_group_constraints.len() {
                     if card_group_constraints[i].get_player_flag(player_id) {
                         if !card_group_constraints[i].get_player_flag(6) {
-                            let mut readd_group = card_group_constraints[i].clone();
-                            readd_group.set_player_flag(6, true);
-                            card_group_constraints.swap_remove(i);
-                            Self::non_redundant_push(card_group_constraints, readd_group);
-                            continue;
+                            // let mut readd_group = card_group_constraints[i].clone();
+                            card_group_constraints[i].set_player_flag(6, true);
+                            // card_group_constraints.swap_remove(i);
+                            // let (_, modified) = Self::non_redundant_push_tracked(card_group_constraints, readd_group);
+                            // if modified {
+                            //     continue;
+                            // }
+                        } else {
+                            if card_group_constraints[i].count_alive() == 1 {
+                                // let mut readd_group = card_group_constraints[i].clone();
+                                // Lets try this
+                                card_group_constraints[i].set_single_card_flag(player_id, true);
+                                // card_group_constraints.swap_remove(i);
+                                // let (_, modified) = Self::non_redundant_push_tracked(card_group_constraints, readd_group);
+                                // if modified {
+                                //     continue;
+                                // }
+                            }
                         }
                     } else {
                         if card_group_constraints[i].get_player_flag(6) {
-                            let mut readd_group = card_group_constraints[i].clone();
-                            readd_group.set_player_flag(player_id, true);
+                            // let mut readd_group = card_group_constraints[i].clone();
+                            card_group_constraints[i].set_player_flag(player_id, true);
                             // Indicate that only 1 of the players' card was revealed, and used in the redraw
-                            readd_group.set_single_card_flag(player_id, true);
-                            readd_group.add_dead_count(player_dead_card_count);
-                            readd_group.add_alive_count(player_alive_card_count);
-                            readd_group.add_total_count(player_dead_card_count + player_alive_card_count);
-                            card_group_constraints.swap_remove(i);
-                            Self::non_redundant_push(card_group_constraints, readd_group);
-                            continue;
+                            card_group_constraints[i].set_single_card_flag(player_id, true);
+                            card_group_constraints[i].add_dead_count(player_dead_card_count);
+                            card_group_constraints[i].add_alive_count(player_alive_card_count);
+                            card_group_constraints[i].add_total_count(player_dead_card_count + player_alive_card_count);
+                            // card_group_constraints.swap_remove(i);
+                            // let (_, modified) = Self::non_redundant_push_tracked(card_group_constraints, readd_group);
+                            // if modified {
+                            //     continue;
+                            // }
                         }
                     }
                     i += 1;
@@ -1057,17 +1073,30 @@ impl CompressedCollectiveConstraint {
             } else {
                 let mut i: usize = 0;
                 while i < card_group_constraints.len() {
-                    if !card_group_constraints[i].get_player_flag(player_id) && card_group_constraints[i].get_player_flag(6){
-                        let mut readd_group = card_group_constraints[i].clone();
-                        readd_group.set_player_flag(player_id, true);
-                        // Indicate that only 1 of the players' card was revealed, and used in the redraw
-                        readd_group.set_single_card_flag(player_id, true);
-                        readd_group.add_dead_count(player_dead_card_count);
-                        readd_group.add_alive_count(player_alive_card_count);
-                        readd_group.add_total_count(player_dead_card_count + player_alive_card_count);
-                        card_group_constraints.swap_remove(i);
-                        Self::non_redundant_push(card_group_constraints, readd_group);
-                        continue;
+                    if !card_group_constraints[i].get_player_flag(player_id) {
+                        if card_group_constraints[i].get_player_flag(6) {
+                            // let mut readd_group = card_group_constraints[i].clone();
+                            card_group_constraints[i].set_player_flag(player_id, true);
+                            // Indicate that only 1 of the players' card was revealed, and used in the redraw
+                            card_group_constraints[i].set_single_card_flag(player_id, true);
+                            card_group_constraints[i].add_dead_count(player_dead_card_count);
+                            card_group_constraints[i].add_alive_count(player_alive_card_count);
+                            card_group_constraints[i].add_total_count(player_dead_card_count + player_alive_card_count);
+                            // card_group_constraints.swap_remove(i);
+                            // let (_, modified) = Self::non_redundant_push_tracked(card_group_constraints, readd_group);
+                            // if modified {
+                            //     continue;
+                            // }
+                        }
+                    } else {
+                        if card_group_constraints[i].get_player_flag(6) {
+                            // let mut readd_group = card_group_constraints[i].clone();
+                            // // Let's try this
+                            card_group_constraints[i].set_single_card_flag(player_id, false);
+                            // card_group_constraints.swap_remove(i);
+                            // Self::non_redundant_push(card_group_constraints, readd_group);
+                            // continue;
+                        }
                     }
                     i += 1;
                 }
@@ -1091,6 +1120,7 @@ impl CompressedCollectiveConstraint {
         let player_count_dead = self.public_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
         let player_pile_reveal_card_group = CompressedGroupConstraint::new_with_pile(player_id, card, player_count_dead, 1);
         Self::non_redundant_push(group_constraints[card as usize], player_pile_reveal_card_group);
+        self.group_redundant_prune();
     }
     // TODO: Review group_constraint addition method
     /// Ambassador Dilution of inferred knowledge
@@ -2175,18 +2205,20 @@ impl CompressedCollectiveConstraint {
         for player_id in 0..7 as usize{
             if self.public_constraints[player_id].len() + self.inferred_constraints[player_id].len() == 2 {
                 impossible_cards[player_id] = [true; 5];
-                for card in self.public_constraints[player_id].iter() {
-                    impossible_cards[player_id][*card as usize] = false;
-                }
                 for card in self.inferred_constraints[player_id].iter() {
                     impossible_cards[player_id][*card as usize] = false;
                 }
             }
         }
         // TODO: [OPTIMIZE], because there are too many groups, maybe only check for player-ids that are not dead players (or are eligible)
-        for (card_num, group_constraints) in self.group_constraints().iter().enumerate() {
+        'outer: for (card_num, group_constraints) in self.group_constraints().iter().enumerate() {
             for group in group_constraints.iter() {
-                if group.count() == 3 {
+                if group.count_dead() == 3 {
+                    for player_id in 0..7 as usize {
+                        impossible_cards[player_id][card_num] = true;
+                    }
+                    continue 'outer;
+                } else if group.count() == 3{
                     for player_id in 0..7 as usize {
                         if !group.get_player_flag(player_id) {
                             impossible_cards[player_id][card_num] = true;
@@ -2197,6 +2229,7 @@ impl CompressedCollectiveConstraint {
         }
         impossible_cards
     }
+    /// This is currently broken
     pub fn generate_one_card_impossibilities_card_player_indexing(&mut self) -> [[bool; 7]; 5] {
         let mut impossible_cards: [[bool; 7]; 5] = [[false; 7]; 5];
         for player_id in 0..7 as usize{
@@ -2223,6 +2256,7 @@ impl CompressedCollectiveConstraint {
                 }
             }
         }
+        todo!("FIX");
         impossible_cards
     }
     /// General method that considers the entire Collective Constraint and generates/updates the card state

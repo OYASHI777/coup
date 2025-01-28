@@ -558,6 +558,56 @@ impl BruteCardCountManager {
                 // We want to know if there's ANY state in which the player's substring
                 // includes `card_char`. If there is, then `cannot_have` is false.
                 // If we can't find it in ANY state, `cannot_have` is true.
+                let found_in_any_state = self.calculated_states.iter().any(|state| {
+                    let actual_count = state[start..end].matches(card_char).count();
+                    let reference_count = self.public_constraints[player_id].iter().filter(|c| **c == card_enum).count();
+                    actual_count > reference_count
+                });
+
+                // If found_in_any_state == false, that means:
+                // "There is NO state in which the player has this card alive"
+                // So the player "cannot have" it => result = true
+                result[player_id][card_idx] = !found_in_any_state;
+            }
+        }
+
+        result
+    }
+    /// Returns a 7x5 boolean array `[ [bool; 5]; 7 ]`.
+    ///
+    /// - Outer index = player (0..6)
+    /// - Inner index = card as usize (0..4 or 0..5, depending on how you define Card).
+    ///
+    /// `result[player_id][card_index]` will be `true` if, **in every** state within
+    /// `self.calculated_states`, that `player_id` does **not** have that card.
+    ///
+    /// In other words, for all states, the substring of `player_id` does not
+    /// contain the corresponding card character. Hence, that player **cannot** have that card.
+    pub fn validated_impossible_constraints_include_dead(&self) -> [[bool; 5]; 7] {
+        let mut result = [[false; 5]; 7];
+
+        // Early return if we have no states; then every card is impossible in all states
+        // or every card is possible—depending on your game logic. Usually, with zero states,
+        // "cannot have" is trivially true for all. But check game logic as needed.
+        if self.calculated_states.is_empty() {
+            return [[true; 5]; 7];
+        }
+
+        // For each player
+        for player_id in 0..7 {
+            let start = self.index_start_arr[player_id];
+            let end = self.index_end_arr[player_id];
+
+            // For each card variant (assuming your Card enum maps 1:1 to these indices)
+            // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
+            for card_idx in 0..5 as usize {
+                // Convert card_idx -> Card -> char
+                let card_enum = Card::try_from(card_idx as u8).unwrap();
+                let card_char = card_enum.card_to_char();
+
+                // We want to know if there's ANY state in which the player's substring
+                // includes `card_char`. If there is, then `cannot_have` is false.
+                // If we can't find it in ANY state, `cannot_have` is true.
                 let found_in_any_state = self.calculated_states.par_iter().any(|state| {
                     let player_slice = &state[start..end];
                     player_slice.contains(card_char)
