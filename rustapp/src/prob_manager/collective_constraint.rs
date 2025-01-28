@@ -1491,8 +1491,9 @@ impl CompressedCollectiveConstraint {
                     if group_constraints[i].count_dead() == group_constraints[j].count_dead() {
                         // If group i is made redundant by group j
                         if group_constraints[j].part_list_is_subset_of(&group_constraints[i]) &&
-                        group_constraints[i].count_alive() < group_constraints[j].count_alive() &&
-                        group_constraints[i].single_card_flags_is_subset_of(group_constraints[j]) {
+                        group_constraints[i].count_alive() < group_constraints[j].count_alive() 
+                        && group_constraints[i].single_card_flags_is_subset_of(group_constraints[j]) 
+                        {
                             // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                             // I set to <= tee hee
                             group_constraints.swap_remove(i);
@@ -1500,8 +1501,9 @@ impl CompressedCollectiveConstraint {
                         }
                         // If group j is made redundant by group i
                         if group_constraints[i].part_list_is_subset_of(&group_constraints[j]) &&
-                        group_constraints[j].count_alive() < group_constraints[i].count_alive() &&
-                        group_constraints[j].single_card_flags_is_subset_of(group_constraints[i]){
+                        group_constraints[j].count_alive() < group_constraints[i].count_alive() 
+                        && group_constraints[j].single_card_flags_is_subset_of(group_constraints[i])
+                        {
                             // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                             // I set to <= tee hee
                             group_constraints.swap_remove(j);
@@ -1643,13 +1645,17 @@ impl CompressedCollectiveConstraint {
             // Subset redundance
             if vec[i].single_card_flags_equal(group) && vec[i].count_dead() == group.count_dead() {
                 if vec[i].part_list_is_subset_of(&group) && 
-                group.count_alive() < vec[i].count_alive() {
+                group.count_alive() < vec[i].count_alive() 
+                && group.single_card_flags_is_subset_of(vec[i])
+                {
                     // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                     // group is redundant
                     return
                 }
                 if group.part_list_is_subset_of(&vec[i]) &&
-                vec[i].count_alive() < group.count_alive() {
+                vec[i].count_alive() < group.count_alive() 
+                && vec[i].single_card_flags_is_subset_of(group)
+                {
                     // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                     vec.swap_remove(i);
                     continue;
@@ -1681,7 +1687,9 @@ impl CompressedCollectiveConstraint {
             // Subset redundance
             if vec[i].single_card_flags_equal(group) && vec[i].count_dead() == group.count_dead() {
                 if vec[i].part_list_is_subset_of(&group) && 
-                group.count_alive() < vec[i].count_alive() {
+                group.count_alive() < vec[i].count_alive() 
+                && group.single_card_flags_is_subset_of(vec[i])
+                {
                     // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                     // group is redundant
                     log::trace!("non_redundant_push_tracked did not add group: {}", group);
@@ -1689,7 +1697,9 @@ impl CompressedCollectiveConstraint {
                     return (false, bool_vec_modified_removed)
                 }
                 if group.part_list_is_subset_of(&vec[i]) &&
-                vec[i].count_alive() < group.count_alive() {
+                vec[i].count_alive() < group.count_alive() 
+                && vec[i].single_card_flags_is_subset_of(group)
+                {
                     // NOTE: DO NOT SET THIS TO <= EQUALITY BREAKS INFERRED GROUPS IDK WHY
                     vec.swap_remove(i);
                     bool_vec_modified_removed = true;
