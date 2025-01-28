@@ -1029,36 +1029,16 @@ impl CompressedCollectiveConstraint {
                                                                             &mut self.group_constraints_cap, 
                                                                             &mut self.group_constraints_duk, 
                                                                             &mut self.group_constraints_con];
-        for inferred_card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
-            // Removing 1 of each non-inferred cards from pile inferred_constraints
-            if inferred_card != card {
-                // Dissipating Information from pile
-                // pile number inferred - 1
-                // self.subtract_inferred_pile_constraint(card);
-                if let Some(pos) = self.inferred_constraints[6].iter().position(|&c| c == inferred_card) {
-                    self.inferred_constraints[6].swap_remove(pos);
-                }
-            }
-            if card_counts[inferred_card as usize] > 0 {
-                // Adding Dissipated information to groups appropriately
-                // TODO: Add method to add groups only if it is not already inside
-                let group = CompressedGroupConstraint::new_with_pile(player_id, inferred_card, dead_counts[inferred_card as usize], card_counts[inferred_card as usize]);
-                log::trace!("");
-                log::trace!("=== dilution_reveal dissipated information");
-                log::trace!("added group: {}", group);
-                // self.add_group_constraint(group);
-                Self::non_redundant_push(group_constraints[inferred_card as usize], group);
-            }
-        }
-        log::trace!("=== After redraw_inferred_adjustment inferred adjustment ===");
-        log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));
-        log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints));
-        log::info!("{}", format!("Group Constraints:"));
-        log::info!("{}", format!("\t AMB: {:?}", group_constraints[0]));
-        log::info!("{}", format!("\t ASS: {:?}", group_constraints[1]));
-        log::info!("{}", format!("\t CAP: {:?}", group_constraints[2]));
-        log::info!("{}", format!("\t DUK: {:?}", group_constraints[3]));
-        log::info!("{}", format!("\t CON: {:?}", group_constraints[4]));
+
+        // log::trace!("=== After redraw_inferred_adjustment inferred adjustment ===");
+        // log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));
+        // log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints));
+        // log::info!("{}", format!("Group Constraints:"));
+        // log::info!("{}", format!("\t AMB: {:?}", group_constraints[0]));
+        // log::info!("{}", format!("\t ASS: {:?}", group_constraints[1]));
+        // log::info!("{}", format!("\t CAP: {:?}", group_constraints[2]));
+        // log::info!("{}", format!("\t DUK: {:?}", group_constraints[3]));
+        // log::info!("{}", format!("\t CON: {:?}", group_constraints[4]));
         // Adjust groups
         // CASE revealed card
         // player true pile false => set pile to true 
@@ -1169,9 +1149,30 @@ impl CompressedCollectiveConstraint {
             self.inferred_constraints[player_id].swap_remove(pos);
             self.inferred_card_count[card as usize] -= 1;
         }
-        let player_count_dead = self.public_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
-        let player_pile_reveal_card_group = CompressedGroupConstraint::new_with_pile(player_id, card, player_count_dead, 1);
-        Self::non_redundant_push(group_constraints[card as usize], player_pile_reveal_card_group);
+        for inferred_card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
+            // Removing 1 of each non-inferred cards from pile inferred_constraints
+            if inferred_card != card {
+                // Dissipating Information from pile
+                // pile number inferred - 1
+                // self.subtract_inferred_pile_constraint(card);
+                if let Some(pos) = self.inferred_constraints[6].iter().position(|&c| c == inferred_card) {
+                    self.inferred_constraints[6].swap_remove(pos);
+                }
+            }
+            if card_counts[inferred_card as usize] > 0 {
+                // Adding Dissipated information to groups appropriately
+                // TODO: Add method to add groups only if it is not already inside
+                let group = CompressedGroupConstraint::new_with_pile(player_id, inferred_card, dead_counts[inferred_card as usize], card_counts[inferred_card as usize]);
+                log::trace!("");
+                log::trace!("=== dilution_reveal dissipated information");
+                log::trace!("added group: {}", group);
+                // self.add_group_constraint(group);
+                Self::non_redundant_push(group_constraints[inferred_card as usize], group);
+            }
+        }
+        // let player_count_dead = self.public_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
+        // let player_pile_reveal_card_group = CompressedGroupConstraint::new_with_pile(player_id, card, player_count_dead, 1);
+        // Self::non_redundant_push(group_constraints[card as usize], player_pile_reveal_card_group);
         self.group_redundant_prune();
     }
     // TODO: Review group_constraint addition method
