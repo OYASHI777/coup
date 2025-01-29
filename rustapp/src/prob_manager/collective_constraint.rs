@@ -1644,7 +1644,7 @@ impl CompressedCollectiveConstraint {
         let inf_exc_pl = self.add_inferred_except_player();
         bool_continue = mut_excl_changes || inf_exc_pl;
         while bool_continue {
-            self.add_subset_groups();
+            self.add_subset_groups_unopt();
             let mut_excl_changes = self.add_mutually_exclusive_unions();
             let inf_exc_pl = self.add_inferred_except_player();
             bool_continue = mut_excl_changes || inf_exc_pl;
@@ -1680,6 +1680,20 @@ impl CompressedCollectiveConstraint {
                     vec.swap_remove(i);
                     continue;
                 }
+            }
+            i += 1;
+        }
+        vec.push(group);
+    }
+    /// Assumes groups in vec all have same card as group input
+    /// Assumes vec is not internally redundant
+    /// Used for a group of single flags, but represented with a single vec without regard for card_num
+    fn non_duplicate_push(vec: &mut Vec<CompressedGroupConstraint>, group: CompressedGroupConstraint) {
+        let mut i: usize = 0;
+        while i < vec.len() {
+            // Testing duplicate redundance
+            if group == vec[i] {
+                return
             }
             i += 1;
         }
@@ -1747,6 +1761,7 @@ impl CompressedCollectiveConstraint {
     /// - Adds inferred constraints in new_groups to self.inferred_constraints
     /// - Removes redundant groups in self.group_constraint as a result of new inferred_constraints
     /// - returns true if literally anything changes
+    /// [OPTIMIZE] I think only need to repeat if inferred group is added?
     pub fn add_subset_groups_unopt(&mut self) -> bool {
         // There technically is alot of repeated code, but i want to be able to pass ownership through the recursed input instead of just a &mut to reduce memory usage
         // In addition the first step should not add groups, so to not make use of branches, its seperated as such
@@ -1811,8 +1826,9 @@ impl CompressedCollectiveConstraint {
                                     CompressedCollectiveConstraint::non_redundant_push(&mut new_groups[card_num], new_group);
                                 } else {
                                     // only 1 flag after removal, and so should be added to inferred constraints later
-                                    log::trace!("add_subset_groups found group for new_inferred_constraints: {}", new_group);
-                                    CompressedCollectiveConstraint::non_redundant_push(&mut new_inferred_constraints, new_group);
+                                    log::trace!("add_subset_groups found single group for new_inferred_constraints: {}", new_group);
+                                    // Non duplicate used as new_inferred_constraints can have different card types
+                                    CompressedCollectiveConstraint::non_duplicate_push(&mut new_inferred_constraints, new_group);
                                 }
                             }
                         }
@@ -1825,6 +1841,7 @@ impl CompressedCollectiveConstraint {
         // Add new_inferred_constraints
         // TODO: [FIX] Adding new_inferred constraints requires reconsidering the entire group_constraints list not just the new_groups
         while let Some(single_flag_group) = new_inferred_constraints.pop() {
+            log::trace!("add_subset considering to add single_flag_group: {}", single_flag_group);
             let alive_count = single_flag_group.count_alive();
             // Something is wrong if this panics, all groups should have a single flag, not no flags
             let player_id = single_flag_group.get_set_players().iter().position(|b| *b).unwrap();
@@ -2024,7 +2041,8 @@ impl CompressedCollectiveConstraint {
                                 } else {
                                     // only 1 flag after removal, and so should be added to inferred constraints later
                                     log::trace!("add_subset_groups found group for new_inferred_constraints: {}", new_group);
-                                    CompressedCollectiveConstraint::non_redundant_push(&mut new_inferred_constraints, new_group);
+                                    // Non duplicate used as new_inferred_constraints can have different card types
+                                    CompressedCollectiveConstraint::non_duplicate_push(&mut new_inferred_constraints, new_group);
                                 }
                             }
                         }
@@ -2218,7 +2236,8 @@ impl CompressedCollectiveConstraint {
                                 } else {
                                     // only 1 flag after removal, and so should be added to inferred constraints later
                                     log::trace!("add_subset_groups added to new_inferred_constraints: {}", new_group);
-                                    CompressedCollectiveConstraint::non_redundant_push(&mut new_inferred_constraints, new_group);
+                                    // Non duplicate used as new_inferred_constraints can have different card types
+                                    CompressedCollectiveConstraint::non_duplicate_push(&mut new_inferred_constraints, new_group);
                                 }
                             }
                         }
