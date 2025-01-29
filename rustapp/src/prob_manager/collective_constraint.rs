@@ -1,3 +1,5 @@
+use std::thread::current;
+
 use crate::history_public::Card;
 use super::{compressed_group_constraint::CompressedGroupConstraint, constraint::GroupConstraint};
 
@@ -1848,10 +1850,13 @@ impl CompressedCollectiveConstraint {
                 },
                 2 => {
                     if player_id == 6 {
-                        let no_to_push = 2 - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count();
-                        for _ in 0..no_to_push {
-                            self.inferred_constraints[player_id].push(card);
-                            bool_changes = true;
+                        let current_count = self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8; 
+                        if alive_count > current_count {
+                            let no_to_push = alive_count - current_count;
+                            for _ in 0..no_to_push {
+                                self.inferred_constraints[player_id].push(card);
+                                bool_changes = true;
+                            }
                         }
                     } else {
                         // Both cards known
@@ -1876,10 +1881,13 @@ impl CompressedCollectiveConstraint {
                 },
                 3 => {
                     if player_id == 6 {
-                        let no_to_push = alive_count - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
-                        for _ in 0..no_to_push {
-                            self.inferred_constraints[player_id].push(card);
-                            bool_changes = true;
+                        let current_count = self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
+                        if alive_count > current_count {
+                            let no_to_push = alive_count - current_count;
+                            for _ in 0..no_to_push {
+                                self.inferred_constraints[player_id].push(card);
+                                bool_changes = true;
+                            }
                         }
                     } else {
                         log::trace!("group: {}", single_flag_group);
@@ -2053,9 +2061,12 @@ impl CompressedCollectiveConstraint {
                 },
                 2 => {
                     if player_id == 6 {
-                        let no_to_push = 2 - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count();
-                        for _ in 0..no_to_push {
-                            self.inferred_constraints[player_id].push(card);
+                        let current_count = self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
+                        if alive_count > current_count {
+                            let no_to_push = 2 - current_count;
+                            for _ in 0..no_to_push {
+                                self.inferred_constraints[player_id].push(card);
+                            }
                         }
                     } else {
                         // Both cards known
@@ -2079,9 +2090,12 @@ impl CompressedCollectiveConstraint {
                 },
                 3 => {
                     if player_id == 6 {
-                        let no_to_push = alive_count - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
-                        for _ in 0..no_to_push {
-                            self.inferred_constraints[player_id].push(card);
+                        let current_count = self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
+                        if alive_count > current_count {
+                            let no_to_push = alive_count - current_count;
+                            for _ in 0..no_to_push {
+                                self.inferred_constraints[player_id].push(card);
+                            }
                         }
                     } else {
                         log::trace!("group: {}", single_flag_group);
@@ -2249,9 +2263,12 @@ impl CompressedCollectiveConstraint {
                 },
                 2 => {
                     if player_id == 6 {
-                        let no_to_push = alive_count - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
-                        for _ in 0..no_to_push {
-                            self.inferred_constraints[player_id].push(card);
+                        let current_count = self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
+                        if alive_count > current_count {
+                            let no_to_push = alive_count - current_count;
+                            for _ in 0..no_to_push {
+                                self.inferred_constraints[player_id].push(card);
+                            }
                         }
                     } else {
                         // Both cards known
@@ -2275,9 +2292,12 @@ impl CompressedCollectiveConstraint {
                 },
                 3 => {
                     if player_id == 6 {
-                        let no_to_push = alive_count - self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
-                        for _ in 0..no_to_push {
-                            self.inferred_constraints[player_id].push(card);
+                        let current_count = self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
+                        if alive_count > current_count {
+                            let no_to_push = alive_count - current_count;
+                            for _ in 0..no_to_push {
+                                self.inferred_constraints[player_id].push(card);
+                            }
                         }
                     } else {
                         log::trace!("group: {}", single_true_group);
