@@ -721,17 +721,26 @@ impl CompressedCollectiveConstraint {
         // [QN] rethink this clear, does it affect the operation below?
         //      - I think not as if you know all the cards for a card, you cant infer more from it...
         //      - But you should think about the single flags maybe?
+        let bool_all_other_cards_dead = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>() == 3;
+        let bool_revealed_status_contains_card = self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card));
         let bool_all_cards_dead_or_known: bool = self.clear_group_constraints(card);
-
+        let player_cards = self.public_constraints[player_id].clone();
+        log::info!("After clear_group_constraints");
+        self.printlog();
         let player_lives_after_death = 2 - self.public_constraints[player_id].len();
         let mut new_inferred: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
+        let bool_revealed_status_contains_card = self.revealed_status[player_id].contains(&card);
         if !self.revealed_status[player_id].is_empty() {
             // The card could have been from the player's previous reveal redraw
             // Search through same card group to check for any Single Flag 1 cases
             // [OPTIMIZE] Or you could store cards one would need to check somehow, so we only check necessary cards
             //              But i think since u need to update anyway, it won't matter
-            log::info!("revealed_Status player: {player_id}, contains: {:?}", card);
-            for (card_num, groups) in self.group_constraints_mut().iter_mut().enumerate() {
+            log::info!("revealed_status player: {player_id}, contains: {:?}", card);
+            for (card_num, groups) in [&mut self.group_constraints_amb, 
+                &mut self.group_constraints_ass, 
+                &mut self.group_constraints_cap, 
+                &mut self.group_constraints_duk, 
+                &mut self.group_constraints_con].iter_mut().enumerate() {
                 if card_num == card as usize {
                     if !bool_all_cards_dead_or_known {
                         let mut i: usize = 0;
@@ -740,6 +749,7 @@ impl CompressedCollectiveConstraint {
                             if group.get_player_flag(player_id) {
                                 if group.count_alive() > 1 {
                                     // Standard group adjustment to reflect that a known card is dead
+                                    log::trace!("add_dead_card !reveal_status.is_empty() player_id: {player_id} modifying group: {},", group);
                                     group.sub_alive_count(1);
                                     if group.get_single_card_flag(player_id) {
                                         // Removing card from the player in the group as only 1 card from the player was participative
@@ -747,16 +757,21 @@ impl CompressedCollectiveConstraint {
                                         if group.is_single_player_part_list() {
                                             new_inferred.push(*group);
                                             groups.swap_remove(i);
+                                            log::trace!("Group removed!");
                                             continue;
                                         }
                                         group.set_single_card_flag(player_id, false);
+                                        group.set_total_count(group.count_alive() + group.count_dead());
+                                        log::trace!("A Group changed to: {},", group);
                                     } else {
                                         // Standard group adjustment to reflect that a known card is dead
                                         group.add_dead_count(1);
+                                        log::trace!("B Group changed to: {},", group);
                                     }
                                 } else {
                                     // Standard group adjustment to reflect that a known card is dead
                                     // After adjustment, count_alive == 0, so we just remove
+                                    log::trace!("C Group removed {},", group);
                                     groups.swap_remove(i);
                                     continue;
                                 }
@@ -769,29 +784,52 @@ impl CompressedCollectiveConstraint {
                 } else {
                     // Get total cards known
                     log::info!("add_dead_card player_id: {}, card: {:?} considering groups of type card: {}", player_id, card, card_num);
-                    let mut i: usize = 0;
-                    while i < groups.len() {
-                        let group = &mut groups[i];
-                        log::info!("add_dead_card considering group: {}", group);
-                        if group.get_single_card_flag(player_id) && group.get_player_flag(player_id) {
-                            log::info!("add_dead_card manhandling group: {}", group);
-                            // We know that player_id had single flag 1 due to a previous reveal redraw
-                            // Modify all groups that reflect this
-                            // Since we know the player_id's single participative card was the one declared dead
-                            // The rest of the groups' single participative card cannot be the group's represented card
-                            // So we remove it
-                            group.set_player_flag(player_id, false);
-                            group.set_single_card_flag(player_id, false);
-                            if group.is_single_player_part_list() && group.count_alive() > 0 {
-                                // More efficient to not use redundant_push here
-                                log::info!("add_dead_card found single_card group: {}", group);
-                                new_inferred.push(*group);
-                                groups.swap_remove(i);
-                                continue;
+                    // TODO: [THINK] Seems like i might needa consider how many cards is known from player?
+                    //      - Should also consider number of known cards from player!
+                    // This if works for some but does not work for replay_4
+                    // If all other cards are outside of reveal_redraw network?
+                    // If all other cards are outside the player? idts
+                    // can try bool_all_other_cards_dead_or_known
+                    // or maybe the complement of this group / network has all the cards
+                    // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_other_cards_dead;
+                    // [NOTE]: This is if the player does not have the group's card and we know it because of what he just revealed
+                    // Thats why we set flags to false, cos we know the group's card is not there
+                    //      - I guess thats the case when player reveals a card in the reveal redraw group?
+                    // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_other_cards_dead && bool_revealed_status_contains_card;
+                    // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_cards_dead_or_known && !player_cards.contains(&Card::try_from(card_num as u8).unwrap());
+                    let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = player_lives_after_death == 0 && !player_cards.contains(&Card::try_from(card_num as u8).unwrap());
+                    // TODO: [OPTIMIZE] for fast bool exit condition
+                    // this mostly is not needed...
+                    if self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card)) {
+                        // handle case where revealed card is part of the single flag network
+                        // Is this necessarily true?
+                        let mut i: usize = 0;
+                        while i < groups.len() {
+                            let group = &mut groups[i];
+                            if group.get_single_card_flag(player_id) && group.get_player_flag(player_id) {
+                                log::trace!("add_dead_card manhandling group: {}", group);
+                                // We know that player_id had single flag 1 due to a previous reveal redraw
+                                // Modify all groups that reflect this
+                                // Since we know the player_id's single participative card was the one declared dead
+                                // The rest of the groups' single participative card cannot be the group's represented card
+                                // So we remove it
+                                group.set_player_flag(player_id, false);
+                                group.set_single_card_flag(player_id, false);
+                                // Should these be here?
+                                // group.sub_dead_count(self.public_constraints[player_id].iter().filter(|c| **c == card).count() as u8);
+                                // group.sub_alive_count(self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8);
+                                if group.is_single_player_part_list() && group.count_alive() > 0 {
+                                    // More efficient to not use redundant_push here
+                                    log::trace!("add_dead_card found single_card group: {}", group);
+                                    new_inferred.push(*group);
+                                    groups.swap_remove(i);
+                                    continue;
+                                }
+                                log::trace!("add_dead_card changed group to: {}", group);
+                                debug_assert!(!group.none_in(), "Should not even reach here!");
                             }
-                            debug_assert!(!group.none_in(), "Should not even reach here!");
+                            i += 1;
                         }
-                        i += 1;
                     }
                 }
             }
@@ -807,9 +845,11 @@ impl CompressedCollectiveConstraint {
                     if card_num != card as usize {
                         let mut i: usize = 0;
                         while i < groups.len() {
-                            let mut group = &mut groups[i];
+                            let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
+                                log::trace!("add_dead_card reveal_status.is_empty() considering group: {}", group);
                                 group.set_single_card_flag(player_id, false);
+                                log::trace!("AA group changed to: {}", group);
                             }
                             i += 1;
                         }
@@ -821,18 +861,21 @@ impl CompressedCollectiveConstraint {
                     if card_num == card as usize {
                         let mut i: usize = 0;
                         while i < groups.len() {
-                            let mut group = &mut groups[i];
+                            let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
                                 debug_assert!(!group.get_single_card_flag(player_id), "Revealed_status not properly updated before this");
+                                log::trace!("add_dead_card reveal_status.is_empty() considering group: {}", group);
                                 if group.count_alive() > 1 {
                                     // Standard group adjustment to reflect that a known card is dead
                                     group.sub_alive_count(1);
                                     // Standard group adjustment to reflect that a known card is dead
                                     group.add_dead_count(1);
                                     // [OPTIMIZE] Generate subset groups?
+                                    log::trace!("BB group changed to: {}", group);
                                 } else {
                                     // Standard group adjustment to reflect that a known card is dead
                                     // After adjustment, count_alive == 0, so we just remove
+                                    log::trace!("group removed: {}", group);
                                     groups.swap_remove(i);
                                     continue;
                                 }
@@ -866,17 +909,19 @@ impl CompressedCollectiveConstraint {
         if player_lives_after_death == 0 {
             self.revealed_status[player_id].clear();
         }
+        log::info!("Before add_inferred_card_bulk");
+        self.printlog();
         self.add_inferred_card_bulk(new_inferred);
     }
     /// Bulk add_inferred_card
     pub fn add_inferred_card_bulk(&mut self, mut single_flag_batch: Vec<CompressedGroupConstraint>) {
 // TODO: Inferred card needs to add other things inside other than just the group adjustment
         // TODO: See reveal, and death()
+        log::info!("In add_inferred_card_bulk");
         let mut card_changes: Vec<Vec<usize>> = vec![Vec::with_capacity(2); 5]; // Store (player_id, bool_counts => false: 1, true: 2)
         // Add new_inferred_constraints
         // TODO: [FIX] Adding new_inferred constraints requires reconsidering the entire group_constraints list not just the new_groups
         while let Some(single_flag_group) = single_flag_batch.pop() {
-            let alive_count = single_flag_group.count_alive();
             // Something is wrong if this panics, all groups should have a single flag, not no flags
             let player_id = single_flag_group.get_set_players().iter().position(|b| *b).unwrap();
             let card: Card = single_flag_group.card();
@@ -898,6 +943,7 @@ impl CompressedCollectiveConstraint {
                         if self_groups[card_num][i].get_player_flag(player_id) {
                             let count_alive = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                             if count_alive >= self_groups[card_num][i].count_alive() {
+                                log::trace!("add_inferred_card_bulk removing group: {}", self_groups[card_num][i]);
                                 self_groups[card_num].swap_remove(i);
                                 continue 'group_removal;
                             }
@@ -916,6 +962,7 @@ impl CompressedCollectiveConstraint {
     /// [1] => More discovered inferred constraints expressed as a single flag CompressedGroupConstraint
     /// [2] => changes to be used for batch prune | Store? (player_id, bool_counts => false: 1, true: 2)
     pub fn add_inferred_card(&mut self, player_id: usize, card: Card, alive_count: u8, card_changes: &mut Vec<Vec<usize>>) -> (bool, Vec<CompressedGroupConstraint>) {
+        log::info!("In add_inferred_card");
         let mut bool_changes = false;
         // [OPTIMIZE] See bulk, maybe dont even need card_changes
         // [OPTIMIZE] cant u just add the difference here instead of a branch
@@ -1009,19 +1056,24 @@ impl CompressedCollectiveConstraint {
                                     // Standard group adjustment to reflect that a known card is dead
                                     if group.get_single_card_flag(player_id) {
                                         // Removing card from the player in the group as only 1 card from the player was participative
+                                        log::trace!("add_inferred_card considering group: {}", group);
                                         group.set_player_flag(player_id, false);
                                         if group.is_single_player_part_list() {
                                             new_inferred.push(*group);
+                                            log::trace!("A add_inferred_card removed group: {}", group);
                                             groups.swap_remove(i);
                                             continue;
                                         }
                                         group.set_single_card_flag(player_id, false);
+                                        log::trace!("A add_inferred_card modified group: {}", group);
                                     } else {
                                         // Standard group adjustment to reflect that a known card is dead
                                     }
                                 } else {
                                     // Standard group adjustment to reflect that a known card is dead
                                     // After adjustment, count_alive == 0, so we just remove
+                                    log::trace!("add_inferred_card considering group: {}", group);
+                                    log::trace!("B add_inferred_card removed group: {}", group);
                                     groups.swap_remove(i);
                                     continue;
                                 }
@@ -1042,10 +1094,12 @@ impl CompressedCollectiveConstraint {
                             // Since we know the player_id's single participative card was the one declared dead
                             // The rest of the groups' single participative card cannot be the group's represented card
                             // So we remove it
+                            log::trace!("add_inferred_card considering group: {}", group);
                             group.set_player_flag(player_id, false);
                             group.set_single_card_flag(player_id, false);
                             if group.is_single_player_part_list() && group.count_alive() > 0 {
                                 // More efficient to not use redundant_push here
+                                log::trace!("C add_inferred_card found inferred group: {}", group);
                                 new_inferred.push(*group);
                             }
                             debug_assert!(!group.none_in(), "Should not even reach here!");
@@ -2213,7 +2267,6 @@ impl CompressedCollectiveConstraint {
                                 3 // Not 0
                             };
                             let player_inferred_diff_cards: u8 = self.inferred_constraints[player].iter().filter(|c| **c as usize != card_num).count() as u8;
-                            // log::trace!("player: {}, player_lives: {}, player_inferred_diff_cards: {}, group.count_alive(): {}", player, player_lives, player_inferred_diff_cards, group.count_alive());
                             if group.count_alive() + player_inferred_diff_cards > player_lives {
                                 // Cards contained is n - player_lives + player_inferred_cards for new group
                                 log::trace!("");
@@ -2221,6 +2274,7 @@ impl CompressedCollectiveConstraint {
                                 log::trace!("add_subset_groups player considered: {:?}", player);
                                 log::trace!("add_subset_groups parent group: {}", group);
                                 log::trace!("add_subset_groups public_constraints: {:?}", self.public_constraints);
+                                log::trace!("player: {}, player_lives: {}, player_inferred_diff_cards: {}, group.count_alive(): {}", player, player_lives, player_inferred_diff_cards, group.count_alive());
                                 log::trace!("add_subset_groups inferred_constraints: {:?}", self.inferred_constraints);
                                 let mut new_group: CompressedGroupConstraint = *group;
                                 new_group.set_player_flag(player, false);
