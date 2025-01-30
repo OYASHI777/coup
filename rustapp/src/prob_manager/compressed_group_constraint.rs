@@ -318,6 +318,19 @@ impl CompressedGroupConstraint {
     pub fn single_card_flags_is_subset_of(&self, other_group: Self) -> bool {
         (self.0 & Self::SINGLE_CARD_MASK) == (self.0 & other_group.0 & Self::SINGLE_CARD_MASK)
     }
+    /// Returns true if only 1 player flag in part_list is true
+    pub fn is_single_player_part_list(&self) -> bool {
+        [
+            0b00000000_00000000_00000000_00000001,
+            0b00000000_00000000_00000000_00000010,
+            0b00000000_00000000_00000000_00000100,
+            0b00000000_00000000_00000000_00001000,
+            0b00000000_00000000_00000000_00010000,
+            0b00000000_00000000_00000000_00100000,
+            0b00000000_00000000_00000000_01000000,
+        ]
+        .contains(&(self.0 & Self::PLAYER_BITS))
+    }
 }
 impl CompressedGroupConstraint {
     /// Constructor method that initialised based on a list of flags with each index representing player id
