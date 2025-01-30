@@ -798,9 +798,39 @@ impl CompressedCollectiveConstraint {
                     // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_other_cards_dead && bool_revealed_status_contains_card;
                     // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_cards_dead_or_known && !player_cards.contains(&Card::try_from(card_num as u8).unwrap());
                     let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = player_lives_after_death == 0 && !player_cards.contains(&Card::try_from(card_num as u8).unwrap());
+                    // Think this passes tests but is obviously anaemic
+                    let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card)) 
+                    && {
+                        // Counting the number of cards outside the network!
+                        let mut count: u8 = 0;
+                        for player in 0..self.revealed_status.len() {
+                            if self.revealed_status[player].is_empty() {
+                                count += self.public_constraints[player]
+                                    .iter()
+                                    .chain(self.inferred_constraints[player].iter())
+                                    .filter(|c| **c == card)
+                                    .count() as u8;
+                            }
+                        }
+                        // Assuming only 1 in network.. which is stupid
+                        count == 2 // [FIX] Im thinking if this is incomplete
+                        // [FIX]
+                        // [A] Like the network may have 2 cards, and outside would be 1
+                        //      - Like we would need to count how many are in the network too!
+                        //      - like if player 1 RevealRedraw Duke, theres 1 in network
+                        //      - if player 2 RevealRedraw Duke, theres another 1 in the network
+                        //      - So an addition to the network should increase the count? 
+                        // [B] Outside the network should consider the groups too, as it may not all be reflected in public and inferred
+                    };
                     // TODO: [OPTIMIZE] for fast bool exit condition
-                    // this mostly is not needed...
-                    if self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card)) {
+                    // TODO: [FIX] what actually is the condition to be used here?
+                    // TODO: [FIX] do the same for inferred groups?
+                    // TODO: [FIXFIXFIXFIXFIX]
+                    // Currently this means if present card is part of the network, but just cos it was revealed doesnt mean it was part of the network
+                    //      - player may have 2 lives and this may not be part of the network
+                    //      - What about the complementing group has all other cards idea?
+                    //          - !!! Like if a player has 2 lives, discards a Duke, but all the other dukes are not in the network
+                    if bool_discarded_card_is_definitely_part_of_reveal_redraw_network {
                         // handle case where revealed card is part of the single flag network
                         // Is this necessarily true?
                         let mut i: usize = 0;
