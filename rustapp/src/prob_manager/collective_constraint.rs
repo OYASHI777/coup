@@ -14,6 +14,7 @@ use super::{compressed_group_constraint::CompressedGroupConstraint, constraint::
 // [FIRST GLANCE PRIORITY]      - 6S inferred counts can generated when required instead of always being allocated
 // [FIRST GLANCE PRIORITY] Consider if counts should be stored at all
 // TODO: [CHECK] Data structure, should I still store counts?
+// TODO: [OPTIMIZE] you could technically use a hashmap and backtrack knowing the subset patterns?
 // TODO: [OPTIMIZE] If you can maintain non internal redundancy throughout, no need self.redundant_prune()
 // TODO: [OPTIMIZE] Why do you have full groups with less than 3 total => redundant
 // TODO: [OPTIMIZE] Why do you have groups with same info just with 1 for single flags => redundant
@@ -66,6 +67,7 @@ pub struct CompressedCollectiveConstraint {
     impossible_constraints: [[bool; 5]; 7], // For each player store an array of bool where each index is a Card, this represents whether a player cannot have a card true => cannot
     dead_card_count: [u8; 5], // each index represents the number of dead cards for the Card enum corresponding to that index
     inferred_card_count: [u8; 5], // each index represents the number of inferred cards for the Card enum
+    revealed_status: Vec<Vec<Card>>, // [Player indexed] Stores cards the player has reveal_redrawn. If player has mixed, it gets emptied 
 }
 /// Constructors, Gettors, Simple Checks
 impl CompressedCollectiveConstraint {
@@ -81,6 +83,7 @@ impl CompressedCollectiveConstraint {
         let impossible_constraints: [[bool; 5]; 7] = [[false; 5]; 7];
         let dead_card_count: [u8; 5] = [0; 5];
         let inferred_card_count: [u8; 5] = [0; 5];
+        let revealed_status = vec![Vec::with_capacity(5)];
         // TODO: Add inferred_card_count
         Self {
             public_constraints,
@@ -93,6 +96,7 @@ impl CompressedCollectiveConstraint {
             impossible_constraints,
             dead_card_count,
             inferred_card_count,
+            revealed_status,
         }
     }
     /// Constructor that returns an CompressedCollectiveConstraint at start of game
@@ -659,6 +663,7 @@ impl CompressedCollectiveConstraint {
     /// TODO: Exact same as reveal except you add to public constraint
     pub fn death(&mut self, player_id: usize, card: Card) {
         log::trace!("In death");
+        // [THINK] does death_group adjustment need to occur before a wipe and add 3-group
         self.add_dead_player_constraint(player_id, card);
         // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
         // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
@@ -670,6 +675,62 @@ impl CompressedCollectiveConstraint {
         self.printlog();
         self.group_redundant_prune();
         self.add_inferred_groups();
+        // Change revealed_status at the end after all groups using it have been updated
+        self.revealed_status[player_id].clear();
+    }
+    /// Checks if it affects groups with single_card == 1
+    /// Generates appropriate subset groups
+    /// Player 1 Reveals Captain
+    /// [0 1 0 0 0 0 1] [0 1 0 0 0 0 0] 1 Alive Captain
+    /// Player 5 Reveals Duke
+    /// [0 0 0 0 0 1 1] [0 0 0 0 0 1 0] 1 Alive Duke
+    /// This should modify
+    /// [0 1 0 0 0 0 1] [0 1 0 0 0 0 0] 1 Alive Captain
+    /// => [0 1 0 0 0 1 1] [0 1 0 0 0 1 0] 1 Alive Captain
+    /// Player 5 Discards Captain
+    /// Since Player 5 has a Captain group with Single Flag 1, 
+    /// If the complementary group [1 0 1 1 1 0 0] has all the remaining Captains,
+    /// => The Discarded Captain must come from the Single Card in the group
+    /// So we can adjust all groups with Player 5 Single Flag 1, including other cards
+    pub fn inferred_group_adjustment(&mut self, player_id: usize, card: Card) {
+        // TODO: [COMBINE] Combine with add_dead_player_constraint
+        // TODO: [OPTIMIZE] Actually don't need to search all the groups if you know who has revealed before
+        // Revealed_status stores a state of who has revealed, and which cards have been revealed
+        // P1 => [0 1 0 0 0 0]
+        // P5 => [0 1 0 0 1 0]
+        // P1 mix => [0 0 0 0 1 0]
+        // OK maybe dont need to store which cards have been revealed?
+        // If player has revealed this card before
+        if self.revealed_status[player_id].contains(&card) {
+            let mut new_inferred = Vec<CompressedGroupConstraint>;
+            // Search through same card group to check for any Single Flag 1 cases
+            // [OPTIMIZE] Or you could store cards one would need to check somehow, so we only check necessary cards
+            //              But i think since u need to update anyway, it won't matter
+            for groups in self.group_constraints_mut() {
+                // Check for complements
+                let mut i: usize = 0;
+                while i < groups.len() {
+                    let mut group = &mut groups[i];
+                    if group.get_single_card_flag(player_id) && group.get_player_flag(player_id) {
+                        group.set_player_flag(player_id, false);
+                        group.set_single_card_flag(player_id, false);
+                        if group.part_list_count() == 1 && group.count_alive() > 0 {
+                            // More efficient to not use redundant_push here
+                            new_inferred.push(group);
+                        }
+                    }
+                }
+            }
+            for group in new_inferred.iter() {
+                // TODO: See add_subset_groups
+                // TODO: [REFACTOR] add_subset_groups, and all that add inferred group should call this
+            }
+        }
+    }
+    /// To facilitate recursive addition of inferred_card
+    pub fn add_inferred_card(&mut self, player_id: usize, card: usize, card_count: u8) {
+        // TODO: Inferred card needs to add other things inside other than just the group adjustment
+        // TODO: See reveal, and death()
     }
     // TODO: [THEORY CHECK]
     // - !!! If already inside, should not add. because the player could just be reveal info we already know
@@ -1251,6 +1312,9 @@ impl CompressedCollectiveConstraint {
         log::trace!("=== After Reveal Intermediate State ===");
         self.printlog();
         self.redraw(player_id, card);
+        if !self.revealed_status[player_id].contains(&card) {
+            self.revealed_status[player_id].push(card);
+        }
         // TODO: add_inferred_groups() here and test if it adds anything by panicking
         // self.add_inferred_groups();
         // self.group_redundant_prune();
@@ -1258,6 +1322,7 @@ impl CompressedCollectiveConstraint {
     }
     /// Function to call for move Ambassador, without considering private information seen by the player who used Ambassador
     pub fn ambassador_public(&mut self, player_id: usize) {
+        
         self.mix(player_id);
         self.ambassador_inferred_adjustment(player_id);
         // Some groups can be inferred even after adjustment. E.g. before mix [1 0 0 0 0 0 1] 3 Duke => inferred_pile 1 Duke
@@ -1276,6 +1341,7 @@ impl CompressedCollectiveConstraint {
         // inferred pile constraints loses the [Captain] and becomes empty [] even though it can still be derived from the groups
         //      - This is because it is not picked up in self.total_known_alive_with_player_and_pile(player_id) in self.ambassador_inferred_adjustment()
         self.add_inferred_groups(); // TODO: [OPTIMIZE] Maybe might only require add_subset groups?
+        self.revealed_status[player_id].clear();
     }
     /// Function to call for move Ambassador, when considering private information seen by the player who used Ambassador
     pub fn ambassador_private(&mut self, player_id: usize) {
@@ -2283,6 +2349,7 @@ impl CompressedCollectiveConstraint {
                 2 => {
                     if player_id == 6 {
                         let current_count = self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
+                        // TODO: [OPTIMIZE] use saturating_sub here!
                         if alive_count > current_count {
                             let no_to_push = alive_count - current_count;
                             for _ in 0..no_to_push {
