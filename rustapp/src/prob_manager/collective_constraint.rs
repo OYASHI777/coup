@@ -83,7 +83,7 @@ impl CompressedCollectiveConstraint {
         let impossible_constraints: [[bool; 5]; 7] = [[false; 5]; 7];
         let dead_card_count: [u8; 5] = [0; 5];
         let inferred_card_count: [u8; 5] = [0; 5];
-        let revealed_status = vec![Vec::with_capacity(5)];
+        let revealed_status = vec![Vec::with_capacity(5); 7];
         // TODO: Add inferred_card_count
         Self {
             public_constraints,
@@ -127,7 +127,7 @@ impl CompressedCollectiveConstraint {
         let impossible_constraints: [[bool; 5]; 7] = [[false; 5]; 7];
         let dead_card_count: [u8; 5] = [0; 5];
         let inferred_card_count: [u8; 5] = [0; 5];
-        let revealed_status = vec![Vec::with_capacity(5)];
+        let revealed_status = vec![Vec::with_capacity(5); 7];
         // TODO: Add inferred_card_count
         Self {
             public_constraints,
@@ -665,6 +665,7 @@ impl CompressedCollectiveConstraint {
     /// TODO: Exact same as reveal except you add to public constraint
     pub fn death(&mut self, player_id: usize, card: Card) {
         log::trace!("In death");
+        log::info!("revealed_status: {:?}", self.revealed_status);
         // [THINK] does death_group adjustment need to occur before a wipe and add 3-group
         // [OLD]
         // self.add_dead_player_constraint(player_id, card);
@@ -707,7 +708,7 @@ impl CompressedCollectiveConstraint {
         // P1 mix => [0 0 0 0 1 0]
         // OK maybe dont need to store which cards have been revealed?
         // If player has revealed this card before
-
+        log::info!("In add_dead_card: {}, card: {:?}", player_id, card);
         // Adding dead card
         self.public_constraints[player_id].push(card);
         
@@ -723,20 +724,19 @@ impl CompressedCollectiveConstraint {
         let bool_all_cards_dead_or_known: bool = self.clear_group_constraints(card);
 
         let player_lives_after_death = 2 - self.public_constraints[player_id].len();
-        let player_cards_known_after_death = self.public_constraints[player_id].len() + self.inferred_constraints[player_id].len();
-
         let mut new_inferred: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
-        if self.revealed_status[player_id].contains(&card) {
+        if !self.revealed_status[player_id].is_empty() {
             // The card could have been from the player's previous reveal redraw
             // Search through same card group to check for any Single Flag 1 cases
             // [OPTIMIZE] Or you could store cards one would need to check somehow, so we only check necessary cards
             //              But i think since u need to update anyway, it won't matter
+            log::info!("revealed_Status player: {player_id}, contains: {:?}", card);
             for (card_num, groups) in self.group_constraints_mut().iter_mut().enumerate() {
                 if card_num == card as usize {
                     if !bool_all_cards_dead_or_known {
                         let mut i: usize = 0;
                         while i < groups.len() {
-                            let mut group = &mut groups[i];
+                            let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
                                 if group.count_alive() > 1 {
                                     // Standard group adjustment to reflect that a known card is dead
@@ -768,10 +768,13 @@ impl CompressedCollectiveConstraint {
                     }
                 } else {
                     // Get total cards known
+                    log::info!("add_dead_card player_id: {}, card: {:?} considering groups of type card: {}", player_id, card, card_num);
                     let mut i: usize = 0;
                     while i < groups.len() {
-                        let mut group = &mut groups[i];
+                        let group = &mut groups[i];
+                        log::info!("add_dead_card considering group: {}", group);
                         if group.get_single_card_flag(player_id) && group.get_player_flag(player_id) {
+                            log::info!("add_dead_card manhandling group: {}", group);
                             // We know that player_id had single flag 1 due to a previous reveal redraw
                             // Modify all groups that reflect this
                             // Since we know the player_id's single participative card was the one declared dead
@@ -781,7 +784,10 @@ impl CompressedCollectiveConstraint {
                             group.set_single_card_flag(player_id, false);
                             if group.is_single_player_part_list() && group.count_alive() > 0 {
                                 // More efficient to not use redundant_push here
+                                log::info!("add_dead_card found single_card group: {}", group);
                                 new_inferred.push(*group);
+                                groups.swap_remove(i);
+                                continue;
                             }
                             debug_assert!(!group.none_in(), "Should not even reach here!");
                         }
@@ -987,7 +993,7 @@ impl CompressedCollectiveConstraint {
         let mut new_inferred: Vec<CompressedGroupConstraint> = Vec::with_capacity(3);
         // update groups and discover new stuff
         // NOTE: This is not the same as the version in death() => NO CODE REUSE HERE
-        if bool_changes && self.revealed_status[player_id].contains(&card) {
+        if bool_changes && !self.revealed_status[player_id].is_empty() {
             // The card could have been from the player's previous reveal redraw
             // Search through same card group to check for any Single Flag 1 cases
             // [OPTIMIZE] Or you could store cards one would need to check somehow, so we only check necessary cards
@@ -2028,14 +2034,28 @@ impl CompressedCollectiveConstraint {
         // }
         // === unopt ===
         // TODO: [OPTIMIZE] Probably can do like mut excl recurse for the inferred groups?
+        log::info!("Before add_subset_groups");
+        self.printlog();
         self.add_subset_groups_unopt();
+        log::info!("After add_subset_groups");
+        self.printlog();
         let mut_excl_changes = self.add_mutually_exclusive_unions();
+        log::info!("After add_mutually_exclusive_unions");
+        self.printlog();
         let inf_exc_pl = self.add_inferred_except_player();
+        log::info!("After add_inferred_except_player");
+        self.printlog();
         bool_continue = mut_excl_changes || inf_exc_pl;
         while bool_continue {
             self.add_subset_groups_unopt();
+            log::info!("After add_subset_groups");
+            self.printlog();
             let mut_excl_changes = self.add_mutually_exclusive_unions();
+            log::info!("After add_mutually_exclusive_unions");
+            self.printlog();
             let inf_exc_pl = self.add_inferred_except_player();
+            log::info!("After add_inferred_except_player");
+            self.printlog();
             bool_continue = mut_excl_changes || inf_exc_pl;
         }
     }
