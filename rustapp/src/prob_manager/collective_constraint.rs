@@ -685,6 +685,9 @@ impl CompressedCollectiveConstraint {
         // This is handled in add_dead_card
         // self.revealed_status[player_id].clear();
     }
+    /// Adds dead card to public constraint.
+    /// Adjusts groups affected by the discarded card.
+    /// If discarded card is part of the revealredraw network (revealed_status)
     /// Checks if it affects groups with single_card == 1
     /// Generates appropriate subset groups
     /// Player 1 Reveals Captain
@@ -821,6 +824,7 @@ impl CompressedCollectiveConstraint {
                         //      - if player 2 RevealRedraw Duke, theres another 1 in the network
                         //      - So an addition to the network should increase the count? 
                         // [B] Outside the network should consider the groups too, as it may not all be reflected in public and inferred
+                        //      - Won't u need mut excl to have been run for this to work?
                     };
                     // TODO: [OPTIMIZE] for fast bool exit condition
                     // TODO: [FIX] what actually is the condition to be used here?
@@ -832,7 +836,7 @@ impl CompressedCollectiveConstraint {
                     //          - !!! Like if a player has 2 lives, discards a Duke, but all the other dukes are not in the network
                     if bool_discarded_card_is_definitely_part_of_reveal_redraw_network {
                         // handle case where revealed card is part of the single flag network
-                        // Is this necessarily true?
+                        // We then adjust affected groups of other cards that are part of the network
                         let mut i: usize = 0;
                         while i < groups.len() {
                             let group = &mut groups[i];
