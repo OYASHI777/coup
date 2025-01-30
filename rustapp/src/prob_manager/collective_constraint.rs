@@ -666,7 +666,10 @@ impl CompressedCollectiveConstraint {
     pub fn death(&mut self, player_id: usize, card: Card) {
         log::trace!("In death");
         // [THINK] does death_group adjustment need to occur before a wipe and add 3-group
-        self.add_dead_player_constraint(player_id, card);
+        // [OLD]
+        // self.add_dead_player_constraint(player_id, card);
+        // [NEW]
+        self.add_dead_card(player_id, card);
         // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
         // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
         //      - like if inferred info reflects the same thing as group constraint
@@ -678,7 +681,8 @@ impl CompressedCollectiveConstraint {
         self.group_redundant_prune();
         self.add_inferred_groups();
         // Change revealed_status at the end after all groups using it have been updated
-        self.revealed_status[player_id].clear();
+        // This is handled in add_dead_card
+        // self.revealed_status[player_id].clear();
     }
     /// Checks if it affects groups with single_card == 1
     /// Generates appropriate subset groups
@@ -852,21 +856,204 @@ impl CompressedCollectiveConstraint {
                 }
             }
         }
-        for group in new_inferred.iter() {
-            // TODO: See add_subset_groups
-            // TODO: [REFACTOR] add_subset_groups, and all that add inferred group should call this
-            let player_id = group.get_set_players().iter().position(|b| *b).unwrap();
-            self.add_inferred_card(player_id, group.card(), group.count_alive());
-        }
         // [QN] should I remove from revealed_status?
         if player_lives_after_death == 0 {
             self.revealed_status[player_id].clear();
         }
+        self.add_inferred_card_bulk(new_inferred);
+    }
+    /// Bulk add_inferred_card
+    pub fn add_inferred_card_bulk(&mut self, mut single_flag_batch: Vec<CompressedGroupConstraint>) {
+// TODO: Inferred card needs to add other things inside other than just the group adjustment
+        // TODO: See reveal, and death()
+        let mut card_changes: Vec<Vec<usize>> = vec![Vec::with_capacity(2); 5]; // Store (player_id, bool_counts => false: 1, true: 2)
+        // Add new_inferred_constraints
+        // TODO: [FIX] Adding new_inferred constraints requires reconsidering the entire group_constraints list not just the new_groups
+        while let Some(single_flag_group) = single_flag_batch.pop() {
+            let alive_count = single_flag_group.count_alive();
+            // Something is wrong if this panics, all groups should have a single flag, not no flags
+            let player_id = single_flag_group.get_set_players().iter().position(|b| *b).unwrap();
+            let card: Card = single_flag_group.card();
+            self.add_inferred_card(player_id, card, single_flag_group.count_alive(), &mut card_changes);
+            // batch prune
+            // This is formatted like this because of some &mutable and immutable borrow issue with the compiler..
+            let self_groups = [&mut self.group_constraints_amb, 
+                                                                        &mut self.group_constraints_ass, 
+                                                                        &mut self.group_constraints_cap, 
+                                                                        &mut self.group_constraints_duk, 
+                                                                        &mut self.group_constraints_con];
+            // Ensures no inferred constraint makes a group redundant
+            // [OPTIMIZE] is this even required? I guess its for removing groups affected by the inferred additions
+            for (card_num, changes) in card_changes.iter().enumerate() {
+                let mut i: usize = 0;
+                'group_removal: while i < self_groups[card_num].len() {
+                    for &player_id in changes {
+                        // If player flag is true and number of cards player now has
+                        if self_groups[card_num][i].get_player_flag(player_id) {
+                            let count_alive = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                            if count_alive >= self_groups[card_num][i].count_alive() {
+                                self_groups[card_num].swap_remove(i);
+                                continue 'group_removal;
+                            }
+                        }
+                    }
+                    i += 1;
+                }
+            }
+        }
+
     }
     /// To facilitate recursive addition of inferred_card
-    pub fn add_inferred_card(&mut self, player_id: usize, card: Card, card_count: u8) {
-        // TODO: Inferred card needs to add other things inside other than just the group adjustment
-        // TODO: See reveal, and death()
+    /// Should store newly discovered inferred groups and return that
+    /// Returns
+    /// [0] => bool of whether changes were made
+    /// [1] => More discovered inferred constraints expressed as a single flag CompressedGroupConstraint
+    /// [2] => changes to be used for batch prune | Store? (player_id, bool_counts => false: 1, true: 2)
+    pub fn add_inferred_card(&mut self, player_id: usize, card: Card, alive_count: u8, card_changes: &mut Vec<Vec<usize>>) -> (bool, Vec<CompressedGroupConstraint>) {
+        let mut bool_changes = false;
+        // [OPTIMIZE] See bulk, maybe dont even need card_changes
+        // [OPTIMIZE] cant u just add the difference here instead of a branch
+        // nothing special just standard changes
+        match alive_count {
+            1 => {
+                // One card known
+                if !self.inferred_constraints[player_id].contains(&card) {
+                    log::trace!("");
+                    log::trace!("=== add_subset_groups Inferred 1 === ");
+                    log::trace!("add_sub_groups adding player considered: {}", player_id);
+                    log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
+                    log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
+                    self.inferred_constraints[player_id].push(card);
+                    card_changes[card as usize].push(player_id);
+                    log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
+                    log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
+                    bool_changes = true;
+                    // TODO: Needs to prune the groups too...
+                    // TODO: Adjust counts properly too... or remove inferred_counts
+                }
+            },
+            2 => {
+                if player_id == 6 {
+                    let current_count = self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8; 
+                    if alive_count > current_count {
+                        let no_to_push = alive_count - current_count;
+                        for _ in 0..no_to_push {
+                            self.inferred_constraints[player_id].push(card);
+                            bool_changes = true;
+                        }
+                    }
+                } else {
+                    // Both cards known
+                    if self.inferred_constraints[player_id] != vec![card; 2] {
+                        log::trace!("");
+                        log::trace!("=== add_subset_groups Inferred 2 === ");
+                        log::trace!("add_sub_groups adding player considered: {}", player_id);
+                        log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
+                        self.inferred_constraints[player_id].clear();
+                        self.inferred_constraints[player_id].push(card);
+                        self.inferred_constraints[player_id].push(card);
+                        card_changes[card as usize].push(player_id);
+                        log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
+                        log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
+                        // TODO: Needs to prune the groups too... some batch function that prunes groups based on changes?
+                        bool_changes = true;
+                    }
+                }
+                // TODO: Adjust counts properly too... or remove inferred_counts
+            },
+            3 => {
+                if player_id == 6 {
+                    let current_count = self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
+                    if alive_count > current_count {
+                        let no_to_push = alive_count - current_count;
+                        for _ in 0..no_to_push {
+                            self.inferred_constraints[player_id].push(card);
+                            bool_changes = true;
+                        }
+                    }
+                } else {
+                    log::trace!("alive_count: {}", alive_count);
+                    debug_assert!(false, "You really should not be here... there should only be alive_count of 2 or 1 for a single player!");
+                }
+                // TODO: Adjust counts properly too... or remove inferred_counts
+            },
+            _ => {
+                log::trace!("alive_count: {}", alive_count);
+                debug_assert!(false, "You really should not be here... there should only be alive_count of 2 or 1 for a single player!");
+            }
+        }
+        let bool_all_cards_dead_or_known: bool = bool_changes && self.clear_group_constraints(card);
+        let mut new_inferred: Vec<CompressedGroupConstraint> = Vec::with_capacity(3);
+        // update groups and discover new stuff
+        // NOTE: This is not the same as the version in death() => NO CODE REUSE HERE
+        if bool_changes && self.revealed_status[player_id].contains(&card) {
+            // The card could have been from the player's previous reveal redraw
+            // Search through same card group to check for any Single Flag 1 cases
+            // [OPTIMIZE] Or you could store cards one would need to check somehow, so we only check necessary cards
+            //              But i think since u need to update anyway, it won't matter
+            for (card_num, groups) in self.group_constraints_mut().iter_mut().enumerate() {
+                if card_num == card as usize {
+                    if !bool_all_cards_dead_or_known {
+                        let mut i: usize = 0;
+                        while i < groups.len() {
+                            let mut group = &mut groups[i];
+                            if group.get_player_flag(player_id) {
+                                if group.count_alive() > 1 {
+                                    // Standard group adjustment to reflect that a known card is dead
+                                    if group.get_single_card_flag(player_id) {
+                                        // Removing card from the player in the group as only 1 card from the player was participative
+                                        group.set_player_flag(player_id, false);
+                                        if group.is_single_player_part_list() {
+                                            new_inferred.push(*group);
+                                            groups.swap_remove(i);
+                                            continue;
+                                        }
+                                        group.set_single_card_flag(player_id, false);
+                                    } else {
+                                        // Standard group adjustment to reflect that a known card is dead
+                                    }
+                                } else {
+                                    // Standard group adjustment to reflect that a known card is dead
+                                    // After adjustment, count_alive == 0, so we just remove
+                                    groups.swap_remove(i);
+                                    continue;
+                                }
+                            }
+                            i += 1;
+                        }
+                    } else {
+                        // Handled in self.clear_group_constraints() earlier
+                    }
+                } else {
+                    // Get total cards known
+                    let mut i: usize = 0;
+                    while i < groups.len() {
+                        let mut group = &mut groups[i];
+                        if group.get_single_card_flag(player_id) && group.get_player_flag(player_id) {
+                            // We know that player_id had single flag 1 due to a previous reveal redraw
+                            // Modify all groups that reflect this
+                            // Since we know the player_id's single participative card was the one declared dead
+                            // The rest of the groups' single participative card cannot be the group's represented card
+                            // So we remove it
+                            group.set_player_flag(player_id, false);
+                            group.set_single_card_flag(player_id, false);
+                            if group.is_single_player_part_list() && group.count_alive() > 0 {
+                                // More efficient to not use redundant_push here
+                                new_inferred.push(*group);
+                            }
+                            debug_assert!(!group.none_in(), "Should not even reach here!");
+                        }
+                        i += 1;
+                    }
+                }
+            }
+            // If revealed card was part of it, remove it
+            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| *c == card) {
+                self.revealed_status[player_id].swap_remove(pos);
+            }
+        }
+        (bool_changes, new_inferred)
     }
     // TODO: [THEORY CHECK]
     // - !!! If already inside, should not add. because the player could just be reveal info we already know
