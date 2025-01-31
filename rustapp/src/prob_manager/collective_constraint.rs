@@ -1179,6 +1179,7 @@ impl CompressedCollectiveConstraint {
     /// [1] => More discovered inferred constraints expressed as a single flag CompressedGroupConstraint
     /// [2] => changes to be used for batch prune | Store? (player_id, bool_counts => false: 1, true: 2)
     pub fn add_inferred_card(&mut self, player_id: usize, card: Card, alive_count: u8, card_changes: &mut Vec<Vec<usize>>) -> (bool, Vec<CompressedGroupConstraint>) {
+        // TODO: [IMPLEMENT] Need to add the case for single_card_flag on card != card_num ZZ2A as per add_dead_cards
         log::info!("In add_inferred_card");
         let mut bool_changes = false;
         // [OPTIMIZE] See bulk, maybe dont even need card_changes
