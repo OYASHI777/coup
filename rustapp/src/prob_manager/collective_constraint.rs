@@ -67,7 +67,10 @@ pub struct CompressedCollectiveConstraint {
     impossible_constraints: [[bool; 5]; 7], // For each player store an array of bool where each index is a Card, this represents whether a player cannot have a card true => cannot
     dead_card_count: [u8; 5], // each index represents the number of dead cards for the Card enum corresponding to that index
     inferred_card_count: [u8; 5], // each index represents the number of inferred cards for the Card enum
-    revealed_status: Vec<Vec<Card>>, // [Player indexed] Stores cards the player has reveal_redrawn. If player has mixed, it gets emptied 
+    revealed_status: Vec<Vec<Card>>, 
+    // Revealed_status stores the cards and the players that have reveal_redrawn, and have yet to use ambassador (mix)
+    // When reveal_redraw is done, the card is added for the corresponding player
+    // If player has mixed, it gets emptied.
 }
 /// Constructors, Gettors, Simple Checks
 impl CompressedCollectiveConstraint {
@@ -724,26 +727,80 @@ impl CompressedCollectiveConstraint {
         // [QN] rethink this clear, does it affect the operation below?
         //      - I think not as if you know all the cards for a card, you cant infer more from it...
         //      - But you should think about the single flags maybe?
-        let bool_all_other_cards_dead = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>() == 3;
-        let bool_revealed_status_contains_card = self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card));
         let bool_all_cards_dead_or_known: bool = self.clear_group_constraints(card);
         let player_cards = self.public_constraints[player_id].clone();
         log::info!("After clear_group_constraints");
         self.printlog();
         let player_lives_after_death = 2 - self.public_constraints[player_id].len();
         let mut new_inferred: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
-        let bool_revealed_status_contains_card = self.revealed_status[player_id].contains(&card);
         if !self.revealed_status[player_id].is_empty() {
             // The card could have been from the player's previous reveal redraw
             // Search through same card group to check for any Single Flag 1 cases
             // [OPTIMIZE] Or you could store cards one would need to check somehow, so we only check necessary cards
             //              But i think since u need to update anyway, it won't matter
             log::info!("revealed_status player: {player_id}, contains: {:?}", card);
-            for (card_num, groups) in [&mut self.group_constraints_amb, 
-                &mut self.group_constraints_ass, 
-                &mut self.group_constraints_cap, 
-                &mut self.group_constraints_duk, 
-                &mut self.group_constraints_con].iter_mut().enumerate() {
+            let mut group_constraints = [&mut self.group_constraints_amb, 
+            &mut self.group_constraints_ass, 
+            &mut self.group_constraints_cap, 
+            &mut self.group_constraints_duk, 
+            &mut self.group_constraints_con];
+            let mut card_num: usize = 0;
+            while card_num < 5 {
+                let groups = &mut group_constraints[card_num];
+                // Rust mutable borrows rules kinda weird...
+                // let (groups, discard_card_group) = match card_num {
+                //     0 => {
+                //         match card as usize {
+                //             0 => (&mut self.group_constraints_amb, None),
+                //             1 => (&mut self.group_constraints_amb, Some(&self.group_constraints_ass)),
+                //             2 => (&mut self.group_constraints_amb, Some(&self.group_constraints_cap)),
+                //             3 => (&mut self.group_constraints_amb, Some(&self.group_constraints_duk)),
+                //             4 => (&mut self.group_constraints_amb, Some(&self.group_constraints_con)),
+                //             _ => unimplemented!("bro really? only 5 cards man"),
+                //         }
+                //     },
+                //     1 => {
+                //         match card as usize {
+                //             0 => (&mut self.group_constraints_ass, Some(&self.group_constraints_amb)),
+                //             1 => (&mut self.group_constraints_ass, None),
+                //             2 => (&mut self.group_constraints_ass, Some(&self.group_constraints_cap)),
+                //             3 => (&mut self.group_constraints_ass, Some(&self.group_constraints_duk)),
+                //             4 => (&mut self.group_constraints_ass, Some(&self.group_constraints_con)),
+                //             _ => unimplemented!("bro really? only 5 cards man"),
+                //         }
+                //     },
+                //     2 => {
+                //         match card as usize {
+                //             0 => (&mut self.group_constraints_cap, Some(&self.group_constraints_amb)),
+                //             1 => (&mut self.group_constraints_cap, Some(&self.group_constraints_ass)),
+                //             2 => (&mut self.group_constraints_cap, None),
+                //             3 => (&mut self.group_constraints_cap, Some(&self.group_constraints_duk)),
+                //             4 => (&mut self.group_constraints_cap, Some(&self.group_constraints_con)),
+                //             _ => unimplemented!("bro really? only 5 cards man"),
+                //         }
+                //     },
+                //     3 => {
+                //         match card as usize {
+                //             0 => (&mut self.group_constraints_duk, Some(&self.group_constraints_amb)),
+                //             1 => (&mut self.group_constraints_duk, Some(&self.group_constraints_ass)),
+                //             2 => (&mut self.group_constraints_duk, Some(&self.group_constraints_cap)),
+                //             3 => (&mut self.group_constraints_duk, None),
+                //             4 => (&mut self.group_constraints_duk, Some(&self.group_constraints_con)),
+                //             _ => unimplemented!("bro really? only 5 cards man"),
+                //         }
+                //     },
+                //     4 => {
+                //         match card as usize {
+                //             0 => (&mut self.group_constraints_con, Some(&self.group_constraints_amb)),
+                //             1 => (&mut self.group_constraints_con, Some(&self.group_constraints_ass)),
+                //             2 => (&mut self.group_constraints_con, Some(&self.group_constraints_cap)),
+                //             3 => (&mut self.group_constraints_con, Some(&self.group_constraints_duk)),
+                //             4 => (&mut self.group_constraints_con, None),
+                //             _ => unimplemented!("bro really? only 5 cards man"),
+                //         }
+                //     },
+                //     _ => unimplemented!("bro really? only 5 cards man"),
+                // };
                 if card_num == card as usize {
                     if !bool_all_cards_dead_or_known {
                         let mut i: usize = 0;
@@ -786,67 +843,191 @@ impl CompressedCollectiveConstraint {
                     }
                 } else {
                     // Get total cards known
-                    log::info!("add_dead_card player_id: {}, card: {:?} considering groups of type card: {}", player_id, card, card_num);
-                    // TODO: [THINK] Seems like i might needa consider how many cards is known from player?
-                    //      - Should also consider number of known cards from player!
-                    // This if works for some but does not work for replay_4
-                    // If all other cards are outside of reveal_redraw network?
-                    // If all other cards are outside the player? idts
-                    // can try bool_all_other_cards_dead_or_known
-                    // or maybe the complement of this group / network has all the cards
-                    // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_other_cards_dead;
-                    // [NOTE]: This is if the player does not have the group's card and we know it because of what he just revealed
-                    // Thats why we set flags to false, cos we know the group's card is not there
-                    //      - I guess thats the case when player reveals a card in the reveal redraw group?
-                    // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_other_cards_dead && bool_revealed_status_contains_card;
-                    // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_cards_dead_or_known && !player_cards.contains(&Card::try_from(card_num as u8).unwrap());
-                    let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = player_lives_after_death == 0 && !player_cards.contains(&Card::try_from(card_num as u8).unwrap());
-                    // Think this passes tests but is obviously anaemic
-                    let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card)) 
-                    && {
-                        // Counting the number of cards outside the network!
-                        let mut count: u8 = 0;
-                        for player in 0..self.revealed_status.len() {
-                            if self.revealed_status[player].is_empty() {
-                                count += self.public_constraints[player]
-                                    .iter()
-                                    .chain(self.inferred_constraints[player].iter())
-                                    .filter(|c| **c == card)
-                                    .count() as u8;
+                    // ZZ2A Was here
+                }
+                card_num += 1;
+            }
+            // ZZ2A Needs to be shifted here
+            // This is here as it needs all the groups to be updated before running
+            log::info!("add_dead_card player_id: {}, card: {:?} considering groups of type card: {}", player_id, card, card_num);
+            // TODO: [THINK] Seems like i might needa consider how many cards is known from player?
+            //      - Should also consider number of known cards from player!
+            // This if works for some but does not work for replay_4
+            // If all other cards are outside of reveal_redraw network?
+            // If all other cards are outside the player? idts
+            // can try bool_all_other_cards_dead_or_known
+            // or maybe the complement of this group / network has all the cards
+            // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_other_cards_dead;
+            // [NOTE]: This is if the player does not have the group's card and we know it because of what he just revealed
+            // Thats why we set flags to false, cos we know the group's card is not there
+            //      - I guess thats the case when player reveals a card in the reveal redraw group?
+            // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_other_cards_dead && bool_revealed_status_contains_card;
+            // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_cards_dead_or_known && !player_cards.contains(&Card::try_from(card_num as u8).unwrap());
+            // Think this passes tests but is obviously anaemic
+            let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = 
+            // If any player has revealed this card before this
+            // If nobody has revealed the card before, the card will not certainly be in the player's single_flag
+            // If some player has revealed the card before, and player has revealredrawn, 
+            //      - if all cards outside group are known, card is not in player's other card
+            //      - card is thus part of the single_flag group
+            self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card));
+            // && {
+            //     // Counting the number of cards outside the network!
+            //     let mut count: u8 = 0;
+            //     for player in 0..self.revealed_status.len() {
+            //         if self.revealed_status[player].is_empty() {
+            //             count += self.public_constraints[player]
+            //                 .iter()
+            //                 .chain(self.inferred_constraints[player].iter())
+            //                 .filter(|c| **c == card)
+            //                 .count() as u8;
+            //         }
+            //     }
+            //     // Assuming only 1 in network.. which is stupid
+            //     count == 2 // [FIX] Im thinking if this is incomplete
+            //     // [FIX]
+            //     // [A] Like the network may have 2 cards, and outside would be 1
+            //     //      - Like we would need to count how many are in the network too!
+            //     //      - like if player 1 RevealRedraw Duke, theres 1 in network
+            //     //      - if player 2 RevealRedraw Duke, theres another 1 in the network
+            //     //      - So an addition to the network should increase the count? 
+            //     // [B] Outside the network should consider the groups too, as it may not all be reflected in public and inferred
+            //     //      - Won't u need mut excl to have been run for this to work?
+            // };
+
+            // TODO: [OPTIMIZE] for fast bool exit condition
+            // TODO: [FIX] what actually is the condition to be used here?
+            // TODO: [FIX] do the same for inferred groups?
+            // TODO: [FIXFIXFIXFIXFIX]
+            // Currently this means if present card is part of the network, but just cos it was revealed doesnt mean it was part of the network
+            //      - player may have 2 lives and this may not be part of the network
+            //      - What about the complementing group has all other cards idea?
+            //          - !!! Like if a player has 2 lives, discards a Duke, but all the other dukes are not in the network
+            if bool_discarded_card_is_definitely_part_of_reveal_redraw_network {
+                // handle case where revealed card is part of the single flag network
+                // We then adjust affected groups of other cards that are part of the network
+                let mut card_num: usize = 0;
+                while card_num < 5 {
+                    if card_num == card as usize {
+                        card_num += 1;
+                        continue;
+                    }
+                    let (groups, discard_card_group) = match card_num {
+                        0 => {
+                            match card as usize {
+                                0 => (&mut self.group_constraints_amb, None),
+                                1 => (&mut self.group_constraints_amb, Some(&self.group_constraints_ass)),
+                                2 => (&mut self.group_constraints_amb, Some(&self.group_constraints_cap)),
+                                3 => (&mut self.group_constraints_amb, Some(&self.group_constraints_duk)),
+                                4 => (&mut self.group_constraints_amb, Some(&self.group_constraints_con)),
+                                _ => unimplemented!("bro really? only 5 cards man"),
                             }
-                        }
-                        // Assuming only 1 in network.. which is stupid
-                        count == 2 // [FIX] Im thinking if this is incomplete
-                        // [FIX]
-                        // [A] Like the network may have 2 cards, and outside would be 1
-                        //      - Like we would need to count how many are in the network too!
-                        //      - like if player 1 RevealRedraw Duke, theres 1 in network
-                        //      - if player 2 RevealRedraw Duke, theres another 1 in the network
-                        //      - So an addition to the network should increase the count? 
-                        // [B] Outside the network should consider the groups too, as it may not all be reflected in public and inferred
-                        //      - Won't u need mut excl to have been run for this to work?
+                        },
+                        1 => {
+                            match card as usize {
+                                0 => (&mut self.group_constraints_ass, Some(&self.group_constraints_amb)),
+                                1 => (&mut self.group_constraints_ass, None),
+                                2 => (&mut self.group_constraints_ass, Some(&self.group_constraints_cap)),
+                                3 => (&mut self.group_constraints_ass, Some(&self.group_constraints_duk)),
+                                4 => (&mut self.group_constraints_ass, Some(&self.group_constraints_con)),
+                                _ => unimplemented!("bro really? only 5 cards man"),
+                            }
+                        },
+                        2 => {
+                            match card as usize {
+                                0 => (&mut self.group_constraints_cap, Some(&self.group_constraints_amb)),
+                                1 => (&mut self.group_constraints_cap, Some(&self.group_constraints_ass)),
+                                2 => (&mut self.group_constraints_cap, None),
+                                3 => (&mut self.group_constraints_cap, Some(&self.group_constraints_duk)),
+                                4 => (&mut self.group_constraints_cap, Some(&self.group_constraints_con)),
+                                _ => unimplemented!("bro really? only 5 cards man"),
+                            }
+                        },
+                        3 => {
+                            match card as usize {
+                                0 => (&mut self.group_constraints_duk, Some(&self.group_constraints_amb)),
+                                1 => (&mut self.group_constraints_duk, Some(&self.group_constraints_ass)),
+                                2 => (&mut self.group_constraints_duk, Some(&self.group_constraints_cap)),
+                                3 => (&mut self.group_constraints_duk, None),
+                                4 => (&mut self.group_constraints_duk, Some(&self.group_constraints_con)),
+                                _ => unimplemented!("bro really? only 5 cards man"),
+                            }
+                        },
+                        4 => {
+                            match card as usize {
+                                0 => (&mut self.group_constraints_con, Some(&self.group_constraints_amb)),
+                                1 => (&mut self.group_constraints_con, Some(&self.group_constraints_ass)),
+                                2 => (&mut self.group_constraints_con, Some(&self.group_constraints_cap)),
+                                3 => (&mut self.group_constraints_con, Some(&self.group_constraints_duk)),
+                                4 => (&mut self.group_constraints_con, None),
+                                _ => unimplemented!("bro really? only 5 cards man"),
+                            }
+                        },
+                        _ => unimplemented!("bro really? only 5 cards man"),
                     };
-                    // TODO: [OPTIMIZE] for fast bool exit condition
-                    // TODO: [FIX] what actually is the condition to be used here?
-                    // TODO: [FIX] do the same for inferred groups?
-                    // TODO: [FIXFIXFIXFIXFIX]
-                    // Currently this means if present card is part of the network, but just cos it was revealed doesnt mean it was part of the network
-                    //      - player may have 2 lives and this may not be part of the network
-                    //      - What about the complementing group has all other cards idea?
-                    //          - !!! Like if a player has 2 lives, discards a Duke, but all the other dukes are not in the network
-                    if bool_discarded_card_is_definitely_part_of_reveal_redraw_network {
-                        // handle case where revealed card is part of the single flag network
-                        // We then adjust affected groups of other cards that are part of the network
-                        let mut i: usize = 0;
-                        while i < groups.len() {
-                            let group = &mut groups[i];
-                            if group.get_single_card_flag(player_id) && group.get_player_flag(player_id) {
-                                log::trace!("add_dead_card manhandling group: {}", group);
-                                // We know that player_id had single flag 1 due to a previous reveal redraw
-                                // Modify all groups that reflect this
-                                // Since we know the player_id's single participative card was the one declared dead
-                                // The rest of the groups' single participative card cannot be the group's represented card
-                                // So we remove it
+                    let mut i: usize = 0;
+                    while i < groups.len() {
+                        let group = &mut groups[i];
+                        // TODO: Check group and outside group
+                        if group.get_single_card_flag(player_id) 
+                        && group.get_player_flag(player_id) 
+                        {
+                            // Check if the discarded card is certainly from the participating single_card of the player
+                            let card_certainly_in_single_flag_group: bool = {
+                                // Condition A: If all of the other cards == card, are outside of the group/ already dead with player
+                                //              Then we know the discarded card was part of the single card the player reveal_redrawn
+                                let complement: [bool; 7] = group.get_complement_part_list();
+                                let mut total_revealed_count_outside_group: u8 = 0;
+                                total_revealed_count_outside_group += self.public_constraints.iter().enumerate().map(|(i, v)| if complement[i] {v.iter().filter(|c| **c == card).count() as u8} else {0}).sum::<u8>();
+                                total_revealed_count_outside_group += self.inferred_constraints.iter().enumerate().map(|(i, v)| if complement[i] {v.iter().filter(|c| **c == card).count() as u8} else {0}).sum::<u8>();
+                                let group_count = group.count();
+                                log::trace!("add_dead_card public_constraint: {:?}", self.public_constraints);
+                                log::trace!("add_dead_card inferred_constraint: {:?}", self.inferred_constraints);
+                                log::trace!("add_dead_card player: {player_id} discarded: {:?}", card);
+                                log::trace!("add_dead_card card_certainly_in_single_flag_group group: {}", group);
+                                log::trace!("add_dead_card complement: {:?}", complement);
+                                log::trace!("add_dead_card card_certainly_in_single_flag_group total_count_outside_group simple: {}", total_revealed_count_outside_group);
+                                let mut total_revealed_card_count_inside_group: u8 = 0;
+                                if total_revealed_count_outside_group == 2 {
+                                    log::trace!("add_dead_card card_certainly_in_single_flag_group total_count_outside_group true A-0");
+                                    true // Early exit as we know the last card is revealed by player!
+                                } else {
+                                    for revealed_card_group in discard_card_group.unwrap().iter() {
+                                        if revealed_card_group.part_list_is_subset_of(group) {
+                                            total_revealed_card_count_inside_group = total_revealed_card_count_inside_group.max(revealed_card_group.count());
+                                        } 
+                                    }
+                                    log::trace!("add_dead_card card_certainly_in_single_flag_group total_revealed_card_count_inside_group: {}", total_revealed_card_count_inside_group);
+                                    // 
+                                    if total_revealed_count_outside_group + total_revealed_card_count_inside_group == 3 {
+                                        // A-1: all cards outside group are known in public / inferred info => early exit
+                                        log::trace!("add_dead_card card_certainly_in_single_flag_group total_count_outside_group true A-1");
+                                        true
+                                    } else {
+                                        // A-2: all cards outside group are known in group info
+                                        let mut bool_return = false; // This is dumb
+                                        // Due to bounds check, this unwrap is always safe
+                                        for revealed_card_group in discard_card_group.unwrap().iter() {
+                                            if group.part_list_is_mut_excl(*revealed_card_group) 
+                                            && group_count + revealed_card_group.count() == 3 {
+                                                log::trace!("add_dead_card card_certainly_in_single_flag_group true A-2");
+                                                bool_return = true;
+                                                break
+                                            }
+                                        }
+                                        log::trace!("add_dead_card card_certainly_in_single_flag_group false boohoo");
+                                        bool_return
+                                    }
+                                }
+                            };
+                            log::trace!("card_certainly_in_single_flag_group: {card_certainly_in_single_flag_group}");
+                            log::trace!("add_dead_card manhandling group: {}", group);
+                            // We know that player_id had single flag 1 due to a previous reveal redraw
+                            // Modify all groups that reflect this
+                            // Since we know the player_id's single participative card was the one declared dead
+                            // The rest of the groups' single participative card cannot be the group's represented card
+                            // So we remove it
+                            if card_certainly_in_single_flag_group {
                                 group.set_player_flag(player_id, false);
                                 group.set_single_card_flag(player_id, false);
                                 // Should these be here?
@@ -862,9 +1043,10 @@ impl CompressedCollectiveConstraint {
                                 log::trace!("add_dead_card changed group to: {}", group);
                                 debug_assert!(!group.none_in(), "Should not even reach here!");
                             }
-                            i += 1;
                         }
+                        i += 1;
                     }
+                    card_num += 1;
                 }
             }
             // If revealed card was part of it, remove it
@@ -940,6 +1122,7 @@ impl CompressedCollectiveConstraint {
             }
         }
         // [QN] should I remove from revealed_status?
+        // TODO: [THINK] might want remove card from all groups if all cards are dead? 
         if player_lives_after_death == 0 {
             self.revealed_status[player_id].clear();
         }

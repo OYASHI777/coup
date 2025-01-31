@@ -263,6 +263,14 @@ impl CompressedGroupConstraint {
             self.get_player_flag(6),
         ]
     }
+    /// Returns the complement of part_list
+    pub fn get_complement_part_list(&self) -> [bool; 7] {
+        Self(!(self.0 & Self::PLAYER_BITS) & !0).get_set_players()
+    }
+    /// Returns the complement of part_list
+    pub fn get_complement_blank_part_list(&self) -> Self {
+        Self(!(self.0 & Self::PLAYER_BITS) & !0)
+    }
     /// Returns Self but with all 0s except the part_list
     pub fn get_blank_part_list(&self) -> Self {
         Self(self.0 & Self::PLAYER_BITS)
