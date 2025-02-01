@@ -71,6 +71,7 @@ pub struct CompressedCollectiveConstraint {
     // Revealed_status stores the cards and the players that have reveal_redrawn, and have yet to use ambassador (mix)
     // When reveal_redraw is done, the card is added for the corresponding player
     // If player has mixed, it gets emptied.
+    // a card can be removed from revealed_status on Discard too, though it may not update all groups
 }
 /// Constructors, Gettors, Simple Checks
 impl CompressedCollectiveConstraint {
@@ -266,6 +267,7 @@ impl CompressedCollectiveConstraint {
     pub fn printlog(&self) {
         log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));
         log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints));
+        log::info!("{}", format!("Revealed Status: {:?}", self.revealed_status));
         log::info!("{}", format!("Group Constraints:"));
         log::info!("{}", format!("\t AMB: {:?}", self.group_constraints_amb));
         log::info!("{}", format!("\t ASS: {:?}", self.group_constraints_ass));
@@ -1079,8 +1081,9 @@ impl CompressedCollectiveConstraint {
                         while i < groups.len() {
                             let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
-                                debug_assert!(!group.get_single_card_flag(player_id), "Revealed_status not properly updated before this");
                                 log::trace!("add_dead_card reveal_status.is_empty() considering group: {}", group);
+                                // This debug_assert is not needed, a card can be removed from revealed_status on Discard too, though it may not update all groups
+                                // debug_assert!(!group.get_single_card_flag(player_id), "Revealed_status not properly updated before this");
                                 if group.count_alive() > 1 {
                                     // Standard group adjustment to reflect that a known card is dead
                                     group.sub_alive_count(1);
