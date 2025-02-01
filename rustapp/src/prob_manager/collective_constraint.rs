@@ -822,6 +822,10 @@ impl CompressedCollectiveConstraint {
                                             log::trace!("Group removed!");
                                             continue;
                                         }
+                                        // Testing start
+                                        let dead_count_before_death = self.public_constraints[player_id].iter().filter(|c| **c == group.card()).count() as u8 - 1;
+                                        group.sub_dead_count(dead_count_before_death);
+                                        // Testing end
                                         group.set_single_card_flag(player_id, false);
                                         group.set_total_count(group.count_alive() + group.count_dead());
                                         log::trace!("A Group changed to: {},", group);
