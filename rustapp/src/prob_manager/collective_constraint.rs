@@ -2479,13 +2479,24 @@ impl CompressedCollectiveConstraint {
                             // But since only 1 of player 5's card is actually part of this mix
                             // We can conclude that the pile must have 2-1 = 1 Captain!
                             // Because Player 5 can have at most 1 Captain! not 2!
+                            // 2 lives, 1 known other card =>
+                            // 2 lives, single_card_flag => 1
+                            // 1 life, single_card_flag => 1
+                            // 1 life, 1 known other card => 0
                             let player_lives: u8 = if player != 6 {
                                 2 - (self.public_constraints[player].len() as u8).max(group.get_single_card_flag(player) as u8)
                             } else {
                                 3 // Not 0
                             };
                             let player_inferred_diff_cards: u8 = self.inferred_constraints[player].iter().filter(|c| **c as usize != card_num).count() as u8;
-                            if group.count_alive() + player_inferred_diff_cards > player_lives {
+                            let max_holdable_spaces: u8 = if player_lives == 1 && player_inferred_diff_cards == 1 {
+                                1
+                            } else {
+                                // This should not overflow as player can't have more cards than he has lives
+                                player_lives - player_inferred_diff_cards
+                            };
+                            // if group.count_alive() + player_inferred_diff_cards > player_lives {
+                            if group.count_alive() > max_holdable_spaces {
                                 // Cards contained is n - player_lives + player_inferred_cards for new group
                                 log::trace!("");
                                 log::trace!("=== add_subset_groups Reference === ");
@@ -2499,7 +2510,8 @@ impl CompressedCollectiveConstraint {
                                 new_group.set_single_card_flag(player, false);
                                 let dead_card_count = self.public_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
                                 new_group.sub_dead_count(dead_card_count);
-                                new_group.set_alive_count(group.count_alive() + player_inferred_diff_cards - player_lives );
+                                // new_group.set_alive_count(group.count_alive() + player_inferred_diff_cards - player_lives );
+                                new_group.set_alive_count(group.count_alive() - max_holdable_spaces);
                                 new_group.set_total_count(new_group.count_alive() + new_group.count_dead());
                                 // Required to meet assumptions of recursive function
                                 if flags_count > 2 {
