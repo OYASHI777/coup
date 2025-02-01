@@ -822,10 +822,8 @@ impl CompressedCollectiveConstraint {
                                             log::trace!("Group removed!");
                                             continue;
                                         }
-                                        // Testing start
                                         let dead_count_before_death = self.public_constraints[player_id].iter().filter(|c| **c == group.card()).count() as u8 - 1;
                                         group.sub_dead_count(dead_count_before_death);
-                                        // Testing end
                                         group.set_single_card_flag(player_id, false);
                                         group.set_total_count(group.count_alive() + group.count_dead());
                                         log::trace!("A Group changed to: {},", group);
@@ -1037,8 +1035,9 @@ impl CompressedCollectiveConstraint {
                                 group.set_player_flag(player_id, false);
                                 group.set_single_card_flag(player_id, false);
                                 // Should these be here?
-                                // group.sub_dead_count(self.public_constraints[player_id].iter().filter(|c| **c == card).count() as u8);
-                                // group.sub_alive_count(self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8);
+                                let group_card = group.card();
+                                group.sub_dead_count(self.public_constraints[player_id].iter().filter(|c| **c == group_card).count() as u8);
+                                group.sub_alive_count(self.inferred_constraints[player_id].iter().filter(|c| **c == group_card).count() as u8);
                                 if group.is_single_player_part_list() && group.count_alive() > 0 {
                                     // More efficient to not use redundant_push here
                                     log::trace!("add_dead_card found single_card group: {}", group);
@@ -1270,12 +1269,16 @@ impl CompressedCollectiveConstraint {
             // Search through same card group to check for any Single Flag 1 cases
             // [OPTIMIZE] Or you could store cards one would need to check somehow, so we only check necessary cards
             //              But i think since u need to update anyway, it won't matter
-            for (card_num, groups) in self.group_constraints_mut().iter_mut().enumerate() {
+            for (card_num, groups) in [&mut self.group_constraints_amb, 
+            &mut self.group_constraints_ass, 
+            &mut self.group_constraints_cap, 
+            &mut self.group_constraints_duk, 
+            &mut self.group_constraints_con].iter_mut().enumerate() {
                 if card_num == card as usize {
                     if !bool_all_cards_dead_or_known {
                         let mut i: usize = 0;
                         while i < groups.len() {
-                            let mut group = &mut groups[i];
+                            let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
                                 if group.count_alive() > 1 {
                                     // Standard group adjustment to reflect that a known card is dead
@@ -1289,7 +1292,11 @@ impl CompressedCollectiveConstraint {
                                             groups.swap_remove(i);
                                             continue;
                                         }
+                                        // Testing
+                                        let dead_count = self.public_constraints[player_id].iter().filter(|c| **c == group.card()).count() as u8;
+                                        group.sub_dead_count(dead_count);
                                         group.set_single_card_flag(player_id, false);
+                                        group.set_total_count(group.count_alive() + group.count_dead());
                                         log::trace!("A add_inferred_card modified group: {}", group);
                                     } else {
                                         // Standard group adjustment to reflect that a known card is dead
@@ -1312,7 +1319,7 @@ impl CompressedCollectiveConstraint {
                     // Get total cards known
                     let mut i: usize = 0;
                     while i < groups.len() {
-                        let mut group = &mut groups[i];
+                        let group = &mut groups[i];
                         if group.get_single_card_flag(player_id) && group.get_player_flag(player_id) {
                             // We know that player_id had single flag 1 due to a previous reveal redraw
                             // Modify all groups that reflect this
@@ -1327,6 +1334,9 @@ impl CompressedCollectiveConstraint {
                                 log::trace!("C add_inferred_card found inferred group: {}", group);
                                 new_inferred.push(*group);
                             }
+                            // Testing
+                            let dead_count = self.public_constraints[player_id].iter().filter(|c| **c == group.card()).count() as u8;
+                            group.count_dead_subtract(dead_count);
                             debug_assert!(!group.none_in(), "Should not even reach here!");
                         }
                         i += 1;
