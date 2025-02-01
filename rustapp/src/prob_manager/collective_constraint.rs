@@ -1275,6 +1275,8 @@ impl CompressedCollectiveConstraint {
             &mut self.group_constraints_duk, 
             &mut self.group_constraints_con].iter_mut().enumerate() {
                 if card_num == card as usize {
+                    let dead_count = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                    let alive_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                     if !bool_all_cards_dead_or_known {
                         let mut i: usize = 0;
                         while i < groups.len() {
@@ -1292,11 +1294,10 @@ impl CompressedCollectiveConstraint {
                                             groups.swap_remove(i);
                                             continue;
                                         }
-                                        // Testing
-                                        let dead_count = self.public_constraints[player_id].iter().filter(|c| **c == group.card()).count() as u8;
-                                        group.sub_dead_count(dead_count);
+                                        // Do I sub alive count?
+                                        group.count_dead_subtract(dead_count);
+                                        group.count_alive_subtract(alive_count);
                                         group.set_single_card_flag(player_id, false);
-                                        group.set_total_count(group.count_alive() + group.count_dead());
                                         log::trace!("A add_inferred_card modified group: {}", group);
                                     } else {
                                         // Standard group adjustment to reflect that a known card is dead
@@ -1318,6 +1319,8 @@ impl CompressedCollectiveConstraint {
                 } else {
                     // Get total cards known
                     let mut i: usize = 0;
+                    let dead_count = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
+                    let alive_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                     while i < groups.len() {
                         let group = &mut groups[i];
                         if group.get_single_card_flag(player_id) && group.get_player_flag(player_id) {
@@ -1334,9 +1337,10 @@ impl CompressedCollectiveConstraint {
                                 log::trace!("C add_inferred_card found inferred group: {}", group);
                                 new_inferred.push(*group);
                             }
-                            // Testing
-                            let dead_count = self.public_constraints[player_id].iter().filter(|c| **c == group.card()).count() as u8;
+                            // Do I sub alive count?
+                            // Invariant
                             group.count_dead_subtract(dead_count);
+                            group.count_alive_subtract(alive_count);
                             debug_assert!(!group.none_in(), "Should not even reach here!");
                         }
                         i += 1;
