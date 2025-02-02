@@ -9,8 +9,8 @@ use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
-pub const LOG_FILE_NAME: &str = "test.log";
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
+pub const LOG_FILE_NAME: &str = "debug_test.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
@@ -21,7 +21,7 @@ fn main() {
     let game_no = 100000;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 1;
+    let print_frequency: usize = 10;
     // (DONE) [TEST 1000] Discard + Ambassador Release farm
     // [TEST 1000] Discard + RevealRedraw Release mode
     // (Ran 210) [TEST 1000] Discard + Ambassador Debug mode
@@ -280,6 +280,7 @@ pub fn game_rnd_constraint_debug(game_no: usize, bool_know_priv_info: bool, prin
                     replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     panic!()
                 }
+                // bit_prob.check_three();
                 public_constraints_correct += pass_public_constraints as usize;
                 inferred_constraints_correct += pass_inferred_constraints as usize;
                 impossible_constraints_correct += pass_impossible_constraints as usize;

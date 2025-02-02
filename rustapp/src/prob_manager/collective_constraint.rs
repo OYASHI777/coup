@@ -875,34 +875,7 @@ impl CompressedCollectiveConstraint {
             //      - if all cards outside group are known, card is not in player's other card
             //      - card is thus part of the single_flag group
             self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card));
-            // && {
-            //     // Counting the number of cards outside the network!
-            //     let mut count: u8 = 0;
-            //     for player in 0..self.revealed_status.len() {
-            //         if self.revealed_status[player].is_empty() {
-            //             count += self.public_constraints[player]
-            //                 .iter()
-            //                 .chain(self.inferred_constraints[player].iter())
-            //                 .filter(|c| **c == card)
-            //                 .count() as u8;
-            //         }
-            //     }
-            //     // Assuming only 1 in network.. which is stupid
-            //     count == 2 // [FIX] Im thinking if this is incomplete
-            //     // [FIX]
-            //     // [A] Like the network may have 2 cards, and outside would be 1
-            //     //      - Like we would need to count how many are in the network too!
-            //     //      - like if player 1 RevealRedraw Duke, theres 1 in network
-            //     //      - if player 2 RevealRedraw Duke, theres another 1 in the network
-            //     //      - So an addition to the network should increase the count? 
-            //     // [B] Outside the network should consider the groups too, as it may not all be reflected in public and inferred
-            //     //      - Won't u need mut excl to have been run for this to work?
-            // };
 
-            // TODO: [OPTIMIZE] for fast bool exit condition
-            // TODO: [FIX] what actually is the condition to be used here?
-            // TODO: [FIX] do the same for inferred groups?
-            // TODO: [FIXFIXFIXFIXFIX]
             // Currently this means if present card is part of the network, but just cos it was revealed doesnt mean it was part of the network
             //      - player may have 2 lives and this may not be part of the network
             //      - What about the complementing group has all other cards idea?

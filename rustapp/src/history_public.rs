@@ -432,6 +432,7 @@ impl History {
     }
     pub fn log_history(&self){
         log::info!("{}", format!("Current_player_turn: {:?}", self.get_history(self.store_len)));
+        println!("{}", format!("Current_player_turn: {:?}", self.get_history(self.store_len)));
     }
     pub fn pop(&mut self){
         if self.store_len == 0 {
