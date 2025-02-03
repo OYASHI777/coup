@@ -730,7 +730,6 @@ impl CompressedCollectiveConstraint {
         //      - I think not as if you know all the cards for a card, you cant infer more from it...
         //      - But you should think about the single flags maybe?
         let bool_all_cards_dead_or_known: bool = self.clear_group_constraints(card);
-        let player_cards = self.public_constraints[player_id].clone();
         log::info!("After clear_group_constraints");
         self.printlog();
         let player_lives_after_death = 2 - self.public_constraints[player_id].len();
@@ -919,7 +918,9 @@ impl CompressedCollectiveConstraint {
                                     true // Early exit as we know the last card is revealed by player!
                                 } else {
                                     for revealed_card_group in discard_card_group.unwrap().iter() {
-                                        if revealed_card_group.part_list_is_subset_of(group) {
+                                        if revealed_card_group.part_list_is_subset_of(group) && revealed_card_group.single_card_flags_is_subset_of(*group) {
+                                            // We require that the single_card_flags for group should be more restrictive to be included in the count of revealed_card_group
+                                            log::trace!("total_revealed_card_count_inside found revealed_card_group: {revealed_card_group} subset of group: {group}");
                                             total_revealed_card_count_inside_group = total_revealed_card_count_inside_group.max(revealed_card_group.count());
                                         } 
                                     }
@@ -1392,7 +1393,8 @@ impl CompressedCollectiveConstraint {
                                     true // Early exit as we know the last card is revealed by player!
                                 } else {
                                     for revealed_card_group in inferred_card_group.unwrap().iter() {
-                                        if revealed_card_group.part_list_is_subset_of(group) {
+                                        // We require that the single_card_flags for group should be more restrictive to be included in the count of revealed_card_group
+                                        if revealed_card_group.part_list_is_subset_of(group) && revealed_card_group.single_card_flags_is_subset_of(*group){
                                             total_revealed_card_count_inside_group = total_revealed_card_count_inside_group.max(revealed_card_group.count());
                                         } 
                                     }
@@ -2448,11 +2450,37 @@ impl CompressedCollectiveConstraint {
             let mut_excl_changes = self.add_mutually_exclusive_unions();
             log::info!("After add_mutually_exclusive_unions");
             self.printlog();
+            // This kinda needs to maximal informative set to work. Perhaps to run both above to completion first?
             let inf_exc_pl = self.add_inferred_except_player();
             log::info!("After add_inferred_except_player");
             self.printlog();
             bool_continue = mut_excl_changes || inf_exc_pl;
         }
+        // === adjusted to fix need for add_inferred_except_player to have maximal informative set else it adds wrongly
+        // log::info!("Before add_subset_groups");
+        // self.printlog();
+        // let subset_changes = self.add_subset_groups_unopt();
+        // log::info!("After add_subset_groups");
+        // self.printlog();
+        // let mut_excl_changes = self.add_mutually_exclusive_unions();
+        // log::info!("After add_mutually_exclusive_unions");
+        // self.printlog();
+        // bool_continue = mut_excl_changes || subset_changes;
+        // while bool_continue {
+        //     bool_continue = self.add_subset_groups_unopt();
+        //     log::info!("After add_subset_groups");
+        //     self.printlog();
+        //     bool_continue = self.add_mutually_exclusive_unions() || bool_continue;
+        //     log::info!("After add_mutually_exclusive_unions");
+        //     self.printlog();
+        // }
+        // // This kinda needs to maximal informative set to work. Perhaps to run both above to completion first?
+        // let inf_exc_pl = self.add_inferred_except_player();
+        // log::info!("After add_inferred_except_player");
+        // self.printlog();
+        // if inf_exc_pl {
+        //     self.add_inferred_groups();
+        // }
     }
     /// Assumes groups in vec all have same card as group input
     /// Assumes vec is not internally redundant
@@ -3407,16 +3435,18 @@ impl CompressedCollectiveConstraint {
                     while player_index < players.len() {
                         let player = players[player_index];
                         if group.get_player_flag(player) {
-                            let mut complement_part_list: CompressedGroupConstraint = group.get_blank_part_list();
-                            complement_part_list.set_player_flag(player, false);
+                            let mut part_list_excl_player: CompressedGroupConstraint = group.get_blank_part_list();
+                            part_list_excl_player.set_player_flag(player, false);
                             // Gets maximal holdable number of cards in the group outside of the player
                             let mut maximal_alive_card_counts: [u8; 5] = [0; 5];
                             for (card_num_inner, complement_groups) in self.group_constraints().iter().enumerate() {
                                 if card_num_inner != card_num {
                                     for complement_group in complement_groups.iter() {
                                         // See Assumptions! This requires add_subsets and add_mut excl unions to be ran for this to work
-                                        if complement_group.part_list_is_subset_of(&complement_part_list) {
+                                        if complement_group.part_list_is_subset_of(&part_list_excl_player) {
+                                            log::trace!("complement group: {} is subset of group: {}", complement_group, part_list_excl_player);
                                             maximal_alive_card_counts[card_num_inner] = std::cmp::max(maximal_alive_card_counts[card_num_inner], complement_group.count_alive());
+                                            log::trace!("maximal_alive_card_counts is now: {:?}", maximal_alive_card_counts);
                                         }
                                     }
                                 }
@@ -3431,12 +3461,12 @@ impl CompressedCollectiveConstraint {
                             // We have got the
                             let complement_maximal_holdable_alive = maximal_alive_card_counts.iter().sum::<u8>();
                             // All spaces other than player
-                            let complement_maximal_holdable_spaces = complement_part_list.max_spaces();
+                            let complement_maximal_holdable_spaces = part_list_excl_player.max_spaces();
                             // This should not overflow as spaces should always be > both
                             let max_free_spaces = complement_maximal_holdable_spaces - complement_maximal_holdable_dead - complement_maximal_holdable_alive; 
                             log::info!("=== add_inferred_except_player discovery ===");
                             log::info!("Parent Group: {}", group);
-                            log::info!("Complement part list: {}, count: {}", complement_part_list, complement_part_list.part_list_count());
+                            log::info!("part list excl player: {}, count: {}", part_list_excl_player, part_list_excl_player.part_list_count());
                             log::info!("Current Player: {}", player);
                             log::info!("Max_free_spaces: {} = complement_maximal_holdable_spaces: {} - complement_maximal_holdable_dead: {} - complement_maximal_holdable_alive: {}", max_free_spaces, complement_maximal_holdable_spaces, complement_maximal_holdable_dead, complement_maximal_holdable_alive);
                             log::info!("Complement_max_alive array: {:?}", maximal_alive_card_counts);
