@@ -749,60 +749,6 @@ impl CompressedCollectiveConstraint {
             let mut card_num: usize = 0;
             while card_num < 5 {
                 let groups = &mut group_constraints[card_num];
-                // Rust mutable borrows rules kinda weird...
-                // let (groups, discard_card_group) = match card_num {
-                //     0 => {
-                //         match card as usize {
-                //             0 => (&mut self.group_constraints_amb, None),
-                //             1 => (&mut self.group_constraints_amb, Some(&self.group_constraints_ass)),
-                //             2 => (&mut self.group_constraints_amb, Some(&self.group_constraints_cap)),
-                //             3 => (&mut self.group_constraints_amb, Some(&self.group_constraints_duk)),
-                //             4 => (&mut self.group_constraints_amb, Some(&self.group_constraints_con)),
-                //             _ => unimplemented!("bro really? only 5 cards man"),
-                //         }
-                //     },
-                //     1 => {
-                //         match card as usize {
-                //             0 => (&mut self.group_constraints_ass, Some(&self.group_constraints_amb)),
-                //             1 => (&mut self.group_constraints_ass, None),
-                //             2 => (&mut self.group_constraints_ass, Some(&self.group_constraints_cap)),
-                //             3 => (&mut self.group_constraints_ass, Some(&self.group_constraints_duk)),
-                //             4 => (&mut self.group_constraints_ass, Some(&self.group_constraints_con)),
-                //             _ => unimplemented!("bro really? only 5 cards man"),
-                //         }
-                //     },
-                //     2 => {
-                //         match card as usize {
-                //             0 => (&mut self.group_constraints_cap, Some(&self.group_constraints_amb)),
-                //             1 => (&mut self.group_constraints_cap, Some(&self.group_constraints_ass)),
-                //             2 => (&mut self.group_constraints_cap, None),
-                //             3 => (&mut self.group_constraints_cap, Some(&self.group_constraints_duk)),
-                //             4 => (&mut self.group_constraints_cap, Some(&self.group_constraints_con)),
-                //             _ => unimplemented!("bro really? only 5 cards man"),
-                //         }
-                //     },
-                //     3 => {
-                //         match card as usize {
-                //             0 => (&mut self.group_constraints_duk, Some(&self.group_constraints_amb)),
-                //             1 => (&mut self.group_constraints_duk, Some(&self.group_constraints_ass)),
-                //             2 => (&mut self.group_constraints_duk, Some(&self.group_constraints_cap)),
-                //             3 => (&mut self.group_constraints_duk, None),
-                //             4 => (&mut self.group_constraints_duk, Some(&self.group_constraints_con)),
-                //             _ => unimplemented!("bro really? only 5 cards man"),
-                //         }
-                //     },
-                //     4 => {
-                //         match card as usize {
-                //             0 => (&mut self.group_constraints_con, Some(&self.group_constraints_amb)),
-                //             1 => (&mut self.group_constraints_con, Some(&self.group_constraints_ass)),
-                //             2 => (&mut self.group_constraints_con, Some(&self.group_constraints_cap)),
-                //             3 => (&mut self.group_constraints_con, Some(&self.group_constraints_duk)),
-                //             4 => (&mut self.group_constraints_con, None),
-                //             _ => unimplemented!("bro really? only 5 cards man"),
-                //         }
-                //     },
-                //     _ => unimplemented!("bro really? only 5 cards man"),
-                // };
                 if card_num == card as usize {
                     if !bool_all_cards_dead_or_known {
                         let mut i: usize = 0;
