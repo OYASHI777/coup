@@ -67,7 +67,7 @@ pub struct CompressedCollectiveConstraint {
     impossible_constraints: [[bool; 5]; 7], // For each player store an array of bool where each index is a Card, this represents whether a player cannot have a card true => cannot
     dead_card_count: [u8; 5], // each index represents the number of dead cards for the Card enum corresponding to that index
     inferred_card_count: [u8; 5], // each index represents the number of inferred cards for the Card enum
-    revealed_status: Vec<Vec<(Card, usize)>>, 
+    revealed_status: Vec<Vec<Option<(Card, usize)>>>, 
     reveal_redraw_move_counter: usize, // Only counts revealredraw moves
     // Revealed_status stores the cards and the players that have reveal_redrawn, and have yet to use ambassador (mix)
     // When reveal_redraw is done, the card is added for the corresponding player
@@ -846,11 +846,26 @@ impl CompressedCollectiveConstraint {
                 true
             ) 
             && {
+                // TODO: [FIX REVEAL_STATUS]
                 match self.revealed_status[player_id].len() {
                     0 => false,
                     x => {
-                        let player_last_reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
-                        self.revealed_status.iter().any(|v| v.iter().any(|c| c.0 == card && c.1 <= player_last_reveal_counter))
+                        // This is checking if there is anyone who has revealed a card == card recently, and has not ambassadored after
+                        let mut output: bool = false;
+                        if let Some((_, reveal_counter)) = self.revealed_status[player_id][x - 1] {
+                            'outer: for vec in self.revealed_status.iter() {
+                                'inner: for item in vec.iter().rev() {
+                                    if item.is_some() && item.unwrap().0 == card && item.unwrap().1 <= reveal_counter {
+                                        output = true;
+                                        break 'outer
+                                    } else {
+                                        break 'inner
+                                    }
+                                }
+                            }
+                        }
+                        // self.revealed_status.iter().any(|v| v.iter().any(|c| c.is_some() && c.unwrap().0 == card && c.unwrap().1 <= player_last_reveal_counter))
+                        output
                     }
                 }
             };
@@ -871,11 +886,6 @@ impl CompressedCollectiveConstraint {
                         card_num += 1;
                         continue;
                     }
-                    // Testing When revealed it was 1 out of 2 cards
-                    // if self.revealed_status[player_id].contains(&Card::try_from(card_num as u8).unwrap()) && self.public_constraints[player_id].len() == 1 {
-                    //     card_num += 1;
-                    //     continue;
-                    // }
                     let (groups, discard_card_group) = match card_num {
                         0 => {
                             match card as usize {
@@ -937,7 +947,7 @@ impl CompressedCollectiveConstraint {
                         && group.get_player_flag(player_id) 
                         {
                             // Check if the discarded card is certainly from the participating single_card of the player
-                            let card_certainly_in_single_flag_group: bool = {
+                            let mut card_certainly_in_single_flag_group: bool = {
                                 // Condition A: If all of the other cards == card, are outside of the group/ already dead with player
                                 //              Then we know the discarded card was part of the single card the player reveal_redrawn
                                 // [THINK] Actually this only tells us if revealed card is in the group but not necessarily if it came from single card network
@@ -946,6 +956,7 @@ impl CompressedCollectiveConstraint {
                                 //      - I guess this looks like someone having revealed it before this player, and this player having reveal redrawn before then revealling it now?
                                 //      - And if all other revealed cards are not in the group?
                                 // [THINK] What erases self.revealed_status? If i AMB, i might need info from before it to know if another player could only have received a card from the set?
+                                // Can maybe store amb inside too as None
                                 let complement: [bool; 7] = group.get_complement_part_list();
                                 let mut total_revealed_count_outside_group: u8 = 0;
                                 total_revealed_count_outside_group += self.public_constraints.iter().enumerate().map(|(i, v)| if complement[i] {v.iter().filter(|c| **c == card).count() as u8} else {0}).sum::<u8>();
@@ -960,7 +971,65 @@ impl CompressedCollectiveConstraint {
                                 let mut total_revealed_card_count_inside_group: u8 = 0;
                                 if total_revealed_count_outside_group == 2 {
                                     log::trace!("add_dead_card card_certainly_in_single_flag_group total_count_outside_group true A-0");
-                                    true // Early exit as we know the last card is revealed by player!
+                                    // [TODO] and if card in group is in the single flag network <=> player could only have gotten the card from a reveal redraw from the network
+                                    // true // Early exit as we know the last card is revealed by player!
+                                    // Can check if any group contains card as single_card and has single_flag true and is a subset, then we know last card is there
+                                    // for group_disc in discard_card_group.unwrap().iter() {
+                                    //     if group_disc.get_single_card_flag(player_id) 
+                                    //     && group_disc.part_list_is_subset_of(group) 
+                                    //     && group_disc.single_card_flags_is_subset_of(group) {
+                                            
+                                    //     }
+                                    // }
+                                    // Checking revealed_status
+                                    // If player had revealed before this, and another player had revealed the card before that
+                                    let mut bool_output = false;
+                                    if self.revealed_status[player_id].len() > 0 {
+                                        if let Some((_, prev_redraw_counter)) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 1] {
+                                            let mut j: usize = self.revealed_status[player_id].len() - 1;
+                                            loop {
+                                                if let Some((card_iter, _)) = self.revealed_status[player_id][j] {
+                                                    if card_iter == card {
+                                                        log::trace!("add_dead_card found card_iter == card: {:?}", card);
+                                                        bool_output = true;
+                                                    }
+                                                } else {
+                                                    break;
+                                                }
+                                                if j == 0 {
+                                                    break
+                                                }
+                                                j -= 1;
+                                            }
+                                            if !bool_output {
+                                                // Checking if some player had reveal redrawn the card into the possible network before
+                                                // the current player drew it and now discards it
+                                                log::trace!("add_dead_card !bool_output");
+                                                'outer: for (player, vec) in self.revealed_status.iter().enumerate() {
+                                                    if player != player_id {
+                                                        log::trace!("add_dead_card search player: {}", player);
+                                                        for field in vec.iter().rev() {
+                                                            log::trace!("add_dead_card checking field: {:?}", field);
+                                                            if let Some((card_iter, counter_iter)) = field {
+                                                                log::trace!("add_dead_card card_iter: {:?} ?= card: {:?}", *card_iter, card);
+                                                                log::trace!("add_dead_card counter_iter: {} ?= prev_redraw_counter: {}", *counter_iter, prev_redraw_counter);
+                                                                if *card_iter == card && *counter_iter < prev_redraw_counter {
+                                                                    bool_output = true;
+                                                                    break 'outer;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } 
+                                    }
+                                    if bool_output {
+                                        log::trace!("card: {:?} is a part of single card group: {}", card, group);
+                                    } else {
+                                        log::trace!("card: {:?} is not part of single card group: {}", card, group);
+                                    }
+                                    bool_output
                                 } else {
                                     for revealed_card_group in discard_card_group.unwrap().iter() {
                                         if revealed_card_group.part_list_is_subset_of(group) && revealed_card_group.single_card_flags_is_subset_of(*group) {
@@ -974,6 +1043,7 @@ impl CompressedCollectiveConstraint {
                                     if total_revealed_count_outside_group + total_revealed_card_count_inside_group == 3 {
                                         // A-1: all cards outside group are known in public / inferred info => early exit
                                         log::trace!("add_dead_card card_certainly_in_single_flag_group total_count_outside_group true A-1");
+                                        // [TODO] and if card in group is in the single flag network <=> player could only have gotten the card from a reveal redraw from the network
                                         true
                                     } else {
                                         // A-2: all cards outside group are known in group info
@@ -992,6 +1062,21 @@ impl CompressedCollectiveConstraint {
                                     }
                                 }
                             };
+                            // card_certainly_in_single_flag_group = card_certainly_in_single_flag_group && {
+                            //     // Above was technically true if card was in group
+                            //     // [TODO] and if card in group is in the single flag network <=> player could only have gotten the card from a reveal redraw from the network
+                            //     //  - In the 2 life case, it is possible for the revealed card to be in the same group, but not the single card network!
+                            //     //  - It is possible in the 2 life case for the revealed card to be in the single card network, if they could have only gotten it through the single card network!
+                            //     //      - I guess this looks like someone having revealed it before this player, and this player having reveal redrawn before then revealling it now?
+                            //     //      - And if all other revealed cards are not in the group?
+                            //     // if there is a group in card that has the current single_flag_group with alive counts only, and all else are known
+                            //     // unwrap here is never None
+                            //     for group in discard_card_group.unwrap().iter() {
+                            //         if group.get_single_card_flag(player_id) && group.{
+
+                            //         }
+                            //     }
+                            // };
                             log::trace!("card_certainly_in_single_flag_group: {card_certainly_in_single_flag_group}");
                             log::trace!("add_dead_card manhandling group: {}", group);
                             // We know that player_id had single flag 1 due to a previous reveal redraw
@@ -1024,7 +1109,7 @@ impl CompressedCollectiveConstraint {
                 }
             }
             // If revealed card was part of it, remove it
-            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.0 == card) {
+            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.is_some() && c.unwrap().0 == card) {
                 self.revealed_status[player_id].swap_remove(pos);
             }
         } else {
@@ -1098,9 +1183,10 @@ impl CompressedCollectiveConstraint {
         }
         // [QN] should I remove from revealed_status?
         // TODO: [THINK] might want remove card from all groups if all cards are dead? 
-        if player_lives_after_death == 0 {
-            self.revealed_status[player_id].clear();
-        }
+        // [FIX] no longer clearing
+        // if player_lives_after_death == 0 {
+        //     self.revealed_status[player_id].clear();
+        // }
         log::info!("Before add_inferred_card_bulk");
         self.printlog();
         self.add_inferred_card_bulk(new_inferred);
@@ -1108,6 +1194,7 @@ impl CompressedCollectiveConstraint {
     /// Bulk add_inferred_card
     pub fn add_inferred_card_bulk(&mut self, mut single_flag_batch: Vec<CompressedGroupConstraint>) {
 // TODO: Inferred card needs to add other things inside other than just the group adjustment
+        // [THINK] I think we need to keep our single person inferred group if the single card flag is 1 to allow us to differentiate in add_dead_card...
         // TODO: See reveal, and death()
         log::info!("In add_inferred_card_bulk");
         let mut card_changes: Vec<Vec<usize>> = vec![Vec::with_capacity(2); 5]; // Store (player_id, bool_counts => false: 1, true: 2)
@@ -1348,11 +1435,33 @@ impl CompressedCollectiveConstraint {
                 true
             ) 
             && {
+                // TODO: [FIX REVEAL_STATUS]
+                // match self.revealed_status[player_id].len() {
+                //     0 => false,
+                //     x => {
+                //         let player_last_reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
+                //         self.revealed_status.iter().any(|v| v.iter().any(|c| c.0 == card && c.1 <= player_last_reveal_counter))
+                //     }
+                // }
                 match self.revealed_status[player_id].len() {
                     0 => false,
                     x => {
-                        let player_last_reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
-                        self.revealed_status.iter().any(|v| v.iter().any(|c| c.0 == card && c.1 <= player_last_reveal_counter))
+                        // This is checking if there is anyone who has revealed a card == card recently, and has not ambassadored after
+                        let mut output: bool = false;
+                        if let Some((_, reveal_counter)) = self.revealed_status[player_id][x - 1] {
+                            'outer: for vec in self.revealed_status.iter() {
+                                'inner: for item in vec.iter().rev() {
+                                    if item.is_some() && item.unwrap().0 == card && item.unwrap().1 <= reveal_counter {
+                                        output = true;
+                                        break 'outer
+                                    } else {
+                                        break 'inner
+                                    }
+                                }
+                            }
+                        }
+                        // self.revealed_status.iter().any(|v| v.iter().any(|c| c.is_some() && c.unwrap().0 == card && c.unwrap().1 <= player_last_reveal_counter))
+                        output
                     }
                 }
             };
@@ -1453,7 +1562,42 @@ impl CompressedCollectiveConstraint {
                                 let mut total_revealed_card_count_inside_group: u8 = 0;
                                 if total_revealed_count_outside_group == 2 {
                                     log::trace!("add_inferred_card card_certainly_in_single_flag_group total_count_outside_group true A-0");
-                                    true // Early exit as we know the last card is revealed by player!
+                                    // true // Early exit as we know the last card is revealed by player!
+                                    let mut bool_output = false;
+                                    // TODO: [FIX] if inferred is done because of reveal, the previous reveal index is len() - 2
+                                    //              - but if inferred is done as found information, the previous reveal index is len() - 1
+                                    if self.revealed_status[player_id].len() > 1 {
+                                        if let Some((_, prev_redraw_counter)) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 2] {
+                                            let mut j: usize = self.revealed_status[player_id].len() - 2;
+                                            while j > 0 {
+                                                if let Some((card_iter, _)) = self.revealed_status[player_id][j] {
+                                                    if card_iter == card {
+                                                        bool_output = true;
+                                                    }
+                                                } else {
+                                                    break;
+                                                }
+                                                j -= 1;
+                                            }
+                                            if !bool_output {
+                                                // Checking if some player had reveal redrawn the card into the possible network before
+                                                // the current player drew it and now discards it
+                                                'outer: for (player, vec) in self.revealed_status.iter().enumerate() {
+                                                    if player != player_id {
+                                                        for field in vec.iter().rev() {
+                                                            if let Some((card_iter, counter_iter)) = field {
+                                                                if *card_iter == card && *counter_iter < prev_redraw_counter {
+                                                                    bool_output = true;
+                                                                    break 'outer;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } 
+                                    }
+                                    bool_output
                                 } else {
                                     for revealed_card_group in inferred_card_group.unwrap().iter() {
                                         // We require that the single_card_flags for group should be more restrictive to be included in the count of revealed_card_group
@@ -1515,7 +1659,7 @@ impl CompressedCollectiveConstraint {
                 }
             }
             // If revealed card was part of it, remove it
-            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.0 == card) {
+            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.is_some() && c.unwrap().0 == card) {
                 self.revealed_status[player_id].swap_remove(pos);
             }
         }
@@ -2102,7 +2246,7 @@ impl CompressedCollectiveConstraint {
         log::trace!("=== After Reveal Intermediate State ===");
         self.printlog();
         self.redraw(player_id, card);
-        self.revealed_status[player_id].push((card, self.reveal_redraw_move_counter));
+        self.revealed_status[player_id].push(Some((card, self.reveal_redraw_move_counter)));
         // if !self.revealed_status[player_id].contains(&card) {
         //     self.revealed_status[player_id].push(card);
         // }
@@ -2132,7 +2276,9 @@ impl CompressedCollectiveConstraint {
         // inferred pile constraints loses the [Captain] and becomes empty [] even though it can still be derived from the groups
         //      - This is because it is not picked up in self.total_known_alive_with_player_and_pile(player_id) in self.ambassador_inferred_adjustment()
         self.add_inferred_groups(); // TODO: [OPTIMIZE] Maybe might only require add_subset groups?
-        self.revealed_status[player_id].clear();
+        // [FIX]
+        // self.revealed_status[player_id].clear();
+        self.revealed_status[player_id].push(None);
     }
     /// Function to call for move Ambassador, when considering private information seen by the player who used Ambassador
     pub fn ambassador_private(&mut self, player_id: usize) {
