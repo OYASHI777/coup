@@ -814,29 +814,51 @@ impl CompressedCollectiveConstraint {
             // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_other_cards_dead && bool_revealed_status_contains_card;
             // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_cards_dead_or_known && !player_cards.contains(&Card::try_from(card_num as u8).unwrap());
             // Think this passes tests but is obviously anaemic
+            // I guess its definitely part of rr network if the player could only have gotten it through an rr interaction
             let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = 
             // If player who discarded it has the card revealed before, it can't be from a card != card_num group
             //  - card != card_num here always
             // If any player has revealed this card before this
+            //  - We don't know for certain that it was from the group's players' single card for the groups where group.card() != card
             // If nobody has revealed the card before, the card will not certainly be in the player's single_flag
             // If some player has revealed the card before, and player has revealredrawn, 
             //      - if all cards outside group are known, card is not in player's other card
             //      - card is thus part of the single_flag group
-            !self.revealed_status[player_id].contains(&card) && self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card));
-
+            // Keeping this fails full_test_replay_11, removing it fails full_test_replay_6
+            (
+                // Im more in favour of removing this, as it should be symmetrical, 
+                //  - If it has the card, it can still be from the reveal network, which is precisely why it was in the revealed_status
+                //  - 
+                // We should be checking if when this was revealed, all the remaining cards was in the reveal_status
+                // The idea here is to filter when the revealed card is definitely not part of the reveal network
+                // [IDEA] Perhaps we need to store move number in revealed_status, then for the any() below we count only cards where move was before the last player move
+                // So we remove the !contains, and add a move_no to revealed_status
+                !self.revealed_status[player_id].contains(&card)  
+            // Case when all of revealed cards are known and therefore it has to be part of the network
+                // || bool_all_cards_dead_or_known
+            ) 
+            && self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card));
             // Currently this means if present card is part of the network, but just cos it was revealed doesnt mean it was part of the network
             //      - player may have 2 lives and this may not be part of the network
             //      - What about the complementing group has all other cards idea?
             //          - !!! Like if a player has 2 lives, discards a Duke, but all the other dukes are not in the network
+            log::trace!("add_dead_card bool evaluation revealed_status: {:?}", self.revealed_status);
+            log::trace!("add_dead_card bool_discard_card_is_part_of_network: {bool_discarded_card_is_definitely_part_of_reveal_redraw_network}");
             if bool_discarded_card_is_definitely_part_of_reveal_redraw_network {
                 // handle case where revealed card is part of the single flag network
                 // We then adjust affected groups of other cards that are part of the network
+                log::trace!("add_dead_card card: {:?} is part of the single card network", card);
                 let mut card_num: usize = 0;
                 while card_num < 5 {
                     if card_num == card as usize {
                         card_num += 1;
                         continue;
                     }
+                    // Testing When revealed it was 1 out of 2 cards
+                    // if self.revealed_status[player_id].contains(&Card::try_from(card_num as u8).unwrap()) && self.public_constraints[player_id].len() == 1 {
+                    //     card_num += 1;
+                    //     continue;
+                    // }
                     let (groups, discard_card_group) = match card_num {
                         0 => {
                             match card as usize {
@@ -1296,7 +1318,12 @@ impl CompressedCollectiveConstraint {
             // If some player has revealed the card before, and player has revealredrawn, 
             //      - if all cards outside group are known, card is not in player's other card
             //      - card is thus part of the single_flag group
-            !self.revealed_status[player_id].contains(&card) && self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card));
+            // Keeping this fails full_test_replay_11, removing it fails full_test_replay_6
+            (
+                !self.revealed_status[player_id].contains(&card) 
+                // || bool_all_cards_dead_or_known
+            ) 
+            && self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card));
             
             // Currently this means if present card is part of the network, but just cos it was revealed doesnt mean it was part of the network
             //      - player may have 2 lives and this may not be part of the network
@@ -1312,6 +1339,11 @@ impl CompressedCollectiveConstraint {
                         card_num += 1;
                         continue;
                     }
+                    // Testing when revealed it was 1 out of 2 cards
+                    // if self.revealed_status[player_id].contains(&Card::try_from(card_num as u8).unwrap()) && self.public_constraints[player_id].len() == 0{
+                    //     card_num += 1;
+                    //     continue;
+                    // }
                     let (groups, inferred_card_group) = match card_num {
                         0 => {
                             match card as usize {
