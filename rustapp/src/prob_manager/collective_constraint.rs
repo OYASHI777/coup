@@ -1031,6 +1031,7 @@ impl CompressedCollectiveConstraint {
                                     }
                                     bool_output
                                 } else {
+                                    // TODO: [FIX REVEAL_STATUS] properly update this with the functionality to check if card is in single_card_network
                                     for revealed_card_group in discard_card_group.unwrap().iter() {
                                         if revealed_card_group.part_list_is_subset_of(group) && revealed_card_group.single_card_flags_is_subset_of(*group) {
                                             // We require that the single_card_flags for group should be more restrictive to be included in the count of revealed_card_group
@@ -1565,17 +1566,26 @@ impl CompressedCollectiveConstraint {
                                     // true // Early exit as we know the last card is revealed by player!
                                     let mut bool_output = false;
                                     // TODO: [FIX] if inferred is done because of reveal, the previous reveal index is len() - 2
+                                    // TODO: [FIX REVEAL_STATUS] find out if should split inferred and reveal
                                     //              - but if inferred is done as found information, the previous reveal index is len() - 1
-                                    if self.revealed_status[player_id].len() > 1 {
-                                        if let Some((_, prev_redraw_counter)) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 2] {
-                                            let mut j: usize = self.revealed_status[player_id].len() - 2;
-                                            while j > 0 {
+                                    //              - Maybe the order of self.revealed_status update could affect this
+                                    //              For now i use > 0 and - 1 => THIS ASSUMES THE LAST REVEALED_STATUS is not the current reveal (which is ok for discard)
+                                    if self.revealed_status[player_id].len() > 0 {
+                                        if let Some((_, prev_redraw_counter)) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 1] {
+                                        // if let Some((_, prev_redraw_counter)) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 2] {
+                                            // let mut j: usize = self.revealed_status[player_id].len() - 2;
+                                            let mut j: usize = self.revealed_status[player_id].len() - 1;
+                                            loop {
                                                 if let Some((card_iter, _)) = self.revealed_status[player_id][j] {
                                                     if card_iter == card {
+                                                        log::trace!("add_dead_card found card_iter == card: {:?}", card);
                                                         bool_output = true;
                                                     }
                                                 } else {
                                                     break;
+                                                }
+                                                if j == 0 {
+                                                    break
                                                 }
                                                 j -= 1;
                                             }
@@ -1599,6 +1609,7 @@ impl CompressedCollectiveConstraint {
                                     }
                                     bool_output
                                 } else {
+                                    // TODO: [FIX REVEAL_STATUS] properly update this with the functionality to check if card is in single_card_network
                                     for revealed_card_group in inferred_card_group.unwrap().iter() {
                                         // We require that the single_card_flags for group should be more restrictive to be included in the count of revealed_card_group
                                         if revealed_card_group.part_list_is_subset_of(group) && revealed_card_group.single_card_flags_is_subset_of(*group){
