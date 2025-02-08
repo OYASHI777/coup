@@ -2320,6 +2320,7 @@ impl CompressedCollectiveConstraint {
     /// This should be modified in future such that we simply do not add such groups in
     /// This reduces errors for some reason
     pub fn temp_remove_redundant_three_groups(&mut self) {
+        // TODO: [OPTIMIZE] Should I just exclude this?
         for group in self.group_constraints_mut().iter_mut() {
             let mut i: usize = 0;
             'outer: while i < group.len() {
@@ -2327,11 +2328,11 @@ impl CompressedCollectiveConstraint {
                 if group[i].get_total_count() == 3 {
                     'inner: while j < group.len() {
                         if group[j].get_total_count() == 3 {
-                            if group[j].part_list_is_subset_of(&group[i]) {
+                            if group[j].part_list_is_subset_of(&group[i]) && group[j].single_card_flags_is_subset_of(group[i]){
                                 group.swap_remove(i);
                                 continue 'outer;
                             }
-                            if group[i].part_list_is_subset_of(&group[j]) {
+                            if group[i].part_list_is_subset_of(&group[j]) && group[j].single_card_flags_is_subset_of(group[i]){
                                 group.swap_remove(j);
                                 continue 'inner;
                             }
