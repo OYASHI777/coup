@@ -67,7 +67,8 @@ pub struct CompressedCollectiveConstraint {
     impossible_constraints: [[bool; 5]; 7], // For each player store an array of bool where each index is a Card, this represents whether a player cannot have a card true => cannot
     dead_card_count: [u8; 5], // each index represents the number of dead cards for the Card enum corresponding to that index
     inferred_card_count: [u8; 5], // each index represents the number of inferred cards for the Card enum
-    revealed_status: Vec<Vec<Card>>, 
+    revealed_status: Vec<Vec<(Card, usize)>>, 
+    reveal_redraw_move_counter: usize, // Only counts revealredraw moves
     // Revealed_status stores the cards and the players that have reveal_redrawn, and have yet to use ambassador (mix)
     // When reveal_redraw is done, the card is added for the corresponding player
     // If player has mixed, it gets emptied.
@@ -101,6 +102,7 @@ impl CompressedCollectiveConstraint {
             dead_card_count,
             inferred_card_count,
             revealed_status,
+            reveal_redraw_move_counter: 0,
         }
     }
     /// Constructor that returns an CompressedCollectiveConstraint at start of game
@@ -145,7 +147,12 @@ impl CompressedCollectiveConstraint {
             dead_card_count,
             inferred_card_count,
             revealed_status,
+            reveal_redraw_move_counter: 0,
         }
+    }
+    // TODO: Consider abstracting this away
+    pub fn increment_move_count(&mut self) {
+        self.reveal_redraw_move_counter += 1;
     }
     pub fn sorted_public_constraints(&self) -> Vec<Vec<Card>> {
         let mut output = self.public_constraints.clone();
@@ -833,11 +840,20 @@ impl CompressedCollectiveConstraint {
                 // The idea here is to filter when the revealed card is definitely not part of the reveal network
                 // [IDEA] Perhaps we need to store move number in revealed_status, then for the any() below we count only cards where move was before the last player move
                 // So we remove the !contains, and add a move_no to revealed_status
-                !self.revealed_status[player_id].contains(&card)  
+                // !self.revealed_status[player_id].contains(&card)  
             // Case when all of revealed cards are known and therefore it has to be part of the network
                 // || bool_all_cards_dead_or_known
+                true
             ) 
-            && self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card));
+            && {
+                match self.revealed_status[player_id].len() {
+                    0 => false,
+                    x => {
+                        let player_last_reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
+                        self.revealed_status.iter().any(|v| v.iter().any(|c| c.0 == card && c.1 <= player_last_reveal_counter))
+                    }
+                }
+            };
             // Currently this means if present card is part of the network, but just cos it was revealed doesnt mean it was part of the network
             //      - player may have 2 lives and this may not be part of the network
             //      - What about the complementing group has all other cards idea?
@@ -1001,7 +1017,7 @@ impl CompressedCollectiveConstraint {
                 }
             }
             // If revealed card was part of it, remove it
-            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| *c == card) {
+            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.0 == card) {
                 self.revealed_status[player_id].swap_remove(pos);
             }
         } else {
@@ -1320,11 +1336,19 @@ impl CompressedCollectiveConstraint {
             //      - card is thus part of the single_flag group
             // Keeping this fails full_test_replay_11, removing it fails full_test_replay_6
             (
-                !self.revealed_status[player_id].contains(&card) 
+                // !self.revealed_status[player_id].contains(&card) 
                 // || bool_all_cards_dead_or_known
+                true
             ) 
-            && self.revealed_status.iter().any(|v| v.iter().any(|c| *c == card));
-            
+            && {
+                match self.revealed_status[player_id].len() {
+                    0 => false,
+                    x => {
+                        let player_last_reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
+                        self.revealed_status.iter().any(|v| v.iter().any(|c| c.0 == card && c.1 <= player_last_reveal_counter))
+                    }
+                }
+            };
             // Currently this means if present card is part of the network, but just cos it was revealed doesnt mean it was part of the network
             //      - player may have 2 lives and this may not be part of the network
             //      - What about the complementing group has all other cards idea?
@@ -1484,7 +1508,7 @@ impl CompressedCollectiveConstraint {
                 }
             }
             // If revealed card was part of it, remove it
-            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| *c == card) {
+            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.0 == card) {
                 self.revealed_status[player_id].swap_remove(pos);
             }
         }
@@ -1546,6 +1570,7 @@ impl CompressedCollectiveConstraint {
     /// FINAL CONCLUSION: Its the same treatment regardless of what card the group is, because we really are comparing a player's hand to the groups.
     ///                   The algo is less about a reveal and more about how to update groups after new information is added from the reveal.
     pub fn reveal(&mut self, player_id: usize, card: Card) {
+        self.increment_move_count();
         log::trace!("In reveal");
         // TODO: Combine adjustment and addition to constraint to allow clear() like in death()
         if !self.inferred_player_constraint_contains(player_id, card) {
@@ -2070,9 +2095,10 @@ impl CompressedCollectiveConstraint {
         log::trace!("=== After Reveal Intermediate State ===");
         self.printlog();
         self.redraw(player_id, card);
-        if !self.revealed_status[player_id].contains(&card) {
-            self.revealed_status[player_id].push(card);
-        }
+        self.revealed_status[player_id].push((card, self.reveal_redraw_move_counter));
+        // if !self.revealed_status[player_id].contains(&card) {
+        //     self.revealed_status[player_id].push(card);
+        // }
         // TODO: add_inferred_groups() here and test if it adds anything by panicking
         // self.add_inferred_groups();
         // self.group_redundant_prune();
