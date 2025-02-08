@@ -854,6 +854,7 @@ impl CompressedCollectiveConstraint {
                     }
                 }
             };
+            // Maybe there is a 2 lives case vs a 1 live case?
             // Currently this means if present card is part of the network, but just cos it was revealed doesnt mean it was part of the network
             //      - player may have 2 lives and this may not be part of the network
             //      - What about the complementing group has all other cards idea?
@@ -939,6 +940,12 @@ impl CompressedCollectiveConstraint {
                             let card_certainly_in_single_flag_group: bool = {
                                 // Condition A: If all of the other cards == card, are outside of the group/ already dead with player
                                 //              Then we know the discarded card was part of the single card the player reveal_redrawn
+                                // [THINK] Actually this only tells us if revealed card is in the group but not necessarily if it came from single card network
+                                //  - In the 2 life case, it is possible for the revealed card to be in the same group, but not the single card network!
+                                //  - It is possible in the 2 life case for the revealed card to be in the single card network, if they could have only gotten it through the single card network!
+                                //      - I guess this looks like someone having revealed it before this player, and this player having reveal redrawn before then revealling it now?
+                                //      - And if all other revealed cards are not in the group?
+                                // [THINK] What erases self.revealed_status? If i AMB, i might need info from before it to know if another player could only have received a card from the set?
                                 let complement: [bool; 7] = group.get_complement_part_list();
                                 let mut total_revealed_count_outside_group: u8 = 0;
                                 total_revealed_count_outside_group += self.public_constraints.iter().enumerate().map(|(i, v)| if complement[i] {v.iter().filter(|c| **c == card).count() as u8} else {0}).sum::<u8>();
