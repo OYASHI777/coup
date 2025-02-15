@@ -4,26 +4,18 @@
 // This is too long
 // Tried instead to save into hashmap and store in bson
 
+use std::usize;
+use std::hash::Hash;
 use crate::history_public::{Card, AOName, ActionObservation};
 use super::permutation_generator::{gen_table_combinations};
 use super::coup_const::{BAG_SIZES, TOKENS};
+use super::card_state::CardPermState;
 // use core::hash::Hasher;
-use std::usize;
-use std::hash::Hash;
 use ahash::{AHashMap, AHashSet};
 use rayon::prelude::*;
 /// Struct that card count manually, by simulating movement of cards (as chars) for all possible permutations
 
-pub trait CardPermState: Sized {
-    fn from_str() -> Self;
-    fn validate_public_constraints(&self, player_id: usize, cards: &Vec<Card>) -> bool;
-    fn gen_table_combinations() -> Vec<Self>;
-    fn player_has_cards(&self, player_reveal: usize, card_chars: &[Card]) -> bool;
-    fn player_has_card(&self, player_reveal: usize, card: Card) -> bool;
-    fn mix_one_card(&self, player_reveal: usize, player_other: usize, card: Card) -> Vec<Self>;
-    fn mix_multiple_chars_with_player6(&self, player_reveal: usize) -> Vec<Self>;
-}
-pub struct BruteCardCountManager<T: CardPermState> 
+pub struct BruteCardCountManagerGeneric<T: CardPermState> 
 where
     T: CardPermState + Hash + Eq + Clone + std::fmt::Display + std::fmt::Debug,
 {
@@ -32,7 +24,7 @@ where
     all_states: Vec<T>,
     calculated_states: AHashSet<T>, // All the states that fulfil current constraints
 }
-impl<T> BruteCardCountManager<T> 
+impl<T> BruteCardCountManagerGeneric<T> 
 where
     T: CardPermState + Hash + Eq + Clone + std::fmt::Display + std::fmt::Debug,
 {
@@ -148,7 +140,7 @@ where
         let new_states_vec: Vec<T> = self
             .calculated_states
             .iter()  // parallel iteration over our existing states
-            .flat_map(|state| state.mix_multiple_chars_with_player6(player_reveal))
+            .flat_map(|state| state.mix_multiple_chars_with_player6(player_reveal, &self.public_constraints[player_reveal]))
             .collect();
 
         // Step 2: Convert that Vec<String> into a new AHashSet to remove duplicates.
@@ -181,71 +173,54 @@ where
     /// then `result[0]` will include 'A' and 'B'. If they sometimes have 'C' and sometimes not,
     /// 'C' won't appear in `result[0]`. If they always have two 'A's (i.e., every state has "AA"),
     /// then `result[0]` will contain `['A','A']`.
-    // pub fn must_have_cards(&self) -> Vec<Vec<Card>> {
-    //     let mut result: Vec<Vec<Card>> = Vec::with_capacity(7);
+    pub fn must_have_cards(&self) -> Vec<Vec<Card>> {
+        
+        // If there are no states at all, every player's "must have" set is empty
+        if self.calculated_states.is_empty() {
+            return vec![];
+        }
+        let mut result: Vec<Vec<Card>> = Vec::with_capacity(7);
 
-    //     // If there are no states at all, every player's "must have" set is empty
-    //     if self.calculated_states.is_empty() {
-    //         result.resize_with(7, Vec::new);
-    //         return result;
-    //     }
+        // For each of the 7 players, compute the "intersection frequency map"
+        // across all `calculated_states`.
+        for player_id in 0..7 {
 
-    //     // Helper to build a frequency map of the substring belonging to one player in a given state
-    //     fn freq_of_slice(state: &str, start: usize, end: usize) -> AHashMap<char, usize> {
-    //         let mut map = AHashMap::new();
-    //         for c in state[start..end].chars() {
-    //             *map.entry(c).or_insert(0) += 1;
-    //         }
-    //         map
-    //     }
+            // Start by taking the frequency map from the first state
+            let mut iter = self.calculated_states.iter();
+            let first_state = iter.next().unwrap();
+            let mut common_freq = first_state.player_card_counts(player_id);
 
-    //     // For each of the 7 players, compute the "intersection frequency map"
-    //     // across all `calculated_states`.
-    //     for player_id in 0..7 {
-    //         let start = self.index_start_arr[player_id];
-    //         let end = self.index_end_arr[player_id];
+            // Intersect with the frequency maps of all subsequent states
+            for state in iter {
+                let freq = state.player_card_counts(player_id);
 
-    //         // Start by taking the frequency map from the first state
-    //         let mut iter = self.calculated_states.iter();
-    //         let first_state = iter.next().unwrap();
-    //         let mut common_freq = freq_of_slice(first_state, start, end);
+                // For each character currently in common_freq, lower it to the
+                // min frequency if this new state has fewer of that character.
+                for (card_id, common_count) in common_freq.clone().iter().enumerate() {
+                    let freq_count = freq[card_id];
+                    let new_count = *common_count.min(&freq_count);
+                    common_freq[card_id] = new_count;
+                }
+                if common_freq.iter().all(|count| *count == 0) {
+                    break
+                }
+            }
 
-    //         // Intersect with the frequency maps of all subsequent states
-    //         for state in iter {
-    //             let freq = freq_of_slice(state, start, end);
+            // Now `common_freq` holds the minimum number of each card that appears
+            // in **every** state for this player. Convert that map to a Vec<char>.
+            let mut must_have_for_player = Vec::with_capacity(3);
+            for (card_id, count) in common_freq.iter().enumerate() {
+                // Repeat each character `count` times
+                for _ in 0..*count {
+                    must_have_for_player.push(Card::try_from(card_id as u8).unwrap());
+                }
+            }
 
-    //             // For each character currently in common_freq, lower it to the
-    //             // min frequency if this new state has fewer of that character.
-    //             for (&ch, &common_count) in common_freq.clone().iter() {
-    //                 let freq_count = freq.get(&ch).copied().unwrap_or(0);
-    //                 let new_count = common_count.min(freq_count);
-    //                 if new_count == 0 {
-    //                     // If this state has none, then the intersection can't have it
-    //                     common_freq.remove(&ch);
-    //                 } else {
-    //                     // Update the count in common_freq to the new minimum
-    //                     *common_freq.get_mut(&ch).unwrap() = new_count;
-    //                 }
-    //             }
-    //         }
+            result.push(must_have_for_player);
+        }
 
-    //         // Now `common_freq` holds the minimum number of each card that appears
-    //         // in **every** state for this player. Convert that map to a Vec<char>.
-    //         let mut must_have_for_player = Vec::new();
-    //         for (ch, count) in common_freq {
-    //             // Repeat each character `count` times
-    //             for _ in 0..count {
-    //                 must_have_for_player.push(Card::char_to_card(ch));
-    //             }
-    //         }
-    //         // Sort for a consistent order (e.g., "AAB" not "BAA")
-    //         must_have_for_player.sort_unstable();
-
-    //         result.push(must_have_for_player);
-    //     }
-
-    //     result
-    // }
+        result
+    }
     /// Returns a 7x5 boolean array `[ [bool; 5]; 7 ]`.
     ///
     /// - Outer index = player (0..6)
@@ -254,48 +229,44 @@ where
     /// `result[player_id][card_index]` will be `true` if, **in every** state within
     /// `self.calculated_states`, that `player_id` does **not** have that card.
     ///
-    /// In other words, for all states, the substring of `player_id` does not
-    /// contain the corresponding card character. Hence, that player **cannot** have that card.
-    // pub fn validated_impossible_constraints(&self) -> [[bool; 5]; 7] {
-    //     let mut result = [[false; 5]; 7];
+    /// Returns an array that is true if a player does cannot have that card alive
+    pub fn validated_impossible_constraints(&self) -> [[bool; 5]; 7] {
+        let mut result = [[false; 5]; 7];
 
-    //     // Early return if we have no states; then every card is impossible in all states
-    //     // or every card is possible—depending on your game logic. Usually, with zero states,
-    //     // "cannot have" is trivially true for all. But check game logic as needed.
-    //     if self.calculated_states.is_empty() {
-    //         return [[true; 5]; 7];
-    //     }
+        // Early return if we have no states; then every card is impossible in all states
+        // or every card is possible—depending on your game logic. Usually, with zero states,
+        // "cannot have" is trivially true for all. But check game logic as needed.
+        if self.calculated_states.is_empty() {
+            return [[true; 5]; 7];
+        }
 
-    //     // For each player
-    //     for player_id in 0..7 {
-    //         let start = self.index_start_arr[player_id];
-    //         let end = self.index_end_arr[player_id];
+        // For each player
+        for player_id in 0..7 {
+            // For each card variant (assuming your Card enum maps 1:1 to these indices)
+            // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
+            for card_idx in 0..5 as usize {
+                // Convert card_idx -> Card -> char
+                let card_enum = Card::try_from(card_idx as u8).unwrap();
+                let card_char = card_enum.card_to_char();
 
-    //         // For each card variant (assuming your Card enum maps 1:1 to these indices)
-    //         // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
-    //         for card_idx in 0..5 as usize {
-    //             // Convert card_idx -> Card -> char
-    //             let card_enum = Card::try_from(card_idx as u8).unwrap();
-    //             let card_char = card_enum.card_to_char();
+                // We want to know if there's ANY state in which the player's substring
+                // includes `card_char`. If there is, then `cannot_have` is false.
+                // If we can't find it in ANY state, `cannot_have` is true.
+                let found_in_any_state = self.calculated_states.iter().any(|state| {
+                    let actual_count = state.player_card_count(player_id, card_enum);
+                    let reference_count = self.public_constraints[player_id].iter().filter(|c| **c == card_enum).count() as u8;
+                    actual_count > reference_count
+                });
 
-    //             // We want to know if there's ANY state in which the player's substring
-    //             // includes `card_char`. If there is, then `cannot_have` is false.
-    //             // If we can't find it in ANY state, `cannot_have` is true.
-    //             let found_in_any_state = self.calculated_states.iter().any(|state| {
-    //                 let actual_count = state[start..end].matches(card_char).count();
-    //                 let reference_count = self.public_constraints[player_id].iter().filter(|c| **c == card_enum).count();
-    //                 actual_count > reference_count
-    //             });
+                // If found_in_any_state == false, that means:
+                // "There is NO state in which the player has this card alive"
+                // So the player "cannot have" it => result = true
+                result[player_id][card_idx] = !found_in_any_state;
+            }
+        }
 
-    //             // If found_in_any_state == false, that means:
-    //             // "There is NO state in which the player has this card alive"
-    //             // So the player "cannot have" it => result = true
-    //             result[player_id][card_idx] = !found_in_any_state;
-    //         }
-    //     }
-
-    //     result
-    // }
+        result
+    }
     /// Returns a 7x5 boolean array `[ [bool; 5]; 7 ]`.
     ///
     /// - Outer index = player (0..6)
@@ -304,64 +275,59 @@ where
     /// `result[player_id][card_index]` will be `true` if, **in every** state within
     /// `self.calculated_states`, that `player_id` does **not** have that card.
     ///
-    /// In other words, for all states, the substring of `player_id` does not
-    /// contain the corresponding card character. Hence, that player **cannot** have that card.
-    // pub fn validated_impossible_constraints_include_dead(&self) -> [[bool; 5]; 7] {
-    //     let mut result = [[false; 5]; 7];
+    /// Returns an array that is true if a player does cannot have that card alive or dead
+    pub fn validated_impossible_constraints_include_dead(&self) -> [[bool; 5]; 7] {
+        let mut result = [[false; 5]; 7];
 
-    //     // Early return if we have no states; then every card is impossible in all states
-    //     // or every card is possible—depending on your game logic. Usually, with zero states,
-    //     // "cannot have" is trivially true for all. But check game logic as needed.
-    //     if self.calculated_states.is_empty() {
-    //         return [[true; 5]; 7];
-    //     }
+        // Early return if we have no states; then every card is impossible in all states
+        // or every card is possible—depending on your game logic. Usually, with zero states,
+        // "cannot have" is trivially true for all. But check game logic as needed.
+        if self.calculated_states.is_empty() {
+            return [[true; 5]; 7];
+        }
 
-    //     // For each player
-    //     for player_id in 0..7 {
-    //         let start = self.index_start_arr[player_id];
-    //         let end = self.index_end_arr[player_id];
+        // For each player
+        for player_id in 0..7 {
 
-    //         // For each card variant (assuming your Card enum maps 1:1 to these indices)
-    //         // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
-    //         for card_idx in 0..5 as usize {
-    //             // Convert card_idx -> Card -> char
-    //             let card_enum = Card::try_from(card_idx as u8).unwrap();
-    //             let card_char = card_enum.card_to_char();
+            // For each card variant (assuming your Card enum maps 1:1 to these indices)
+            // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
+            for card_idx in 0..5 as usize {
+                // Convert card_idx -> Card -> char
+                let card_enum = Card::try_from(card_idx as u8).unwrap();
 
-    //             // We want to know if there's ANY state in which the player's substring
-    //             // includes `card_char`. If there is, then `cannot_have` is false.
-    //             // If we can't find it in ANY state, `cannot_have` is true.
-    //             let found_in_any_state = self.calculated_states.iter().any(|state| {
-    //                 let player_slice = &state[start..end];
-    //                 player_slice.contains(card_char)
-    //             });
+                // We want to know if there's ANY state in which the player's substring
+                // includes `card_char`. If there is, then `cannot_have` is false.
+                // If we can't find it in ANY state, `cannot_have` is true.
+                let found_in_any_state = self.calculated_states.iter().any(|state| {
+                    state.player_has_cards(player_id, &[card_enum])
+                });
 
-    //             // If found_in_any_state == false, that means:
-    //             // "There is NO state in which the player has this card."
-    //             // So the player "cannot have" it => result = true
-    //             result[player_id][card_idx] = !found_in_any_state;
-    //         }
-    //     }
+                // If found_in_any_state == false, that means:
+                // "There is NO state in which the player has this card."
+                // So the player "cannot have" it => result = true
+                result[player_id][card_idx] = !found_in_any_state;
+            }
+        }
 
-    //     result
-    // }
+        result
+    }
     /// Returns all the dead cards for each player that we are certain they have
     /// Assumes calculates states align with latest constraints
     pub fn update_constraints(&mut self) {
-        // self.inferred_constraints = self.must_have_cards();
-        // for (player, cards) in self.public_constraints.iter().enumerate() {
-        //     for card in cards.iter() {
-        //         if let Some(pos) = self.inferred_constraints[player].iter().position(|c| *c == *card ){
-        //             self.inferred_constraints[player].swap_remove(pos);
-        //         }
-        //     }
-        // }
-        // for vec in self.public_constraints.iter_mut() {
-        //     vec.sort_unstable();
-        // }
-        // for vec in self.inferred_constraints.iter_mut() {
-        //     vec.sort_unstable();
-        // }
+        self.inferred_constraints = self.must_have_cards();
+        for (player, cards) in self.public_constraints.iter().enumerate() {
+            for card in cards.iter() {
+                if let Some(pos) = self.inferred_constraints[player].iter().position(|c| *c == *card ){
+                    self.inferred_constraints[player].swap_remove(pos);
+                }
+            }
+        }
+        for vec in self.public_constraints.iter_mut() {
+            vec.sort_unstable();
+        }
+        for vec in self.inferred_constraints.iter_mut() {
+            vec.sort_unstable();
+        }
 
     }
     /// Returns all the dead cards for each player that we are certain they have
@@ -383,13 +349,13 @@ where
         log::info!("calculated_states.len: {}", self.calculated_states.len());
         log::info!("Brute public constraints: {:?}", self.validated_public_constraints());
         log::info!("Brute inferred constraints: {:?}", self.validated_inferred_constraints());
-        // log::info!("Brute impossible cards: {:?}", self.validated_impossible_constraints());
+        log::info!("Brute impossible cards: {:?}", self.validated_impossible_constraints());
     }
     /// Checks if calculated_states fulfils all self.public_constraints
     pub fn validate(&self) -> bool {
         let mut output = true;
         for (player_id, card_vec) in self.public_constraints.iter().enumerate() {
-            output = self.calculated_states.iter().all(|state| state.validate_public_constraints(player_id, card_vec)) && output;
+            output = self.calculated_states.iter().all(|state| state.player_has_cards(player_id, card_vec)) && output;
             if !output {
                 return output
             }

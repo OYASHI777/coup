@@ -13,7 +13,7 @@ pub mod prob_manager {
     pub mod bit_prob;
     pub mod brute_prob_generic;
     pub mod brute_prob;
-    pub mod card_state_u64;
+    pub mod card_state;
     pub mod collective_constraint;
     pub mod compressed_group_constraint;
     pub mod constraint;
