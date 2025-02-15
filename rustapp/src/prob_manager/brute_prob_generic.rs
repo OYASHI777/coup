@@ -7,6 +7,7 @@
 use std::usize;
 use std::hash::Hash;
 use crate::history_public::{Card, AOName, ActionObservation};
+use crate::prob_manager::coup_const::MAX_PERM_STATES;
 use super::permutation_generator::{gen_table_combinations};
 use super::coup_const::{BAG_SIZES, TOKENS};
 use super::card_state::CardPermState;
@@ -17,22 +18,22 @@ use rayon::prelude::*;
 
 pub struct BruteCardCountManagerGeneric<T: CardPermState> 
 where
-    T: CardPermState + Hash + Eq + Clone + std::fmt::Display + std::fmt::Debug,
+    T: CardPermState + Hash + Eq + Copy + Clone + std::fmt::Display + std::fmt::Debug,
 {
     all_states: Vec<T>,
-    calculated_states: AHashSet<T>, // All the states that fulfil current constraints
+    calculated_states: Vec<T>, // All the states that fulfil current constraints
     public_constraints: Vec<Vec<Card>>,
     inferred_constraints: Vec<Vec<Card>>,
     impossible_constraints: [[bool; 5]; 7],
 }
 impl<T> BruteCardCountManagerGeneric<T> 
 where
-    T: CardPermState + Hash + Eq + Clone + std::fmt::Display + std::fmt::Debug,
+    T: CardPermState + Hash + Eq + Copy + Clone + std::fmt::Display + std::fmt::Debug,
 {
     /// Constructor
     pub fn new() -> Self {
         let all_states: Vec<T> = T::gen_table_combinations();
-        let calculated_states: AHashSet<T> = all_states.clone().into_iter().collect();
+        let calculated_states: Vec<T> = all_states.clone().into_iter().collect();
         let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
         public_constraints.push(Vec::with_capacity(3));
         let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
@@ -118,18 +119,29 @@ where
         let mut current_dead_cards: Vec<Card> = self.public_constraints[player_reveal].clone();
         current_dead_cards.push(card_i);
         self.restrict(player_reveal, &current_dead_cards);
-        let new_states_vec: Vec<T> = self
-        .calculated_states
-        .iter()  // parallel iteration over our existing states
-        .flat_map(|state| state.mix_one_card(player_reveal, 6, card_i))
-        .collect();
+        let mut temp_set = AHashSet::with_capacity(MAX_PERM_STATES);
+        let mut temp_vec = Vec::with_capacity(MAX_PERM_STATES.min(self.calculated_states.len() * 2));
+        for t in self.calculated_states.iter() {
+            for new_state in t.mix_one_card(player_reveal, 6, card_i).iter() {
+                if !temp_set.contains(new_state) {
+                    temp_set.insert(*new_state);
+                    temp_vec.push(*new_state);
+                }
+            }
+        }
+        // let new_states_vec: Vec<T> = self
+        // .calculated_states
+        // .iter()  // parallel iteration over our existing states
+        // .flat_map(|state| state.mix_one_card(player_reveal, 6, card_i))
+        // .collect();
     
         // Step 2: Convert that Vec<String> into a new AHashSet to remove duplicates.
-        let new_states: AHashSet<T> = new_states_vec.into_iter().collect();
+        // let new_states: AHashSet<T> = new_states_vec.into_iter().collect();
         
         // Finally, assign this new set back to `self.calculated_states`.
-        self.calculated_states = new_states;
+        // self.calculated_states = new_states;
         log::info!("Brute Prob Redraw:");
+        self.calculated_states = temp_vec;
         self.print_legal_states();
     }
     /// Use Rayon to parallelize the process of running `mix_one_char` on
@@ -139,19 +151,30 @@ where
         &mut self,
         player_reveal: usize,
     ) {
+        let mut temp_set = AHashSet::with_capacity(MAX_PERM_STATES);
+        let mut temp_vec = Vec::with_capacity(MAX_PERM_STATES.min(self.calculated_states.len() * 2));
+        for t in self.calculated_states.iter() {
+            for new_state in t.mix_multiple_chars_with_player6(player_reveal, &self.public_constraints[player_reveal]).iter() {
+                if !temp_set.contains(new_state) {
+                    temp_set.insert(*new_state);
+                    temp_vec.push(*new_state);
+                }
+            }
+        }
         // Step 1: In parallel, call `mix_one_char` for each state, flatten the results
         // into a single Vec<String>.
-        let new_states_vec: Vec<T> = self
-            .calculated_states
-            .iter()  // parallel iteration over our existing states
-            .flat_map(|state| state.mix_multiple_chars_with_player6(player_reveal, &self.public_constraints[player_reveal]))
-            .collect();
+        // let new_states_vec: Vec<T> = self
+        //     .calculated_states
+        //     .iter()  // parallel iteration over our existing states
+        //     .flat_map(|state| state.mix_multiple_chars_with_player6(player_reveal, &self.public_constraints[player_reveal]))
+        //     .collect();
 
         // Step 2: Convert that Vec<String> into a new AHashSet to remove duplicates.
-        let new_states: AHashSet<T> = new_states_vec.into_iter().collect();
+        // let new_states: AHashSet<T> = new_states_vec.into_iter().collect();
 
         // Finally, assign this new set back to `self.calculated_states`.
-        self.calculated_states = new_states;
+        // self.calculated_states = new_states;
+        self.calculated_states = temp_vec
     }
     /// This function filters out `self.calculated_states` such that only
     /// states where `player_reveal` possesses *all* cards in `card_chars` remain.
