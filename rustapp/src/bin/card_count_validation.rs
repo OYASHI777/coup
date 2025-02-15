@@ -31,8 +31,8 @@ fn main() {
     // [TEST 1000] Discard + RevealRedraw Debug mode
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
-    // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
-    test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
+    game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
+    // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // game_rnd_constraint_debug(game_no, bool_know_priv_info, print_frequency, log_bool);
     // {
     //     use ActionObservation::*;
@@ -185,12 +185,12 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 let pass_brute_prob_validity = prob.validate();
                 if !pass_inferred_constraints {
                     let replay = hh.get_history(hh.store_len());
-                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     panic!()
                 }
                 if !pass_brute_prob_validity{
                     let replay = hh.get_history(hh.store_len());
-                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     panic!()
                 }
                 public_constraints_correct += pass_public_constraints as usize;
