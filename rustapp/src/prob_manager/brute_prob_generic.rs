@@ -23,6 +23,7 @@ where
     inferred_constraints: Vec<Vec<Card>>,
     all_states: Vec<T>,
     calculated_states: AHashSet<T>, // All the states that fulfil current constraints
+    impossible_constraints: [[bool; 5]; 7],
 }
 impl<T> BruteCardCountManagerGeneric<T> 
 where
@@ -36,11 +37,13 @@ where
         inferred_constraints.push(Vec::with_capacity(3));
         let all_states: Vec<T> = T::gen_table_combinations();
         let calculated_states: AHashSet<T> = all_states.clone().into_iter().collect();
+        let impossible_constraints = [[false; 5]; 7];
         Self {
             public_constraints,
             inferred_constraints,
             all_states,
             calculated_states,
+            impossible_constraints,
         }
     }
     /// Resets
@@ -165,6 +168,29 @@ where
         self.print_legal_states();
         // log::info!("legal states after Restrict: {:?}", self.calculated_states);
     }
+    /// This function returns true if a player can have a particular card
+    pub fn player_can_have_card(&self, player_id: usize, card: Card) -> bool {
+        self.calculated_states.iter().
+        any(|state| state.player_has_cards(player_id, &[card]))
+    }
+    /// This function returns true if a player can have a particular card
+    /// Does care about alive or dead status
+    pub fn player_can_have_card_alive(&self, player_id: usize, card: Card) -> bool {
+        if self.public_constraints[player_id].len() == 1 {
+            let mut card_vec: Vec<Card> = self.public_constraints[player_id].clone();
+            card_vec.push(card);
+            self.player_can_have_cards(player_id, &card_vec[0..2])
+        } else {
+            self.calculated_states.iter().
+            any(|state| state.player_has_cards(player_id, &[card]))
+        }
+    }
+    /// This function returns true if a player can have all of these cards
+    /// Does not care about alive or dead status
+    pub fn player_can_have_cards(&self, player_id: usize, cards: &[Card]) -> bool {
+        // Check in paralle if any state satisfies the requirement
+        self.calculated_states.iter().any(|state| state.player_has_cards(player_id, cards))
+    }
     /// For each player (0..6), determine which cards they **must** have in *every* possible state.
     /// Returns a `Vec<Vec<char>>` of length 7, where `result[player_id]` is a sorted list
     /// (with multiplicities) of all cards that player *always* holds in all current `calculated_states`.
@@ -231,14 +257,14 @@ where
     /// `self.calculated_states`, that `player_id` does **not** have that card.
     ///
     /// Returns an array that is true if a player does cannot have that card alive
-    pub fn validated_impossible_constraints(&self) -> [[bool; 5]; 7] {
+    pub fn set_impossible_constraints(&mut self) {
         let mut result = [[false; 5]; 7];
 
         // Early return if we have no states; then every card is impossible in all states
         // or every card is possible—depending on your game logic. Usually, with zero states,
         // "cannot have" is trivially true for all. But check game logic as needed.
         if self.calculated_states.is_empty() {
-            return [[true; 5]; 7];
+            self.impossible_constraints = [[true; 5]; 7];
         }
 
         // For each player
@@ -266,7 +292,19 @@ where
             }
         }
 
-        result
+        self.impossible_constraints = result;
+    }
+    /// Returns a 7x5 boolean array `[ [bool; 5]; 7 ]`.
+    ///
+    /// - Outer index = player (0..6)
+    /// - Inner index = card as usize (0..4 or 0..5, depending on how you define Card).
+    ///
+    /// `result[player_id][card_index]` will be `true` if, **in every** state within
+    /// `self.calculated_states`, that `player_id` does **not** have that card.
+    ///
+    /// Returns an array that is true if a player does cannot have that card alive
+    pub fn validated_impossible_constraints(&self) -> [[bool; 5]; 7] {
+        self.impossible_constraints.clone()
     }
     /// Returns a 7x5 boolean array `[ [bool; 5]; 7 ]`.
     ///
@@ -316,6 +354,7 @@ where
     /// Assumes calculates states align with latest constraints
     pub fn update_constraints(&mut self) {
         self.inferred_constraints = self.must_have_cards();
+        self.set_impossible_constraints();
         for (player, cards) in self.public_constraints.iter().enumerate() {
             for card in cards.iter() {
                 if let Some(pos) = self.inferred_constraints[player].iter().position(|c| *c == *card ){
