@@ -31,5 +31,3 @@ Some papers to reference.
   📜 [Student of Games: A unified learning algorithm for both perfect and imperfect information games](https://arxiv.org/abs/2112.03178)  
   📜 [Combining Deep Reinforcement Learning and Search for Imperfect-Information Games](https://arxiv.org/abs/2007.13544)  
 
-## FAQ
-No I am not going to simply dump a transformer architecture.
