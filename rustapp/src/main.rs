@@ -1,29 +1,17 @@
-// mod unittests;
-// mod string_utils;
-// mod prob_manager;
-use std::collections::{HashSet, HashMap};
-pub mod history_public;
-pub mod pcmccfr;
-pub mod cfr;
-use crossbeam::thread;
-use pcmccfr::ReachProbability;
-use history_public::{ActionObservation, History, AOName, Card};
 use std::fs::File;
 use std::io::Write;
 use std::io::{self};
+use std::collections::{HashSet, HashMap};
+use std::time::Instant;
 use log::{info, LevelFilter};
 use env_logger::{Builder, Env, Target};
 use rand::{Rng, thread_rng};
 use rand::prelude::SliceRandom;
-pub mod prob_manager;
-// use prob_manager::prob_state::ProbState;
-mod string_utils;
-use prob_manager::naive_prob::{NaiveProb};
-use prob_manager::constraint::{GroupConstraint, CollectiveConstraint};
-use std::time::Instant;
-use rand::prelude::IteratorRandom;
-use std::sync::Mutex;
-use cfr::explorer::{cfr_test, mccfr_test, cfr_prune_test, mccfr_prune_test, pmccfr_test};
+use rustapp::pcmccfr::ReachProbability;
+use rustapp::history_public::{ActionObservation, History, AOName, Card};
+use rustapp::prob_manager::naive_prob::{NaiveProb};
+use rustapp::prob_manager::constraint::{GroupConstraint, CollectiveConstraint};
+use rustapp::cfr::explorer::{cfr_test, mccfr_test, cfr_prune_test, mccfr_prune_test, pmccfr_test};
 // QUICK TEMP: Exchange Draw showing 2 cards should prune the other groups? because they found out the pile has 2 cards
 //              Make Func to initialise past constraint history based on player perspective in naive_prob
 //              Integrate this by having an initial constraint history that can be loaded in
