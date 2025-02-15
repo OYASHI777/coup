@@ -176,14 +176,15 @@ where
     /// This function returns true if a player can have a particular card
     /// Does care about alive or dead status
     pub fn player_can_have_card_alive(&self, player_id: usize, card: Card) -> bool {
-        if self.public_constraints[player_id].len() == 1 {
-            let mut card_vec: Vec<Card> = self.public_constraints[player_id].clone();
-            card_vec.push(card);
-            self.player_can_have_cards(player_id, &card_vec[0..2])
-        } else {
-            self.calculated_states.iter().
-            any(|state| state.player_has_cards(player_id, &[card]))
-        }
+        // if self.public_constraints[player_id].len() == 1 {
+        //     let mut card_vec: Vec<Card> = self.public_constraints[player_id].clone();
+        //     card_vec.push(card);
+        //     self.player_can_have_cards(player_id, &card_vec[0..2])
+        // } else {
+        //     self.calculated_states.iter().
+        //     any(|state| state.player_has_cards(player_id, &[card]))
+        // }
+        !self.impossible_constraints[player_id][card as usize]
     }
     /// This function returns true if a player can have all of these cards
     /// Does not care about alive or dead status
