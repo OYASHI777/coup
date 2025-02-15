@@ -8,21 +8,21 @@ Coup is an imperfect information social deduction game, that pits players agains
 
 ## Features
 🟢 **Basic game simulation**  
-    🟢 Handles full Coup game flow  
-    ⚪ Better game design architecture instead of many branches  
+  - 🟢 Handles full Coup game flow  
+  - ⚪ Better game design architecture instead of many branches  
   
 🟡 **Card counting mechanism for pruning search**  
-    🟢 Create brute force tracker for validation  
-    🟡 Create memoized card counter for quicker querying of impossible states  
-    ⚪ Front-end visualization  
+  - 🟢 Create brute force tracker for validation  
+  - 🟡 Create memoized card counter for quicker querying of impossible states  
+  - ⚪ Front-end visualization  
 
 ⚪ **State Probability Tracker**  
-    ⚪ Use a GPU Compute Shader to compute probability of a particular card permutation state  
+  - ⚪ Use a GPU Compute Shader to compute probability of a particular card permutation state  
 
 ⚪ **Counterfactual Regret Minimization (CFR)**  
-    ⚪ Basic CFR  
-    ⚪ CVFPR  
-    ⚪ CVFPR + RL  
+  - ⚪ Basic CFR  
+  - ⚪ CVFPR  
+  - ⚪ CVFPR + RL  
 
 ## Technical Overview
 Some papers to reference.  
@@ -32,4 +32,4 @@ Some papers to reference.
   📜 [Combining Deep Reinforcement Learning and Search for Imperfect-Information Games](https://arxiv.org/abs/2007.13544)  
 
 ## FAQ
-No I am not going to simply dump a transformer architecture and expect it to work.
+No I am not going to simply dump a transformer architecture.
