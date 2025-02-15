@@ -19,10 +19,10 @@ pub struct BruteCardCountManagerGeneric<T: CardPermState>
 where
     T: CardPermState + Hash + Eq + Clone + std::fmt::Display + std::fmt::Debug,
 {
-    public_constraints: Vec<Vec<Card>>,
-    inferred_constraints: Vec<Vec<Card>>,
     all_states: Vec<T>,
     calculated_states: AHashSet<T>, // All the states that fulfil current constraints
+    public_constraints: Vec<Vec<Card>>,
+    inferred_constraints: Vec<Vec<Card>>,
     impossible_constraints: [[bool; 5]; 7],
 }
 impl<T> BruteCardCountManagerGeneric<T> 
@@ -31,18 +31,18 @@ where
 {
     /// Constructor
     pub fn new() -> Self {
+        let all_states: Vec<T> = T::gen_table_combinations();
+        let calculated_states: AHashSet<T> = all_states.clone().into_iter().collect();
         let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
         public_constraints.push(Vec::with_capacity(3));
         let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
         inferred_constraints.push(Vec::with_capacity(3));
-        let all_states: Vec<T> = T::gen_table_combinations();
-        let calculated_states: AHashSet<T> = all_states.clone().into_iter().collect();
         let impossible_constraints = [[false; 5]; 7];
         Self {
-            public_constraints,
-            inferred_constraints,
             all_states,
             calculated_states,
+            public_constraints,
+            inferred_constraints,
             impossible_constraints,
         }
     }
@@ -52,6 +52,7 @@ where
         self.public_constraints.push(Vec::with_capacity(3));
         self.inferred_constraints = vec![Vec::with_capacity(2); 6];
         self.inferred_constraints.push(Vec::with_capacity(3));
+        self.impossible_constraints = [[false; 5]; 7];
         self.calculated_states = self.all_states.clone().into_iter().collect();
     }
     /// adds public constraint
@@ -190,6 +191,20 @@ where
     /// Does not care about alive or dead status
     pub fn player_can_have_cards(&self, player_id: usize, cards: &[Card]) -> bool {
         // Check in paralle if any state satisfies the requirement
+        let mut deduplicated = cards.to_vec();
+        deduplicated.sort_unstable();
+        deduplicated.dedup();
+        for card in deduplicated {
+            if !self.player_can_have_card_alive(player_id, card) {
+                return false;
+            }
+            if self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == cards[0]).count() as u8).sum::<u8>() +
+            self.inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == cards[0]).count() as u8).sum::<u8>() +
+            cards.iter().filter(|c| **c == card).count() as u8
+            > 3 {
+                return false;
+            }
+        }
         self.calculated_states.iter().any(|state| state.player_has_cards(player_id, cards))
     }
     /// For each player (0..6), determine which cards they **must** have in *every* possible state.
@@ -275,7 +290,6 @@ where
             for card_idx in 0..5 as usize {
                 // Convert card_idx -> Card -> char
                 let card_enum = Card::try_from(card_idx as u8).unwrap();
-                let card_char = card_enum.card_to_char();
 
                 // We want to know if there's ANY state in which the player's substring
                 // includes `card_char`. If there is, then `cannot_have` is false.
