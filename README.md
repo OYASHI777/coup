@@ -4,7 +4,7 @@ Yet another *AI*—ugh. It's really just a game theory solver with a neural netw
 
 ## Description
 Coup is an imperfect information social deduction game, that pits players against each other. Just like poker, players do not know other players' cards, but unlike poker, players can swap cards with a central pile to gain more information. This adds a layer of complexity in managing "chance nodes" and player actions that are dependent on it. 
-**Game Rules**: https://cdn.1j1ju.com/medias/1e/da/43-the-resistance-rulebook.pdf
+**Game Rules**: [Official Rulebook](https://cdn.1j1ju.com/medias/1e/da/43-the-resistance-rulebook.pdf)
 
 ## Features
 🟢 **Basic game simulation**  
