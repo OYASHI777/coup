@@ -739,7 +739,7 @@ fn test_brute(game_no: usize, bool_know_priv_info: bool, print_frequency: usize,
             prob.printlog();
             test_prob.printlog();
             new_moves = hh.generate_legal_moves();
-            new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
             
