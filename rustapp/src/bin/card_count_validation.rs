@@ -185,12 +185,12 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 let pass_brute_prob_validity = prob.validate();
                 if !pass_inferred_constraints {
                     let replay = hh.get_history(hh.store_len());
-                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     panic!()
                 }
                 if !pass_brute_prob_validity{
                     let replay = hh.get_history(hh.store_len());
-                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     panic!()
                 }
                 public_constraints_correct += pass_public_constraints as usize;
@@ -709,9 +709,9 @@ pub fn logger(level: LevelFilter) {
 }
 
 fn test_brute(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool) {
-    // if log_bool{
-    //     logger(LOG_LEVEL);
-    // }
+    if log_bool{
+        logger(LOG_LEVEL);
+    }
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob = BruteCardCountManager::new();
@@ -739,11 +739,12 @@ fn test_brute(game_no: usize, bool_know_priv_info: bool, print_frequency: usize,
             prob.printlog();
             test_prob.printlog();
             new_moves = hh.generate_legal_moves();
-            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
+            new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-            new_moves.retain(|m| m.name() != AOName::Exchange);
+            // new_moves.retain(|m| m.name() != AOName::Exchange);
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                log::info!("Choice: {:?}", output);
                 if output.name() == AOName::Discard{
                     let true_legality = if output.no_cards() == 1 {
                         // let start_time = Instant::now();
@@ -774,18 +775,24 @@ fn test_brute(game_no: usize, bool_know_priv_info: bool, print_frequency: usize,
                 let test_public_constraints = test_prob.validated_public_constraints();
                 let test_inferred_constraints = test_prob.validated_inferred_constraints();
                 let test_impossible_constraints = test_prob.validated_impossible_constraints();
+                log::info!("=== Prob ===");
+                prob.printlog();
+                prob.print_legal_states();
+                log::info!("=== Test Prob ===");
+                test_prob.printlog();
+                test_prob.print_legal_states();
                 let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
                 let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
                 let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
                 let pass_brute_prob_validity = prob.validate();
                 if !pass_inferred_constraints {
                     let replay = hh.get_history(hh.store_len());
-                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     panic!()
                 }
                 if !pass_brute_prob_validity{
                     let replay = hh.get_history(hh.store_len());
-                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     panic!()
                 }
                 public_constraints_correct += pass_public_constraints as usize;

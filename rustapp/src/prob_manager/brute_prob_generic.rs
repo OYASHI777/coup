@@ -175,11 +175,12 @@ where
     /// then `result[0]` will contain `['A','A']`.
     pub fn must_have_cards(&self) -> Vec<Vec<Card>> {
         
+        let mut result: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        result.push(Vec::with_capacity(3));
         // If there are no states at all, every player's "must have" set is empty
         if self.calculated_states.is_empty() {
-            return vec![];
+            return result;
         }
-        let mut result: Vec<Vec<Card>> = Vec::with_capacity(7);
 
         // For each of the 7 players, compute the "intersection frequency map"
         // across all `calculated_states`.
@@ -216,7 +217,7 @@ where
                 }
             }
 
-            result.push(must_have_for_player);
+            result[player_id] = must_have_for_player;
         }
 
         result

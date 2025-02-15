@@ -1,4 +1,4 @@
-use std::hash::Hasher;
+use std::{hash::Hasher, process::Output};
 
 use crate::history_public::Card;
 use crate::prob_manager::permutation_generator::gen_table_combinations;
@@ -139,7 +139,7 @@ impl CardPermState for CardStateu64 {
         let cards: Vec<Card> = str.chars().map(|c| Card::char_to_card(c)).collect();
         let mut state = Self::new();
         state.set_player_cards(0, &cards[0..2]);
-        state.set_player_cards(0, &cards[2..4]);
+        state.set_player_cards(1, &cards[2..4]);
         state.set_player_cards(2, &cards[4..6]);
         state.set_player_cards(3, &cards[6..8]);
         state.set_player_cards(4, &cards[8..10]);
@@ -151,7 +151,9 @@ impl CardPermState for CardStateu64 {
     fn gen_table_combinations() -> Vec<Self> {
         // This is a lazy unoptimized implementation as it's only intended to be called once at start of program
         let all_states: Vec<String> = gen_table_combinations(TOKENS, &BAG_SIZES);
-        all_states.iter().map(|state| Self::from_str(state)).collect()
+        let output = all_states.iter().map(|state| Self::from_str(state)).collect();
+        log::info!("all_states: {:?}", output);
+        output
     }
 
     fn player_has_cards(&self, player_id: usize, cards: &[Card]) -> bool {
