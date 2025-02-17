@@ -1941,9 +1941,11 @@ impl CompressedCollectiveConstraint {
                         // Here player is 1 and pile is 0
                         // We add pile information that it is originally missing
                         group.set_player_flag(6, true);
+                        group.set_single_card_flag(player_id, false);
                         // group.count_alive_add(self.inferred_pile_constraints[card_num]); 
                         group.count_alive_add(pile_inferred_count); 
                     } else {
+                        group.set_single_card_flag(player_id, false);
                         // Here player is 1 and pile is 1, we do a simple check
                         // If somehow you have learnt of more inferred information, than prune the group
                         // FIX: we do nth here, handle elsewhere
@@ -2073,6 +2075,7 @@ impl CompressedCollectiveConstraint {
             if card_num == card as usize {
                 let mut i: usize = 0;
                 while i < card_group_constraints.len() {
+                    log::trace!("Redraw Group Adjustment considering group (A): {}", card_group_constraints[i]);
                     if card_group_constraints[i].get_player_flag(player_id) {
                         if !card_group_constraints[i].get_player_flag(6) {
                             // let mut readd_group = card_group_constraints[i].clone();
@@ -2082,6 +2085,7 @@ impl CompressedCollectiveConstraint {
                             // if modified {
                             //     continue;
                             // }
+                            log::trace!("Redraw Group Adjustment group changed (a) to: {}", card_group_constraints[i]);
                         } else {
                             if card_group_constraints[i].count_alive() == 1 {
                                 // let mut readd_group = card_group_constraints[i].clone();
@@ -2092,6 +2096,7 @@ impl CompressedCollectiveConstraint {
                                 // if modified {
                                 //     continue;
                                 // }
+                                log::trace!("Redraw Group Adjustment group changed (b) to: {}", card_group_constraints[i]);
                             }
                         }
                     } else {
@@ -2108,6 +2113,7 @@ impl CompressedCollectiveConstraint {
                             // if modified {
                             //     continue;
                             // }
+                            log::trace!("Redraw Group Adjustment group changed (c) to: {}", card_group_constraints[i]);
                         }
                     }
                     i += 1;
@@ -2115,20 +2121,23 @@ impl CompressedCollectiveConstraint {
             } else {
                 let mut i: usize = 0;
                 while i < card_group_constraints.len() {
+                    log::trace!("Redraw Group Adjustment considering group (B): {}", card_group_constraints[i]);
                     if !card_group_constraints[i].get_player_flag(player_id) {
                         if card_group_constraints[i].get_player_flag(6) {
                             // let mut readd_group = card_group_constraints[i].clone();
                             card_group_constraints[i].set_player_flag(player_id, true);
                             // Indicate that only 1 of the players' card was revealed, and used in the redraw
-                            card_group_constraints[i].set_single_card_flag(player_id, true);
                             card_group_constraints[i].add_dead_count(player_dead_card_count);
-                            card_group_constraints[i].add_alive_count(player_alive_card_count);
-                            card_group_constraints[i].add_total_count(player_dead_card_count + player_alive_card_count);
+                            card_group_constraints[i].set_single_card_flag(player_id, true);
+                            // NOTE: We do not add_alive count if we set single_card_flag == true 
+                            //       as the inferred alive count is not part of single flag
+                            card_group_constraints[i].add_total_count(player_dead_card_count);
                             // card_group_constraints.swap_remove(i);
                             // let (_, modified) = Self::non_redundant_push_tracked(card_group_constraints, readd_group);
                             // if modified {
                             //     continue;
                             // }
+                            log::trace!("Redraw Group Adjustment group (B) changed (a) to: {}", card_group_constraints[i]);
                         }
                     } else {
                         if card_group_constraints[i].get_player_flag(6) {
@@ -2138,6 +2147,7 @@ impl CompressedCollectiveConstraint {
                             // card_group_constraints.swap_remove(i);
                             // Self::non_redundant_push(card_group_constraints, readd_group);
                             // continue;
+                            log::trace!("Redraw Group Adjustment group (B) changed (b) to: {}", card_group_constraints[i]);
                         }
                     }
                     i += 1;
