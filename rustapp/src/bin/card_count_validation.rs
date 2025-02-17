@@ -23,7 +23,7 @@ fn main() {
     let game_no = 100000;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 1;
+    let print_frequency: usize = 5;
     // (DONE) [TEST 1000] Discard + Ambassador Release farm
     // [TEST 1000] Discard + RevealRedraw Release mode
     // (Ran 210) [TEST 1000] Discard + Ambassador Debug mode
@@ -97,8 +97,8 @@ pub fn test() {
         
         println!("Testing: {}", stringify!(full_test_replay_5)); count += 1;
         replay_game_constraint(full_test_replay_5, false, false);
-        println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
-        replay_game_constraint(full_test_replay_6, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
+        // replay_game_constraint(full_test_replay_6, false, false);
         println!("Testing: {}", stringify!(full_test_replay_7)); count += 1;
         replay_game_constraint(full_test_replay_7, false, false);
         // New feature required

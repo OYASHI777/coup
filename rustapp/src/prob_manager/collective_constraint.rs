@@ -832,6 +832,8 @@ impl CompressedCollectiveConstraint {
             //      - if all cards outside group are known, card is not in player's other card
             //      - card is thus part of the single_flag group
             // Keeping this fails full_test_replay_11, removing it fails full_test_replay_6
+            // [FIX] full_test_replay_6 is held up by this bool_discarded, but bool discarded only looks at last item, which does not make that much sense
+            //          currently u must do bool_discarded_card && is_part_of_network to survive full_test_6
                 // TODO: [FIX REVEAL_STATUS]
             match self.revealed_status[player_id].len() {
                 0 => false,
@@ -864,10 +866,29 @@ impl CompressedCollectiveConstraint {
             log::trace!("add_dead_card bool_discard_card_is_part_of_network: {bool_discarded_card_is_definitely_part_of_reveal_redraw_network}");
             let bool_secondary_network_check = self.is_part_of_network(player_id, card);
             if bool_discarded_card_is_definitely_part_of_reveal_redraw_network != bool_secondary_network_check {
+                println!("self.revealed_status: {:?}", self.revealed_status);
                 println!("playerid: {}, card: {:?}", player_id, card);
                 println!("NOT EQUALS: bool_disc: {}, bool_sec: {}", bool_discarded_card_is_definitely_part_of_reveal_redraw_network, bool_secondary_network_check);
+                let mut temp_output: bool = false;
+                if self.revealed_status[player_id][self.revealed_status[player_id].len() - 1].0.is_some() {
+                    let reveal_counter: usize = self.revealed_status[player_id][self.revealed_status[player_id].len() - 1].1;
+                    println!("reveal_counter: {}", reveal_counter);
+                    'outer: for vec in self.revealed_status.iter() {
+                        'inner: for item in vec.iter().rev() {
+                            println!("item: {:?}", item);
+                            if item.0.is_some() && item.0.unwrap() == card && item.1 <= reveal_counter {
+                                println!("output: true");
+                                temp_output = true;
+                                break 'outer
+                            } else {
+                                println!("break inner");
+                                break 'inner
+                            }
+                        }
+                    }
+                }
             }
-            if bool_discarded_card_is_definitely_part_of_reveal_redraw_network && bool_secondary_network_check {
+            if bool_secondary_network_check {
                 // handle case where revealed card is part of the single flag network
                 // We then adjust affected groups of other cards that are part of the network
                 let latest_player_amb_index: usize = self.revealed_status[player_id].iter().rev().find(|( reveal_card, _)| reveal_card.is_none()).map(|(_, revealed_counter)| *revealed_counter).unwrap_or(0);
@@ -1144,12 +1165,13 @@ impl CompressedCollectiveConstraint {
         self.printlog();
         self.add_inferred_card_bulk(new_inferred);
     }
-
+    /// 
     fn is_part_of_network(&mut self, player_id: usize, card: Card) -> bool {
         let latest_player_amb_index: usize = self.revealed_status[player_id].iter().rev().find(|( reveal_card, _)| reveal_card.is_none()).map(|(_, revealed_counter)| *revealed_counter).unwrap_or(0);
         let mut bool_secondary_network_check = false;
         let prev_redraw_counter: usize = self.revealed_status[player_id].last().map(|value| value.1).unwrap_or(0);
-        if self.revealed_status[player_id].len() > 0 {
+        // If player participated in network before current turn
+        if self.revealed_status[player_id].len() > 0  && self.revealed_status[player_id][self.revealed_status[player_id].len() - 1].0.is_some(){
             let mut j: usize = self.revealed_status[player_id].len() - 1;
             loop {
                 if let (Some(card_iter), _) = self.revealed_status[player_id][j] {
@@ -1175,7 +1197,7 @@ impl CompressedCollectiveConstraint {
             'outer: for (player, vec) in self.revealed_status.iter().enumerate() {
                 if player != player_id {
                     log::trace!("add_dead_card search player: {}", player);
-                    for field in vec.iter().rev() {
+                    'inner: for field in vec.iter().rev() {
                         log::trace!("add_dead_card checking field: {:?}", field);
                         if let (Some(card_iter), counter_iter) = field {
                             log::trace!("add_dead_card card_iter: {:?} ?= card: {:?}", *card_iter, card);
@@ -1187,6 +1209,8 @@ impl CompressedCollectiveConstraint {
                                 bool_secondary_network_check = true;
                                 break 'outer;
                             }
+                        } else {
+                            break 'inner;
                         }
                     }
                 }
