@@ -879,6 +879,7 @@ impl CompressedCollectiveConstraint {
             if bool_discarded_card_is_definitely_part_of_reveal_redraw_network {
                 // handle case where revealed card is part of the single flag network
                 // We then adjust affected groups of other cards that are part of the network
+                let latest_player_amb_index: isize = self.revealed_status[player_id].iter().enumerate().rev().find(|(_, value)| value.is_none()).map(|(index, _)| index as isize).unwrap_or(-1);
                 log::trace!("add_dead_card card: {:?} is part of the single card network", card);
                 let mut card_num: usize = 0;
                 while card_num < 5 {
@@ -1013,7 +1014,9 @@ impl CompressedCollectiveConstraint {
                                                             if let Some((card_iter, counter_iter)) = field {
                                                                 log::trace!("add_dead_card card_iter: {:?} ?= card: {:?}", *card_iter, card);
                                                                 log::trace!("add_dead_card counter_iter: {} ?= prev_redraw_counter: {}", *counter_iter, prev_redraw_counter);
-                                                                if *card_iter == card && *counter_iter < prev_redraw_counter {
+                                                                if *card_iter == card && latest_player_amb_index < *counter_iter as isize && *counter_iter < prev_redraw_counter {
+                                                                    // latest_player_amb_index < *counter_iter
+                                                                    // Idea behind this is that the AMB cuts the person off from the network accued before it
                                                                     bool_output = true;
                                                                     break 'outer;
                                                                 }
@@ -1473,6 +1476,7 @@ impl CompressedCollectiveConstraint {
             if bool_inferred_card_is_definitely_part_of_reveal_redraw_network {
                 // handle case where revealed card is part of the single flag network
                 // We then adjust affected groups of other cards that are part of the network
+                let latest_player_amb_index: isize = self.revealed_status[player_id].iter().enumerate().rev().find(|(_, value)| value.is_none()).map(|(index, _)| index as isize).unwrap_or(-1);
                 let mut card_num: usize = 0;
                 while card_num < 5 {
                     log::info!("add_inferred_card player_id: {}, card: {:?} considering groups of type card: {}", player_id, card, card_num);
@@ -1596,7 +1600,7 @@ impl CompressedCollectiveConstraint {
                                                     if player != player_id {
                                                         for field in vec.iter().rev() {
                                                             if let Some((card_iter, counter_iter)) = field {
-                                                                if *card_iter == card && *counter_iter < prev_redraw_counter {
+                                                                if *card_iter == card && latest_player_amb_index < *counter_iter as isize && *counter_iter < prev_redraw_counter {
                                                                     bool_output = true;
                                                                     break 'outer;
                                                                 }
