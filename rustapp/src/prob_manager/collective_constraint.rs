@@ -970,6 +970,7 @@ impl CompressedCollectiveConstraint {
                     let mut i: usize = 0;
                     while i < groups.len() {
                         let group = &mut groups[i];
+                        log::trace!("add_dead_card ZZ2A considering group: {}", group);
                         // TODO: Check group and outside group
                         if group.get_single_card_flag(player_id) 
                         && group.get_player_flag(player_id) 
@@ -1017,7 +1018,9 @@ impl CompressedCollectiveConstraint {
                                         // Since we know the other card, we can assume the discarded card is part of the single_card_groups
                                         bool_output = true;
                                     }
-                                    
+                                    // There are other cases too...
+
+
                                     // if self.revealed_status[player_id].len() > 0 {
                                     //     if let Some((_, prev_redraw_counter)) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 1] {
                                     //         let mut j: usize = self.revealed_status[player_id].len() - 1;
