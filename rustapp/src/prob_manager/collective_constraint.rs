@@ -67,7 +67,7 @@ pub struct CompressedCollectiveConstraint {
     impossible_constraints: [[bool; 5]; 7], // For each player store an array of bool where each index is a Card, this represents whether a player cannot have a card true => cannot
     dead_card_count: [u8; 5], // each index represents the number of dead cards for the Card enum corresponding to that index
     inferred_card_count: [u8; 5], // each index represents the number of inferred cards for the Card enum
-    revealed_status: Vec<Vec<Option<(Card, usize)>>>, 
+    revealed_status: Vec<Vec<(Option<Card>, usize)>>, 
     reveal_redraw_move_counter: usize, // Only counts revealredraw moves
     // Revealed_status stores the cards and the players that have reveal_redrawn, and have yet to use ambassador (mix)
     // When reveal_redraw is done, the card is added for the corresponding player
@@ -852,10 +852,11 @@ impl CompressedCollectiveConstraint {
                     x => {
                         // This is checking if there is anyone who has revealed a card == card recently, and has not ambassadored after
                         let mut output: bool = false;
-                        if let Some((_, reveal_counter)) = self.revealed_status[player_id][x - 1] {
+                        if self.revealed_status[player_id][x - 1].0.is_some() {
+                            let reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
                             'outer: for vec in self.revealed_status.iter() {
                                 'inner: for item in vec.iter().rev() {
-                                    if item.is_some() && item.unwrap().0 == card && item.unwrap().1 <= reveal_counter {
+                                    if item.0.is_some() && item.0.unwrap() == card && item.1 <= reveal_counter {
                                         output = true;
                                         break 'outer
                                     } else {
@@ -879,7 +880,7 @@ impl CompressedCollectiveConstraint {
             if bool_discarded_card_is_definitely_part_of_reveal_redraw_network {
                 // handle case where revealed card is part of the single flag network
                 // We then adjust affected groups of other cards that are part of the network
-                let latest_player_amb_index: usize = self.revealed_status[player_id].iter().enumerate().rev().find(|(_, value)| value.is_none()).map(|(index, _)| index).unwrap_or(0);
+                let latest_player_amb_index: usize = self.revealed_status[player_id].iter().rev().find(|( reveal_card, _)| reveal_card.is_none()).map(|(_, revealed_counter)| *revealed_counter).unwrap_or(0);
                 log::trace!("add_dead_card card: {:?} is part of the single card network", card);
                 let mut card_num: usize = 0;
                 while card_num < 5 {
@@ -986,10 +987,10 @@ impl CompressedCollectiveConstraint {
                                     // If player had revealed before this, and another player had revealed the card before that
                                     let mut bool_output = false;
                                     if self.revealed_status[player_id].len() > 0 {
-                                        if let Some((_, prev_redraw_counter)) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 1] {
+                                        if let (Some(_), prev_redraw_counter) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 1] {
                                             let mut j: usize = self.revealed_status[player_id].len() - 1;
                                             loop {
-                                                if let Some((card_iter, _)) = self.revealed_status[player_id][j] {
+                                                if let (Some(card_iter), _) = self.revealed_status[player_id][j] {
                                                     if card_iter == card {
                                                         log::trace!("add_dead_card found card_iter == card: {:?}", card);
                                                         bool_output = true;
@@ -1011,8 +1012,9 @@ impl CompressedCollectiveConstraint {
                                                         log::trace!("add_dead_card search player: {}", player);
                                                         for field in vec.iter().rev() {
                                                             log::trace!("add_dead_card checking field: {:?}", field);
-                                                            if let Some((card_iter, counter_iter)) = field {
+                                                            if let (Some(card_iter), counter_iter) = field {
                                                                 log::trace!("add_dead_card card_iter: {:?} ?= card: {:?}", *card_iter, card);
+                                                                log::trace!("add_dead_card counter_iter: {} ?= latest_player_amb_index: {}", *counter_iter, latest_player_amb_index);
                                                                 log::trace!("add_dead_card counter_iter: {} ?= prev_redraw_counter: {}", *counter_iter, prev_redraw_counter);
                                                                 if *card_iter == card && latest_player_amb_index < *counter_iter && *counter_iter < prev_redraw_counter {
                                                                     // latest_player_amb_index < *counter_iter
@@ -1113,7 +1115,7 @@ impl CompressedCollectiveConstraint {
                 }
             }
             // If revealed card was part of it, remove it
-            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.is_some() && c.unwrap().0 == card) {
+            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.0 == Some(card)) {
                 self.revealed_status[player_id].swap_remove(pos);
             }
         } else {
@@ -1452,10 +1454,11 @@ impl CompressedCollectiveConstraint {
                     x => {
                         // This is checking if there is anyone who has revealed a card == card recently, and has not ambassadored after
                         let mut output: bool = false;
-                        if let Some((_, reveal_counter)) = self.revealed_status[player_id][x - 1] {
+                        if self.revealed_status[player_id][x - 1].0.is_some() {
+                            let reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
                             'outer: for vec in self.revealed_status.iter() {
                                 'inner: for item in vec.iter().rev() {
-                                    if item.is_some() && item.unwrap().0 == card && item.unwrap().1 <= reveal_counter {
+                                    if item.0.is_some() && item.0.unwrap() == card && item.1 <= reveal_counter {
                                         output = true;
                                         break 'outer
                                     } else {
@@ -1476,7 +1479,7 @@ impl CompressedCollectiveConstraint {
             if bool_inferred_card_is_definitely_part_of_reveal_redraw_network {
                 // handle case where revealed card is part of the single flag network
                 // We then adjust affected groups of other cards that are part of the network
-                let latest_player_amb_index: usize = self.revealed_status[player_id].iter().enumerate().rev().find(|(_, value)| value.is_none()).map(|(index, _)| index).unwrap_or(0);
+                let latest_player_amb_index: usize = self.revealed_status[player_id].iter().rev().find(|( reveal_card, _)| reveal_card.is_none()).map(|(_, revealed_counter)| *revealed_counter).unwrap_or(0);
                 let mut card_num: usize = 0;
                 while card_num < 5 {
                     log::info!("add_inferred_card player_id: {}, card: {:?} considering groups of type card: {}", player_id, card, card_num);
@@ -1575,12 +1578,12 @@ impl CompressedCollectiveConstraint {
                                     //              - Maybe the order of self.revealed_status update could affect this
                                     //              For now i use > 0 and - 1 => THIS ASSUMES THE LAST REVEALED_STATUS is not the current reveal (which is ok for discard)
                                     if self.revealed_status[player_id].len() > 0 {
-                                        if let Some((_, prev_redraw_counter)) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 1] {
+                                        if let (Some(_), prev_redraw_counter) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 1] {
                                         // if let Some((_, prev_redraw_counter)) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 2] {
                                             // let mut j: usize = self.revealed_status[player_id].len() - 2;
                                             let mut j: usize = self.revealed_status[player_id].len() - 1;
                                             loop {
-                                                if let Some((card_iter, _)) = self.revealed_status[player_id][j] {
+                                                if let (Some(card_iter), _) = self.revealed_status[player_id][j] {
                                                     if card_iter == card {
                                                         log::trace!("add_dead_card found card_iter == card: {:?}", card);
                                                         bool_output = true;
@@ -1599,7 +1602,7 @@ impl CompressedCollectiveConstraint {
                                                 'outer: for (player, vec) in self.revealed_status.iter().enumerate() {
                                                     if player != player_id {
                                                         for field in vec.iter().rev() {
-                                                            if let Some((card_iter, counter_iter)) = field {
+                                                            if let (Some(card_iter), counter_iter) = field {
                                                                 if *card_iter == card && latest_player_amb_index < *counter_iter && *counter_iter < prev_redraw_counter {
                                                                     bool_output = true;
                                                                     break 'outer;
@@ -1674,7 +1677,7 @@ impl CompressedCollectiveConstraint {
                 }
             }
             // If revealed card was part of it, remove it
-            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.is_some() && c.unwrap().0 == card) {
+            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.0 == Some(card)) {
                 self.revealed_status[player_id].swap_remove(pos);
             }
         }
@@ -2271,7 +2274,7 @@ impl CompressedCollectiveConstraint {
         log::trace!("=== After Reveal Intermediate State ===");
         self.printlog();
         self.redraw(player_id, card);
-        self.revealed_status[player_id].push(Some((card, self.reveal_redraw_move_counter)));
+        self.revealed_status[player_id].push((Some(card), self.reveal_redraw_move_counter));
         // if !self.revealed_status[player_id].contains(&card) {
         //     self.revealed_status[player_id].push(card);
         // }
@@ -2283,6 +2286,7 @@ impl CompressedCollectiveConstraint {
     /// Function to call for move Ambassador, without considering private information seen by the player who used Ambassador
     pub fn ambassador_public(&mut self, player_id: usize) {
         log::trace!("=== Before Mix ===");
+        self.increment_move_count();
         self.printlog();
         self.mix(player_id);
         log::trace!("=== After Mix ===");
@@ -2310,7 +2314,7 @@ impl CompressedCollectiveConstraint {
         self.add_inferred_groups(); // TODO: [OPTIMIZE] Maybe might only require add_subset groups?
         // [FIX]
         // self.revealed_status[player_id].clear();
-        self.revealed_status[player_id].push(None);
+        self.revealed_status[player_id].push((None, self.reveal_redraw_move_counter));
     }
     /// Function to call for move Ambassador, when considering private information seen by the player who used Ambassador
     pub fn ambassador_private(&mut self, player_id: usize) {
@@ -2319,6 +2323,7 @@ impl CompressedCollectiveConstraint {
         // "reveal" of sorts
         // dilution
         // swap?
+        self.increment_move_count();
         todo!()
     }
     // TODO: [ALT] Try to see if you can do a 2n checks instead of n^2, by just checking if the added item makes anything redundant or if it is redundant so you shift 
