@@ -1914,14 +1914,14 @@ impl CompressedCollectiveConstraint {
         // IDEA: So i guess updating would be taking missing information known from pile or player and adding it in? pile info wont be loss, player info wont be loss, pile & player info will be added in later 
         
         // [MIXING] Here we add information to current groups that gain it from the mix e.g. groups where player is 0 and pile is 1 or vice versa
-        log::trace!("In redraw");
-        let mut i: usize = 0;
+        log::trace!("In mix");
         for (card_num, group_constraints) in [&mut self.group_constraints_amb, &mut self.group_constraints_ass, &mut self.group_constraints_cap, &mut self.group_constraints_duk, &mut self.group_constraints_con].iter_mut().enumerate() {
             let player_inferred_count = self.inferred_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
             let player_dead_count = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
             let pile_inferred_count = self.inferred_constraints[6].iter().filter(|c| **c as usize == card_num).count() as u8;
+            let mut i: usize = 0;
             while i < group_constraints.len() {
-                let group = &mut group_constraints[i];
+                let group: &mut CompressedGroupConstraint = &mut group_constraints[i];
                 // consider 2 dimensions, player_flag and pile_flag 0 1, 1 0, 1 1? no 0 0
                 if !group.get_player_flag(player_id) {
                     if group.get_player_flag(6) {
@@ -2268,11 +2268,18 @@ impl CompressedCollectiveConstraint {
     }
     /// Function to call for move Ambassador, without considering private information seen by the player who used Ambassador
     pub fn ambassador_public(&mut self, player_id: usize) {
-        
+        log::trace!("=== Before Mix ===");
+        self.printlog();
         self.mix(player_id);
+        log::trace!("=== After Mix ===");
+        self.printlog();
         self.ambassador_inferred_adjustment(player_id);
         // Some groups can be inferred even after adjustment. E.g. before mix [1 0 0 0 0 0 1] 3 Duke => inferred_pile 1 Duke
+        log::trace!("=== After ambassador_inferred_adjustment ===");
+        self.printlog();
         self.group_redundant_prune();
+        log::trace!("=== After ambassador group_redundant_prune ===");
+        self.printlog();
         // You might think that add_inferred_groups is not required for ambassador()
         // There is a case, where
         // [0 1 0 0 0 1 1] has 3 Captains, player 1 and 5 each have 1 life => inferred pile constraints has [Captain]
