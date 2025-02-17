@@ -31,8 +31,8 @@ fn main() {
     // [TEST 1000] Discard + RevealRedraw Debug mode
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
-    // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
-    test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
+    game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
+    // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // game_rnd_constraint_debug(game_no, bool_know_priv_info, print_frequency, log_bool);
     // {
     //     use ActionObservation::*;

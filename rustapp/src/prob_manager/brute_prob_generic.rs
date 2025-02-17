@@ -135,17 +135,19 @@ where
         &mut self,
         player_reveal: usize,
     ) {
-        let mut temp_set = AHashSet::with_capacity(MAX_PERM_STATES);
-        let mut temp_vec = Vec::with_capacity(MAX_PERM_STATES.min(self.calculated_states.len() * 2));
-        for t in self.calculated_states.iter() {
+        let initial_len: usize = self.calculated_states.len();
+        let mut temp_set = AHashSet::with_capacity(MAX_PERM_STATES - initial_len);
+        let mut i: usize = 0;
+        while i < initial_len {
+            let t = self.calculated_states[i];
             for new_state in t.mix_multiple_chars_with_player6(player_reveal, &self.public_constraints[player_reveal]).iter() {
                 if !temp_set.contains(new_state) {
                     temp_set.insert(*new_state);
-                    temp_vec.push(*new_state);
+                    self.calculated_states.push(*new_state);
                 }
             }
+            i += 1;
         }
-        self.calculated_states = temp_vec
     }
     /// This function filters out `self.calculated_states` such that only
     /// states where `player_reveal` possesses *all* cards in `card_chars` remain.

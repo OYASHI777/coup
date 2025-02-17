@@ -100,7 +100,7 @@ impl CardStateu64 {
         }
     
         // We'll store the "current combination" indices in `indices`
-        // let mut indices: Vec<usize> = (0..k).collect(); // initial combination: [0, 1, ..., k-1]
+        let mut indices: Vec<usize> = (0..k).collect(); // initial combination: [0, 1, ..., k-1]
     
         // Push the first combination
         // push_combination(&indices, arr, &mut result);
