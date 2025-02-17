@@ -832,42 +832,27 @@ impl CompressedCollectiveConstraint {
             //      - if all cards outside group are known, card is not in player's other card
             //      - card is thus part of the single_flag group
             // Keeping this fails full_test_replay_11, removing it fails full_test_replay_6
-            (
-                // Im more in favour of removing this, as it should be symmetrical, 
-                //  - If it has the card, it can still be from the reveal network, which is precisely why it was in the revealed_status
-                //  - 
-                // We should be checking if when this was revealed, all the remaining cards was in the reveal_status
-                // The idea here is to filter when the revealed card is definitely not part of the reveal network
-                // [IDEA] Perhaps we need to store move number in revealed_status, then for the any() below we count only cards where move was before the last player move
-                // So we remove the !contains, and add a move_no to revealed_status
-                // !self.revealed_status[player_id].contains(&card)  
-            // Case when all of revealed cards are known and therefore it has to be part of the network
-                // || bool_all_cards_dead_or_known
-                true
-            ) 
-            && {
                 // TODO: [FIX REVEAL_STATUS]
-                match self.revealed_status[player_id].len() {
-                    0 => false,
-                    x => {
-                        // This is checking if there is anyone who has revealed a card == card recently, and has not ambassadored after
-                        let mut output: bool = false;
-                        if self.revealed_status[player_id][x - 1].0.is_some() {
-                            let reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
-                            'outer: for vec in self.revealed_status.iter() {
-                                'inner: for item in vec.iter().rev() {
-                                    if item.0.is_some() && item.0.unwrap() == card && item.1 <= reveal_counter {
-                                        output = true;
-                                        break 'outer
-                                    } else {
-                                        break 'inner
-                                    }
+            match self.revealed_status[player_id].len() {
+                0 => false,
+                x => {
+                    // This is checking if there is anyone who has revealed a card == card recently, and has not ambassadored after
+                    let mut output: bool = false;
+                    if self.revealed_status[player_id][x - 1].0.is_some() {
+                        let reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
+                        'outer: for vec in self.revealed_status.iter() {
+                            'inner: for item in vec.iter().rev() {
+                                if item.0.is_some() && item.0.unwrap() == card && item.1 <= reveal_counter {
+                                    output = true;
+                                    break 'outer
+                                } else {
+                                    break 'inner
                                 }
                             }
                         }
-                        // self.revealed_status.iter().any(|v| v.iter().any(|c| c.is_some() && c.unwrap().0 == card && c.unwrap().1 <= player_last_reveal_counter))
-                        output
                     }
+                    // self.revealed_status.iter().any(|v| v.iter().any(|c| c.is_some() && c.unwrap().0 == card && c.unwrap().1 <= player_last_reveal_counter))
+                    output
                 }
             };
             // Maybe there is a 2 lives case vs a 1 live case?
@@ -877,55 +862,57 @@ impl CompressedCollectiveConstraint {
             //          - !!! Like if a player has 2 lives, discards a Duke, but all the other dukes are not in the network
             log::trace!("add_dead_card bool evaluation revealed_status: {:?}", self.revealed_status);
             log::trace!("add_dead_card bool_discard_card_is_part_of_network: {bool_discarded_card_is_definitely_part_of_reveal_redraw_network}");
-            if bool_discarded_card_is_definitely_part_of_reveal_redraw_network {
-                // handle case where revealed card is part of the single flag network
-                // We then adjust affected groups of other cards that are part of the network
-                let latest_player_amb_index: usize = self.revealed_status[player_id].iter().rev().find(|( reveal_card, _)| reveal_card.is_none()).map(|(_, revealed_counter)| *revealed_counter).unwrap_or(0);
-                log::trace!("add_dead_card card: {:?} is part of the single card network", card);
-                let mut card_num: usize = 0;
-                let mut temp_bool_in_network = false;
-                let prev_redraw_counter: usize = self.revealed_status[player_id].last().map(|value| value.1).unwrap_or(0);
-                if self.revealed_status[player_id].len() > 0 {
-                    let mut j: usize = self.revealed_status[player_id].len() - 1;
-                    loop {
-                        if let (Some(card_iter), _) = self.revealed_status[player_id][j] {
-                            if card_iter == card {
-                                log::trace!("add_dead_card found card_iter == card: {:?}", card);
-                                temp_bool_in_network = true;
-                            }
-                        } else {
-                            break;
+            let latest_player_amb_index: usize = self.revealed_status[player_id].iter().rev().find(|( reveal_card, _)| reveal_card.is_none()).map(|(_, revealed_counter)| *revealed_counter).unwrap_or(0);
+            let mut bool_secondary_network_check = false;
+            let prev_redraw_counter: usize = self.revealed_status[player_id].last().map(|value| value.1).unwrap_or(0);
+            if self.revealed_status[player_id].len() > 0 {
+                let mut j: usize = self.revealed_status[player_id].len() - 1;
+                loop {
+                    if let (Some(card_iter), _) = self.revealed_status[player_id][j] {
+                        if card_iter == card {
+                            log::trace!("add_dead_card found card_iter == card: {:?}", card);
+                            bool_secondary_network_check = true;
                         }
-                        if j == 0 {
-                            break
-                        }
-                        j -= 1;
+                    } else {
+                        break;
                     }
+                    if j == 0 {
+                        break
+                    }
+                    j -= 1;
                 }
-                if !temp_bool_in_network {
-                    // Checking if some player had reveal redrawn the card into the possible network before
-                    // the current player drew it and now discards it
-                    log::trace!("add_dead_card !bool_output");
-                    'outer: for (player, vec) in self.revealed_status.iter().enumerate() {
-                        if player != player_id {
-                            log::trace!("add_dead_card search player: {}", player);
-                            for field in vec.iter().rev() {
-                                log::trace!("add_dead_card checking field: {:?}", field);
-                                if let (Some(card_iter), counter_iter) = field {
-                                    log::trace!("add_dead_card card_iter: {:?} ?= card: {:?}", *card_iter, card);
-                                    log::trace!("add_dead_card counter_iter: {} ?= latest_player_amb_index: {}", *counter_iter, latest_player_amb_index);
-                                    log::trace!("add_dead_card counter_iter: {} ?= prev_redraw_counter: {}", *counter_iter, prev_redraw_counter);
-                                    if *card_iter == card && latest_player_amb_index < *counter_iter && *counter_iter < prev_redraw_counter {
-                                        // latest_player_amb_index < *counter_iter
-                                        // Idea behind this is that the AMB cuts the person off from the network accued before it
-                                        temp_bool_in_network = true;
-                                        break 'outer;
-                                    }
+            }
+            if !bool_secondary_network_check {
+                // Checking if some player had reveal redrawn the card into the possible network before
+                // the current player drew it and now discards it
+                log::trace!("add_dead_card !bool_output");
+                'outer: for (player, vec) in self.revealed_status.iter().enumerate() {
+                    if player != player_id {
+                        log::trace!("add_dead_card search player: {}", player);
+                        for field in vec.iter().rev() {
+                            log::trace!("add_dead_card checking field: {:?}", field);
+                            if let (Some(card_iter), counter_iter) = field {
+                                log::trace!("add_dead_card card_iter: {:?} ?= card: {:?}", *card_iter, card);
+                                log::trace!("add_dead_card counter_iter: {} ?= latest_player_amb_index: {}", *counter_iter, latest_player_amb_index);
+                                log::trace!("add_dead_card counter_iter: {} ?= prev_redraw_counter: {}", *counter_iter, prev_redraw_counter);
+                                if *card_iter == card && latest_player_amb_index < *counter_iter && *counter_iter < prev_redraw_counter {
+                                    // latest_player_amb_index < *counter_iter
+                                    // Idea behind this is that the AMB cuts the person off from the network accued before it
+                                    bool_secondary_network_check = true;
+                                    break 'outer;
                                 }
                             }
                         }
                     }
                 }
+            }
+            if bool_discarded_card_is_definitely_part_of_reveal_redraw_network && bool_secondary_network_check {
+                // handle case where revealed card is part of the single flag network
+                // We then adjust affected groups of other cards that are part of the network
+                let latest_player_amb_index: usize = self.revealed_status[player_id].iter().rev().find(|( reveal_card, _)| reveal_card.is_none()).map(|(_, revealed_counter)| *revealed_counter).unwrap_or(0);
+                log::trace!("add_dead_card card: {:?} is part of the single card network", card);
+                let mut card_num: usize = 0;
+
                 while card_num < 5 {
                     if card_num == card as usize {
                         card_num += 1;
@@ -1028,56 +1015,12 @@ impl CompressedCollectiveConstraint {
                                     // }
                                     // Checking revealed_status
                                     // If player had revealed before this, and another player had revealed the card before that
-                                    let mut bool_output = temp_bool_in_network;
-                                    // if self.revealed_status[player_id].len() > 0 {
-                                    //     if let (Some(_), prev_redraw_counter) = self.revealed_status[player_id][self.revealed_status[player_id].len() - 1] {
-                                    //         let mut j: usize = self.revealed_status[player_id].len() - 1;
-                                    //         loop {
-                                    //             if let (Some(card_iter), _) = self.revealed_status[player_id][j] {
-                                    //                 if card_iter == card {
-                                    //                     log::trace!("add_dead_card found card_iter == card: {:?}", card);
-                                    //                     bool_output = true;
-                                    //                 }
-                                    //             } else {
-                                    //                 break;
-                                    //             }
-                                    //             if j == 0 {
-                                    //                 break
-                                    //             }
-                                    //             j -= 1;
-                                    //         }
-                                    //         if !bool_output {
-                                    //             // Checking if some player had reveal redrawn the card into the possible network before
-                                    //             // the current player drew it and now discards it
-                                    //             log::trace!("add_dead_card !bool_output");
-                                    //             'outer: for (player, vec) in self.revealed_status.iter().enumerate() {
-                                    //                 if player != player_id {
-                                    //                     log::trace!("add_dead_card search player: {}", player);
-                                    //                     for field in vec.iter().rev() {
-                                    //                         log::trace!("add_dead_card checking field: {:?}", field);
-                                    //                         if let (Some(card_iter), counter_iter) = field {
-                                    //                             log::trace!("add_dead_card card_iter: {:?} ?= card: {:?}", *card_iter, card);
-                                    //                             log::trace!("add_dead_card counter_iter: {} ?= latest_player_amb_index: {}", *counter_iter, latest_player_amb_index);
-                                    //                             log::trace!("add_dead_card counter_iter: {} ?= prev_redraw_counter: {}", *counter_iter, prev_redraw_counter);
-                                    //                             if *card_iter == card && latest_player_amb_index < *counter_iter && *counter_iter < prev_redraw_counter {
-                                    //                                 // latest_player_amb_index < *counter_iter
-                                    //                                 // Idea behind this is that the AMB cuts the person off from the network accued before it
-                                    //                                 bool_output = true;
-                                    //                                 break 'outer;
-                                    //                             }
-                                    //                         }
-                                    //                     }
-                                    //                 }
-                                    //             }
-                                    //         }
-                                    //     } 
-                                    // }
-                                    if bool_output {
+                                    if bool_secondary_network_check {
                                         log::trace!("card: {:?} is a part of single card group: {}", card, group);
                                     } else {
                                         log::trace!("card: {:?} is not part of single card group: {}", card, group);
                                     }
-                                    bool_output
+                                    true
                                 } else {
                                     // TODO: [FIX REVEAL_STATUS] properly update this with the functionality to check if card is in single_card_network
                                     for revealed_card_group in discard_card_group.unwrap().iter() {
