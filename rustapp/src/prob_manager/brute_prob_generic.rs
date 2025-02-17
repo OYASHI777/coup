@@ -114,16 +114,18 @@ where
         current_dead_cards.push(card_i);
         self.restrict(player_reveal, &current_dead_cards);
         let mut temp_set = AHashSet::with_capacity(MAX_PERM_STATES);
-        let mut temp_vec = Vec::with_capacity(MAX_PERM_STATES.min(self.calculated_states.len() * 2));
-        for t in self.calculated_states.iter() {
+        let initial_len = self.calculated_states.len();
+        let mut i: usize = 0;
+        while i < initial_len {
+            let t = self.calculated_states[i];
             for new_state in t.mix_one_card(player_reveal, 6, card_i).iter() {
                 if !temp_set.contains(new_state) {
                     temp_set.insert(*new_state);
-                    temp_vec.push(*new_state);
+                    self.calculated_states.push(*new_state);
                 }
             }
+            i += 1;
         }
-        self.calculated_states = temp_vec;
         self.print_legal_states();
     }
     /// Use Rayon to parallelize the process of running `mix_one_char` on
