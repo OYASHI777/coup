@@ -87,7 +87,7 @@ impl CardStateu64 {
     }
     // A small helper to generate all combinations of `k` elements from a slice.
     pub fn combinations<T: Clone>(arr: &[T], k: usize) -> Vec<Vec<T>> {
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(10); // Its always < 10
     
         // A helper function that takes indices and builds the corresponding combination
         fn push_combination<T: Clone>(indices: &[usize], arr: &[T], result: &mut Vec<Vec<T>>) {
@@ -100,10 +100,10 @@ impl CardStateu64 {
         }
     
         // We'll store the "current combination" indices in `indices`
-        let mut indices: Vec<usize> = (0..k).collect(); // initial combination: [0, 1, ..., k-1]
+        // let mut indices: Vec<usize> = (0..k).collect(); // initial combination: [0, 1, ..., k-1]
     
         // Push the first combination
-        push_combination(&indices, arr, &mut result);
+        // push_combination(&indices, arr, &mut result);
     
         // Generate subsequent combinations in lexicographic order
         loop {
@@ -197,7 +197,7 @@ impl CardPermState for CardStateu64 {
             return vec![];
         }
 
-        let mut result = Vec::new();
+        let mut result = Vec::with_capacity(3);
 
         // Remove only 1 `card` from `player_id`
         if let Some(pos) = player_cards.iter().position(|&c| c == card) {
@@ -205,7 +205,7 @@ impl CardPermState for CardStateu64 {
         }
 
         // First case: the same card is received back, meaning no change
-        result.push(*self);
+        // result.push(*self);
 
         // Generate all swaps with `player_other`'s cards
         for (i, &other_card) in other_cards.iter().enumerate() {
@@ -252,8 +252,9 @@ impl CardPermState for CardStateu64 {
         let player_count = player_cards.len(); // Typically 2 cards if player_id < 6
 
         // Generate all ways to reassign the total cards
-        let mut results = Vec::new();
-        for combo_for_player in Self::combinations(&combined_cards, player_count) {
+        let combinations = Self::combinations(&combined_cards, player_count);
+        let mut results = Vec::with_capacity(combinations.len());
+        for combo_for_player in combinations {
             // Sort the chosen cards for player_id
             let mut new_player_cards = player_dead_cards.to_vec();
             new_player_cards.extend_from_slice(&combo_for_player);
