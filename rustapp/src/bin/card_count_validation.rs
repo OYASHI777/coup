@@ -31,7 +31,7 @@ fn main() {
     // [TEST 1000] Discard + RevealRedraw Debug mode
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
-    // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
+    game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
     // game_rnd_constraint_debug(game_no, bool_know_priv_info, print_frequency, log_bool);
@@ -45,7 +45,7 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    test();
+    // test();
 }
 pub fn test() {
     {
@@ -189,13 +189,24 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
                 let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
                 let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
+                let bool_test_over_inferred: bool = validated_inferred_constraints.iter().zip(test_inferred_constraints.iter()).any(|(val, test)| {
+                    val.iter().all(|item| test.contains(item)) && test.len() > val.len()
+                });
                 let pass_brute_prob_validity = prob.validate();
                 if !pass_inferred_constraints {
+                    break;
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     panic!()
                 }
                 if !pass_brute_prob_validity{
+                    break;
+                    let replay = hh.get_history(hh.store_len());
+                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    panic!()
+                }
+                if bool_test_over_inferred {
+                    // what we are testing inferred too many things
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     panic!()
