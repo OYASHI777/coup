@@ -193,11 +193,15 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                     val.iter().all(|item| test.contains(item)) && test.len() > val.len()
                 });
                 let pass_brute_prob_validity = prob.validate();
+                public_constraints_correct += pass_public_constraints as usize;
+                inferred_constraints_correct += pass_inferred_constraints as usize;
+                impossible_constraints_correct += pass_impossible_constraints as usize;
+                total_tries += 1;
                 if !pass_inferred_constraints {
                     break;
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint(replay, bool_know_priv_info, log_bool);
-                    panic!()
+                    panic!("Inferred constraints do not match!")
                 }
                 if !pass_brute_prob_validity{
                     break;
@@ -209,12 +213,10 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                     // what we are testing inferred too many things
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint(replay, bool_know_priv_info, log_bool);
-                    panic!()
+                    panic!("Inferred to many items!")
                 }
-                public_constraints_correct += pass_public_constraints as usize;
-                inferred_constraints_correct += pass_inferred_constraints as usize;
-                impossible_constraints_correct += pass_impossible_constraints as usize;
-                total_tries += 1;
+
+
             } else {
                 log::trace!("Pushed bad move somewhere earlier!");
                 break;

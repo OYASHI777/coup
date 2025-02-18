@@ -809,8 +809,7 @@ impl CompressedCollectiveConstraint {
             log::info!("add_dead_card player_id: {}, card: {:?} considering groups of type card: {}", player_id, card, card_num);
             log::trace!("add_dead_card bool evaluation revealed_status: {:?}", self.revealed_status);
             // log::trace!("add_dead_card bool_discard_card_is_part_of_network: {bool_discarded_card_is_definitely_part_of_reveal_redraw_network}");
-            let bool_secondary_network_check = self.is_part_of_network(player_id, card);
-            if bool_secondary_network_check {
+            if self.is_part_of_network(player_id, card) {
                 // handle case where revealed card is part of the single flag network
                 // We then adjust affected groups of other cards that are part of the network
                 log::trace!("add_dead_card card: {:?} is part of the single card network", card);
@@ -892,6 +891,11 @@ impl CompressedCollectiveConstraint {
                                 //      - And if all other revealed cards are not in the group?
                                 // [THINK] What erases self.revealed_status? If i AMB, i might need info from before it to know if another player could only have received a card from the set?
                                 // Can maybe store amb inside too as None
+
+                                // [THINK]: Can we solve this by solving if all cards outside of players' single card?
+                                //          If so, we can skip this collation every iteration
+                                // [OPTIMIZE]: You could technically just find the all non redundant valid groups outside loop
+                                //              Then just check if group is mutually exclusive with any of those, cant rly cos its a count...
                                 let complement: [bool; 7] = group.get_complement_part_list();
                                 let mut total_revealed_count_outside_group: u8 = 0;
                                 total_revealed_count_outside_group += self.public_constraints.iter().enumerate().map(|(i, v)| if complement[i] {v.iter().filter(|c| **c == card).count() as u8} else {0}).sum::<u8>();
@@ -905,7 +909,7 @@ impl CompressedCollectiveConstraint {
                                 log::trace!("add_dead_card card_certainly_in_single_flag_group total_count_outside_group simple: {}", total_revealed_count_outside_group);
                                 let mut total_revealed_card_count_inside_group: u8 = 0;
                                 if total_revealed_count_outside_group == 2 {
-                                    log::trace!("add_dead_card card_certainly_in_single_flag_group total_count_outside_group true A-0");
+                                    log::trace!("card: {:?} is a part of single card group: {}", card, group);
                                     // [TODO] and if card in group is in the single flag network <=> player could only have gotten the card from a reveal redraw from the network
                                     // true // Early exit as we know the last card is revealed by player!
                                     // Can check if any group contains card as single_card and has single_flag true and is a subset, then we know last card is there
@@ -918,11 +922,11 @@ impl CompressedCollectiveConstraint {
                                     // }
                                     // Checking revealed_status
                                     // If player had revealed before this, and another player had revealed the card before that
-                                    if bool_secondary_network_check {
-                                        log::trace!("card: {:?} is a part of single card group: {}", card, group);
-                                    } else {
-                                        log::trace!("card: {:?} is not part of single card group: {}", card, group);
-                                    }
+                                    // if bool_secondary_network_check {
+                                    //     log::trace!("card: {:?} is a part of single card group: {}", card, group);
+                                    // } else {
+                                    //     log::trace!("card: {:?} is not part of single card group: {}", card, group);
+                                    // }
                                     true
                                 } else {
                                     // TODO: [FIX REVEAL_STATUS] properly update this with the functionality to check if card is in single_card_network
