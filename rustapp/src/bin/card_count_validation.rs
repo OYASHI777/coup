@@ -97,8 +97,8 @@ pub fn test() {
         
         println!("Testing: {}", stringify!(full_test_replay_5)); count += 1;
         replay_game_constraint(full_test_replay_5, false, false);
-        // println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
-        // replay_game_constraint(full_test_replay_6, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
+        replay_game_constraint(full_test_replay_6, false, false);
         println!("Testing: {}", stringify!(full_test_replay_7)); count += 1;
         replay_game_constraint(full_test_replay_7, false, false);
         // New feature required

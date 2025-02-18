@@ -807,91 +807,12 @@ impl CompressedCollectiveConstraint {
             // ZZ2A Needs to be shifted here
             // This is here as it needs all the groups to be updated before running
             log::info!("add_dead_card player_id: {}, card: {:?} considering groups of type card: {}", player_id, card, card_num);
-            // TODO: [THINK] Seems like i might needa consider how many cards is known from player?
-            //      - Should also consider number of known cards from player!
-            // This if works for some but does not work for replay_4
-            // If all other cards are outside of reveal_redraw network?
-            // If all other cards are outside the player? idts
-            // can try bool_all_other_cards_dead_or_known
-            // or maybe the complement of this group / network has all the cards
-            // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_other_cards_dead;
-            // [NOTE]: This is if the player does not have the group's card and we know it because of what he just revealed
-            // Thats why we set flags to false, cos we know the group's card is not there
-            //      - I guess thats the case when player reveals a card in the reveal redraw group?
-            // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_other_cards_dead && bool_revealed_status_contains_card;
-            // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = bool_all_cards_dead_or_known && !player_cards.contains(&Card::try_from(card_num as u8).unwrap());
-            // Think this passes tests but is obviously anaemic
-            // I guess its definitely part of rr network if the player could only have gotten it through an rr interaction
-            let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = 
-            // If player who discarded it has the card revealed before, it can't be from a card != card_num group
-            //  - card != card_num here always
-            // If any player has revealed this card before this
-            //  - We don't know for certain that it was from the group's players' single card for the groups where group.card() != card
-            // If nobody has revealed the card before, the card will not certainly be in the player's single_flag
-            // If some player has revealed the card before, and player has revealredrawn, 
-            //      - if all cards outside group are known, card is not in player's other card
-            //      - card is thus part of the single_flag group
-            // Keeping this fails full_test_replay_11, removing it fails full_test_replay_6
-            // [FIX] full_test_replay_6 is held up by this bool_discarded, but bool discarded only looks at last item, which does not make that much sense
-            //          currently u must do bool_discarded_card && is_part_of_network to survive full_test_6
-                // TODO: [FIX REVEAL_STATUS]
-            match self.revealed_status[player_id].len() {
-                0 => false,
-                x => {
-                    // This is checking if there is anyone who has revealed a card == card recently, and has not ambassadored after
-                    let mut output: bool = false;
-                    if self.revealed_status[player_id][x - 1].0.is_some() {
-                        let reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
-                        'outer: for vec in self.revealed_status.iter() {
-                            'inner: for item in vec.iter().rev() {
-                                if item.0.is_some() && item.0.unwrap() == card && item.1 <= reveal_counter {
-                                    output = true;
-                                    break 'outer
-                                } else {
-                                    break 'inner
-                                }
-                            }
-                        }
-                    }
-                    // self.revealed_status.iter().any(|v| v.iter().any(|c| c.is_some() && c.unwrap().0 == card && c.unwrap().1 <= player_last_reveal_counter))
-                    output
-                }
-            };
-            // Maybe there is a 2 lives case vs a 1 live case?
-            // Currently this means if present card is part of the network, but just cos it was revealed doesnt mean it was part of the network
-            //      - player may have 2 lives and this may not be part of the network
-            //      - What about the complementing group has all other cards idea?
-            //          - !!! Like if a player has 2 lives, discards a Duke, but all the other dukes are not in the network
             log::trace!("add_dead_card bool evaluation revealed_status: {:?}", self.revealed_status);
-            log::trace!("add_dead_card bool_discard_card_is_part_of_network: {bool_discarded_card_is_definitely_part_of_reveal_redraw_network}");
+            // log::trace!("add_dead_card bool_discard_card_is_part_of_network: {bool_discarded_card_is_definitely_part_of_reveal_redraw_network}");
             let bool_secondary_network_check = self.is_part_of_network(player_id, card);
-            if bool_discarded_card_is_definitely_part_of_reveal_redraw_network != bool_secondary_network_check {
-                println!("self.revealed_status: {:?}", self.revealed_status);
-                println!("playerid: {}, card: {:?}", player_id, card);
-                println!("NOT EQUALS: bool_disc: {}, bool_sec: {}", bool_discarded_card_is_definitely_part_of_reveal_redraw_network, bool_secondary_network_check);
-                let mut temp_output: bool = false;
-                if self.revealed_status[player_id][self.revealed_status[player_id].len() - 1].0.is_some() {
-                    let reveal_counter: usize = self.revealed_status[player_id][self.revealed_status[player_id].len() - 1].1;
-                    println!("reveal_counter: {}", reveal_counter);
-                    'outer: for vec in self.revealed_status.iter() {
-                        'inner: for item in vec.iter().rev() {
-                            println!("item: {:?}", item);
-                            if item.0.is_some() && item.0.unwrap() == card && item.1 <= reveal_counter {
-                                println!("output: true");
-                                temp_output = true;
-                                break 'outer
-                            } else {
-                                println!("break inner");
-                                break 'inner
-                            }
-                        }
-                    }
-                }
-            }
             if bool_secondary_network_check {
                 // handle case where revealed card is part of the single flag network
                 // We then adjust affected groups of other cards that are part of the network
-                let latest_player_amb_index: usize = self.revealed_status[player_id].iter().rev().find(|( reveal_card, _)| reveal_card.is_none()).map(|(_, revealed_counter)| *revealed_counter).unwrap_or(0);
                 log::trace!("add_dead_card card: {:?} is part of the single card network", card);
                 let mut card_num: usize = 0;
 
@@ -1167,6 +1088,45 @@ impl CompressedCollectiveConstraint {
     }
     /// 
     fn is_part_of_network(&mut self, player_id: usize, card: Card) -> bool {
+        // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = 
+        // // If player who discarded it has the card revealed before, it can't be from a card != card_num group
+        // //  - card != card_num here always
+        // // If any player has revealed this card before this
+        // //  - We don't know for certain that it was from the group's players' single card for the groups where group.card() != card
+        // // If nobody has revealed the card before, the card will not certainly be in the player's single_flag
+        // // If some player has revealed the card before, and player has revealredrawn, 
+        // //      - if all cards outside group are known, card is not in player's other card
+        // //      - card is thus part of the single_flag group
+        // // Keeping this fails full_test_replay_11, removing it fails full_test_replay_6
+        // // [FIX] full_test_replay_6 is held up by this bool_discarded, but bool discarded only looks at last item, which does not make that much sense
+        // //          currently u must do bool_discarded_card && is_part_of_network to survive full_test_6
+        //     // TODO: [FIX REVEAL_STATUS]
+        // match self.revealed_status[player_id].len() {
+        //     0 => false,
+        //     x => {
+        //         // This is checking if there is anyone who has revealed a card == card recently, and has not ambassadored after
+        //         let mut output: bool = false;
+        //         if self.revealed_status[player_id][x - 1].0.is_some() {
+        //             let reveal_counter: usize = self.revealed_status[player_id][x - 1].1;
+        //             'outer: for vec in self.revealed_status.iter() {
+        //                 'inner: for item in vec.iter().rev() {
+        //                     if item.0.is_some() && item.0.unwrap() == card && item.1 <= reveal_counter {
+        //                         output = true;
+        //                         break 'outer
+        //                     } else {
+        //                         break 'inner
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         // self.revealed_status.iter().any(|v| v.iter().any(|c| c.is_some() && c.unwrap().0 == card && c.unwrap().1 <= player_last_reveal_counter))
+        //         output
+        //     }
+        // };
+        // if !bool_discarded_card_is_definitely_part_of_reveal_redraw_network {
+        //     return bool_discarded_card_is_definitely_part_of_reveal_redraw_network
+        // }
+        // [FIX] The above only exits on the first item seen, its inefficient and can be combined
         let latest_player_amb_index: usize = self.revealed_status[player_id].iter().rev().find(|( reveal_card, _)| reveal_card.is_none()).map(|(_, revealed_counter)| *revealed_counter).unwrap_or(0);
         let mut bool_secondary_network_check = false;
         let prev_redraw_counter: usize = self.revealed_status[player_id].last().map(|value| value.1).unwrap_or(0);
@@ -1178,6 +1138,10 @@ impl CompressedCollectiveConstraint {
                     if card_iter == card {
                         log::trace!("add_dead_card found card_iter == card: {:?}", card);
                         bool_secondary_network_check = true;
+                    } else {
+                        // This part is originally not here, but added to be coherent with the bool_discarded logic
+                        // TODO: Decide if should be included, as its alot simpler to write code to check just the last item
+                        break
                     }
                 } else {
                     break;
@@ -1208,6 +1172,10 @@ impl CompressedCollectiveConstraint {
                                 // Idea behind this is that the AMB cuts the person off from the network accued before it
                                 bool_secondary_network_check = true;
                                 break 'outer;
+                            } else {
+                                // This part is originally not here, but added to be coherent with the bool_discarded logic
+                                // TODO: Decide if should be included, as its alot simpler to write code to check just the last item
+                                break 'inner;
                             }
                         } else {
                             break 'inner;
