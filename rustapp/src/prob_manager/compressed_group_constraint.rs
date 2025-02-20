@@ -2,7 +2,7 @@
 use crate::history_public::Card;
 use core::fmt;
 use std::{fmt::Display, fmt::Debug};
-
+use std::hash::{Hash, Hasher};
 // TODO: public constraint as a u32 3 bits per card x 6 players? Or probably better to just have a Vec that reserves space and reduces need for conversion
 // TODO: joint constraint as u64 3bits per card x 6 players?
 // TODO: but this is helpful for storeing the game state and sending it to a neural network...
@@ -76,6 +76,12 @@ impl Debug for CompressedGroupConstraint {
     }
 }
 
+impl Hash for CompressedGroupConstraint {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u32(self.0);
+    }
+}
+
 impl CompressedGroupConstraint {
     const START_FLAGS: [u32; 6] = [
         0b00000000_00000000_00000000_01000001, 
@@ -140,6 +146,10 @@ impl CompressedGroupConstraint {
     pub fn get_card(&self) -> Card {
         let num = ((self.0 & (0b111 << Self::CARD_SHIFT)) >> Self::CARD_SHIFT) as u8;
         Card::try_from(num).expect("Invalid value found")
+    }
+    /// Returns in the form of usize to avoid reconversions
+    pub fn card_num(&self) -> usize {
+        ((self.0 & (0b111 << Self::CARD_SHIFT)) >> Self::CARD_SHIFT) as usize
     }
     /// Sets the dead count (0-3).
     pub fn set_dead_count(&mut self, count: u8) {
@@ -275,6 +285,10 @@ impl CompressedGroupConstraint {
     pub fn get_blank_part_list(&self) -> Self {
         Self(self.0 & Self::PLAYER_BITS)
     }
+    /// Returns Self but with all 0s except the part_list
+    pub fn get_blank_part_list_and_single_card_flags(&self) -> Self {
+        Self(self.0 & (Self::PLAYER_BITS | Self::SINGLE_CARD_MASK))
+    }
     /// Sets the flag for single cards
     /// false => includes both of the players' cards
     /// true => includes 1 of the players' cards
@@ -321,7 +335,6 @@ impl CompressedGroupConstraint {
     /// - [0 0 0 0 0 0 0] is subset of [0 1 0 0 0 0 0] because having a single card flag is more restrictive, and tells us more
     /// - [0 1 0 0 0 0 0] is a subset of [0 1 0 0 0 0 0] as this is not a "strict" subset
     /// - [0 1 0 0 0 0 0] is a subset of [0 1 0 1 0 0 0]
-    /// - [0 1 0 1 0 0 0] is not a subset of [0 1 0 1 0 0 0]
     /// - [0 1 0 1 0 0 0] is not a subset of [0 0 0 1 0 1 0] and vice versa
     /// [NEW]
     /// - Just a standard subset
@@ -341,6 +354,26 @@ impl CompressedGroupConstraint {
             0b00000000_00000000_00000000_01000000,
         ]
         .contains(&(self.0 & Self::PLAYER_BITS))
+    }
+    /// Returns true if there is a single flag
+    pub fn has_single_card_flag(&self) -> bool {
+        self.get_single_card_flag(0) |
+        self.get_single_card_flag(1) |
+        self.get_single_card_flag(2) |
+        self.get_single_card_flag(3) |
+        self.get_single_card_flag(4) |
+        self.get_single_card_flag(5) |
+        self.get_single_card_flag(6)
+    }
+    /// Returns true if there is a single flag
+    pub fn has_single_card_flag_for_any_players_with_zero_counts(&self, player_counts: &[u8; 7]) -> bool {
+        (self.get_single_card_flag(0) && player_counts[0] == 0) |
+        (self.get_single_card_flag(1) && player_counts[1] == 0) |
+        (self.get_single_card_flag(2) && player_counts[2] == 0) |
+        (self.get_single_card_flag(3) && player_counts[3] == 0) |
+        (self.get_single_card_flag(4) && player_counts[4] == 0) |
+        (self.get_single_card_flag(5) && player_counts[5] == 0) |
+        (self.get_single_card_flag(6) && player_counts[6] == 0)
     }
 }
 impl CompressedGroupConstraint {

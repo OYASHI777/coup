@@ -1,5 +1,8 @@
 use std::thread::current;
 
+use ahash::{AHashMap, AHashSet};
+use nohash_hasher::IntMap;
+
 use crate::history_public::Card;
 use super::{compressed_group_constraint::CompressedGroupConstraint, constraint::GroupConstraint};
 
@@ -50,6 +53,8 @@ use super::{compressed_group_constraint::CompressedGroupConstraint, constraint::
 // [FIRST GLANCE PRIORITY] Consider processing all new items to add with redundant checks in bulk
 // [FIRST GLANCE PRIORITY] Check redundant addition process. New item can make more than 1 item redundant. e.g. [1 0 0 0 0 0 0] 2 cards makes both [1 0 1 0 0 0 0] 1 cards and [1 1 0 0 0 0 0] 1 cards redundant
 
+
+// TODO: [OPTIMIZE] change all .card() as usize to card_num()
 #[derive(Clone)]
 /// A struct that helps in card counting. Stores all information known about cards by a particular player.
 pub struct CompressedCollectiveConstraint {
@@ -692,7 +697,7 @@ impl CompressedCollectiveConstraint {
         // TODO: [OPTIMIZE] Add subset groups like in RevealRedraw, so don't need to run add_inferred_groups
         self.printlog();
         self.group_redundant_prune();
-        self.add_inferred_groups();
+        self.add_inferred_information();
         // Change revealed_status at the end after all groups using it have been updated
         // This is handled in add_dead_card
         // self.revealed_status[player_id].clear();
@@ -1707,7 +1712,7 @@ impl CompressedCollectiveConstraint {
         // TODO: Test without reveal_group_adjustment
         self.reveal_group_adjustment(player_id, card);
         // TODO: [TEST] Can this add_inferred_groups go above?
-        self.add_inferred_groups();
+        self.add_inferred_information();
         self.clear_group_constraints(card);
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
@@ -2265,7 +2270,7 @@ impl CompressedCollectiveConstraint {
         // But if Player 1 Exchanges, since we no long have [0 1 0 0 0 0 1] has 2 Captains in group constraints
         // inferred pile constraints loses the [Captain] and becomes empty [] even though it can still be derived from the groups
         //      - This is because it is not picked up in self.total_known_alive_with_player_and_pile(player_id) in self.ambassador_inferred_adjustment()
-        self.add_inferred_groups(); // TODO: [OPTIMIZE] Maybe might only require add_subset groups?
+        self.add_inferred_information(); // TODO: [OPTIMIZE] Maybe might only require add_subset groups?
         // [FIX]
         // self.revealed_status[player_id].clear();
         self.revealed_status[player_id].push((None, self.reveal_redraw_move_counter));
@@ -2553,7 +2558,7 @@ impl CompressedCollectiveConstraint {
     /// 
     /// Assumes self.group_constraints is not internally redundant
     /// Leaves self.group_constraint not internally redundant
-    pub fn add_inferred_groups(&mut self) {
+    pub fn add_inferred_information(&mut self) {
         // DATA STRUCTURE: STORING IMPOSSIBLE ALIVE STATES
         // CASE 0: Player cannot have 4 cards
         // CASE 0b: Player cannot have 3 types of cards and there is only 1 of each remaining card left and player has 2 lives
@@ -3707,6 +3712,105 @@ impl CompressedCollectiveConstraint {
         }
         bool_change
     }
+    /// Adds inferred cards, based on knowing all remaining cards - a sub_group within
+    /// We know all the possible cards that must be in the set of players whom at least 1 card are unknown
+    /// e.g.
+    ///     Public Constraints: [[Ambassador, Duke], [Assassin, Duke], [Ambassador, Assassin], [Captain, Captain], [], [Assassin, Duke], []]
+    ///     Inferred Constraints: [[], [], [], [], [], [], [Contessa]]
+    ///     We know players [0 0 0 0 1 0 1] must have 1 Ambassador 1 Captain 3 Contessa
+    ///     
+    ///     If we know also the following:
+    ///         { Card: Contessa, Flags: [0 0 0 0 1 0 1], Single Card Flags: [0 0 0 0 1 0 0], 0 dead 2 alive 2 total}
+    ///         { Card: Captain, Flags: [0 0 0 0 1 0 1], Single Card Flags: [0 0 0 0 1 0 0], 0 dead 1 alive 1 total}
+    ///         { Card: Ambassador, Flags: [0 0 0 0 1 0 1], Single Card Flags: [0 0 0 0 1 0 0], 0 dead 1 alive 1 total}
+    ///     
+    ///     We can conclude that Player 4 has 1 Contessa, as it is their last card
+    /// Currently only implemented for groups with 1 single_card_flag
+    pub fn add_inferred_remaining_negation(&mut self) -> bool {
+        
+        // Get the remaining card group + card counts
+        let mut full_group_flags = CompressedGroupConstraint::zero();
+        full_group_flags.set_player_flag(0, (self.public_constraints[0].len() + self.inferred_constraints[0].len()) != 2);
+        full_group_flags.set_player_flag(1, (self.public_constraints[1].len() + self.inferred_constraints[1].len()) != 2);
+        full_group_flags.set_player_flag(2, (self.public_constraints[2].len() + self.inferred_constraints[2].len()) != 2);
+        full_group_flags.set_player_flag(3, (self.public_constraints[3].len() + self.inferred_constraints[3].len()) != 2);
+        full_group_flags.set_player_flag(4, (self.public_constraints[4].len() + self.inferred_constraints[4].len()) != 2);
+        full_group_flags.set_player_flag(5, (self.public_constraints[5].len() + self.inferred_constraints[5].len()) != 2);
+        full_group_flags.set_player_flag(6, (self.public_constraints[6].len() + self.inferred_constraints[6].len()) != 3);
+        
+        let mut full_group_total_card_freq: [u8; 5] = [3; 5]; // All Alive counts only
+        let mut full_group_known_card_freq: [u8; 5] = [0; 5]; // All known Alive counts only
+        let mut player_unknown_alive_count: [u8; 7] = [2, 2, 2, 2, 2, 2, 3]; // Alive counts only
+        let mut player_lives: [u8; 7] = [2, 2, 2, 2, 2, 2, 3];
+        for i in 0..6 as usize {
+            for card in self.public_constraints[i].iter() {
+                full_group_total_card_freq[*card as usize] -= 1;
+                player_unknown_alive_count[i] -= 1;
+                player_lives[i] -= 1;
+            }
+        }
+        for i in 0..7 as usize {
+            for card in self.inferred_constraints[i].iter() {
+                full_group_known_card_freq[*card as usize] += 1;
+                player_unknown_alive_count[i] -= 1;
+            }
+        }
+        // Store in HashSet
+        // TODO: [OPTIMIZE] Change maybe to IntMap
+        let capacity = (self.group_constraints_amb.len() + self.group_constraints_ass.len() + self.group_constraints_cap.len() + self.group_constraints_duk.len() + self.group_constraints_con.len() + 1) / 2;
+        let mut groups_set: AHashSet<CompressedGroupConstraint> = AHashSet::with_capacity(capacity);
+        // Have to compare every group with every other group 
+        for (card_num_outer, card_groups_outer) in [&self.group_constraints_amb, &self.group_constraints_ass, &self.group_constraints_cap, &self.group_constraints_duk, &self.group_constraints_con].iter().enumerate() {
+            if full_group_total_card_freq[card_num_outer] - full_group_known_card_freq[card_num_outer] == 0 {
+                // Skip if u cannot possible get a negation for this as all the cards are already dead
+                // Skip also if all the alive cards that could be known are already known, 
+                // these groups will be included in the inner_groups for coherence
+                continue;
+            }
+            'outer: for group_outer in card_groups_outer.iter() {
+                let group_key: CompressedGroupConstraint = group_outer.get_blank_part_list_and_single_card_flags();
+                let mut group_card_freq: [u8; 5] = [0; 5]; // Alive count
+                // Can we skip entire card groups based on whats in full group?
+                if group_outer.part_list_is_subset_of(&full_group_flags) && 
+                group_outer.has_single_card_flag_for_any_players_with_zero_counts(&player_unknown_alive_count) && // Check if single_card_flag is 1 for any of the players with unknown_alive_count > 0
+                !groups_set.contains(&group_key) // The above checks are alot faster than indexing a hashmap
+                {
+                    // Check if difference in available spaces is <= 3
+                    //  full [1 1 1 0 0 0 0] current [1 1 0 0 0 0 0] => difference is number of unknown alive for that player
+                    //  full [1 1 1 0 0 0 0] current [1 1 1 0 0 0 0] with single_flags [0 0 1 0 0 0 0] 
+                    //      Player has 2 Lives 0 alive cards known => difference is 2 - 1 = 1 
+                    //      Player has 2 Lives 1 alive cards known card => max difference is 2 - 1 = 1
+                    //      Player has 2 Lives 2 alive cards known => no difference
+                    //      Player has 1 Lives 0 alive cards known => difference = 2 - 1 = 1
+                    //      Player has 1 Lives 1 alive cards known => difference = 2 - 2 = 0
+                    //      These are all just unknown_alive cards
+                    let mut maximum_difference: u8 = 0;
+                    for player in 0..7 as usize {
+                        if full_group_flags.get_player_flag(player)  {
+                            maximum_difference += player_unknown_alive_count[player];
+                        } 
+                        // here if full_group flag is 0, group_key flag is 0, see conditionals above
+                        if maximum_difference > 3 {
+                            continue 'outer;
+                        }
+                    }
+                    for (card_num_inner, card_groups_inner) in [&self.group_constraints_amb, &self.group_constraints_ass, &self.group_constraints_cap, &self.group_constraints_duk, &self.group_constraints_con].iter().enumerate() {
+                        for group_inner in card_groups_inner.iter() {
+                            if group_inner.part_list_is_subset_of(&group_outer) && group_outer.single_card_flags_is_subset_of(*group_inner) {
+                                group_card_freq[card_num_inner] = group_card_freq[card_num_inner].max(group_inner.count_alive());
+                            }
+                        }
+                    }
+                    groups_set.insert(group_key);
+                    // Might need to loop over inferred_constraints too, but im pretty sure add_mut_excl already includes those naturally
+                }
+            }
+        }
+
+        // Checking for possible cards to infer
+        false
+    }
+
     /// Returns an array indexed by [player][card] that indicates if a player can have a particular card
     /// true => impossible
     /// false => possible
