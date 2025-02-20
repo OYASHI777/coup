@@ -3803,6 +3803,58 @@ impl CompressedCollectiveConstraint {
                     }
                     groups_set.insert(group_key);
                     // Might need to loop over inferred_constraints too, but im pretty sure add_mut_excl already includes those naturally
+
+                    // Modify group_card_freq to be cards in the full_group but not in group_key
+                    for (found_counts, total_group_counts) in group_card_freq.iter_mut().zip(full_group_total_card_freq.iter()) {
+                        *found_counts = *total_group_counts - *found_counts;
+                    }
+                    // Counts of total number of cards inferred in the negation set
+                    let negation_inferred_counts = group_card_freq.iter().sum::<u8>();
+                    debug_assert!(negation_inferred_counts < 4, "Seems like the max_difference continue 'outer; is not working as intended");
+                    // Find the inferred amount from the negation
+                    match negation_inferred_counts {
+                        1 => {
+                            for player in 0..7 as usize {
+                                if full_group_flags.get_player_flag(player) {
+                                    // here we assume if it has single_card_flag == 1 it naturally has flag == 1
+                                    // What's the difference
+                                    //      Player has 2 Lives 0 alive cards known => difference is 2 - 1 = 1 
+                                    //      Player has 2 Lives 1 alive cards known card => max difference is 2 - 1 = 1
+                                    //      Player has 2 Lives 2 alive cards known => no difference
+                                    //      Player has 1 Lives 0 alive cards known => difference = 2 - 1 = 1
+                                    //      Player has 1 Lives 1 alive cards known => difference = 2 - 2 = 0
+                                    if group_key.get_player_flag(player) {
+        
+                                    } else {
+                                        if player_unknown_alive_count[player] == 1 {
+        
+                                        }
+                                    }
+                                } 
+                            }
+                        },
+                        2 => {
+                            // If its just 1 player we infer 2 cards for
+                            //      => give to that player
+                            // If its split between 2 players
+                            //      if boths cards are the same give to both players
+                        },
+                        3 => {
+                            // If its just 1 player (pile) we infer 3 cards for
+                            //      => give to the pile
+                            // If shared between 2 players
+                            //      If its split 2 cards, 1 card
+                            //          => for the player that has 2 slots to receive
+                            //             give the card that has count of 2 
+                            //      If split 3 same cards,
+                            //          => give to all players
+                            // If shared between 3 players
+                            //      If split 3 same cards,
+                            //          => give to all players
+                        },
+                        _ => {},
+                    }
+                    
                 }
             }
         }
