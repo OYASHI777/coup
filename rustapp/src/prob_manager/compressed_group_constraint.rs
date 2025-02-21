@@ -361,7 +361,6 @@ impl CompressedGroupConstraint {
     /// Returns true if self group is a subset of other_group
     /// NOTE:
     /// - Subset here does not refer to a SET subset
-    /// - It refers to an informational subset
     /// - [0 0 0 0 0 0 0] is subset of [0 1 0 0 0 0 0] because having a single card flag is more restrictive, and tells us more
     /// - [0 1 0 0 0 0 0] is a subset of [0 1 0 0 0 0 0] as this is not a "strict" subset
     /// - [0 1 0 0 0 0 0] is a subset of [0 1 0 1 0 0 0]
@@ -369,8 +368,8 @@ impl CompressedGroupConstraint {
     /// [NEW]
     /// - Just a standard subset
     pub fn single_card_flags_is_subset_of(&self, other_group: Self) -> bool {
-        // (self.0 & Self::SINGLE_CARD_MASK) == (self.0 & other_group.0 & Self::SINGLE_CARD_MASK)
-        (other_group.0 & Self::SINGLE_CARD_MASK) == (self.0 & other_group.0 & Self::SINGLE_CARD_MASK)
+        (self.0 & Self::SINGLE_CARD_MASK) == (self.0 & other_group.0 & Self::SINGLE_CARD_MASK)
+        // (other_group.0 & Self::SINGLE_CARD_MASK) == (self.0 & other_group.0 & Self::SINGLE_CARD_MASK)
     }
     /// Returns true if only 1 player flag in part_list is true
     pub fn is_single_player_part_list(&self) -> bool {

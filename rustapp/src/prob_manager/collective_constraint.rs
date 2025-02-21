@@ -937,7 +937,7 @@ impl CompressedCollectiveConstraint {
                                 } else {
                                     // TODO: [FIX REVEAL_STATUS] properly update this with the functionality to check if card is in single_card_network
                                     for revealed_card_group in discard_card_group.unwrap().iter() {
-                                        if revealed_card_group.part_list_is_subset_of(group) && revealed_card_group.single_card_flags_is_subset_of(*group) {
+                                        if revealed_card_group.part_list_is_subset_of(group) && group.single_card_flags_is_subset_of(*revealed_card_group) {
                                             // We require that the single_card_flags for group should be more restrictive to be included in the count of revealed_card_group
                                             log::trace!("total_revealed_card_count_inside found revealed_card_group: {revealed_card_group} subset of group: {group}");
                                             total_revealed_card_count_inside_group = total_revealed_card_count_inside_group.max(revealed_card_group.count());
@@ -1579,7 +1579,7 @@ impl CompressedCollectiveConstraint {
                                     // TODO: [FIX REVEAL_STATUS] properly update this with the functionality to check if card is in single_card_network
                                     for revealed_card_group in inferred_card_group.unwrap().iter() {
                                         // We require that the single_card_flags for group should be more restrictive to be included in the count of revealed_card_group
-                                        if revealed_card_group.part_list_is_subset_of(group) && revealed_card_group.single_card_flags_is_subset_of(*group){
+                                        if revealed_card_group.part_list_is_subset_of(group) && group.single_card_flags_is_subset_of(*revealed_card_group){
                                             total_revealed_card_count_inside_group = total_revealed_card_count_inside_group.max(revealed_card_group.count());
                                         } 
                                     }
@@ -2536,7 +2536,8 @@ impl CompressedCollectiveConstraint {
                 if group[i].get_total_count() == 3 {
                     'inner: while j < group.len() {
                         if group[j].get_total_count() == 3 {
-                            if group[j].part_list_is_subset_of(&group[i]) && group[j].single_card_flags_is_subset_of(group[i]){
+                            // [BUG] single_card_flags subset is weird?
+                            if group[j].part_list_is_subset_of(&group[i]) && group[i].single_card_flags_is_subset_of(group[j]){
                                 group.swap_remove(i);
                                 continue 'outer;
                             }
