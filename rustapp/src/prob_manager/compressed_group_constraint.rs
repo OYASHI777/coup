@@ -133,6 +133,36 @@ impl CompressedGroupConstraint {
         debug_assert!(player_id < 7);
         (self.0 & (1 << player_id)) != 0
     }
+    /// Iterator over only the true values
+    pub fn iter_true_player_flags(&self) -> impl Iterator<Item = usize> + '_ {
+        (0..7).filter_map(move |player| {
+            if self.get_player_flag(player) {
+                Some(player)
+            } else {
+                None
+            }
+        })
+    }
+    /// Iterator over only the true values
+    pub fn iter_true_player_single_card_flags(&self) -> impl Iterator<Item = usize> + '_ {
+        (0..7).filter_map(move |player| {
+            if self.get_single_card_flag(player) {
+                Some(player)
+            } else {
+                None
+            }
+        })
+    }
+    /// Iterator over only the true values
+    pub fn iter_true_player_flags_and_single_card_flags(&self) -> impl Iterator<Item = usize> + '_ {
+        (0..7).filter_map(move |player| {
+            if self.get_single_card_flag(player) && self.get_player_flag(player) {
+                Some(player)
+            } else {
+                None
+            }
+        })
+    }
     pub fn get_player_flags(&self) -> u32 {
         self.0 & Self::PLAYER_BITS
     }
@@ -374,6 +404,16 @@ impl CompressedGroupConstraint {
         (self.get_single_card_flag(4) && player_counts[4] == 0) |
         (self.get_single_card_flag(5) && player_counts[5] == 0) |
         (self.get_single_card_flag(6) && player_counts[6] == 0)
+    }
+    /// Returns total number of single flags
+    pub fn single_card_flag_counts(&self) -> u8 {
+        self.get_single_card_flag(0) as u8 +
+        self.get_single_card_flag(1) as u8 +
+        self.get_single_card_flag(2) as u8 +
+        self.get_single_card_flag(3) as u8 +
+        self.get_single_card_flag(4) as u8 +
+        self.get_single_card_flag(5) as u8 +
+        self.get_single_card_flag(6) as u8
     }
 }
 impl CompressedGroupConstraint {

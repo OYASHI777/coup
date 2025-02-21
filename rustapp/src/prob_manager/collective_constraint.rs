@@ -59,6 +59,7 @@ use super::{compressed_group_constraint::CompressedGroupConstraint, constraint::
 /// A struct that helps in card counting. Stores all information known about cards by a particular player.
 pub struct CompressedCollectiveConstraint {
     // TODO: [OPTIMIZE] Consider if can just combine public and joint constraints
+    // TODO: [REFACTOR] Consider using iter_true_player_flags
     // public_constraints:[[Option<Card>; 2]; 6], // Stores all the dead cards of dead players, None are all behind
     public_constraints: Vec<Vec<Card>>, // Stores all the dead cards of dead players, None are all behind
     // inferred_constraints:[[Option<Card>; 2]; 6], // Stores all the dead cards of dead players 
@@ -2650,7 +2651,10 @@ impl CompressedCollectiveConstraint {
         let inf_exc_pl = self.add_inferred_except_player();
         log::info!("After add_inferred_except_player");
         self.printlog();
-        bool_continue = mut_excl_changes || inf_exc_pl;
+        let inf_rem_neg = self.add_inferred_remaining_negation();
+        log::info!("After add_inferred_remaining_negation");
+        self.printlog();
+        bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
         while bool_continue {
             self.add_subset_groups_unopt();
             log::info!("After add_subset_groups");
@@ -2660,6 +2664,9 @@ impl CompressedCollectiveConstraint {
             self.printlog();
             // This kinda needs to maximal informative set to work. Perhaps to run both above to completion first?
             let inf_exc_pl = self.add_inferred_except_player();
+            log::info!("After add_inferred_except_player");
+            self.printlog();
+            let inf_rem_neg = self.add_inferred_remaining_negation();
             log::info!("After add_inferred_except_player");
             self.printlog();
             bool_continue = mut_excl_changes || inf_exc_pl;
@@ -3726,6 +3733,9 @@ impl CompressedCollectiveConstraint {
     ///     
     ///     We can conclude that Player 4 has 1 Contessa, as it is their last card
     /// Currently only implemented for groups with 1 single_card_flag
+    /// !!! Also 2 single_flag_groups of different cards, might imply be that both cards in a players' hand is part of the single_flag_group, so there may be more counted than expected
+    /// !!! Perhaps this is only usable if a player with single_flag has RR only once since their last amb? else we need to expand the single_flag_group
+    ///     Not quite, if the player has only 1 life then its obvious that for that it should be included
     pub fn add_inferred_remaining_negation(&mut self) -> bool {
         
         // Get the remaining card group + card counts
@@ -3740,7 +3750,7 @@ impl CompressedCollectiveConstraint {
         
         let mut full_group_total_card_freq: [u8; 5] = [3; 5]; // All Alive counts only
         let mut full_group_known_card_freq: [u8; 5] = [0; 5]; // All known Alive counts only
-        let mut player_unknown_alive_count: [u8; 7] = [2, 2, 2, 2, 2, 2, 3]; // Alive counts only
+        let mut player_unknown_alive_count: [u8; 7] = [2, 2, 2, 2, 2, 2, 3]; // All unknown Alive counts only
         let mut player_lives: [u8; 7] = [2, 2, 2, 2, 2, 2, 3];
         for i in 0..6 as usize {
             for card in self.public_constraints[i].iter() {
@@ -3772,7 +3782,7 @@ impl CompressedCollectiveConstraint {
                 let mut group_card_freq: [u8; 5] = [0; 5]; // Alive count
                 // Can we skip entire card groups based on whats in full group?
                 if group_outer.part_list_is_subset_of(&full_group_flags) && 
-                group_outer.has_single_card_flag_for_any_players_with_zero_counts(&player_unknown_alive_count) && // Check if single_card_flag is 1 for any of the players with unknown_alive_count > 0
+                // group_outer.has_single_card_flag_for_any_players_with_zero_counts(&player_unknown_alive_count) && // Check if single_card_flag is 1 for any of the players with unknown_alive_count > 0
                 !groups_set.contains(&group_key) // The above checks are alot faster than indexing a hashmap
                 {
                     // Check if difference in available spaces is <= 3
@@ -3804,9 +3814,11 @@ impl CompressedCollectiveConstraint {
                     groups_set.insert(group_key);
                     // Might need to loop over inferred_constraints too, but im pretty sure add_mut_excl already includes those naturally
 
-                    // Modify group_card_freq to be cards in the full_group but not in group_key
-                    for (found_counts, total_group_counts) in group_card_freq.iter_mut().zip(full_group_total_card_freq.iter()) {
-                        *found_counts = *total_group_counts - *found_counts;
+                    // Modify group_card_freq to be cards in the all alive counts in full group -
+                    for (found_alive_counts, all_alive_counts) in group_card_freq.iter_mut().zip(full_group_total_card_freq.iter()) {
+                        // found_alive_counts is assumed to include known alive counts (inferred_constraints) already
+                        //  as inferred_constraints is assumed in be inside group_constraints due to add_mut_excl_groups
+                        *found_alive_counts = *all_alive_counts - *found_alive_counts;
                     }
                     // Counts of total number of cards inferred in the negation set
                     let negation_inferred_counts = group_card_freq.iter().sum::<u8>();
@@ -3814,23 +3826,31 @@ impl CompressedCollectiveConstraint {
                     // Find the inferred amount from the negation
                     match negation_inferred_counts {
                         1 => {
-                            for player in 0..7 as usize {
-                                if full_group_flags.get_player_flag(player) {
+                            if group_key.single_card_flag_counts() == 1 {
+                                for player in full_group_flags.iter_true_player_flags_and_single_card_flags() {
                                     // here we assume if it has single_card_flag == 1 it naturally has flag == 1
                                     // What's the difference
                                     //      Player has 2 Lives 0 alive cards known => difference is 2 - 1 = 1 
                                     //      Player has 2 Lives 1 alive cards known card => max difference is 2 - 1 = 1
+                                    //          Actually theres a problem? here:
+                                    //              1 alive known Duke
+                                    //              1 alive known Duke in single_card_flag group
+                                    //              1 non Duke in single_flag_group
+                //          Also 2 single_flag_groups of different cards, might imply be that both cards in a players' hand is part of the single_flag_group, so there may be more counted than expected
+                //          Perhaps this is only usable if a player has RR only once since their last amb?
                                     //      Player has 2 Lives 2 alive cards known => no difference
                                     //      Player has 1 Lives 0 alive cards known => difference = 2 - 1 = 1
                                     //      Player has 1 Lives 1 alive cards known => difference = 2 - 2 = 0
-                                    if group_key.get_player_flag(player) {
-        
-                                    } else {
-                                        if player_unknown_alive_count[player] == 1 {
-        
-                                        }
+                                    // if player_unknown_alive_count[player] == 1 {
+                                        
+                                    // }
+                                    if let Some(card_num) = group_card_freq.iter().find(|c| **c == negation_inferred_counts) {
+                                        // [OPTIMIZE] u really just don;t need card_changes for this
+                                        let mut card_changes: Vec<Vec<usize>> = Vec::new();
+                                        let bool_changes: bool = self.add_inferred_card(player, Card::try_from(*card_num).unwrap(), 1, &mut card_changes).0;
+                                        return bool_changes
                                     }
-                                } 
+                                }
                             }
                         },
                         2 => {
@@ -3862,7 +3882,23 @@ impl CompressedCollectiveConstraint {
         // Checking for possible cards to infer
         false
     }
-
+    /// Temp name, checks if should include the incumbent group
+    /// Full Group: The General large group for which we know all the cards of
+    ///     => Should be a blank part list group
+    /// Main Group: Current group we are trying to get information about
+    ///     => Should be a blank part list group
+    /// Incumbent Group: Group we are considering for inclusion in Main Group
+    ///     => Is not a blank part list group
+    /// 
+    /// Returns true if
+    ///     a) main group is subset of full_group, and
+    ///     b) 
+    pub fn negation_check(full_group_flags: CompressedCollectiveConstraint, main_group: CompressedGroupConstraint, incumbent_group: CompressedCollectiveConstraint, player_unknown_alive_count: &[u8; 7]) -> bool {
+        main_group.part_list_is_subset_of(&full_group_flags) && 
+        // main_group.has_single_card_flag_for_any_players_with_zero_counts(player_unknown_alive_count) && // Check if single_card_flag is 1 for any of the players with unknown_alive_count > 0
+        // If main_group has single_card_flag == 1, incumbent must have it as 1 too
+        main_group.single_card_flags_is_subset_of(incumbent_group)
+    }
     /// Returns an array indexed by [player][card] that indicates if a player can have a particular card
     /// true => impossible
     /// false => possible
