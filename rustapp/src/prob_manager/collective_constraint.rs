@@ -3769,7 +3769,6 @@ impl CompressedCollectiveConstraint {
                 } else {
                     full_group_known_card_freq[*card as usize] += 1;
                 }
-                
                 player_unknown_alive_count[i] -= 1;
             }
         }
@@ -3843,6 +3842,11 @@ impl CompressedCollectiveConstraint {
                             }
                             log::trace!("add_inferred_remaining_negation ignored outer_group: {}", group_outer);
                             log::trace!("add_inferred_remaining_negation ignored inner_group: {}", group_inner);
+                        }
+                    }
+                    for player in group_key.iter_true_player_flags() {
+                        for card in self.inferred_constraints[player].iter() {
+                            group_card_freq[*card as usize] = group_card_freq[*card as usize].max(self.inferred_constraints[player].iter().filter(|c| **c == *card).count() as u8);
                         }
                     }
                     groups_set.insert(group_key);
