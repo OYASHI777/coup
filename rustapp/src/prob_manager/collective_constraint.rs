@@ -1197,7 +1197,7 @@ impl CompressedCollectiveConstraint {
         bool_secondary_network_check
     }
     /// Bulk add_inferred_card
-    pub fn add_inferred_card_bulk(&mut self, mut single_flag_batch: Vec<CompressedGroupConstraint>) {
+    pub fn add_inferred_card_bulk(&mut self, mut single_flag_batch: Vec<CompressedGroupConstraint>) -> bool{
 // TODO: Inferred card needs to add other things inside other than just the group adjustment
         // [THINK] I think we need to keep our single person inferred group if the single card flag is 1 to allow us to differentiate in add_dead_card...
         // TODO: See reveal, and death()
@@ -1205,12 +1205,13 @@ impl CompressedCollectiveConstraint {
         let mut card_changes: Vec<Vec<usize>> = vec![Vec::with_capacity(2); 5]; // Store (player_id, bool_counts => false: 1, true: 2)
         // Add new_inferred_constraints
         // TODO: [FIX] Adding new_inferred constraints requires reconsidering the entire group_constraints list not just the new_groups
+        let mut bool_changes = false;
         while let Some(single_flag_group) = single_flag_batch.pop() {
             // Something is wrong if this panics, all groups should have a single flag, not no flags
             let player_id = single_flag_group.get_set_players().iter().position(|b| *b).unwrap();
             let card: Card = single_flag_group.card();
             log::trace!("add_inferred_card_bulk: adding group: {}", single_flag_group);
-            self.add_inferred_card(player_id, card, single_flag_group.count_alive(), &mut card_changes);
+            bool_changes = self.add_inferred_card(player_id, card, single_flag_group.count_alive(), &mut card_changes).0 || bool_changes;
             // batch prune
             // This is formatted like this because of some &mutable and immutable borrow issue with the compiler..
             let self_groups = [&mut self.group_constraints_amb, 
@@ -1238,7 +1239,7 @@ impl CompressedCollectiveConstraint {
                 }
             }
         }
-
+        bool_changes
     }
     /// To facilitate recursive addition of inferred_card
     /// Should store newly discovered inferred groups and return that
@@ -1246,6 +1247,7 @@ impl CompressedCollectiveConstraint {
     /// [0] => bool of whether changes were made
     /// [1] => More discovered inferred constraints expressed as a single flag CompressedGroupConstraint
     /// [2] => changes to be used for batch prune | Store? (player_id, bool_counts => false: 1, true: 2)
+    /// TODO [OPTIMIZE] where even are we using the second return?
     pub fn add_inferred_card(&mut self, player_id: usize, card: Card, alive_count: u8, card_changes: &mut Vec<Vec<usize>>) -> (bool, Vec<CompressedGroupConstraint>) {
         // TODO: [IMPLEMENT] Need to add the case for single_card_flag on card != card_num ZZ2A as per add_dead_cards
         log::info!("In add_inferred_card");
@@ -3749,7 +3751,7 @@ impl CompressedCollectiveConstraint {
         full_group_flags.set_player_flag(5, (self.public_constraints[5].len() + self.inferred_constraints[5].len()) != 2);
         full_group_flags.set_player_flag(6, (self.public_constraints[6].len() + self.inferred_constraints[6].len()) != 3);
         
-        let mut full_group_total_card_freq: [u8; 5] = [3; 5]; // All Alive counts only
+        let mut full_group_total_card_freq: [u8; 5] = [3; 5]; // All Alive counts in full_group_flags only
         let mut full_group_known_card_freq: [u8; 5] = [0; 5]; // All known Alive counts only
         let mut player_unknown_alive_count: [u8; 7] = [2, 2, 2, 2, 2, 2, 3]; // All unknown Alive counts only
         let mut player_lives: [u8; 7] = [2, 2, 2, 2, 2, 2, 3];
@@ -3762,7 +3764,12 @@ impl CompressedCollectiveConstraint {
         }
         for i in 0..7 as usize {
             for card in self.inferred_constraints[i].iter() {
-                full_group_known_card_freq[*card as usize] += 1;
+                if !full_group_flags.get_player_flag(i) {
+                    full_group_total_card_freq[*card as usize] -= 1;
+                } else {
+                    full_group_known_card_freq[*card as usize] += 1;
+                }
+                
                 player_unknown_alive_count[i] -= 1;
             }
         }
@@ -3825,13 +3832,17 @@ impl CompressedCollectiveConstraint {
                     // }
                     for (card_num_inner, card_groups_inner) in [&self.group_constraints_amb, &self.group_constraints_ass, &self.group_constraints_cap, &self.group_constraints_duk, &self.group_constraints_con].iter().enumerate() {
                         for group_inner in card_groups_inner.iter() {
-                            if group_inner.part_list_is_subset_of(&group_outer) && group_outer.single_card_flags_is_subset_of(*group_inner) {
+                            if group_inner.part_list_is_subset_of(&group_outer) 
+                            && group_outer.single_card_flags_is_subset_of(*group_inner) 
+                            {
                                 log::trace!("add_inferred_remaining_negation found outer_group: {}", group_outer);
                                 log::trace!("add_inferred_remaining_negation found inner_group: {}", group_inner);
                                 log::trace!("group_card_freq changed from: {:?}", group_card_freq);
                                 group_card_freq[card_num_inner] = group_card_freq[card_num_inner].max(group_inner.count_alive());
                                 log::trace!("group_card_freq changed to: {:?}", group_card_freq);
                             }
+                            log::trace!("add_inferred_remaining_negation ignored outer_group: {}", group_outer);
+                            log::trace!("add_inferred_remaining_negation ignored inner_group: {}", group_inner);
                         }
                     }
                     groups_set.insert(group_key);
@@ -3854,12 +3865,13 @@ impl CompressedCollectiveConstraint {
                     log::trace!("add_inferred_remaining_negation group_card_freq: {:?}", group_card_freq);
                     // Counts of total number of cards inferred in the negation set
                     let negation_inferred_counts = group_card_freq.iter().sum::<u8>();
+                    log::trace!("Negation counts: {}", negation_inferred_counts);
                     debug_assert!(negation_inferred_counts < 4, "Seems like the max_difference continue 'outer; is not working as intended");
                     // Find the inferred amount from the negation
                     match negation_inferred_counts {
                         1 => {
                             if group_key.single_card_flag_counts() == 1 {
-                                for player in full_group_flags.iter_true_player_flags_and_single_card_flags() {
+                                for player in group_key.iter_true_player_flags_and_single_card_flags() {
                                     // here we assume if it has single_card_flag == 1 it naturally has flag == 1
                                     // What's the difference
                                     //      Player has 2 Lives 0 alive cards known => difference is 2 - 1 = 1 
@@ -3876,13 +3888,14 @@ impl CompressedCollectiveConstraint {
                                     // if player_unknown_alive_count[player] == 1 {
                                         
                                     // }
-                                    if let Some(card_num) = group_card_freq.iter().find(|c| **c == negation_inferred_counts) {
+                                    if let Some(card_num) = group_card_freq.iter().position(|c| *c == negation_inferred_counts) {
                                         // [OPTIMIZE] u really just don;t need card_changes for this
-                                        let mut card_changes: Vec<Vec<usize>> = Vec::new();
-                                        let bool_changes: bool = self.add_inferred_card(player, Card::try_from(*card_num).unwrap(), 1, &mut card_changes).0;
-                                        log::trace!("add_inferred_remaining_negation added: {}, card_num: {} for player: {}", bool_changes, *card_num, player);
-
-                                        return bool_changes
+                                        log::trace!("add_inferred_remaining_negation trying to add card_num: {} for player: {}", card_num, player);
+                                        let card_found= Card::try_from(card_num as u8).unwrap();
+                                        if !self.inferred_constraints[player].contains(&card_found) {
+                                            self.inferred_constraints[player].push(card_found);
+                                            return true;
+                                        }
                                     }
                                 }
                             }

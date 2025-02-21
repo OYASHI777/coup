@@ -315,6 +315,10 @@ impl CompressedGroupConstraint {
     pub fn get_blank_part_list(&self) -> Self {
         Self(self.0 & Self::PLAYER_BITS)
     }
+    /// Returns true if part list is equal
+    pub fn part_list_is_equal(&self, other_group: Self) -> bool {
+        self.0 & Self::PLAYER_BITS == other_group.0 & Self::PLAYER_BITS
+    }
     /// Returns Self but with all 0s except the part_list
     pub fn get_blank_part_list_and_single_card_flags(&self) -> Self {
         Self(self.0 & (Self::PLAYER_BITS | Self::SINGLE_CARD_MASK))
