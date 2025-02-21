@@ -3775,6 +3775,13 @@ impl CompressedCollectiveConstraint {
                 // Skip if u cannot possible get a negation for this as all the cards are already dead
                 // Skip also if all the alive cards that could be known are already known, 
                 // these groups will be included in the inner_groups for coherence
+                log::trace!("add_inferred_remaining_negation full_group_flags: {:?}", full_group_flags);
+                log::trace!("add_inferred_remaining_negation public constraint: {:?}", self.public_constraints);
+                log::trace!("add_inferred_remaining_negation inferred constraint: {:?}", self.inferred_constraints);
+                log::trace!("add_inferred_remaining_negation full_group_total_card_freq: {:?}", full_group_total_card_freq);
+                log::trace!("add_inferred_remaining_negation full_group_known_card_freq: {:?}", full_group_known_card_freq);
+                log::trace!("add_inferred_remaining_negation player_unknown_alive_count: {:?}", player_unknown_alive_count);
+                log::trace!("add_inferred_remaining_negation continue full_group_total_card_freq[card_num_outer]: {:?}, full_group_known_card_freq[card_num_outer]: {:?}", full_group_total_card_freq[card_num_outer], full_group_known_card_freq[card_num_outer]);
                 continue;
             }
             'outer: for group_outer in card_groups_outer.iter() {
@@ -3785,6 +3792,13 @@ impl CompressedCollectiveConstraint {
                 // group_outer.has_single_card_flag_for_any_players_with_zero_counts(&player_unknown_alive_count) && // Check if single_card_flag is 1 for any of the players with unknown_alive_count > 0
                 !groups_set.contains(&group_key) // The above checks are alot faster than indexing a hashmap
                 {
+                    log::trace!("add_inferred_remaining_negation full_group_flags: {:?}", full_group_flags);
+                    log::trace!("add_inferred_remaining_negation public constraint: {:?}", self.public_constraints);
+                    log::trace!("add_inferred_remaining_negation inferred constraint: {:?}", self.inferred_constraints);
+                    log::trace!("add_inferred_remaining_negation full_group_total_card_freq: {:?}", full_group_total_card_freq);
+                    log::trace!("add_inferred_remaining_negation full_group_known_card_freq: {:?}", full_group_known_card_freq);
+                    log::trace!("add_inferred_remaining_negation player_unknown_alive_count: {:?}", player_unknown_alive_count);
+                    log::trace!("add_inferred_remaining_negation checking part_list_is_subset group_outer {:?}, full_group_flags: {:?}", group_outer, full_group_flags);
                     // Check if difference in available spaces is <= 3
                     //  full [1 1 1 0 0 0 0] current [1 1 0 0 0 0 0] => difference is number of unknown alive for that player
                     //  full [1 1 1 0 0 0 0] current [1 1 1 0 0 0 0] with single_flags [0 0 1 0 0 0 0] 
@@ -3794,20 +3808,28 @@ impl CompressedCollectiveConstraint {
                     //      Player has 1 Lives 0 alive cards known => difference = 2 - 1 = 1
                     //      Player has 1 Lives 1 alive cards known => difference = 2 - 2 = 0
                     //      These are all just unknown_alive cards
-                    let mut maximum_difference: u8 = 0;
-                    for player in 0..7 as usize {
-                        if full_group_flags.get_player_flag(player)  {
-                            maximum_difference += player_unknown_alive_count[player];
-                        } 
-                        // here if full_group flag is 0, group_key flag is 0, see conditionals above
-                        if maximum_difference > 3 {
-                            continue 'outer;
-                        }
-                    }
+                    // Think this part should be min_diff
+                    // let mut maximum_difference: u8 = 0;
+                    // for player in 0..7 as usize {
+                    //     if full_group_flags.get_player_flag(player)  {
+                    //         maximum_difference += player_unknown_alive_count[player];
+                    //     } 
+                    //     // here if full_group flag is 0, group_key flag is 0, see conditionals above
+                    //     if maximum_difference > 3 {
+                    //         // log::trace!("add_inferred_remaining_negation max diff: {} > 3", maximum_difference);
+                    //         // log::trace!("add_inferred_remaining_negation full_group_flags: {:?}", full_group_flags);
+                    //         // log::trace!("add_inferred_remaining_negation player_unknown_alive_count: {:?}", player_unknown_alive_count);
+                    //         continue 'outer;
+                    //     }
+                    // }
                     for (card_num_inner, card_groups_inner) in [&self.group_constraints_amb, &self.group_constraints_ass, &self.group_constraints_cap, &self.group_constraints_duk, &self.group_constraints_con].iter().enumerate() {
                         for group_inner in card_groups_inner.iter() {
                             if group_inner.part_list_is_subset_of(&group_outer) && group_outer.single_card_flags_is_subset_of(*group_inner) {
+                                log::trace!("add_inferred_remaining_negation found outer_group: {}", group_outer);
+                                log::trace!("add_inferred_remaining_negation found inner_group: {}", group_inner);
+                                log::trace!("group_card_freq changed from: {:?}", group_card_freq);
                                 group_card_freq[card_num_inner] = group_card_freq[card_num_inner].max(group_inner.count_alive());
+                                log::trace!("group_card_freq changed to: {:?}", group_card_freq);
                             }
                         }
                     }
@@ -3820,6 +3842,15 @@ impl CompressedCollectiveConstraint {
                         //  as inferred_constraints is assumed in be inside group_constraints due to add_mut_excl_groups
                         *found_alive_counts = *all_alive_counts - *found_alive_counts;
                     }
+                    log::trace!("add_inferred_remaining_negation Considering adding info");
+                    log::trace!("add_inferred_remaining_negation public constraint: {:?}", self.public_constraints);
+                    log::trace!("add_inferred_remaining_negation inferred constraint: {:?}", self.inferred_constraints);
+                    log::trace!("add_inferred_remaining_negation full_group_total_card_freq: {:?}", full_group_total_card_freq);
+                    log::trace!("add_inferred_remaining_negation full_group_known_card_freq: {:?}", full_group_known_card_freq);
+                    log::trace!("add_inferred_remaining_negation player_unknown_alive_count: {:?}", player_unknown_alive_count);
+                    log::trace!("add_inferred_remaining_negation player_lives: {:?}", player_lives);
+                    log::trace!("add_inferred_remaining_negation group_key: {}", group_key);
+                    log::trace!("add_inferred_remaining_negation group_card_freq: {:?}", group_card_freq);
                     // Counts of total number of cards inferred in the negation set
                     let negation_inferred_counts = group_card_freq.iter().sum::<u8>();
                     debug_assert!(negation_inferred_counts < 4, "Seems like the max_difference continue 'outer; is not working as intended");
@@ -3848,6 +3879,8 @@ impl CompressedCollectiveConstraint {
                                         // [OPTIMIZE] u really just don;t need card_changes for this
                                         let mut card_changes: Vec<Vec<usize>> = Vec::new();
                                         let bool_changes: bool = self.add_inferred_card(player, Card::try_from(*card_num).unwrap(), 1, &mut card_changes).0;
+                                        log::trace!("add_inferred_remaining_negation added: {}, card_num: {} for player: {}", bool_changes, *card_num, player);
+
                                         return bool_changes
                                     }
                                 }
@@ -3893,12 +3926,12 @@ impl CompressedCollectiveConstraint {
     /// Returns true if
     ///     a) main group is subset of full_group, and
     ///     b) 
-    pub fn negation_check(full_group_flags: CompressedCollectiveConstraint, main_group: CompressedGroupConstraint, incumbent_group: CompressedCollectiveConstraint, player_unknown_alive_count: &[u8; 7]) -> bool {
-        main_group.part_list_is_subset_of(&full_group_flags) && 
-        // main_group.has_single_card_flag_for_any_players_with_zero_counts(player_unknown_alive_count) && // Check if single_card_flag is 1 for any of the players with unknown_alive_count > 0
-        // If main_group has single_card_flag == 1, incumbent must have it as 1 too
-        main_group.single_card_flags_is_subset_of(incumbent_group)
-    }
+    // pub fn negation_check(full_group_flags: CompressedCollectiveConstraint, main_group: CompressedGroupConstraint, incumbent_group: CompressedCollectiveConstraint, player_unknown_alive_count: &[u8; 7]) -> bool {
+    //     main_group.part_list_is_subset_of(&full_group_flags) && 
+    //     // main_group.has_single_card_flag_for_any_players_with_zero_counts(player_unknown_alive_count) && // Check if single_card_flag is 1 for any of the players with unknown_alive_count > 0
+    //     // If main_group has single_card_flag == 1, incumbent must have it as 1 too
+    //     main_group.single_card_flags_is_subset_of(incumbent_group)
+    // }
     /// Returns an array indexed by [player][card] that indicates if a player can have a particular card
     /// true => impossible
     /// false => possible
