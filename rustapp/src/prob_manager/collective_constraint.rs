@@ -2654,10 +2654,11 @@ impl CompressedCollectiveConstraint {
         let inf_exc_pl = self.add_inferred_except_player();
         log::info!("After add_inferred_except_player");
         self.printlog();
-        let inf_rem_neg = self.add_inferred_remaining_negation();
-        log::info!("After add_inferred_remaining_negation");
-        self.printlog();
-        bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
+        // let inf_rem_neg = self.add_inferred_remaining_negation();
+        // log::info!("After add_inferred_remaining_negation");
+        // self.printlog();
+        bool_continue = mut_excl_changes || inf_exc_pl;
+        // bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
         while bool_continue {
             self.add_subset_groups_unopt();
             log::info!("After add_subset_groups");
@@ -2669,9 +2670,10 @@ impl CompressedCollectiveConstraint {
             let inf_exc_pl = self.add_inferred_except_player();
             log::info!("After add_inferred_except_player");
             self.printlog();
-            let inf_rem_neg = self.add_inferred_remaining_negation();
-            log::info!("After add_inferred_except_player");
-            self.printlog();
+            // let inf_rem_neg = self.add_inferred_remaining_negation();
+            // log::info!("After add_inferred_remaining_negation");
+            // self.printlog();
+            // bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
             bool_continue = mut_excl_changes || inf_exc_pl;
         }
         // === adjusted to fix need for add_inferred_except_player to have maximal informative set else it adds wrongly
@@ -3874,6 +3876,7 @@ impl CompressedCollectiveConstraint {
                     // Find the inferred amount from the negation
                     match negation_inferred_counts {
                         1 => {
+                            // The negation might be for a player not of single_card_flag tho
                             if group_key.single_card_flag_counts() == 1 {
                                 for player in group_key.iter_true_player_flags_and_single_card_flags() {
                                     // here we assume if it has single_card_flag == 1 it naturally has flag == 1
