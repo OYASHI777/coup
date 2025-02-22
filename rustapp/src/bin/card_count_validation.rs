@@ -11,7 +11,7 @@ use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 pub const LOG_FILE_NAME: &str = "just_test_d.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
@@ -31,7 +31,7 @@ fn main() {
     // [TEST 1000] Discard + RevealRedraw Debug mode
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
-    game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
+    // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
     // game_rnd_constraint_debug(game_no, bool_know_priv_info, print_frequency, log_bool);
@@ -39,13 +39,13 @@ fn main() {
     //     use ActionObservation::*;
     //     use Card::*;
     //     // Please test out different redundancies
-    //     let replay = vec![Tax { player_id: 0 }, CollectiveChallenge { participants: [false, true, false, false, true, true], opposing_player_id: 0, final_actioner: 4 }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, true, false], opposing_player_id: 1, final_actioner: 4 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Income { player_id: 2 }, Steal { player_id: 3, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 3, final_actioner: 5 }, Discard { player_id: 3, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, false, true], opposing_player_id: 4, final_actioner: 2 }, RevealRedraw { player_id: 4, card: Captain }, Discard { player_id: 2, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 1, opposing_player_id: 4, card: Captain }, CollectiveChallenge { participants: [false, false, true, true, false, false], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 5, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [true, false, false, true, true, false], opposing_player_id: 5, final_actioner: 3 }, RevealRedraw { player_id: 5, card: Captain }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, BlockSteal { player_id: 0, opposing_player_id: 0, card: Captain }, Steal { player_id: 0, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, true, true], opposing_player_id: 0, final_actioner: 2 }, RevealRedraw { player_id: 0, card: Captain }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, Income { player_id: 4 }, Steal { player_id: 5, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 5, final_actioner: 0 }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, Income { player_id: 0 }, Steal { player_id: 4, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [false, false, false, false, false, true], opposing_player_id: 4, final_actioner: 5 }, Discard { player_id: 4, card: [Ambassador, Ambassador], no_cards: 1 }, Assassinate { player_id: 5, opposing_player_id: 4 }, CollectiveChallenge { participants: [true, false, false, false, true, false], opposing_player_id: 5, final_actioner: 0 }, Discard { player_id: 5, card: [Ambassador, Ambassador], no_cards: 1 }];
+    //     let replay = vec![ForeignAid { player_id: 0 }, CollectiveBlock { participants: [false, true, false, false, false, false], opposing_player_id: 0, final_actioner: 1 }, CollectiveChallenge { participants: [true, false, true, false, true, false], opposing_player_id: 1, final_actioner: 4 }, RevealRedraw { player_id: 1, card: Duke }, Discard { player_id: 4, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 1, final_actioner: 3 }, Discard { player_id: 1, card: [Assassin, Assassin], no_cards: 1 }, Exchange { player_id: 2 }, CollectiveChallenge { participants: [true, true, false, true, true, true], opposing_player_id: 2, final_actioner: 0 }, RevealRedraw { player_id: 2, card: Ambassador }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, ExchangeDraw { player_id: 2, card: [Ambassador, Duke] }, ExchangeChoice { player_id: 2, no_cards: 2 }, Steal { player_id: 3, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, true, true], opposing_player_id: 3, final_actioner: 4 }, RevealRedraw { player_id: 3, card: Captain }, Discard { player_id: 4, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 2, opposing_player_id: 3, card: Ambassador }, CollectiveChallenge { participants: [false, true, false, true, false, false], opposing_player_id: 2, final_actioner: 1 }, Discard { player_id: 2, card: [Captain, Captain], no_cards: 1 }, Exchange { player_id: 5 }, CollectiveChallenge { participants: [true, true, true, false, false, false], opposing_player_id: 5, final_actioner: 0 }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 0, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, false, true, true, false, true], opposing_player_id: 0, final_actioner: 5 }, RevealRedraw { player_id: 0, card: Captain }, Discard { player_id: 5, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 2, amount: 0 }, CollectiveChallenge { participants: [false, false, true, false, false, false], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [true, false, false, false, false, false], opposing_player_id: 2, final_actioner: 0 }, CollectiveChallenge { participants: [false, false, true, true, false, false], opposing_player_id: 0, final_actioner: 2 }, Discard { player_id: 0, card: [Assassin, Assassin], no_cards: 1 }, Income { player_id: 3 }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [false, false, false, true, false, false], opposing_player_id: 2, final_actioner: 3 }, CollectiveChallenge { participants: [false, false, true, false, false, false], opposing_player_id: 3, final_actioner: 2 }, RevealRedraw { player_id: 3, card: Duke }];
     //     replay_game_constraint(replay, bool_know_priv_info, log_bool);
     // }
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    // test();
+    test();
 }
 pub fn test() {
     {
@@ -159,7 +159,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
             new_moves = hh.generate_legal_moves();
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-            // new_moves.retain(|m| m.name() != AOName::Exchange);
+            new_moves.retain(|m| m.name() != AOName::Exchange);
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 if output.name() == AOName::Discard{

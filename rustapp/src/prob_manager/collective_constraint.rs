@@ -2657,8 +2657,8 @@ impl CompressedCollectiveConstraint {
         let inf_rem_neg = self.add_inferred_remaining_negation();
         log::info!("After add_inferred_remaining_negation");
         self.printlog();
-        // bool_continue = mut_excl_changes || inf_exc_pl;
         bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
+        // bool_continue = mut_excl_changes || inf_exc_pl;
         while bool_continue {
             self.add_subset_groups_unopt();
             log::info!("After add_subset_groups");
@@ -3920,13 +3920,28 @@ impl CompressedCollectiveConstraint {
                                     // Expand for like more general difference
                                     if let Some(card_num) = group_card_freq.iter().position(|c| *c == negation_inferred_counts) {
                                         // [OPTIMIZE] u really just don;t need card_changes for this
-                                        log::trace!("add_inferred_remaining_negation trying to add card_num: {} for player: {}", card_num, player);
+                                        // Not sure if need to update groups after this inferred_constraint is added...
+                                        log::trace!("add_inferred_remaining_negation A trying to add card_num: {} for player: {}", card_num, player);
                                         let card_found= Card::try_from(card_num as u8).unwrap();
                                         if !self.inferred_constraints[player].contains(&card_found) {
                                             self.inferred_constraints[player].push(card_found);
                                             return true;
                                         }
                                     }
+                                }
+                            } else {
+                                // Groups that have full_group flag 1, group_key flag 0 and no single_card_flags
+                                for player in 0..7 as usize {
+                                    if full_group_flags.get_player_flag(player) && !group_key.get_player_flag(player) {
+                                        if let Some(card_num) = group_card_freq.iter().position(|c| *c == negation_inferred_counts) {
+                                            let card_found= Card::try_from(card_num as u8).unwrap();
+                                            if !self.inferred_constraints[player].contains(&card_found) {
+                                                log::trace!("add_inferred_remaining_negation B trying to add card_num: {} for player: {}", card_num, player);
+                                                self.inferred_constraints[player].push(card_found);
+                                                return true;
+                                            }
+                                        }
+                                    } 
                                 }
                             }
                         },
