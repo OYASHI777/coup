@@ -3901,22 +3901,6 @@ impl CompressedCollectiveConstraint {
                             // The negation might be for a player not of single_card_flag tho
                             if group_key.single_card_flag_counts() == 1 {
                                 for player in group_key.iter_true_player_flags_and_single_card_flags() {
-                                    // here we assume if it has single_card_flag == 1 it naturally has flag == 1
-                                    // What's the difference
-                                    //      Player has 2 Lives 0 alive cards known => difference is 2 - 1 = 1 
-                                    //      Player has 2 Lives 1 alive cards known card => max difference is 2 - 1 = 1
-                                    //          Actually theres a problem? here:
-                                    //              1 alive known Duke
-                                    //              1 alive known Duke in single_card_flag group
-                                    //              1 non Duke in single_flag_group
-                //          Also 2 single_flag_groups of different cards, might imply be that both cards in a players' hand is part of the single_flag_group, so there may be more counted than expected
-                //          Perhaps this is only usable if a player has RR only once since their last amb?
-                                    //      Player has 2 Lives 2 alive cards known => no difference
-                                    //      Player has 1 Lives 0 alive cards known => difference = 2 - 1 = 1
-                                    //      Player has 1 Lives 1 alive cards known => difference = 2 - 2 = 0
-                                    // if player_unknown_alive_count[player] == 1 {
-                                        
-                                    // }
                                     // Expand for like more general difference
                                     if let Some(card_num) = group_card_freq.iter().position(|c| *c == negation_inferred_counts) {
                                         // [OPTIMIZE] u really just don;t need card_changes for this
@@ -3931,6 +3915,7 @@ impl CompressedCollectiveConstraint {
                                 }
                             } else {
                                 // Groups that have full_group flag 1, group_key flag 0 and no single_card_flags
+                                // Yet to find case where this fixes smth
                                 for player in 0..7 as usize {
                                     if full_group_flags.get_player_flag(player) && !group_key.get_player_flag(player) {
                                         if let Some(card_num) = group_card_freq.iter().position(|c| *c == negation_inferred_counts) {
@@ -3950,6 +3935,82 @@ impl CompressedCollectiveConstraint {
                             //      => give to that player
                             // If its split between 2 players
                             //      if boths cards are the same give to both players
+                            match group_key.single_card_flag_counts() {
+                                0 => {
+                                    // Groups that have full_group flag 1, group_key flag 0 and no single_card_flags
+                                    // Yet to find case where this fixes smth
+                                    // Test cases run infinitely when this is included...
+                                    for player in full_group_flags.iter_true_player_flags() {
+                                        let mut bool_changed = false;
+                                        if !group_key.get_player_flag(player) && player_lives[player] == 2{
+                                            if player_lives[player] == 2 {
+                                                for card_num in 0..5 as usize {
+                                                    match group_card_freq[card_num] {
+                                                        1 => {
+                                                            let card_found= Card::try_from(card_num as u8).unwrap();
+                                                            if !self.inferred_constraints[player].contains(&card_found) {
+                                                                log::trace!("add_inferred_remaining_negation C1 trying to add card_num: {} for player: {}", card_num, player);
+                                                                self.inferred_constraints[player].push(card_found);
+                                                                bool_changed = true;
+                                                            }
+                                                        },
+                                                        2 => {
+                                                            let card_found= Card::try_from(card_num as u8).unwrap();
+                                                            let current_count: usize = self.inferred_constraints[player].iter().filter(|c| **c == card_found).count();
+                                                            match current_count {
+                                                                0 => {
+                                                                    log::trace!("add_inferred_remaining_negation C2 trying to add x2 card_num: {} for player: {}", card_num, player);
+                                                                    self.inferred_constraints[player].push(card_found);
+                                                                    self.inferred_constraints[player].push(card_found);
+                                                                    bool_changed = true;
+                                                                },
+                                                                1 => {
+                                                                    log::trace!("add_inferred_remaining_negation C3 trying to add card_num: {} for player: {}", card_num, player);
+                                                                    self.inferred_constraints[player].push(card_found);
+                                                                    bool_changed = true;
+                                                                },
+                                                                _ => {}
+                                                            }
+                                                        }
+                                                        _ => {}
+                                                    } 
+                                                }
+                                                if bool_changed {
+                                                    return true;
+                                                }
+                                            } else if player_lives[player] == 1 {
+                                                for card_num in 0..5 {
+                                                    match group_card_freq[card_num] {
+                                                        2 => {
+                                                            // [OPTIMIZE] Don't think this contains check is actually needed as it should be unknown by construction, thus not inside
+                                                            let card_found= Card::try_from(card_num as u8).unwrap();
+                                                            if !self.inferred_constraints[player].contains(&card_found) {
+                                                                log::trace!("add_inferred_remaining_negation C1 trying to add card_num: {} for player: {}", card_num, player);
+                                                                self.inferred_constraints[player].push(card_found);
+                                                                bool_changed = true;
+                                                            }
+                                                        },
+                                                        _ => {
+                                                            // unable to tell which card belongs to which player
+                                                            // Since the cards are both unknown alive cards
+                                                        },
+                                                    }
+                                                }
+
+                                            }
+                                            if bool_changed {
+                                                return true;
+                                            }
+                                        } 
+                                    }
+                                },
+                                1 => {
+                                    // single player + pile
+                                    // single player + n players
+                                    // single player + n players + pile
+                                },
+                                _ => {},
+                            }
                         },
                         3 => {
                             // If its just 1 player (pile) we infer 3 cards for
@@ -3964,7 +4025,10 @@ impl CompressedCollectiveConstraint {
                             //      If split 3 same cards,
                             //          => give to all players
                         },
-                        _ => {},
+                        _ => {
+                            debug_assert!(false, "you should not be here");
+                            unreachable_unchecked!()
+                        },
                     }
                     
                 }
