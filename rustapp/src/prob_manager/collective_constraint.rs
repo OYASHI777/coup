@@ -1,3 +1,4 @@
+use std::hint::unreachable_unchecked;
 use std::thread::current;
 
 use ahash::{AHashMap, AHashSet};
@@ -3905,7 +3906,7 @@ impl CompressedCollectiveConstraint {
                                     if let Some(card_num) = group_card_freq.iter().position(|c| *c == negation_inferred_counts) {
                                         // [OPTIMIZE] u really just don;t need card_changes for this
                                         // Not sure if need to update groups after this inferred_constraint is added...
-                                        log::trace!("add_inferred_remaining_negation A trying to add card_num: {} for player: {}", card_num, player);
+                                        log::trace!("add_inferred_remaining_negation trying to add A card_num: {} for player: {}", card_num, player);
                                         let card_found= Card::try_from(card_num as u8).unwrap();
                                         if !self.inferred_constraints[player].contains(&card_found) {
                                             self.inferred_constraints[player].push(card_found);
@@ -3921,7 +3922,7 @@ impl CompressedCollectiveConstraint {
                                         if let Some(card_num) = group_card_freq.iter().position(|c| *c == negation_inferred_counts) {
                                             let card_found= Card::try_from(card_num as u8).unwrap();
                                             if !self.inferred_constraints[player].contains(&card_found) {
-                                                log::trace!("add_inferred_remaining_negation B trying to add card_num: {} for player: {}", card_num, player);
+                                                log::trace!("add_inferred_remaining_negation trying to add B card_num: {} for player: {}", card_num, player);
                                                 self.inferred_constraints[player].push(card_found);
                                                 return true;
                                             }
@@ -3938,8 +3939,8 @@ impl CompressedCollectiveConstraint {
                             match group_key.single_card_flag_counts() {
                                 0 => {
                                     // Groups that have full_group flag 1, group_key flag 0 and no single_card_flags
-                                    // Yet to find case where this fixes smth
-                                    // Test cases run infinitely when this is included...
+                                    // Yet to observe case where this fixes smth, but we know if fixes stuff cos it makes less errors in general
+                                    // TODO: [TEST] document a case or so by commenting out
                                     for player in full_group_flags.iter_true_player_flags() {
                                         let mut bool_changed = false;
                                         if !group_key.get_player_flag(player) && player_lives[player] == 2{
@@ -3949,7 +3950,7 @@ impl CompressedCollectiveConstraint {
                                                         1 => {
                                                             let card_found= Card::try_from(card_num as u8).unwrap();
                                                             if !self.inferred_constraints[player].contains(&card_found) {
-                                                                log::trace!("add_inferred_remaining_negation C1 trying to add card_num: {} for player: {}", card_num, player);
+                                                                log::trace!("add_inferred_remaining_negation trying to add C1 card_num: {} for player: {}", card_num, player);
                                                                 self.inferred_constraints[player].push(card_found);
                                                                 bool_changed = true;
                                                             }
@@ -3959,13 +3960,13 @@ impl CompressedCollectiveConstraint {
                                                             let current_count: usize = self.inferred_constraints[player].iter().filter(|c| **c == card_found).count();
                                                             match current_count {
                                                                 0 => {
-                                                                    log::trace!("add_inferred_remaining_negation C2 trying to add x2 card_num: {} for player: {}", card_num, player);
+                                                                    log::trace!("add_inferred_remaining_negation trying to add C2 x2 card_num: {} for player: {}", card_num, player);
                                                                     self.inferred_constraints[player].push(card_found);
                                                                     self.inferred_constraints[player].push(card_found);
                                                                     bool_changed = true;
                                                                 },
                                                                 1 => {
-                                                                    log::trace!("add_inferred_remaining_negation C3 trying to add card_num: {} for player: {}", card_num, player);
+                                                                    log::trace!("add_inferred_remaining_negation trying to add C3 card_num: {} for player: {}", card_num, player);
                                                                     self.inferred_constraints[player].push(card_found);
                                                                     bool_changed = true;
                                                                 },
@@ -3985,7 +3986,7 @@ impl CompressedCollectiveConstraint {
                                                             // [OPTIMIZE] Don't think this contains check is actually needed as it should be unknown by construction, thus not inside
                                                             let card_found= Card::try_from(card_num as u8).unwrap();
                                                             if !self.inferred_constraints[player].contains(&card_found) {
-                                                                log::trace!("add_inferred_remaining_negation C1 trying to add card_num: {} for player: {}", card_num, player);
+                                                                log::trace!("add_inferred_remaining_negation trying to add C4 card_num: {} for player: {}", card_num, player);
                                                                 self.inferred_constraints[player].push(card_found);
                                                                 bool_changed = true;
                                                             }
@@ -4005,9 +4006,34 @@ impl CompressedCollectiveConstraint {
                                     }
                                 },
                                 1 => {
+                                    // Could have earlier case present itself here, cos the single flag could be for somone
+                                        // => who has 1 live, so all the cards are in player where full_group_flag == 1. group_key_flag == 0
                                     // single player + pile
                                     // single player + n players
                                     // single player + n players + pile
+                                    // let mut bool_changes = false;
+                                    // for player in full_group_flags.iter_true_player_flags() {
+                                    //     if group_key.get_player_flag(player) {
+
+                                    //     } else {
+                                    //         match player_unknown_alive_count[player] {
+                                    //             2 => {
+                                    //                 // Receivable spots is player_unknown_alive amount
+                                    //                 // which could be 2
+                                    //                 for card_num in 0..5 {
+                                    //                     match group_card_freq[card_num] {
+                                    //                         2 => {
+        
+                                    //                         },
+                                    //                         _ => {},
+                                    //                     }
+                                    //                 }
+                                    //             },
+                                    //             1 => {},
+                                    //             _ => {},
+                                    //         }
+                                    //     }
+                                    // }
                                 },
                                 _ => {},
                             }
@@ -4027,7 +4053,9 @@ impl CompressedCollectiveConstraint {
                         },
                         _ => {
                             debug_assert!(false, "you should not be here");
-                            unreachable_unchecked!()
+                            unsafe {
+                                unreachable_unchecked();
+                            }
                         },
                     }
                     
