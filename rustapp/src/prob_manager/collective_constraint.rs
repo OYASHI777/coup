@@ -2654,11 +2654,11 @@ impl CompressedCollectiveConstraint {
         let inf_exc_pl = self.add_inferred_except_player();
         log::info!("After add_inferred_except_player");
         self.printlog();
-        // let inf_rem_neg = self.add_inferred_remaining_negation();
-        // log::info!("After add_inferred_remaining_negation");
-        // self.printlog();
-        bool_continue = mut_excl_changes || inf_exc_pl;
-        // bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
+        let inf_rem_neg = self.add_inferred_remaining_negation();
+        log::info!("After add_inferred_remaining_negation");
+        self.printlog();
+        // bool_continue = mut_excl_changes || inf_exc_pl;
+        bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
         while bool_continue {
             self.add_subset_groups_unopt();
             log::info!("After add_subset_groups");
@@ -2670,11 +2670,11 @@ impl CompressedCollectiveConstraint {
             let inf_exc_pl = self.add_inferred_except_player();
             log::info!("After add_inferred_except_player");
             self.printlog();
-            // let inf_rem_neg = self.add_inferred_remaining_negation();
-            // log::info!("After add_inferred_remaining_negation");
-            // self.printlog();
-            // bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
-            bool_continue = mut_excl_changes || inf_exc_pl;
+            let inf_rem_neg = self.add_inferred_remaining_negation();
+            log::info!("After add_inferred_remaining_negation");
+            self.printlog();
+            bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
+            // bool_continue = mut_excl_changes || inf_exc_pl;
         }
         // === adjusted to fix need for add_inferred_except_player to have maximal informative set else it adds wrongly
         // log::info!("Before add_subset_groups");
@@ -3799,7 +3799,29 @@ impl CompressedCollectiveConstraint {
                 // Can we skip entire card groups based on whats in full group?
                 if group_outer.part_list_is_subset_of(&full_group_flags) && 
                 // group_outer.has_single_card_flag_for_any_players_with_zero_counts(&player_unknown_alive_count) && // Check if single_card_flag is 1 for any of the players with unknown_alive_count > 0
-                !groups_set.contains(&group_key) // The above checks are alot faster than indexing a hashmap
+                !groups_set.contains(&group_key) && // The above checks are alot faster than indexing a hashmap
+                {
+                    // Check if there is actually any space difference between full group and group outer
+                    let mut bool_check = false;
+                    for i in 0..7 as usize {
+                        if full_group_flags.get_player_flag(i) {
+                            if group_outer.get_player_flag(i) {
+                                if group_outer.get_single_card_flag(i) && player_unknown_alive_count[i] == 2 {
+                                    // player_unknown_alive_count[i] == 2 or player_lives[i] == 2
+                                    bool_check = true;
+                                    break
+                                }
+                            } else {
+                                if player_unknown_alive_count[i] > 0 {
+                                    bool_check = true;
+                                    break
+                                }
+                            }
+
+                        } 
+                    }
+                    bool_check
+                }
                 {
                     log::trace!("add_inferred_remaining_negation full_group_flags: {:?}", full_group_flags);
                     log::trace!("add_inferred_remaining_negation public constraint: {:?}", self.public_constraints);
@@ -3895,6 +3917,7 @@ impl CompressedCollectiveConstraint {
                                     // if player_unknown_alive_count[player] == 1 {
                                         
                                     // }
+                                    // Expand for like more general difference
                                     if let Some(card_num) = group_card_freq.iter().position(|c| *c == negation_inferred_counts) {
                                         // [OPTIMIZE] u really just don;t need card_changes for this
                                         log::trace!("add_inferred_remaining_negation trying to add card_num: {} for player: {}", card_num, player);

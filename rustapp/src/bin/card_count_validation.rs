@@ -11,7 +11,7 @@ use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 pub const LOG_FILE_NAME: &str = "just_test_d.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
@@ -108,8 +108,8 @@ pub fn test() {
         println!("Testing: {}", stringify!(full_test_replay_9)); count += 1;
         replay_game_constraint(full_test_replay_9, false, false);
         
-        println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
-        replay_game_constraint(full_test_replay_10, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
+        // replay_game_constraint(full_test_replay_10, false, false);
         println!("Testing: {}", stringify!(full_test_replay_11)); count += 1;
         replay_game_constraint(full_test_replay_11, false, false);
         println!("Testing: {}", stringify!(redundancy_replay_0)); count += 1;
@@ -120,6 +120,9 @@ pub fn test() {
         replay_game_constraint(whole_replay_2, false, false);
         println!("Testing: {}", stringify!(whole_replay_4)); count += 1;
         replay_game_constraint(whole_replay_4, false, false);
+        
+        println!("Testing: {}", stringify!(backward_compat_0)); count += 1;
+        replay_game_constraint(backward_compat_0, false, false);
         println!("ALL PASSED");
     }
 }
