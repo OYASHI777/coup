@@ -4029,29 +4029,29 @@ impl CompressedCollectiveConstraint {
                                                         match group_card_freq[card_num] {
                                                             1 => {
                                                                 let card_found= Card::try_from(card_num as u8).unwrap();
-                                                                if !self.inferred_constraints[player].contains(&card_found) {
+                                                                // if !self.inferred_constraints[player].contains(&card_found) {
                                                                     log::trace!("add_inferred_remaining_negation trying to add D1 card_num: {} for player: {}", card_num, player);
                                                                     self.inferred_constraints[player].push(card_found);
                                                                     bool_changed = true;
-                                                                }
+                                                                // }
                                                             },
                                                             2 => {
                                                                 let card_found= Card::try_from(card_num as u8).unwrap();
-                                                                let current_count: usize = self.inferred_constraints[player].iter().filter(|c| **c == card_found).count();
-                                                                match current_count {
-                                                                    0 => {
+                                                                // let current_count: usize = self.inferred_constraints[player].iter().filter(|c| **c == card_found).count();
+                                                                // match current_count {
+                                                                //     0 => {
                                                                         log::trace!("add_inferred_remaining_negation trying to add D2 x2 card_num: {} for player: {}", card_num, player);
                                                                         self.inferred_constraints[player].push(card_found);
                                                                         self.inferred_constraints[player].push(card_found);
                                                                         bool_changed = true;
-                                                                    },
-                                                                    1 => {
-                                                                        log::trace!("add_inferred_remaining_negation trying to add D3 card_num: {} for player: {}", card_num, player);
-                                                                        self.inferred_constraints[player].push(card_found);
-                                                                        bool_changed = true;
-                                                                    },
-                                                                    _ => {}
-                                                                }
+                                                                //     },
+                                                                //     1 => {
+                                                                //         log::trace!("add_inferred_remaining_negation trying to add D3 card_num: {} for player: {}", card_num, player);
+                                                                //         self.inferred_constraints[player].push(card_found);
+                                                                //         bool_changed = true;
+                                                                //     },
+                                                                //     _ => {}
+                                                                // }
                                                             },
                                                             _ => {},
                                                         }
