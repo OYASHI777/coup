@@ -4011,29 +4011,92 @@ impl CompressedCollectiveConstraint {
                                     // single player + pile
                                     // single player + n players
                                     // single player + n players + pile
-                                    // let mut bool_changes = false;
-                                    // for player in full_group_flags.iter_true_player_flags() {
-                                    //     if group_key.get_player_flag(player) {
-
-                                    //     } else {
-                                    //         match player_unknown_alive_count[player] {
-                                    //             2 => {
-                                    //                 // Receivable spots is player_unknown_alive amount
-                                    //                 // which could be 2
-                                    //                 for card_num in 0..5 {
-                                    //                     match group_card_freq[card_num] {
-                                    //                         2 => {
-        
-                                    //                         },
-                                    //                         _ => {},
-                                    //                     }
-                                    //                 }
-                                    //             },
-                                    //             1 => {},
-                                    //             _ => {},
-                                    //         }
-                                    //     }
-                                    // }
+                                    let mut bool_changed = false;
+                                    for player in full_group_flags.iter_true_player_flags() {
+                                        if group_key.get_player_flag(player) {
+                                            // TODO: Handle perhaps single flag case
+                                            // Does single_flag_counts need to be 1 tho? cant we handle all cases? hmm
+                                            // Cos its about spaces to receive, not necessarily single_card_flags i guess?
+                                            // Consider how to handle player + pile? cos idk how much space will be unknown in pile
+                                        } else {
+                                            match player_unknown_alive_count[player] {
+                                                2 => {
+                                                    // all cards are for this particular player
+                                                    // Receivable spots is player_unknown_alive amount
+                                                    // which could be 2
+                                                    // TODO: [OPTIMIZE] do we need so many if contains check if we know player_unknown_alive_count anyways
+                                                    for card_num in 0..5 {
+                                                        match group_card_freq[card_num] {
+                                                            1 => {
+                                                                let card_found= Card::try_from(card_num as u8).unwrap();
+                                                                if !self.inferred_constraints[player].contains(&card_found) {
+                                                                    log::trace!("add_inferred_remaining_negation trying to add D1 card_num: {} for player: {}", card_num, player);
+                                                                    self.inferred_constraints[player].push(card_found);
+                                                                    bool_changed = true;
+                                                                }
+                                                            },
+                                                            2 => {
+                                                                let card_found= Card::try_from(card_num as u8).unwrap();
+                                                                let current_count: usize = self.inferred_constraints[player].iter().filter(|c| **c == card_found).count();
+                                                                match current_count {
+                                                                    0 => {
+                                                                        log::trace!("add_inferred_remaining_negation trying to add D2 x2 card_num: {} for player: {}", card_num, player);
+                                                                        self.inferred_constraints[player].push(card_found);
+                                                                        self.inferred_constraints[player].push(card_found);
+                                                                        bool_changed = true;
+                                                                    },
+                                                                    1 => {
+                                                                        log::trace!("add_inferred_remaining_negation trying to add D3 card_num: {} for player: {}", card_num, player);
+                                                                        self.inferred_constraints[player].push(card_found);
+                                                                        bool_changed = true;
+                                                                    },
+                                                                    _ => {}
+                                                                }
+                                                            },
+                                                            _ => {},
+                                                        }
+                                                    }
+                                                    if bool_changed {
+                                                        return true;
+                                                    }
+                                                },
+                                                1 => {
+                                                    for card_num in 0..5 {
+                                                        match group_card_freq[card_num] {
+                                                            2 => {
+                                                                let card_found= Card::try_from(card_num as u8).unwrap();
+                                                                // let current_count: usize = self.inferred_constraints[player].iter().filter(|c| **c == card_found).count();
+                                                                // match current_count {
+                                                                //     0 => {
+                                                                //         log::trace!("add_inferred_remaining_negation trying to add D2 x2 card_num: {} for player: {}", card_num, player);
+                                                                //         self.inferred_constraints[player].push(card_found);
+                                                                //         self.inferred_constraints[player].push(card_found);
+                                                                //         bool_changed = true;
+                                                                //     },
+                                                                //     1 => {
+                                                                //         log::trace!("add_inferred_remaining_negation trying to add D3 card_num: {} for player: {}", card_num, player);
+                                                                //         self.inferred_constraints[player].push(card_found);
+                                                                //         bool_changed = true;
+                                                                //     },
+                                                                //     _ => {}
+                                                                // }
+                                                                // unknown_alive_count is 1 so theres 1 space
+                                                                log::trace!("add_inferred_remaining_negation trying to add E1 card_num: {} for player: {}", card_num, player);
+                                                                self.inferred_constraints[player].push(card_found);
+                                                                bool_changed = true;
+                                                            },
+                                                            _ => {},
+                                                        }
+                                                    }
+                                                },
+                                                _ => {},
+                                            }
+                                        }
+                                    }
+                                    // Exit after player as there can be more than 1 player receiving a card
+                                    if bool_changed {
+                                        return true;
+                                    }
                                 },
                                 _ => {},
                             }
