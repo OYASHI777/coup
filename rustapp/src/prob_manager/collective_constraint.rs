@@ -995,6 +995,7 @@ impl CompressedCollectiveConstraint {
                                 group.set_single_card_flag(player_id, false);
                                 // Should these be here?
                                 let group_card = group.card();
+                                log::trace!("add_dead_card found certainly in single_flag_group: {player_id}, {group_card:?}");
                                 group.sub_dead_count(self.public_constraints[player_id].iter().filter(|c| **c == group_card).count() as u8);
                                 group.sub_alive_count(self.inferred_constraints[player_id].iter().filter(|c| **c == group_card).count() as u8);
                                 if group.is_single_player_part_list() && group.count_alive() > 0 {
@@ -1489,7 +1490,7 @@ impl CompressedCollectiveConstraint {
                         continue;
                     }
                     // Testing when revealed it was 1 out of 2 cards
-                    // if self.revealed_status[player_id].contains(&Card::try_from(card_num as u8).unwrap()) && self.public_constraints[player_id].len() == 0{
+                    // if self.revealed_status[player_id].contains(&Some(Card::try_from(card_num as u8).unwrap())) && self.public_constraints[player_id].len() == 0{
                     //     card_num += 1;
                     //     continue;
                     // }
@@ -3918,6 +3919,7 @@ impl CompressedCollectiveConstraint {
                                                 log::trace!("add_inferred_remaining_negation trying to add A1 card_num: {} for player: {}", card_num, player);
                                                 let card_found= Card::try_from(card_num as u8).unwrap();
                                                 if !self.inferred_constraints[player].contains(&card_found) {
+                                                    println!("A1");
                                                     self.inferred_constraints[player].push(card_found);
                                                     return true;
                                                 }
@@ -3927,10 +3929,11 @@ impl CompressedCollectiveConstraint {
                                                 log::trace!("add_inferred_remaining_negation trying to add A2 card_num: {} for player: {}", card_num, player);
                                                 let card_found= Card::try_from(card_num as u8).unwrap();
                                                 if !self.inferred_constraints[player].contains(&card_found) {
+                                                    // Observed to have been used
                                                     self.inferred_constraints[player].push(card_found);
                                                     return true;
                                                 }
-                                            } 
+                                            }
                                         }
                                     // }
                                 }
@@ -4154,12 +4157,14 @@ impl CompressedCollectiveConstraint {
                                                                 1 => {
                                                                     let card_found= Card::try_from(card_num as u8).unwrap();
                                                                     log::trace!("add_inferred_remaining_negation trying to add E1 card_num: {} for player: {}", card_num, player);
+                                                                    println!("E1");
                                                                     self.inferred_constraints[player].push(card_found);
                                                                     bool_changed = true;
                                                                 },
                                                                 2 => {
                                                                     let card_found= Card::try_from(card_num as u8).unwrap();
                                                                     log::trace!("add_inferred_remaining_negation trying to add E2 x2 card_num: {} for player: {}", card_num, player);
+                                                                    println!("E2");
                                                                     self.inferred_constraints[player].push(card_found);
                                                                     self.inferred_constraints[player].push(card_found);
                                                                     bool_changed = true;
@@ -4178,6 +4183,7 @@ impl CompressedCollectiveConstraint {
                                                                     let card_found= Card::try_from(card_num as u8).unwrap();
                                                                     // unknown_alive_count is 1 so theres 1 space
                                                                     log::trace!("add_inferred_remaining_negation trying to add E3 card_num: {} for player: {}", card_num, player);
+                                                                    println!("E3");
                                                                     self.inferred_constraints[player].push(card_found);
                                                                     bool_changed = true;
                                                                 },
@@ -4196,6 +4202,7 @@ impl CompressedCollectiveConstraint {
                                                                 2 => {
                                                                     let card_found= Card::try_from(card_num as u8).unwrap();
                                                                     log::trace!("add_inferred_remaining_negation trying to add E4 card_num: {} for player: {}", card_num, player);
+                                                                    println!("E4");
                                                                     self.inferred_constraints[player].push(card_found);
                                                                     bool_changed = true; // cos negation_inferred_counts is only 2
                                                                 },
@@ -4278,6 +4285,9 @@ impl CompressedCollectiveConstraint {
                             // If shared between 3 players
                             //      If split 3 same cards,
                             //          => give to all players
+                            if max_negation_spaces == negation_inferred_counts {
+
+                            }
                         },
                         _ => {
                             debug_assert!(false, "you should not be here");
@@ -4318,7 +4328,13 @@ impl CompressedCollectiveConstraint {
         let mut impossible_cards: [[bool; 5]; 7] = [[false; 5]; 7];
         // This first part is here until the grouping part auto includes the inferred groups... probably in mutual exclusive groups
         // TODO: Remove this for loop
-        for player_id in 0..7 as usize{
+        let mut dead_cards: [u8; 5] = [0; 5];
+        for i in 0..6 {
+            for c in self.public_constraints[i].iter() {
+                dead_cards[*c as usize] += 1;
+            }
+        }
+        for player_id in 0..6 as usize{
             if self.public_constraints[player_id].len() + self.inferred_constraints[player_id].len() == 2 {
                 impossible_cards[player_id] = [true; 5];
                 for card in self.inferred_constraints[player_id].iter() {
@@ -4326,21 +4342,108 @@ impl CompressedCollectiveConstraint {
                 }
             }
         }
+        if self.inferred_constraints[6].len() == 3 {
+            impossible_cards[6] = [true; 5];
+            for card in self.inferred_constraints[6].iter() {
+                impossible_cards[6][*card as usize] = false;
+            }
+        }
         // TODO: [OPTIMIZE], because there are too many groups, maybe only check for player-ids that are not dead players (or are eligible)
         'outer: for (card_num, group_constraints) in self.group_constraints().iter().enumerate() {
             for group in group_constraints.iter() {
                 if group.count_dead() == 3 {
                     for player_id in 0..7 as usize {
+                        log::trace!("impossible_cards group: {:?}", group);
+                        log::trace!("impossible_cards A setting: {:?}, card: {:?}", player_id, card_num);
                         impossible_cards[player_id][card_num] = true;
                     }
                     continue 'outer;
                 } else if group.count() == 3{
                     for player_id in 0..7 as usize {
                         if !group.get_player_flag(player_id) {
+                            log::trace!("impossible_cards group: {:?}", group);
+                            log::trace!("impossible_cards B setting: {:?}, card: {:?}", player_id, card_num);
+                            impossible_cards[player_id][card_num] = true;
+                        }
+                    }
+                } else if group.count_alive() == (3 - dead_cards[card_num]) {
+                    for player_id in 0..7 {
+                        if !group.get_player_flag(player_id) {
+                            log::trace!("impossible_cards group: {:?}", group);
+                            log::trace!("impossible_cards C setting: {:?}, card: {:?}", player_id, card_num);
                             impossible_cards[player_id][card_num] = true;
                         }
                     }
                 }
+            }
+        }
+        log::trace!("impossible_cards before: {:?}", &impossible_cards);
+        let mut group_sets: AHashSet<CompressedGroupConstraint> = AHashSet::with_capacity(
+            self.group_constraints_amb.len() + 
+            self.group_constraints_ass.len() + 
+            self.group_constraints_cap.len() + 
+            self.group_constraints_duk.len() + 
+            self.group_constraints_con.len()
+        );
+        for groups_i in [&self.group_constraints_amb, &self.group_constraints_ass, &self.group_constraints_cap, &self.group_constraints_duk, &self.group_constraints_con].iter() {
+            for group_i in groups_i.iter() {
+                let group_key = group_i.get_blank_part_list();
+                if group_sets.contains(&group_key) {
+                    continue;
+                }
+                let mut card_freq_dead: [u8; 5] = [0; 5];
+                for i in 0..6 {
+                    if group_key.get_player_flag(i) {
+                        for c in self.public_constraints[i].iter() {
+                            card_freq_dead[*c as usize] += 1;
+                        }
+                    }
+                }
+                let mut card_freq_alive: [u8; 5] = [0; 5];
+                for (card_num_j, groups_j) in [&self.group_constraints_amb, &self.group_constraints_ass, &self.group_constraints_cap, &self.group_constraints_duk, &self.group_constraints_con].iter().enumerate() {
+                    for group_j in groups_j.iter() {
+                        if group_j.part_list_is_subset_of(&group_key) {
+                            log::trace!("group_j: {} is subset of group_key: {}", group_j, group_key);
+                            card_freq_alive[card_num_j] = card_freq_alive[card_num_j].max(group_j.count_alive());
+                        }
+                    }
+                }
+                let mut total_slots: u8 = 0;
+                for i in 0..6 {
+                    if group_key.get_player_flag(i) {
+                        total_slots += 2;
+                    }
+                }
+                if group_key.get_player_flag(6) {
+                    total_slots += 3;
+                }
+                log::trace!("impossible_cards total_slots: {}", total_slots);
+                if total_slots == (card_freq_alive.iter().sum::<u8>() + card_freq_dead.iter().sum::<u8>()) {
+                    log::trace!("impossible_cards group_key: {}", group_key);
+                    log::trace!("impossible_cards card_freq_alive: {:?}", card_freq_alive);
+                    log::trace!("impossible_cards card_freq_dead: {:?}", card_freq_dead);
+                    let zero_indices: Vec<usize> = card_freq_alive.iter()
+                    .enumerate()
+                    .filter(|&(_, c)| *c == 0)
+                    .map(&|(i, _)| i)
+                    .collect();
+                    for player in 0..6 {
+                        if group_key.get_player_flag(player) {
+                            for card in zero_indices.iter() {
+                                log::trace!("impossible_cards setting: {:?}, card: {:?}", player, card);
+                                impossible_cards[player][*card] = true;
+                            }
+                        }
+                    }
+                    if group_key.get_player_flag(6) {
+                        for card in zero_indices.iter() {
+                            if card_freq_dead[*card] == 0 {
+                                impossible_cards[6][*card] = true;
+                            }
+                        }
+                    }
+                }
+                group_sets.insert(group_key);
             }
         }
         impossible_cards
