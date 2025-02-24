@@ -23,7 +23,7 @@ fn main() {
     let game_no = 100000;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 10;
+    let print_frequency: usize = 100;
     // (DONE) [TEST 1000] Discard + Ambassador Release farm
     // [TEST 1000] Discard + RevealRedraw Release mode
     // (Ran 210) [TEST 1000] Discard + Ambassador Debug mode
@@ -31,7 +31,7 @@ fn main() {
     // [TEST 1000] Discard + RevealRedraw Debug mode
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
-    // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
+    game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
     // game_rnd_constraint_debug(game_no, bool_know_priv_info, print_frequency, log_bool);
@@ -138,6 +138,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
     let mut public_constraints_correct: usize = 0;
     let mut inferred_constraints_correct: usize = 0;
     let mut impossible_constraints_correct: usize = 0;
+    let mut over_inferred_count: usize = 0;
     let mut total_tries: usize = 0;
     while game < game_no {
         let mut hh = History::new(0);
@@ -148,6 +149,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
             println!("Game: {}", game);
             println!("Public Constraints Correct: {}/{}", public_constraints_correct, total_tries);
             println!("Inferred Constraints Correct: {}/{}", inferred_constraints_correct, total_tries);
+            println!("Inferred Constraints Overinferred: {}/{}", over_inferred_count, total_tries);
             println!("Impossible Cases Correct: {}/{}", impossible_constraints_correct, total_tries);
         }
         log::trace!("Game Made:");
@@ -206,6 +208,8 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 total_tries += 1;
                 if bool_test_over_inferred {
                     // what we are testing inferred too many things
+                    over_inferred_count += 1;
+                    break;
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     panic!("Inferred to many items!")
