@@ -4245,7 +4245,71 @@ impl CompressedCollectiveConstraint {
                                                     log::trace!("add_inferred_remaining_negation open_slots = 1 case group_card_freq: {:?}", full_group_minus_group_key_card_freq);
                                                     for card_num in 0..5 {
                                                         match full_group_minus_group_key_card_freq[card_num] {
-                                                            3 => {},
+                                                            3 => {
+                                                                // TODO: Swap this check to outside
+                                                                if max_negation_spaces == 1 {
+                                                                    let mut only_open_single_flag_slot: Option<usize> = None;
+                                                                    let mut counter_open_single_flag_slot: u8 = 0;
+                                                                    for player in full_group_flags.iter_true_player_flags() {
+                                                                        if !group_key.get_player_flag(player) {
+                                                                            if self.inferred_constraints[player].len() < 2 {
+                                                                                log::trace!("add_inferred_remaining_negation 2 A added card_num: {}", card_num);
+                                                                                self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                                                                                return true;
+                                                                            }
+                                                                        } else {
+                                                                            if group_key.get_single_card_flag(player) && player_lives[player] == 2 && self.inferred_constraints[player].len() == 0 {
+                                                                                if only_open_single_flag_slot.is_none() {
+                                                                                    only_open_single_flag_slot = Some(player);
+                                                                                    counter_open_single_flag_slot += 1
+                                                                                } else {
+                                                                                    counter_open_single_flag_slot += 1
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    // If no cases found, check single card cases
+                                                                    if counter_open_single_flag_slot == 1 {
+                                                                        if let Some(player) = only_open_single_flag_slot {
+                                                                            log::trace!("add_inferred_remaining_negation 2 B added card_num: {}", card_num);
+                                                                            self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                                                                            return true;
+                                                                        }
+                                                                    }
+                                                                } else if max_negation_spaces == 2 {
+                                                                    // TESTING
+                                                                    // NEVER Encountered so far...
+                                                                    // Will handle other cases first
+                                                                    for player in full_group_flags.iter_true_player_flags() {
+                                                                        // Think need to consider all the open spaces first
+                                                                        // This may not be the best
+                                                                        if !group_key.get_player_flag(player)  {
+                                                                            if player_lives[player] == 2 {
+                                                                                if self.inferred_constraints[player].len() == 0 {
+                                                                                    log::trace!("add_inferred_remaining_negation 2 C added card_num: {}", card_num);
+                                                                                    println!("Added 2CA");
+                                                                                    self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                                                                                    self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                                                                                    return true;
+                                                                                } else if self.inferred_constraints[player].len() == 1 {
+                                                                                    log::trace!("add_inferred_remaining_negation 2 C added card_num: {}", card_num);
+                                                                                    println!("Added 2CB");
+                                                                                    self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                                                                                    return true;
+                                                                                }
+                                                                            } else {
+                                                                                if self.inferred_constraints[player].len() < 2 {
+                                                                                    log::trace!("add_inferred_remaining_negation 2 C added card_num: {}", card_num);
+                                                                                    println!("Added 2CC");
+                                                                                    self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                                                                                    return true;
+                                                                                }
+                                                                            }
+                                                                        } 
+                                                                    }
+                                                                    // Handle single card flag case?
+                                                                }
+                                                            },
                                                             2 => {
                                                                 // TODO: Swap this check to outside
                                                                 if max_negation_spaces == 1 {
