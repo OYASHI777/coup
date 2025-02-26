@@ -282,6 +282,23 @@ impl CompressedGroupConstraint {
     pub fn clear_players(&mut self) {
         self.0 &= !(Self::PLAYER_BITS | Self::SINGLE_CARD_MASK);
     }
+    /// Get slots
+    pub fn get_slots(&self) -> u8{
+        let mut output: u8 = 0;
+        for player in 0..6 {
+            if self.get_player_flag(player) {
+                if self.get_single_card_flag(player) {
+                    output += 1;
+                } else {
+                    output += 2;
+                }
+            }
+        }
+        if self.get_player_flag(6) {
+            output += 3;
+        }
+        output
+    }
     /// Retrieves all set player flags as a fixed-size array of boolean values.
     ///
     /// Each element in the returned array corresponds to a player.

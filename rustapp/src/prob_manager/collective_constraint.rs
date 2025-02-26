@@ -3797,7 +3797,7 @@ impl CompressedCollectiveConstraint {
             }
             'outer: for group_outer in card_groups_outer.iter() {
                 let group_key: CompressedGroupConstraint = group_outer.get_blank_part_list_and_single_card_flags();
-                let mut group_card_freq: [u8; 5] = [0; 5]; // Alive count
+                let mut full_group_minus_group_key_card_freq: [u8; 5] = [0; 5]; // Alive count
                 // Can we skip entire card groups based on whats in full group?
                 if group_outer.part_list_is_subset_of(&full_group_flags) && 
                 // group_outer.has_single_card_flag_for_any_players_with_zero_counts(&player_unknown_alive_count) && // Check if single_card_flag is 1 for any of the players with unknown_alive_count > 0
@@ -3862,28 +3862,37 @@ impl CompressedCollectiveConstraint {
                             {
                                 log::trace!("add_inferred_remaining_negation found outer_group: {}", group_outer);
                                 log::trace!("add_inferred_remaining_negation found inner_group: {}", group_inner);
-                                log::trace!("group_card_freq changed from: {:?}", group_card_freq);
-                                group_card_freq[card_num_inner] = group_card_freq[card_num_inner].max(group_inner.count_alive());
-                                log::trace!("group_card_freq changed to: {:?}", group_card_freq);
+                                log::trace!("group_card_freq changed from: {:?}", full_group_minus_group_key_card_freq);
+                                full_group_minus_group_key_card_freq[card_num_inner] = full_group_minus_group_key_card_freq[card_num_inner].max(group_inner.count_alive());
+                                log::trace!("group_card_freq changed to: {:?}", full_group_minus_group_key_card_freq);
                             }
                             log::trace!("add_inferred_remaining_negation ignored outer_group: {}", group_outer);
                             log::trace!("add_inferred_remaining_negation ignored inner_group: {}", group_inner);
                         }
                     }
+                    let mut group_key_max_alive_spaces: u8 = group_key.get_slots();
                     for player in group_key.iter_true_player_flags() {
                         for card in self.inferred_constraints[player].iter() {
-                            group_card_freq[*card as usize] = group_card_freq[*card as usize].max(self.inferred_constraints[player].iter().filter(|c| **c == *card).count() as u8);
+                            full_group_minus_group_key_card_freq[*card as usize] = full_group_minus_group_key_card_freq[*card as usize].max(self.inferred_constraints[player].iter().filter(|c| **c == *card).count() as u8);
+                        }
+                        if group_key.get_single_card_flag(player) {
+                            if self.public_constraints[player].len() == 2 {
+                                group_key_max_alive_spaces -= 1;
+                            }
+                        } else {
+                            group_key_max_alive_spaces -= self.public_constraints[player].len() as u8;
                         }
                     }
                     groups_set.insert(group_key);
                     // Might need to loop over inferred_constraints too, but im pretty sure add_mut_excl already includes those naturally
-
+                    let group_key_card_freq = full_group_minus_group_key_card_freq.clone(); // Those inside group_key
                     // Modify group_card_freq to be cards in the all alive counts in full group -
-                    for (found_alive_counts, all_alive_counts) in group_card_freq.iter_mut().zip(full_group_total_card_freq.iter()) {
+                    for (found_alive_counts, all_alive_counts) in full_group_minus_group_key_card_freq.iter_mut().zip(full_group_total_card_freq.iter()) {
                         // found_alive_counts is assumed to include known alive counts (inferred_constraints) already
                         //  as inferred_constraints is assumed in be inside group_constraints due to add_mut_excl_groups
                         *found_alive_counts = *all_alive_counts - *found_alive_counts;
                     }
+                    let group_key_alive_found: u8 = group_key_card_freq.iter().sum::<u8>();
                     log::trace!("add_inferred_remaining_negation Considering adding info");
                     log::trace!("add_inferred_remaining_negation public constraint: {:?}", self.public_constraints);
                     log::trace!("add_inferred_remaining_negation inferred constraint: {:?}", self.inferred_constraints);
@@ -3892,9 +3901,11 @@ impl CompressedCollectiveConstraint {
                     log::trace!("add_inferred_remaining_negation player_unknown_alive_count: {:?}", player_unknown_alive_count);
                     log::trace!("add_inferred_remaining_negation player_lives: {:?}", player_lives);
                     log::trace!("add_inferred_remaining_negation group_key: {}", group_key);
-                    log::trace!("add_inferred_remaining_negation group_card_freq: {:?}", group_card_freq);
+                    log::trace!("add_inferred_remaining_negation full_group_minus_group_key_card_freq: {:?}", full_group_minus_group_key_card_freq);
+                    log::trace!("add_inferred_remaining_negation group_key_alive_found: {:?}", group_key_alive_found);
+                    log::trace!("add_inferred_remaining_negation group_key_card_freq: {:?}", group_key_card_freq);
                     // Counts of total number of cards inferred in the negation set
-                    let negation_inferred_counts = group_card_freq.iter().sum::<u8>();
+                    let negation_inferred_counts = full_group_minus_group_key_card_freq.iter().sum::<u8>();
                     log::trace!("Negation counts: {}", negation_inferred_counts);
                     debug_assert!(negation_inferred_counts < 4, "Seems like the max_difference continue 'outer; is not working as intended");
                     
@@ -3915,7 +3926,7 @@ impl CompressedCollectiveConstraint {
                                 for player in full_group_flags.iter_true_player_flags() {
                                     // if player_unknown_alive_count[player] == 1 {
                                         if !group_key.get_player_flag(player) {
-                                            if let Some(card_num) = group_card_freq.iter().position(|c| *c == negation_inferred_counts) {
+                                            if let Some(card_num) = full_group_minus_group_key_card_freq.iter().position(|c| *c == negation_inferred_counts) {
                                                 log::trace!("add_inferred_remaining_negation trying to add A1 card_num: {} for player: {}", card_num, player);
                                                 let card_found= Card::try_from(card_num as u8).unwrap();
                                                 if !self.inferred_constraints[player].contains(&card_found) {
@@ -3925,7 +3936,7 @@ impl CompressedCollectiveConstraint {
                                                 }
                                             } 
                                         } else if group_key.get_single_card_flag(player) && group_key.get_player_flag(player) && player_lives[player] == 2 {
-                                            if let Some(card_num) = group_card_freq.iter().position(|c| *c == negation_inferred_counts) {
+                                            if let Some(card_num) = full_group_minus_group_key_card_freq.iter().position(|c| *c == negation_inferred_counts) {
                                                 log::trace!("add_inferred_remaining_negation trying to add A2 card_num: {} for player: {}", card_num, player);
                                                 let card_found= Card::try_from(card_num as u8).unwrap();
                                                 if !self.inferred_constraints[player].contains(&card_found) {
@@ -4143,80 +4154,142 @@ impl CompressedCollectiveConstraint {
                                     // single player + n players + pile
                                     // TODO: [REFACTOR] This might be the generalised version?... might handle cases where single_card_flag_counts == 2 does not
                                     let mut bool_changed = false;
-                                    if max_negation_spaces == negation_inferred_counts {
-                                        for player in full_group_flags.iter_true_player_flags() {
-                                            if !group_key.get_player_flag(player) {
-                                                match player_unknown_alive_count[player] {
-                                                    2 => {
-                                                        // all cards are for this particular player
-                                                        // Receivable spots is player_unknown_alive amount
-                                                        // which could be 2
-                                                        // TODO: [OPTIMIZE] do we need so many if contains check if we know player_unknown_alive_count anyways
-                                                        for card_num in 0..5 {
-                                                            match group_card_freq[card_num] {
-                                                                1 => {
-                                                                    let card_found= Card::try_from(card_num as u8).unwrap();
-                                                                    log::trace!("add_inferred_remaining_negation trying to add E1 card_num: {} for player: {}", card_num, player);
-                                                                    println!("E1");
-                                                                    self.inferred_constraints[player].push(card_found);
-                                                                    bool_changed = true;
-                                                                },
-                                                                2 => {
-                                                                    let card_found= Card::try_from(card_num as u8).unwrap();
-                                                                    log::trace!("add_inferred_remaining_negation trying to add E2 x2 card_num: {} for player: {}", card_num, player);
-                                                                    println!("E2");
-                                                                    self.inferred_constraints[player].push(card_found);
-                                                                    self.inferred_constraints[player].push(card_found);
-                                                                    bool_changed = true;
-                                                                },
-                                                                _ => {},
-                                                            }
+                                    // if max_negation_spaces >= negation_inferred_counts {
+                                    //     for player in full_group_flags.iter_true_player_flags() {
+                                    //         if !group_key.get_player_flag(player) {
+                                    //             match player_unknown_alive_count[player] {
+                                    //                 2 => {
+                                    //                     // all cards are for this particular player
+                                    //                     // Receivable spots is player_unknown_alive amount
+                                    //                     // which could be 2
+                                    //                     // TODO: [OPTIMIZE] do we need so many if contains check if we know player_unknown_alive_count anyways
+                                    //                     for card_num in 0..5 {
+                                    //                         match group_card_freq[card_num] {
+                                    //                             1 => {
+                                    //                                 let card_found= Card::try_from(card_num as u8).unwrap();
+                                    //                                 log::trace!("add_inferred_remaining_negation trying to add E1 card_num: {} for player: {}", card_num, player);
+                                    //                                 println!("E1");
+                                    //                                 self.inferred_constraints[player].push(card_found);
+                                    //                                 bool_changed = true;
+                                    //                             },
+                                    //                             2 => {
+                                    //                                 let card_found= Card::try_from(card_num as u8).unwrap();
+                                    //                                 log::trace!("add_inferred_remaining_negation trying to add E2 x2 card_num: {} for player: {}", card_num, player);
+                                    //                                 println!("E2");
+                                    //                                 self.inferred_constraints[player].push(card_found);
+                                    //                                 self.inferred_constraints[player].push(card_found);
+                                    //                                 bool_changed = true;
+                                    //                             },
+                                    //                             _ => {},
+                                    //                         }
+                                    //                     }
+                                    //                     if bool_changed {
+                                    //                         return true;
+                                    //                     }
+                                    //                 },
+                                    //                 1 => {
+                                    //                     for card_num in 0..5 {
+                                    //                         match group_card_freq[card_num] {
+                                    //                             2 => {
+                                    //                                 let card_found= Card::try_from(card_num as u8).unwrap();
+                                    //                                 // unknown_alive_count is 1 so theres 1 space
+                                    //                                 log::trace!("add_inferred_remaining_negation trying to add E3 card_num: {} for player: {}", card_num, player);
+                                    //                                 println!("E3");
+                                    //                                 self.inferred_constraints[player].push(card_found);
+                                    //                                 bool_changed = true;
+                                    //                             },
+                                    //                             _ => {},
+                                    //                         }
+                                    //                     }
+                                    //                 },
+                                    //                 _ => {},
+                                    //             }
+                                    //         } else if player_lives[player] == 2 && group_key.get_single_card_flag(player) {
+                                    //             match player_unknown_alive_count[player] {
+                                    //                 0 => {},
+                                    //                 _ => {
+                                    //                     for card_num in 0..5 {
+                                    //                         match group_card_freq[card_num] {
+                                    //                             2 => {
+                                    //                                 let card_found= Card::try_from(card_num as u8).unwrap();
+                                    //                                 log::trace!("add_inferred_remaining_negation trying to add E4 card_num: {} for player: {}", card_num, player);
+                                    //                                 println!("E4");
+                                    //                                 self.inferred_constraints[player].push(card_found);
+                                    //                                 bool_changed = true; // cos negation_inferred_counts is only 2
+                                    //                             },
+                                    //                             _ => {},
+                                    //                         }
+                                    //                     }
+                                    //                 },
+                                    //             }
+                                    //         }
+                                    //     }
+                                    //     if bool_changed {
+                                    //         return true;
+                                    //     }
+                                    // } else {
+                                        // size of alive in group_keys - known alive in group_keys (number of slots remaining in group_keys)
+                                        // negation_inferred cards (cards outside group_keys but in full_group)
+                                        // max_negation_spaces (total number of people with single_flag_groups and external slots)
+                                        log::trace!("add_inferred_remaining_negation 2 case empty slots?");
+                                        log::trace!("add_inferred_remaining_negation 2 full_group: {}", full_group_flags);
+                                        log::trace!("add_inferred_remaining_negation 2 group_key: {}", group_key);
+                                        log::trace!("add_inferred_remaining_negation 2 group_key_max_alive_spaces: {}, group_key_alive_found: {}", group_key_max_alive_spaces, group_key_alive_found);
+                                        if group_key_max_alive_spaces > group_key_alive_found {
+                                            log::trace!("add_inferred_remaining_negation 2 case empty slots");
+                                            let open_slots_in_group_keys = group_key_max_alive_spaces - group_key_alive_found;
+                                            match open_slots_in_group_keys {
+                                                0 => {},
+                                                1 => {
+                                                    // handle 3 card and 2 card to fill case
+                                                    log::trace!("add_inferred_remaining_negation open_slots = 1 case group_card_freq: {:?}", full_group_minus_group_key_card_freq);
+                                                    for card_num in 0..5 {
+                                                        match full_group_minus_group_key_card_freq[card_num] {
+                                                            3 => {},
+                                                            2 => {
+                                                                // TODO: Swap this check to outside
+                                                                if max_negation_spaces == 1 {
+                                                                    let mut only_open_single_flag_slot: Option<usize> = None;
+                                                                    let mut counter_open_single_flag_slot: u8 = 0;
+                                                                    for player in full_group_flags.iter_true_player_flags() {
+                                                                        if !group_key.get_player_flag(player) {
+                                                                            if self.inferred_constraints[player].len() < 2 {
+                                                                                log::trace!("add_inferred_remaining_negation 2 A added card_num: {}", card_num);
+                                                                                self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                                                                                return true;
+                                                                            }
+                                                                        } else {
+                                                                            if group_key.get_single_card_flag(player) && player_lives[player] == 2 && self.inferred_constraints[player].len() == 0 {
+                                                                                if only_open_single_flag_slot.is_none() {
+                                                                                    only_open_single_flag_slot = Some(player);
+                                                                                    counter_open_single_flag_slot += 1
+                                                                                } else {
+                                                                                    counter_open_single_flag_slot += 1
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    // If no cases found, check single card cases
+                                                                    if counter_open_single_flag_slot == 1 {
+                                                                        if let Some(player) = only_open_single_flag_slot {
+                                                                            log::trace!("add_inferred_remaining_negation 2 B added card_num: {}", card_num);
+                                                                            self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                                                                            return true;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            _ => {},
                                                         }
-                                                        if bool_changed {
-                                                            return true;
-                                                        }
-                                                    },
-                                                    1 => {
-                                                        for card_num in 0..5 {
-                                                            match group_card_freq[card_num] {
-                                                                2 => {
-                                                                    let card_found= Card::try_from(card_num as u8).unwrap();
-                                                                    // unknown_alive_count is 1 so theres 1 space
-                                                                    log::trace!("add_inferred_remaining_negation trying to add E3 card_num: {} for player: {}", card_num, player);
-                                                                    println!("E3");
-                                                                    self.inferred_constraints[player].push(card_found);
-                                                                    bool_changed = true;
-                                                                },
-                                                                _ => {},
-                                                            }
-                                                        }
-                                                    },
-                                                    _ => {},
-                                                }
-                                            } else if player_lives[player] == 2 && group_key.get_single_card_flag(player) {
-                                                match player_unknown_alive_count[player] {
-                                                    0 => {},
-                                                    _ => {
-                                                        for card_num in 0..5 {
-                                                            match group_card_freq[card_num] {
-                                                                2 => {
-                                                                    let card_found= Card::try_from(card_num as u8).unwrap();
-                                                                    log::trace!("add_inferred_remaining_negation trying to add E4 card_num: {} for player: {}", card_num, player);
-                                                                    println!("E4");
-                                                                    self.inferred_constraints[player].push(card_found);
-                                                                    bool_changed = true; // cos negation_inferred_counts is only 2
-                                                                },
-                                                                _ => {},
-                                                            }
-                                                        }
-                                                    },
-                                                }
+                                                    }
+                                                },
+                                                2 => {
+                                                    // handle 3 card to fill case
+                                                },
+                                                _ => {}
                                             }
                                         }
-                                        if bool_changed {
-                                            return true;
-                                        }
-                                    } else {
+
                                         // for player in full_group_flags.iter_true_player_flags() {
                                         //     if !group_key.get_player_flag(player) {
                                         //         match player_unknown_alive_count[player] {
@@ -4269,7 +4342,7 @@ impl CompressedCollectiveConstraint {
                                         // if bool_changed {
                                         //     return true;
                                         // }
-                                    }
+                                    // }
                                 },
                             }
                         },
@@ -4285,15 +4358,12 @@ impl CompressedCollectiveConstraint {
                             // If shared between 3 players
                             //      If split 3 same cards,
                             //          => give to all players
-                            if max_negation_spaces == negation_inferred_counts {
-
-                            }
                         },
                         _ => {
-                            debug_assert!(false, "you should not be here");
-                            unsafe {
-                                unreachable_unchecked();
-                            }
+                            // debug_assert!(false, "you should not be here");
+                            // unsafe {
+                            //     unreachable_unchecked();
+                            // }
                         },
                     }
                     
