@@ -23,7 +23,8 @@ fn main() {
     let game_no = 100000;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 50;
+    let print_frequency: usize = 5;
+    let min_dead_check: usize = 3;
     // (DONE) [TEST 1000] Discard + Ambassador Release farm
     // [TEST 1000] Discard + RevealRedraw Release mode
     // (Ran 210) [TEST 1000] Discard + Ambassador Debug mode
@@ -31,7 +32,7 @@ fn main() {
     // [TEST 1000] Discard + RevealRedraw Debug mode
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
-    // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool);
+    game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
     // game_rnd_constraint_debug(game_no, bool_know_priv_info, print_frequency, log_bool);
@@ -45,7 +46,7 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    test();
+    // test();
 }
 pub fn test() {
     {
@@ -109,8 +110,8 @@ pub fn test() {
         println!("Testing: {}", stringify!(full_test_replay_9)); count += 1;
         replay_game_constraint(full_test_replay_9, false, false);
         
-        // println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
-        // replay_game_constraint(full_test_replay_10, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
+        replay_game_constraint(full_test_replay_10, false, false);
         println!("Testing: {}", stringify!(full_test_replay_11)); count += 1;
         replay_game_constraint(full_test_replay_11, false, false);
         println!("Testing: {}", stringify!(redundancy_replay_0)); count += 1;
@@ -127,7 +128,7 @@ pub fn test() {
         println!("ALL PASSED");
     }
 }
-pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool){
+pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool, min_dead_check: usize){
     // if log_bool{
     //     logger(LOG_LEVEL);
     // }
@@ -189,48 +190,51 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                 hh.push_ao(output);
                 prob.push_ao(&output, bool_know_priv_info);
                 bit_prob.push_ao(&output, bool_know_priv_info);
-                let validated_public_constraints = prob.validated_public_constraints();
-                let validated_inferred_constraints = prob.validated_inferred_constraints();
-                let validated_impossible_constraints = prob.validated_impossible_constraints();
-                let test_public_constraints = bit_prob.latest_constraint().sorted_public_constraints();
-                let test_inferred_constraints = bit_prob.latest_constraint().sorted_inferred_constraints();
-                let test_impossible_constraints = bit_prob.latest_constraint().generate_one_card_impossibilities_player_card_indexing();
-                let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
-                let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
-                let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
-                let bool_test_over_inferred: bool = validated_inferred_constraints.iter().zip(test_inferred_constraints.iter()).any(|(val, test)| {
-                    test.iter().any(|item| !val.contains(item)) || test.len() > val.len()
-                });
-                let pass_brute_prob_validity = prob.validate();
-                public_constraints_correct += pass_public_constraints as usize;
-                inferred_constraints_correct += pass_inferred_constraints as usize;
-                impossible_constraints_correct += pass_impossible_constraints as usize;
-                total_tries += 1;
-                if bool_test_over_inferred {
-                    // what we are testing inferred too many things
-                    over_inferred_count += 1;
-                    break;
-                    let replay = hh.get_history(hh.store_len());
-                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
-                    panic!("Inferred to many items!")
-                }
-                if !pass_inferred_constraints {
-                    break;
-                    let replay = hh.get_history(hh.store_len());
-                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
-                    panic!("Inferred constraints do not match!")
-                }
-                if !pass_brute_prob_validity{
-                    break;
-                    let replay = hh.get_history(hh.store_len());
-                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
-                    panic!()
-                }
-                if !pass_impossible_constraints {
-                    break;
-                    let replay = hh.get_history(hh.store_len());
-                    replay_game_constraint(replay, bool_know_priv_info, log_bool);
-                    panic!()
+                let total_dead: usize = bit_prob.latest_constraint().sorted_public_constraints().iter().map(|v| v.len()).sum();
+                if total_dead >= min_dead_check {
+                    let validated_public_constraints = prob.validated_public_constraints();
+                    let validated_inferred_constraints = prob.validated_inferred_constraints();
+                    let validated_impossible_constraints = prob.validated_impossible_constraints();
+                    let test_public_constraints = bit_prob.latest_constraint().sorted_public_constraints();
+                    let test_inferred_constraints = bit_prob.latest_constraint().sorted_inferred_constraints();
+                    let test_impossible_constraints = bit_prob.latest_constraint().generate_one_card_impossibilities_player_card_indexing();
+                    let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
+                    let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
+                    let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
+                    let bool_test_over_inferred: bool = validated_inferred_constraints.iter().zip(test_inferred_constraints.iter()).any(|(val, test)| {
+                        test.iter().any(|item| !val.contains(item)) || test.len() > val.len()
+                    });
+                    let pass_brute_prob_validity = prob.validate();
+                    public_constraints_correct += pass_public_constraints as usize;
+                    inferred_constraints_correct += pass_inferred_constraints as usize;
+                    impossible_constraints_correct += pass_impossible_constraints as usize;
+                    total_tries += 1;
+                    if bool_test_over_inferred {
+                        // what we are testing inferred too many things
+                        over_inferred_count += 1;
+                        break;
+                        let replay = hh.get_history(hh.store_len());
+                        replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                        panic!("Inferred to many items!")
+                    }
+                    if !pass_inferred_constraints {
+                        break;
+                        let replay = hh.get_history(hh.store_len());
+                        replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                        panic!("Inferred constraints do not match!")
+                    }
+                    if !pass_brute_prob_validity{
+                        break;
+                        let replay = hh.get_history(hh.store_len());
+                        replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                        panic!()
+                    }
+                    if !pass_impossible_constraints {
+                        break;
+                        let replay = hh.get_history(hh.store_len());
+                        replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                        panic!()
+                    }
                 }
 
 
