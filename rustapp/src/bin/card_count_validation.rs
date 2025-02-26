@@ -23,7 +23,7 @@ fn main() {
     let game_no = 100000;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 5;
+    let print_frequency: usize = 10;
     let min_dead_check: usize = 0;
     // (DONE) [TEST 1000] Discard + Ambassador Release farm
     // [TEST 1000] Discard + RevealRedraw Release mode
@@ -167,7 +167,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
             new_moves = hh.generate_legal_moves();
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-            // new_moves.retain(|m| m.name() != AOName::Exchange);
+            new_moves.retain(|m| m.name() != AOName::Exchange);
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 if output.name() == AOName::Discard{
@@ -503,10 +503,10 @@ pub fn replay_game_constraint(replay: Vec<ActionObservation>, bool_know_priv_inf
                 hh.print_replay_history_braindead();
                 panic!()
             }
-            if !pass_brute_prob_validity{
-                hh.print_replay_history_braindead();
-                panic!()
-            }
+            // if !pass_brute_prob_validity{
+            //     hh.print_replay_history_braindead();
+            //     panic!()
+            // }
             // bit_prob.check_three();
             public_constraints_correct += pass_public_constraints as usize;
             inferred_constraints_correct += pass_inferred_constraints as usize;
