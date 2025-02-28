@@ -65,7 +65,7 @@ pub struct CompressedCollectiveConstraint {
     public_constraints: Vec<Vec<Card>>, // Stores all the dead cards of dead players, None are all behind
     // inferred_constraints:[[Option<Card>; 2]; 6], // Stores all the dead cards of dead players 
     inferred_constraints: Vec<Vec<Card>>, // Stores all the inferred cards of alive players 
-    // [ALT] TODO: Change group_constraints to by card so Vec<Vec<CompressedGroupConstraint>> ... maybe remove Card from it? or make this an object?
+    // Struct of arrays makes it more efficient to process rather than an array of structs
     group_constraints_amb: Vec<CompressedGroupConstraint>,
     group_constraints_ass: Vec<CompressedGroupConstraint>,
     group_constraints_cap: Vec<CompressedGroupConstraint>,
