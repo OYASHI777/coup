@@ -344,8 +344,14 @@ impl CompressedCollectiveConstraint {
         }
         output
     }
-    pub fn dead_card_count(&self) -> &[u8; 5] {
-        &self.dead_card_count
+    pub fn dead_card_count(&self) -> [u8; 5] {
+        let mut dead_card_counts: [u8; 5] = [0; 5];
+        for dead_cards in self.public_constraints.iter() {
+            for card in dead_cards.iter() {
+                dead_card_counts[*card as usize] += 1;
+            }
+        }
+        dead_card_counts
     }
     /// Returns number of a player's cards are known, i.e. Dead or inferred
     pub fn player_cards_known(&self, player_id: usize) -> u8 {
@@ -2653,13 +2659,15 @@ impl CompressedCollectiveConstraint {
         let mut_excl_changes = self.add_mutually_exclusive_unions();
         log::info!("After add_mutually_exclusive_unions");
         self.printlog();
+        let inf_com_pl = self.add_inferred_complement_of_player();
+        self.printlog();
         let inf_exc_pl = self.add_inferred_except_player();
         log::info!("After add_inferred_except_player");
         self.printlog();
         let inf_rem_neg = self.add_inferred_remaining_negation();
         log::info!("After add_inferred_remaining_negation");
         self.printlog();
-        bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
+        bool_continue = mut_excl_changes || inf_com_pl || inf_exc_pl || inf_rem_neg;
         // bool_continue = mut_excl_changes || inf_exc_pl;
         while bool_continue {
             self.add_subset_groups_unopt();
@@ -2669,13 +2677,15 @@ impl CompressedCollectiveConstraint {
             log::info!("After add_mutually_exclusive_unions");
             self.printlog();
             // This kinda needs to maximal informative set to work. Perhaps to run both above to completion first?
+            let inf_com_pl = self.add_inferred_complement_of_player();
+            self.printlog();
             let inf_exc_pl = self.add_inferred_except_player();
             log::info!("After add_inferred_except_player");
             self.printlog();
             let inf_rem_neg = self.add_inferred_remaining_negation();
             log::info!("After add_inferred_remaining_negation");
             self.printlog();
-            bool_continue = mut_excl_changes || inf_exc_pl || inf_rem_neg;
+            bool_continue = mut_excl_changes || inf_com_pl || inf_exc_pl || inf_rem_neg;
             // bool_continue = mut_excl_changes || inf_exc_pl;
         }
         // === adjusted to fix need for add_inferred_except_player to have maximal informative set else it adds wrongly
@@ -3653,6 +3663,7 @@ impl CompressedCollectiveConstraint {
                 let group_alive_count = group.count_alive();
                 if group.part_list_count() > 2 && group_alive_count > 1{
                     // for player 
+                    // TODO: [REFACTOR]
                     let mut player_index: usize = 0;
                     while player_index < players.len() {
                         let player = players[player_index];
@@ -3726,6 +3737,125 @@ impl CompressedCollectiveConstraint {
         }
         bool_change
     }
+
+    /// Adds inferred constraints based on algo that checks cards in group "except" player
+    /// 
+    /// Assumes maximally informative group is within the group_constraints
+    /// Does not modify group_constraints
+    /// Only adds inferred_group_constraints
+    /// 
+    /// Only checks for each player and is not dependent on groups in the group_constraints
+    pub fn add_inferred_complement_of_player(&mut self) -> bool {
+        // TODO: [OPTIMIZE / THINK] Consider there is just a generalised subset prune, and you can just put this in subset prune!
+        // TODO: [OPTIMIZE / THINK] I wonder if there would be groups implied by the case where its outside a group rather than a player...
+        // TODO: [OPTIMIZE / THINK] IntSet to skip some looked over items i guess? or just not have redundant shit bro
+        log::trace!("In add_inferred_complement_player");
+        let mut players: Vec<usize> = Vec::with_capacity(7);
+        let mut bool_change = false;
+        for i in 0..7 {
+            // Only consider for players that can be inferred about
+            if self.public_constraints[i].len() + self.inferred_constraints[i].len() < 2 {
+                players.push(i);
+            }
+        }
+        let mut remaining_alive_counts = self.dead_card_count();
+        log::trace!("dead_card_count: {:?}", remaining_alive_counts);
+        remaining_alive_counts.iter_mut().for_each(|x| *x = 3 - *x);
+        // Creating alive_counts for each player
+        let mut player_remaining_alive_counts: Vec<[u8; 5]> = vec![remaining_alive_counts.clone(); players.len()];
+        let mut player_alive_counts_to_subtract: Vec<[u8; 5]> = vec![[0; 5]; players.len()]; 
+        
+        // Adding inferred_alive_cards that belong to other players
+        for i in 0..7 as usize {
+            for (index, player) in players.iter().enumerate() {
+                if i != *player {
+                    for card in self.inferred_constraints[i].iter() {
+                        player_alive_counts_to_subtract[index][*card as usize] += 1;
+                    }
+                }
+            }
+        }
+        log::trace!("Before Looping through group_constraints");
+        log::trace!("public_constraints: {:?}", self.public_constraints);
+        log::trace!("inferred_constraints: {:?}", self.inferred_constraints);
+        log::trace!("remaining_alive_counts: {:?}", remaining_alive_counts);
+        log::trace!("players: {:?}", players);
+        log::trace!("player_alive_counts_to_subtract: {:?}", player_alive_counts_to_subtract);
+
+        // Loop through every group, and add amount to subtract based on those alive
+        for (card_num, groups) in [&self.group_constraints_amb, 
+            &self.group_constraints_ass, 
+            &self.group_constraints_cap, 
+            &self.group_constraints_duk, 
+            &self.group_constraints_con]
+            .iter().enumerate() {
+                // Early exit
+                if remaining_alive_counts[card_num] == 0 {
+                    continue;
+                }
+                for group in groups.iter() {
+                    for (index, player) in players.iter().enumerate() {
+                        if !group.get_player_flag(*player) {
+                            player_alive_counts_to_subtract[index][group.card_num()] = player_alive_counts_to_subtract[index][group.card_num()].max(group.count_alive());
+                        }
+                    }
+                }
+            }
+        // Subtract all alive from the remaining for each player
+        for (remaining, subtract) in player_remaining_alive_counts
+        .iter_mut()
+        .zip(player_alive_counts_to_subtract.iter())
+            {
+                for (r, s) in remaining.iter_mut().zip(subtract.iter()) {
+                    *r = *r - *s;
+                }
+            }
+        log::trace!("Before Looping through group_constraints");
+        log::trace!("public_constraints: {:?}", self.public_constraints);
+        log::trace!("inferred_constraints: {:?}", self.inferred_constraints);
+        log::trace!("remaining_alive_counts: {:?}", remaining_alive_counts);
+        log::trace!("players: {:?}", players);
+        log::trace!("player_alive_counts_to_subtract: {:?}", player_alive_counts_to_subtract);
+    
+        
+        // Check each and add inferred groups as necessary
+        for (index, player) in players.iter().enumerate() {
+            if 2 - self.public_constraints[*player].len() as u8 >= player_remaining_alive_counts[index].iter().sum::<u8>() {
+                // If player lives >= remaining counts
+                for (card_num, count) in player_remaining_alive_counts[index].iter().enumerate() {
+                    match *count {
+                        2 => {
+                            //TODO: add debug_assert
+                            if self.inferred_constraints[*player].contains(&Card::try_from(card_num as u8).unwrap()) {
+                                if self.inferred_constraints[*player].len() == 1 {
+                                    log::trace!("A: Adding card_num: {card_num} to player: {player}");
+                                    self.inferred_constraints[*player].push(Card::try_from(card_num as u8).unwrap());
+                                    bool_change = true;
+                                }
+                            } else {
+                                debug_assert!(self.inferred_constraints[*player].len() == 0, "Trying to add 2 items will cause player to have > 3 cards");
+                                log::trace!("B: Adding 2x card_num: {card_num} to player: {player}");
+                                self.inferred_constraints[*player].push(Card::try_from(card_num as u8).unwrap());
+                                self.inferred_constraints[*player].push(Card::try_from(card_num as u8).unwrap());
+                                bool_change = true;
+                            }
+                        }
+                        1 => {
+                            if !self.inferred_constraints[*player].contains(&Card::try_from(card_num as u8).unwrap()) {
+                                log::trace!("C: Adding x card_num: {card_num} to player: {player}");
+                                self.inferred_constraints[*player].push(Card::try_from(card_num as u8).unwrap());
+                                bool_change = true;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        log::trace!("END inferred_constraints: {:?}", self.inferred_constraints);
+        bool_change
+    }
+
     /// Adds inferred cards, based on knowing all remaining cards - a sub_group within
     /// We know all the possible cards that must be in the set of players whom at least 1 card are unknown
     /// e.g.
