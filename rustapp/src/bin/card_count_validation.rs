@@ -11,10 +11,11 @@ use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
 use std::sync::mpsc::{self, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use env_logger::{Builder, Env, Target};
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
-pub const LOG_FILE_NAME: &str = "just_test_d.log";
+pub const LOG_FILE_NAME: &str = "bug_generation.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
@@ -26,8 +27,8 @@ fn main() {
     let game_no = 100000;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 50;
-    let min_dead_check: usize = 0;
+    let print_frequency: usize = 100;
+    let min_dead_check: usize = 3;
     let num_threads = 8;
     // (DONE) [TEST 1000] Discard + Ambassador Release farm
     // [TEST 1000] Discard + RevealRedraw Release mode
@@ -36,7 +37,7 @@ fn main() {
     // [TEST 1000] Discard + RevealRedraw Debug mode
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
-    // game_rnd_constraint_mt(num_threads, game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
+    game_rnd_constraint_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
@@ -51,7 +52,7 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    test();
+    // test();
 }
 
 pub fn test() {
@@ -143,7 +144,7 @@ pub fn test() {
 }
 
 #[derive(Default)]
-struct Stats {
+pub struct Stats {
     pub games: usize,
     pub max_steps: usize,
     pub public_constraints_correct: usize,
@@ -152,6 +153,7 @@ struct Stats {
     pub over_inferred_count: usize,
     pub total_tries: usize,
     pub pushed_bad_move: usize,
+    pub replay_string: String,
 }
 
 impl Stats {
@@ -170,6 +172,22 @@ impl Stats {
         self.pushed_bad_move += other.pushed_bad_move;
     }
     
+    pub fn public_correct(&self) -> bool {
+        self.total_tries == self.public_constraints_correct
+    }
+
+    pub fn inferred_correct(&self) -> bool {
+        self.total_tries == self.inferred_constraints_correct
+    }
+
+    pub fn overinferred(&self) -> bool {
+        self.over_inferred_count > 0
+    }
+
+    pub fn pushed_bad_move(&self) -> bool {
+        self.pushed_bad_move > 0
+    }
+
     pub fn games(&self) -> usize {
         self.games
     }
@@ -183,7 +201,16 @@ impl Stats {
         println!("Bad Moves Pushed: {}/{}", self.pushed_bad_move, self.games);
     }
 }
-pub fn game_rnd_constraint_mt(num_threads: usize, game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool, min_dead_check: usize){
+pub fn game_rnd_constraint_mt(num_threads: usize, game_no: usize, bool_know_priv_info: bool, print_frequency: usize, min_dead_check: usize){
+    let replay_file = Arc::new(Mutex::new(
+        OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open("replays_only.log")
+            .expect("Unable to open replays_only.log"),
+    ));
+    
     let (tx, rx) = mpsc::channel();
     let games_per_thread = game_no / 4;
     let extra_games = game_no % 4;
@@ -203,6 +230,36 @@ pub fn game_rnd_constraint_mt(num_threads: usize, game_no: usize, bool_know_priv
 
     let mut final_stats = Stats::new();
     for received in rx {
+        let mut log_replay = false;
+        let mut status = "".to_string();
+        if !received.public_correct() {
+            status = format!("{status}|PUBLIC CONSTRAINTS WRONG");
+            log_replay = true;
+        }
+        if !received.inferred_correct() {
+            if received.overinferred() {
+                status = format!("{status}|>+ OVERINFERRED INFERRED CONSTRAINTS");
+            } else {
+                status = format!("{status}|<- UNDERINFERRED INFERRED CONSTRAINTS");
+            }
+            log_replay = true;
+        }
+        if received.pushed_bad_move() {
+            status = format!("{status}|PUSHED BAD MOVE");
+            log_replay = true;
+        }
+        // if !received.impossible_constraints_correct {
+        //     status = format!("{status}|IMPOSSIBLE CONSTRAINTS WRONG");
+        //     log_replay = true;
+        // }
+        if log_replay {
+            let replay_data = received.replay_string.clone();
+            if let Ok(mut file) = replay_file.lock() {
+                // Append a separator and the replay content to the file.
+                writeln!(file, "{status}").expect("Failed to write to file");
+                writeln!(file, "{}", replay_data).expect("Failed to write replay");
+            }
+        }
         final_stats.add(&received);
         if final_stats.games() % print_frequency == 0 {
             final_stats.print();
@@ -318,7 +375,7 @@ pub fn game_rnd_constraint_st(game_no: usize, bool_know_priv_info: bool, min_dea
         if step > max_steps {
             max_steps = step;
         }
-        // hh.print_replay_history_braindead();
+        stats.replay_string = hh.get_replay_history_braindead();
         stats.games += 1;
         tx.send(stats).unwrap();
         prob.reset();

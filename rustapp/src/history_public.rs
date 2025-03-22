@@ -430,6 +430,9 @@ impl History {
     pub fn print_replay_history_braindead(&self) {
         log::warn!("vec!{:?};", self.get_history(self.store_len));
     }
+    pub fn get_replay_history_braindead(&self) -> String {
+        format!("vec!{:?};", self.get_history(self.store_len)).to_string()
+    }
     pub fn log_history(&self){
         log::info!("{}", format!("Current_player_turn: {:?}", self.get_history(self.store_len)));
         println!("{}", format!("Current_player_turn: {:?}", self.get_history(self.store_len)));
