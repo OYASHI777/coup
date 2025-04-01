@@ -132,6 +132,22 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
             - ExchangeDraw has to save realised cards
             - Perhaps this could be if private information is legit
         3. Save new state
+=> [ISSUE]
+    1. Change the history store
+        - Consider if it should be split by player
+            - Multiple Vec may overallocate capacity
+        - Consider if it should be store historically
+            - Less capacity overallocation
+            - filter to get a particular player
+        - Store Discards too
+        - RevealRedraw and Ambassador need to store possible private information
+    2. Add method to evaluate if Card is known for a RevealRedraw
+    3. Add method to evaluate if a Card is known for Ambassador
+    4. Add method to evaluate if both Cards are known for Ambassador
+    5. Consider how this might be recursive?
+        - Recalculating history
+        - Leads to further history recalculation
+
 CATALOG
 
 terminology:

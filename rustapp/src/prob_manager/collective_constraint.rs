@@ -56,6 +56,7 @@ use super::{compressed_group_constraint::CompressedGroupConstraint, constraint::
 
 
 // TODO: [OPTIMIZE] change all .card() as usize to card_num()
+// TODO: [OPTIMIZE] consider removing dead_card_count and inferred_card_count to save space
 #[derive(Clone)]
 /// A struct that helps in card counting. Stores all information known about cards by a particular player.
 pub struct CompressedCollectiveConstraint {
