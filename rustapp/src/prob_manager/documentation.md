@@ -146,6 +146,7 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
             E[TR] = E[T] + 1/250 E[TR]
                   = 250/249 * E[T]
                   = 1.004
+            (E[T] + E[TR]) represents processing all nodes until the point of recalculation + the cost of recalculation
         4. We expect around 0.4% increase in processing time on average. E[R] ~= 2.004 E[T]
         5. But of course, its possible that each recursive history traversal increases the probability more and more.
              
