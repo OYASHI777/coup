@@ -100,8 +100,38 @@ another player revealredraw for that card should not mix with that player, can I
 (DRAFT)
 aren't cases where player Reveal last card already handled naturally?
 
-
-
+    (PROBLEM FORMULATION)
+its about knowing what was redrawn (and as a result not redrawn) in a previous move.
+<=> its about knowing that a player could not possibly have a card naturally other than withdrawing
+<=> all of that card are outside of player or in pile (player draws it) or all other cards are outside of the player (player redraws it)
+=> [CONDITION] RR/D card C card C is the third card known (others Dead or inferred).
+    - AND Checking if any previous RR card can be known
+        - Some RR/Single card AMB (maybe double)
+=> [EFFECT] 
+    - if redrawn Card C == RevealRedraw Card R was redrawn, 
+        === Effectively nothing should change as the player returns to original state ===
+        - Added group (containing R) of Player + Pile should only have player
+        - Groups card != C => unmixing all card groups where Card != C
+            - Flag for Player should not have been set to 1
+        - Groups card == C => unmixing card groups 
+            - Groups with Player flag 0 will have been set to 1 making it looser. (not favourable for greedy fix)
+            - Groups with Player flag 1 will have been unaffected (except by inferred constraint pruning)
+    - if redrawn Card C != RevealRedraw Card R was redrawn,
+        === Effectively Player has Card C and Pile has Card R ===
+        - Added group (containing R) of Player + Pile should only have pile
+        - Groups card != C => unmixing all card groups where Card != C
+            - Flag for player should not have been set to 1 (as Player did not receive group card)
+        - Groups card == C => unmixing card groups 
+            - Groups with Player flag 0 will have been set to 1 making it looser. (not favourable for greedy fix)
+            - Groups with Player flag 1 will have been unaffected (except by inferred constraint pruning)
+=> [RECALCULATION]
+    - path dependent solution would have to:
+        1. save the redrawn card
+        2. recalculate all relevant moves (Discard, RevealRedraw, ExchangeDraw) after RevealRedraw
+            - RevealRedraw has to save realised card
+            - ExchangeDraw has to save realised cards
+            - Perhaps this could be if private information is legit
+        3. Save new state
 CATALOG
 
 terminology:
