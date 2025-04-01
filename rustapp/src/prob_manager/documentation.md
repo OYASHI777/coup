@@ -105,8 +105,11 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
 <=> its about knowing that a player could not possibly have a card naturally other than withdrawing
 <=> all of that card are outside of player or in pile (player draws it) or all other cards are outside of the player (player redraws it)
 => [CONDITION] RR/D card C card C is the third card known (others Dead or inferred).
-    - AND Checking if any previous RR card can be known
+    - AND Checking if any previous RR card can be known as a result
         - Some RR/Single card AMB (maybe double)
+        - Will this be the same player as Discard or RR?
+            - Could it be Player A RR R_0 and redrew C, then Player B RR R_1 and redrew R_0
+                - both of which are inferred in one go?
 => [EFFECT] 
     - if redrawn Card C == RevealRedraw Card R was redrawn, 
         === Effectively nothing should change as the player returns to original state ===
@@ -132,6 +135,18 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
             - ExchangeDraw has to save realised cards
             - Perhaps this could be if private information is legit
         3. Save new state
+    - performance impact
+        1. This roughly is run 1/250 games at a later node
+        2. It reruns the entire game in a traversal (or it could store a save)
+            ~ 20 Actions
+        3. Let E[T] be the average time to process an action excluding moves that need recalculation
+            With recalculation,
+            E[TR] = 249/250 * E[T] + 1/250 * E[R]
+                  = 249/250 * E[T] + 1/250 * 20 * E[TR]
+            E[TR] = (249/250) / (1 - 1/250 * 20) * E[T]
+                  ~= 1.0826 E[T]
+        4. We expect around 8% increase in processing time on average. E[R] ~= 21.6 E[T]
+             
 => [ISSUE]
     1. Change the history store
         - Consider if it should be split by player
