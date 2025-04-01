@@ -135,17 +135,19 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
             - ExchangeDraw has to save realised cards
             - Perhaps this could be if private information is legit
         3. Save new state
-    - performance impact
+    - performance impact (very rough)
         1. This roughly is run 1/250 games at a later node
         2. It reruns the entire game in a traversal (or it could store a save)
             ~ 20 Actions
-        3. Let E[T] be the average time to process an action excluding moves that need recalculation
+        3. Let E[T] be the average time to process an game that does not have moves that need recalculation
             With recalculation,
             E[TR] = 249/250 * E[T] + 1/250 * E[R]
-                  = 249/250 * E[T] + 1/250 * 20 * E[TR]
-            E[TR] = (249/250) / (1 - 1/250 * 20) * E[T]
-                  ~= 1.0826 E[T]
-        4. We expect around 8% increase in processing time on average. E[R] ~= 21.6 E[T]
+                  = 249/250 * E[T] + 1/250 * (E[T] + E[TR])
+            E[TR] = E[T] + 1/250 E[TR]
+                  = 250/249 * E[T]
+                  = 1.004
+        4. We expect around 0.4% increase in processing time on average. E[R] ~= 2.004 E[T]
+        5. But of course, its possible that each recursive history traversal increases the probability more and more.
              
 => [ISSUE]
     1. Change the history store
