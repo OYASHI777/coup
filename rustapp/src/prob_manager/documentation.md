@@ -159,12 +159,26 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
             - filter to get a particular player
         - Store Discards too
         - RevealRedraw and Ambassador need to store possible private information
+        - What is swap_remove for, well things break without it
     2. Add method to evaluate if Card is known for a RevealRedraw
     3. Add method to evaluate if a Card is known for Ambassador
     4. Add method to evaluate if both Cards are known for Ambassador
     5. Consider how this might be recursive?
         - Recalculating history
         - Leads to further history recalculation
+    6. Arguments of functions may need to be changed
+        - RevealRedraw with private/partial information
+            - Redraw same card => Inferred constraint
+            - Redraw different card => mix then double inference or just double inference?
+                - mix then double inference has to know that the card inferred is necessarily from the swap
+                    - 1 card groups => mixed then deleted effectively
+                    - 2 card groups? (look through revealredraw implementation)
+                        - Player flag 0 => mixed then might be single flag pruned?
+                        - Player flag 1 => mixed?
+                    - 3 card groups? (look through revealredraw implementation)
+                        - Player flag 0 => mixed then might be single flag pruned?
+                        - Player flag 1 => mixed?
+        - Ambassador with private/partial information
 
 CATALOG
 
