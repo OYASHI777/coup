@@ -165,6 +165,7 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
             - Change to perhaps not delete information
             - Consider how single card flag might be different from knowing a particular card was redrawn
         - Change to enum of RR and AMB
+        - Does the history store recursion just replace RR Network?
     1b. Review every inference and how it interacts and depends on history store and single_card_flag
         - Method for inference will affect dead_card and inferred_card
         - Method may not be another function to run in add_inferred_information
