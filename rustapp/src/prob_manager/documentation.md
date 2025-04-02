@@ -160,12 +160,14 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
         - Store Discards too
         - RevealRedraw and Ambassador need to store possible private information
         - What is swap_remove for, well things break without it
+        - Change to enum of RR and AMB
     2. Add method to evaluate if Card is known for a RevealRedraw
     3. Add method to evaluate if a Card is known for Ambassador
     4. Add method to evaluate if both Cards are known for Ambassador
     5. Consider how this might be recursive?
         - Recalculating history
         - Leads to further history recalculation
+        - Note the usually the move counter increases every evaluation, so would need to refactor that
     6. Arguments of functions may need to be changed
         - RevealRedraw with private/partial information
             - Redraw same card => Inferred constraint
