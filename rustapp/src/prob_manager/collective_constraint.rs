@@ -1023,7 +1023,8 @@ impl CompressedCollectiveConstraint {
                 }
             }
             // If revealed card was part of it, remove it
-            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.0 == Some(card)) {
+            if let Some(pos) = self.revealed_status[player_id].iter().rev().position(|c| c.0 == Some(card)) {
+                // self.revealed_status[player_id].remove(pos);
                 self.revealed_status[player_id].swap_remove(pos);
             }
         } else {
@@ -1648,7 +1649,8 @@ impl CompressedCollectiveConstraint {
                 }
             }
             // If revealed card was part of it, remove it
-            if let Some(pos) = self.revealed_status[player_id].iter().position(|c| c.0 == Some(card)) {
+            if let Some(pos) = self.revealed_status[player_id].iter().rev().position(|c| c.0 == Some(card)) {
+                // self.revealed_status[player_id].remove(pos);
                 self.revealed_status[player_id].swap_remove(pos);
             }
         }

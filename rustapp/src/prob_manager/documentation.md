@@ -159,7 +159,8 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
             - filter to get a particular player
         - Store Discards too
         - RevealRedraw and Ambassador need to store possible private information
-        - What is swap_remove for, well things break without it
+        - [PROBLEM] What is self.revealed_status[player_id].swap_remove for, well things break without it
+        - [PROBLEM] in is_part_of_network prev_redraw_counter does not make sense
         - Change to enum of RR and AMB
     2. Add method to evaluate if Card is known for a RevealRedraw
     3. Add method to evaluate if a Card is known for Ambassador
