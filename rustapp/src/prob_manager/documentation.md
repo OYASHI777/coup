@@ -151,7 +151,7 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
         5. But of course, its possible that each recursive history traversal increases the probability more and more.
              
 => [ISSUE]
-    1. Change the history store
+    1a. Change the history store
         - Consider if it should be split by player
             - Multiple Vec may overallocate capacity
         - Consider if it should be store historically
@@ -160,8 +160,15 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
         - Store Discards too
         - RevealRedraw and Ambassador need to store possible private information
         - [PROBLEM] What is self.revealed_status[player_id].swap_remove for, well things break without it
-        - [PROBLEM] in is_part_of_network prev_redraw_counter does not make sense
+        - [PROBLEM] Loop in is_part_of_network does not really make sense
+            - Change to include known information about the action
+            - Change to perhaps not delete information
+            - Consider how single card flag might be different from knowing a particular card was redrawn
         - Change to enum of RR and AMB
+    1b. Review every inference and how it interacts and depends on history store and single_card_flag
+        - Method for inference will affect dead_card and inferred_card
+        - Method may not be another function to run in add_inferred_information
+        - Method may be called in dead_card and inferred_card when we know the state of a previous action
     2. Add method to evaluate if Card is known for a RevealRedraw
     3. Add method to evaluate if a Card is known for Ambassador
     4. Add method to evaluate if both Cards are known for Ambassador

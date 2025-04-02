@@ -1106,7 +1106,7 @@ impl CompressedCollectiveConstraint {
         self.printlog();
         self.add_inferred_card_bulk(new_inferred);
     }
-    /// 
+    /// I suppose this return true if it is possible that a player acquired a card from the revealredraw network
     fn is_part_of_network(&mut self, player_id: usize, card: Card) -> bool {
         // let bool_discarded_card_is_definitely_part_of_reveal_redraw_network = 
         // // If player who discarded it has the card revealed before, it can't be from a card != card_num group
