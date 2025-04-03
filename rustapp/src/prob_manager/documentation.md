@@ -110,6 +110,18 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
         - Will this be the same player as Discard or RR?
             - Could it be Player A RR R_0 and redrew C, then Player B RR R_1 and redrew R_0
                 - both of which are inferred in one go?
+    - 2 main conditions
+        - Checking if the player could only have gotten that card from revealredraw/amb
+            - At time of redraw, all of those cards were outside of the player
+                - Checking all discarded/revealredrawn cards done before that turn
+                - Check Group constraints at that particular time for that revealredraw (expensive)
+                - Check ??? of the discarded/revealredrawn cards done after
+                    - For Player != player moves after, outside the player for the RR if
+                        - Never RR or AMB and they discarded card of interest
+                        - First RR after player and have card of interest
+                - Check if there is a card in the RR network?
+            - so player could only have gotten it during the redraw
+        - Checking if we know exactly where the player got the card from
 => [EFFECT] 
     - if redrawn Card C == RevealRedraw Card R was redrawn, 
         === Effectively nothing should change as the player returns to original state ===
@@ -157,6 +169,7 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
         - Consider if it should be store historically
             - Less capacity overallocation
             - filter to get a particular player
+        - Only need to store Ambassadors after first discard/revealredraw
         - Store Discards too
         - RevealRedraw and Ambassador need to store possible private information
         - [PROBLEM] What is self.revealed_status[player_id].swap_remove for, well things break without it
@@ -165,6 +178,14 @@ its about knowing what was redrawn (and as a result not redrawn) in a previous m
             - Change to perhaps not delete information
             - Consider how single card flag might be different from knowing a particular card was redrawn
         - Change to enum of RR and AMB
+        - Most changes will affect add_dead_cards and add_inferred_card => Consider uniting them under same framework
+            - [PROBLEM] if you have a card revealed/discard and you know its from a revealed network, but not which move, how to update?
+                - (Discard) Perhaps you don't care about single_card_flag as its possible to have gotten from either
+                    - You just update if known and ignore if unknown
+                    - If discard, just remove single_card_flag as we don't know if card is from single or whole group
+                        - Just don't touch single_card_flag for evaluation
+                - (Inferred)
+                    - Leave single_card_flag as 1, if unsure of whether card inferred is part of the single_card_flag
         - Does the history store recursion just replace RR Network?
     1b. Review every inference and how it interacts and depends on history store and single_card_flag
         - Method for inference will affect dead_card and inferred_card
