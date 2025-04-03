@@ -2,6 +2,7 @@ use crate::history_public::Card;
 use super::compressed_group_constraint::CompressedGroupConstraint;
 
 pub enum ActionInfo {
+    Start,
     Discard {discard: Card}, // Player | Card
     RevealRedraw {reveal: Card, redraw: Option<Card>}, // Player | Reveal Card | Redraw Option<Card>
     ExchangeDrawChoice {draw: Vec<Card>, relinquish: Vec<Card>}, // Player | Draw Vec<Card> | Return Vec<Card>
@@ -95,6 +96,16 @@ impl PathDependentMetaData {
     }   
 }   
 
+// 1: Test without any inference first, just to see if the recursion works for simple cases
+//      - Basic Cases
+//          - 1 life case
+//          - First discard/revealredraw case
+//          - First Amb with known cards before case
+//      - game_start affected
+//          - ensure game_start can start from some inferred state
+// 2: Include all the inference, but do not recurse on finding inferred constraint
+// 3: Add recursion on finding inferred constraint
+// 4: Optimize to consider where we might not need to recurse (non recursive method can get 1/250 games wrong)
 #[derive(Clone)]
 /// A struct that helps in card counting. Stores all information known about cards by a particular player.
 pub struct PathDependentCollectiveConstraint {
@@ -115,6 +126,7 @@ pub struct PathDependentCollectiveConstraint {
     //      => only concern is a possible case wehre single_card_flag should be false because it was redrawn, but we not sure where it is redrawn
     // revealed_status: Vec<Vec<(Option<Card>, usize)>>, 
     move_no: usize, // turn number
+    // TODO: Consider having indices for each player to make traversal over players faster
     history: Vec<SignificantAction>, // Stores 
     // The shared LRU cache is maintained here and passed to each constraint.
     // cache: Rc<RefCell<LruCache<ConstraintKey, SignificantAction>>>,
@@ -165,6 +177,8 @@ impl PathDependentCollectiveConstraint {
             history,
         }
     }
+    /// TODO: change gamestart for different inferred starting hands
+    /// use start_state
     fn regenerate_game_start(&mut self) {
         self.public_constraints = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
         self.inferred_constraints = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
@@ -216,11 +230,12 @@ impl PathDependentCollectiveConstraint {
 
                     },
                     None => {
-                        
+                        // Group A abstract to lookback_2 for inferred addition too
                     }
                 }
             },
             ActionInfo::Discard(discard_considered) => {
+                // Group A abstract to lookback_2 for inferred addition too
                 let player_index: u8 = considered_move.player();
                 for i in (0..index).rev() {
                     let action_data = &self.history[i];
@@ -242,16 +257,16 @@ impl PathDependentCollectiveConstraint {
                                 }
                             },
                             ActionInfo::ExchangeDrawChoice(draw, relinquish) => {
-        
+                                
                             },
                             ActionInfo::Discard(discard) => {}
                         }
                     }
-                    unimplemented!();
+                    // unimplemented!();
                 }
             },
             _ => {
-                unimplemented!();
+                // unimplemented!();
             }
         }
     }
