@@ -15,6 +15,8 @@ pub struct PathDependentCardCountManager {
     constraint_history: Vec<PathDependentCollectiveConstraint>, // I think None is stored if there are no changes
     constraint_history_move_no: Vec<usize>, // TODO: determine if more optimal to put in constraint_history
     move_number: usize,
+    // The shared LRU cache is maintained here and passed to each constraint.
+    // cache: Rc<RefCell<LruCache<ConstraintKey, ActionMetaData>>>,
 }
 impl PathDependentCardCountManager {
     /// Constructor
@@ -45,7 +47,18 @@ impl PathDependentCardCountManager {
         self.constraint_history.last().unwrap_or(&self.game_start)
     }
     /// Entrypoint for any action done, updates history accordingly
-    pub fn push_ao(&mut self, ao: &ActionObservation, bool_know_priv_info: bool){
+    /// Assumes knowledge of public information but not private information
+    pub fn push_ao_public(&mut self, ao: &ActionObservation){
+
+        // Handle different move types
+        unimplemented!();
+        // shove move_no into CollectiveConstraint
+        // post_increment: move_no is now the number of the next move
+        self.move_no += 1;
+    }
+    /// Entrypoint for any action done, updates history accordingly
+    /// Assumes knowledge of both public and private information
+    pub fn push_ao_private(&mut self, ao: &ActionObservation){
 
         // Handle different move types
         unimplemented!();
