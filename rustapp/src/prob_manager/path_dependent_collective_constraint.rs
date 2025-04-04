@@ -248,7 +248,6 @@ impl PathDependentCollectiveConstraint {
                                 // 1 card unknown
                                 if redraw_current.is_none() 
                                 && action_data.public_constraints()[action_player as usize].len() + action_data.inferred_constraints()[action_player as usize].len() == 1 
-                                && !action_data.public_constraints()[action_player as usize].contains(&discard_considered)
                                 && !action_data.inferred_constraints()[action_player as usize].contains(&discard_considered)
                                 {
                                     *redraw_current = Some(discard_considered);
