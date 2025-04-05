@@ -910,13 +910,12 @@ impl PathDependentCollectiveConstraint {
         
         let card_num_range = (0..5).filter(|x| *x != card as usize);
         let mut dead_card_counts: [u8; 5] = [0; 5];
-        // [COMBINE SJ]
         for card in self.public_constraints[player_id].iter() {
             dead_card_counts[*card as usize] += 1;
         }
-        let mut alive_card_counts: [u8; 5] = [0; 5];
+        let mut inferred_card_counts: [u8; 5] = [0; 5];
         for card in self.inferred_constraints[player_id].iter() {
-            alive_card_counts[*card as usize] += 1;
+            inferred_card_counts[*card as usize] += 1;
         }
         // Handle groups where cards are not same as discarded card
         // Get total cards known
@@ -966,10 +965,10 @@ impl PathDependentCollectiveConstraint {
                         let group = &mut groups[i];
                         if group.get_player_flag(player_id) {
                             group.set_player_flag(player_id, false);
-                            if alive_card_counts[card_num] < group.count_alive() {
-                                group.sub_alive_count(alive_card_counts[card_num]);
+                            if inferred_card_counts[card_num] < group.count_alive() {
+                                group.sub_alive_count(inferred_card_counts[card_num]);
                                 group.sub_dead_count(dead_card_counts[card_num]);
-                                group.sub_total_count(alive_card_counts[card_num] + dead_card_counts[card_num]);
+                                group.sub_total_count(inferred_card_counts[card_num] + dead_card_counts[card_num]);
                                 if group.is_single_player_part_list() {
                                     new_inferred.push(*group);
                                     groups.swap_remove(i);
@@ -999,10 +998,10 @@ impl PathDependentCollectiveConstraint {
                         let group = &mut groups[i];
                         if group.get_player_flag(player_id) {
                             group.set_player_flag(player_id, false);
-                            if group.count_alive() > 1 + alive_card_counts[card as usize] {
+                            if group.count_alive() > 1 + inferred_card_counts[card as usize] {
                                 // -1 for dead card, - for other alive_cards
-                                group.sub_alive_count(1 + alive_card_counts[card as usize]);
-                                group.sub_total_count(1 + alive_card_counts[card as usize]);
+                                group.sub_alive_count(1 + inferred_card_counts[card as usize]);
+                                group.sub_total_count(1 + inferred_card_counts[card as usize]);
                                 if group.is_single_player_part_list() {
                                     // TODO: [OPTIMIZE] maybe don't push into group if it might be DUP or its already in inferred_constraints?
                                     new_inferred.push(*group);
@@ -1028,9 +1027,9 @@ impl PathDependentCollectiveConstraint {
                             let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
                                 group.set_player_flag(player_id, false);
-                                if group.count_alive() > alive_card_counts[card_num] {
-                                    group.sub_alive_count(alive_card_counts[card_num]);
-                                    group.sub_total_count(alive_card_counts[card_num]);
+                                if group.count_alive() > inferred_card_counts[card_num] {
+                                    group.sub_alive_count(inferred_card_counts[card_num]);
+                                    group.sub_total_count(inferred_card_counts[card_num]);
                                     if group.is_single_player_part_list() {
                                         new_inferred.push(*group);
                                         groups.swap_remove(i);
@@ -1241,8 +1240,14 @@ impl PathDependentCollectiveConstraint {
         &mut self.group_constraints_con];
         if bool_changes {
             let card_num_range = (0..5).filter(|x| *x != card as usize);
-            let dead_card_counts = self.player_dead_card_counts(player_id);
-            let inferred_card_counts = self.player_inferred_card_counts(player_id);
+            let mut dead_card_counts: [u8; 5] = [0; 5];
+            for card in self.public_constraints[player_id].iter() {
+                dead_card_counts[*card as usize] += 1;
+            }
+            let mut inferred_card_counts: [u8; 5] = [0; 5];
+            for card in self.inferred_constraints[player_id].iter() {
+                inferred_card_counts[*card as usize] += 1;
+            }
             let dead_card_count = self.public_constraints[player_id].len();
             let inferred_card_count = self.inferred_constraints[player_id].len();
             if dead_card_count + inferred_card_count == 1 {
