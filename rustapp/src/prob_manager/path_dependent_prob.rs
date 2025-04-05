@@ -20,9 +20,13 @@ pub struct PathDependentCardCountManager {
 impl PathDependentCardCountManager {
     /// Constructor
     pub fn new() -> Self {
+        let mut constraint_history = Vec::with_capacity(120);
+        constraint_history.push(PathDependentCollectiveConstraint::game_start());
+        let mut constraint_history_move_no = Vec::with_capacity(120);
+        constraint_history_move_no.push(0);
         PathDependentCardCountManager{
-            constraint_history: Vec::with_capacity(120),
-            constraint_history_move_no: Vec::with_capacity(120),
+            constraint_history,
+            constraint_history_move_no,
             move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
         }
     }
@@ -30,11 +34,15 @@ impl PathDependentCardCountManager {
     pub fn reset(&mut self) {
         self.constraint_history.clear();
         self.constraint_history.push(PathDependentCollectiveConstraint::game_start());
+        self.constraint_history_move_no.clear();
+        self.constraint_history_move_no.push(0);
         self.move_no = 1;
     }
     /// Logs the constraint's log
     pub fn printlog(&self) {
         log::trace!("{}", format!("Constraint History Len{}", self.constraint_history.len()));
+        log::trace!("PathDependentCardCountManager history_move_no: {:?}", self.constraint_history_move_no);
+        log::trace!("PathDependentCardCountManager move_no: {:?}", self.move_no);
         if let Some(constraint) = self.constraint_history.last() {
             constraint.printlog();
         } else {
@@ -52,6 +60,7 @@ impl PathDependentCardCountManager {
 
         // Handle different move types
         let ao_name = ao.name();
+        println!("Pushing: {:?}", ao_name);
         if ao_name == AOName::Discard {
             match ao.no_cards() {
                 1 => {
@@ -59,6 +68,7 @@ impl PathDependentCardCountManager {
                     // unwrap is fine as the vec should never be size 0
                     let mut last_constraint = self.constraint_history.last().unwrap().clone();
                     let action_info = ActionInfo::Discard { discard: *temp_card };
+                    log::trace!("Adding move discard 1");
                     last_constraint.add_move(ao.player_id() as u8, action_info);
                     // last_constraint.sort_unstable();
                     self.constraint_history.push(last_constraint);
@@ -69,8 +79,10 @@ impl PathDependentCardCountManager {
                     let temp_cards = ao.cards();
                     let mut last_constraint = self.constraint_history.last().unwrap().clone();
                     let action_info = ActionInfo::Discard { discard: temp_cards[0] };
+                    log::trace!("Adding move discard 2");
                     last_constraint.add_move(ao.player_id() as u8, action_info);
                     let action_info = ActionInfo::Discard { discard: temp_cards[1] };
+                    log::trace!("Adding move discard 2");
                     last_constraint.add_move(ao.player_id() as u8, action_info);
                     // last_constraint.sort_unstable();
                     self.constraint_history.push(last_constraint);
@@ -83,6 +95,7 @@ impl PathDependentCardCountManager {
         } else if ao_name == AOName::RevealRedraw{
             let mut last_constraint = self.constraint_history.last().unwrap().clone();
             let action_info = ActionInfo::RevealRedraw { reveal: ao.card(), redraw: None };
+            log::trace!("Adding move RevealRedraw");
             last_constraint.add_move(ao.player_id() as u8, action_info);
             // last_constraint.sort_unstable();
             self.constraint_history.push(last_constraint);
@@ -90,6 +103,7 @@ impl PathDependentCardCountManager {
         } else if ao_name == AOName::ExchangeChoice {
             let mut last_constraint = self.constraint_history.last().unwrap().clone();
             let action_info = ActionInfo::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) };
+            log::trace!("Adding move ExchangeChoice");
             last_constraint.add_move(ao.player_id() as u8, action_info);
             self.constraint_history.push(last_constraint);
             self.constraint_history_move_no.push(self.move_no);

@@ -249,7 +249,7 @@ impl CompressedGroupConstraint {
         self.0 = (self.0 & !Self::TOTAL_COUNT_MASK) | (new_count << Self::TOTAL_COUNT_SHIFT);
     }
 
-    fn sub_total_count(&mut self, amount: u8) {
+    pub fn sub_total_count(&mut self, amount: u8) {
         let total_bits = (self.0 & Self::TOTAL_COUNT_MASK) >> Self::TOTAL_COUNT_SHIFT;
         debug_assert!(total_bits >= amount as u32, "Total count would go below zero");
         self.0 = (self.0 & !Self::TOTAL_COUNT_MASK) | ((total_bits - amount as u32) << Self::TOTAL_COUNT_SHIFT);
