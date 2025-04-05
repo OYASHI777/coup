@@ -834,10 +834,10 @@ impl PathDependentCollectiveConstraint {
         // self.add_dead_player_constraint(player_id, card);
         // [NEW]
         // Check before recursing
-        // if self.lookback_1(history_index) {
-        //     // If true, it will have rerun the entire history including the current move
-        //     return
-        // }
+        if self.lookback_1(history_index) {
+            // If true, it will have rerun the entire history including the current move
+            return
+        }
         self.add_dead_card(player_id, card);
         // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
         // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
@@ -1239,7 +1239,8 @@ impl PathDependentCollectiveConstraint {
         &mut self.group_constraints_duk, 
         &mut self.group_constraints_con];
         if bool_changes {
-            // TODO: change card_num_range to exclude those with full inferred + dead card counts known
+            // TODO: [FIX/OPTIMIZE] change card_num_range to exclude those with full inferred + dead card counts known
+            //      - Not having this leaves empty group_constraints, which may or may not be a good thing
             let card_num_range = (0..5).filter(|x| *x != card as usize);
             let mut dead_card_counts: [u8; 5] = [0; 5];
             for card in self.public_constraints[player_id].iter() {
@@ -1996,10 +1997,10 @@ impl PathDependentCollectiveConstraint {
     /// Function to call for move RevealRedraw
     pub fn reveal_redraw(&mut self, history_index: usize, player_id: usize, card: Card) {
         // Abit dumb to seperate it like this, but if not it gets abit messy and I have more branchs :/
-        // if self.lookback_1(history_index) {
-        //     // If true, it will have rerun the entire history including the current move
-        //     return
-        // }
+        if self.lookback_1(history_index) {
+            // If true, it will have rerun the entire history including the current move
+            return
+        }
         self.reveal(player_id, card);
         // Actually shouldnt this only move the player's card in
         // mix here is not the same as ambassador, as inferred should not be touched. And since we know the revealed card

@@ -54,6 +54,10 @@ impl PathDependentCardCountManager {
         // Should never pop() to 0
         self.constraint_history.last().unwrap()
     }
+    pub fn latest_constraint_mut(&mut self) -> &mut PathDependentCollectiveConstraint {
+        // Should never pop() to 0
+        self.constraint_history.last_mut().unwrap()
+    }
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of public information but not private information
     pub fn push_ao_public(&mut self, ao: &ActionObservation){
