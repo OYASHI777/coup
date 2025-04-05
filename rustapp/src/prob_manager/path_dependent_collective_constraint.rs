@@ -373,7 +373,6 @@ impl PathDependentCollectiveConstraint {
     /// might need to look forward too?
     pub fn lookback_1(&mut self, index: usize) -> bool {
         // index is the index for history``
-        println!("Lookback_1");
         let considered_move: &SignificantAction = &self.history[index];
         match *considered_move.action_info() {
             ActionInfo::RevealRedraw{reveal: reveal_considered, redraw: redraw_considered} => {
@@ -408,11 +407,8 @@ impl PathDependentCollectiveConstraint {
                                 if need_redraw_update {
                                     if let ActionInfo::RevealRedraw { redraw, .. } = action_data.action_info_mut() {
                                         *redraw = Some(discard_considered);
-                                        println!("LOOKBACK CASE 0");
-                                        println!("action_data: {:?}", action_data);
                                         self.regenerate_path();
                                         self.printlog();
-                                        println!("LOOKBACK CASE 0");
                                         // panic!();
                                         return true;
                                     }
@@ -443,7 +439,6 @@ impl PathDependentCollectiveConstraint {
         log::info!("Regenerating Path");
         self.regenerate_game_start();
         // TODO: Implement skipping starting empty ambassadors
-        println!("regenerate path");
         let mut skip_starting_empty_ambassador: bool = true;
         for index in 0..self.history.len() {
             // run the update for that action
@@ -453,7 +448,6 @@ impl PathDependentCollectiveConstraint {
         }
     }
     fn calculate_stored_move(&mut self, history_index: usize) {
-        println!("calculate_stored_move");
         // let action: &SignificantAction = &self.history[history_index];
         let (player_id, action_info) = {
             let action = &self.history[history_index];
@@ -469,7 +463,21 @@ impl PathDependentCollectiveConstraint {
             },
             ActionInfo::RevealRedraw{ reveal, redraw } => {
                 // TODO: handle the known card case obviously lol
-                self.reveal_redraw(history_index, player_id, reveal);
+                match redraw {
+                    None => {
+                        self.reveal_redraw(history_index, player_id, reveal);
+                    },
+                    Some(card) => {
+                        if card == reveal {
+                            self.reveal(history_index, player_id, reveal);
+                        } else {
+                            // TODO: Redraw can give you back info about the previous ambassador perhaps?
+                            // TODO: Check if reveal works for pile?
+                            // Temp: Not handled yet
+                            self.reveal_redraw(history_index, player_id, reveal);
+                        }
+                    },
+                }
             },
             ActionInfo::ExchangeDrawChoice{ draw, relinquish } => {
                 // TODO: handle the known card case obviously lol
@@ -849,7 +857,6 @@ impl PathDependentCollectiveConstraint {
         self.printlog();
         self.group_redundant_prune();
         self.add_inferred_information();
-        println!("After add_inferred_information");
         // Change revealed_status at the end after all groups using it have been updated
         // This is handled in add_dead_card
         // self.revealed_status[player_id].clear();
@@ -1472,10 +1479,14 @@ impl PathDependentCollectiveConstraint {
     /// CONCLUSION 4: Groups where player_id is 0 are unaffected. They will be handled later in generate inferred constraints, and any further redundant pruning.
     /// FINAL CONCLUSION: Its the same treatment regardless of what card the group is, because we really are comparing a player's hand to the groups.
     ///                   The algo is less about a reveal and more about how to update groups after new information is added from the reveal.
-    pub fn reveal(&mut self, player_id: usize, card: Card) {
+    pub fn reveal(&mut self, history_index: usize, player_id: usize, card: Card) {
         // PD Obsolete
         // self.increment_move_count();
         log::trace!("In reveal");
+        if self.lookback_1(history_index) {
+            // If true, it will have rerun the entire history including the current move
+            return
+        }
         // TODO: Combine adjustment and addition to constraint to allow clear() like in death()
         if !self.inferred_player_constraint_contains(player_id, card) {
             // Adds information to inferred constraint if it isn't already there
@@ -1997,11 +2008,8 @@ impl PathDependentCollectiveConstraint {
     /// Function to call for move RevealRedraw
     pub fn reveal_redraw(&mut self, history_index: usize, player_id: usize, card: Card) {
         // Abit dumb to seperate it like this, but if not it gets abit messy and I have more branchs :/
-        if self.lookback_1(history_index) {
-            // If true, it will have rerun the entire history including the current move
-            return
-        }
-        self.reveal(player_id, card);
+        
+        self.reveal(history_index, player_id, card);
         // Actually shouldnt this only move the player's card in
         // mix here is not the same as ambassador, as inferred should not be touched. And since we know the revealed card
         // To rigorously show how to mix if group is not the same card, and 1 player 0 pile
@@ -2205,7 +2213,6 @@ impl PathDependentCollectiveConstraint {
     /// Assumes self.group_constraints is not internally redundant
     /// Leaves self.group_constraint not internally redundant
     pub fn add_inferred_information(&mut self) {
-        println!("In add_inferred_information");
         // DATA STRUCTURE: STORING IMPOSSIBLE ALIVE STATES
         // CASE 0: Player cannot have 4 cards
         // CASE 0b: Player cannot have 3 types of cards and there is only 1 of each remaining card left and player has 2 lives
@@ -2466,7 +2473,6 @@ impl PathDependentCollectiveConstraint {
         // There technically is alot of repeated code, but i want to be able to pass ownership through the recursed input instead of just a &mut to reduce memory usage
         // In addition the first step should not add groups, so to not make use of branches, its seperated as such
         // Recursion stops of no more groups to add
-        println!("add_subset_groups_unopt");
         let mut bool_changes = false;
         if self.group_constraints().iter().all(|v| v.is_empty()) {
             return false
@@ -3210,7 +3216,6 @@ impl PathDependentCollectiveConstraint {
     ///     - Recurses with new_new_groups being the new reference group
     pub fn add_mutually_exclusive_unions(&mut self) -> bool {
         log::trace!("In add_mutually_exclusive_unions");
-        println!("In add_mutually_exclusive_unions");
         if self.group_constraints().iter().all(|v| v.is_empty()) {
             log::trace!("exit add_mutually_exclusive_unions");
             return false
@@ -3295,7 +3300,6 @@ impl PathDependentCollectiveConstraint {
         // TODO: [OPTIMIZE / THINK] I wonder if there would be groups implied by the case where its outside a group rather than a player...
         // TODO: [OPTIMIZE / THINK] IntSet to skip some looked over items i guess? or just not have redundant shit bro
         log::trace!("In add_inferred_except_player");
-        println!("In add_inferred_except_player");
         let mut players: Vec<usize> = Vec::with_capacity(7);
         let mut bool_change = false;
         for i in 0..7 {
@@ -3402,7 +3406,6 @@ impl PathDependentCollectiveConstraint {
         // TODO: [OPTIMIZE / THINK] I wonder if there would be groups implied by the case where its outside a group rather than a player...
         // TODO: [OPTIMIZE / THINK] IntSet to skip some looked over items i guess? or just not have redundant shit bro
         log::trace!("In add_inferred_complement_player");
-        println!("In add_inferred_complement_player");
         let mut players: Vec<usize> = Vec::with_capacity(7);
         let mut bool_change = false;
         for i in 0..7 {
@@ -3526,7 +3529,6 @@ impl PathDependentCollectiveConstraint {
     /// !!! Perhaps this is only usable if a player with single_flag has RR only once since their last amb? else we need to expand the single_flag_group
     ///     Not quite, if the player has only 1 life then its obvious that for that it should be included
     pub fn add_inferred_remaining_negation(&mut self) -> bool {
-        println!("In add inferred_remaining_negation");
         // Get the remaining card group + card counts
         let mut full_group_flags = CompressedGroupConstraint::zero();
         full_group_flags.set_player_flag(0, (self.public_constraints[0].len() + self.inferred_constraints[0].len()) != 2);
@@ -3713,7 +3715,7 @@ impl PathDependentCollectiveConstraint {
                                                 let card_found= Card::try_from(card_num as u8).unwrap();
                                                 if !self.inferred_constraints[player].contains(&card_found) {
                                                     // This has been observed once before
-                                                    println!("A1");
+                                                    // println!("A1");
                                                     self.inferred_constraints[player].push(card_found);
                                                     return true;
                                                 }
@@ -4070,20 +4072,20 @@ impl PathDependentCollectiveConstraint {
                                                                             if player_lives[player] == 2 {
                                                                                 if self.inferred_constraints[player].len() == 0 {
                                                                                     log::trace!("add_inferred_remaining_negation 2 C added card_num: {}", card_num);
-                                                                                    println!("Added 2CA");
+                                                                                    // println!("Added 2CA");
                                                                                     self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
                                                                                     self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
                                                                                     return true;
                                                                                 } else if self.inferred_constraints[player].len() == 1 {
                                                                                     log::trace!("add_inferred_remaining_negation 2 C added card_num: {}", card_num);
-                                                                                    println!("Added 2CB");
+                                                                                    // println!("Added 2CB");
                                                                                     self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
                                                                                     return true;
                                                                                 }
                                                                             } else {
                                                                                 if self.inferred_constraints[player].len() < 2 {
                                                                                     log::trace!("add_inferred_remaining_negation 2 C added card_num: {}", card_num);
-                                                                                    println!("Added 2CC");
+                                                                                    // println!("Added 2CC");
                                                                                     self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
                                                                                     return true;
                                                                                 }
@@ -4241,7 +4243,7 @@ impl PathDependentCollectiveConstraint {
     /// Returns an array indexed by [player][card] that indicates if a player can have a particular card
     /// true => impossible
     /// false => possible
-    pub fn generate_one_card_impossibilities_player_card_indexing(&mut self) -> [[bool; 5]; 7] {
+    pub fn generate_one_card_impossibilities_player_card_indexing(&self) -> [[bool; 5]; 7] {
         let mut impossible_cards: [[bool; 5]; 7] = [[false; 5]; 7];
         // This first part is here until the grouping part auto includes the inferred groups... probably in mutual exclusive groups
         // TODO: Remove this for loop

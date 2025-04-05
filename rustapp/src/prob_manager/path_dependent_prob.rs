@@ -64,7 +64,6 @@ impl PathDependentCardCountManager {
 
         // Handle different move types
         let ao_name = ao.name();
-        println!("Pushing: {:?}", ao_name);
         if ao_name == AOName::Discard {
             match ao.no_cards() {
                 1 => {
