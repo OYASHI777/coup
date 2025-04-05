@@ -1215,6 +1215,7 @@ impl PathDependentCollectiveConstraint {
         let bool_all_cards_dead_or_known: bool = bool_changes && self.clear_group_constraints(card);
         // === REMOVED REVEALED_STATUS LOGIC ===
         // TODO: But i think we maybe need prune part? lol (leave single flag alone)
+        // For now im not gonna prune because I need supergroups anyways so.
         let new_inferred = Vec::with_capacity(0); // temp dummy
         (bool_changes, new_inferred)
     }
@@ -2092,20 +2093,16 @@ impl PathDependentCollectiveConstraint {
         self.add_subset_groups_unopt();
         log::info!("After add_subset_groups");
         self.printlog();
-        // let mut_excl_changes = self.add_mutually_exclusive_unions();
-        let mut_excl_changes = false;
+        let mut_excl_changes = self.add_mutually_exclusive_unions();
         log::info!("After add_mutually_exclusive_unions");
         self.printlog();
-        // let inf_com_pl = self.add_inferred_complement_of_player();
-        let inf_com_pl = false;
+        let inf_com_pl = self.add_inferred_complement_of_player();
         self.printlog();
-        // let inf_exc_pl = self.add_inferred_except_player();
-        let inf_exc_pl = false;
+        let inf_exc_pl = self.add_inferred_except_player();
         log::info!("After add_inferred_except_player");
         self.printlog();
-        // let inf_rem_neg = self.add_inferred_remaining_negation();
-        let inf_rem_neg = false;
-        // log::info!("After add_inferred_remaining_negation");
+        let inf_rem_neg = self.add_inferred_remaining_negation();
+        log::info!("After add_inferred_remaining_negation");
         self.printlog();
         bool_continue = mut_excl_changes || inf_com_pl || inf_exc_pl || inf_rem_neg;
         // bool_continue = mut_excl_changes || inf_exc_pl;
@@ -2113,17 +2110,17 @@ impl PathDependentCollectiveConstraint {
             self.add_subset_groups_unopt();
             log::info!("After add_subset_groups");
             self.printlog();
-            // let mut_excl_changes = self.add_mutually_exclusive_unions();
-            // log::info!("After add_mutually_exclusive_unions");
+            let mut_excl_changes = self.add_mutually_exclusive_unions();
+            log::info!("After add_mutually_exclusive_unions");
             self.printlog();
             // This kinda needs to maximal informative set to work. Perhaps to run both above to completion first?
-            // let inf_com_pl = self.add_inferred_complement_of_player();
+            let inf_com_pl = self.add_inferred_complement_of_player();
             self.printlog();
-            // let inf_exc_pl = self.add_inferred_except_player();
-            // log::info!("After add_inferred_except_player");
+            let inf_exc_pl = self.add_inferred_except_player();
+            log::info!("After add_inferred_except_player");
             self.printlog();
-            // let inf_rem_neg = self.add_inferred_remaining_negation();
-            // log::info!("After add_inferred_remaining_negation");
+            let inf_rem_neg = self.add_inferred_remaining_negation();
+            log::info!("After add_inferred_remaining_negation");
             self.printlog();
             bool_continue = mut_excl_changes || inf_com_pl || inf_exc_pl || inf_rem_neg;
             // bool_continue = mut_excl_changes || inf_exc_pl;

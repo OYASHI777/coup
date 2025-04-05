@@ -672,11 +672,12 @@ pub fn game_rnd_constraint_debug_pd(game_no: usize, print_frequency: usize, log_
             println!("Inferred Constraints Correct: {}/{}", inferred_constraints_correct, total_tries);
             println!("Impossible Cases Correct: {}/{}", impossible_constraints_correct, total_tries);
         }
+        println!("Game: {}", game);
         log::trace!("Game Made:");
         while !hh.game_won() {
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
-            prob.printlog();
+            // prob.printlog();
             bit_prob.printlog();
             new_moves = hh.generate_legal_moves();
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
