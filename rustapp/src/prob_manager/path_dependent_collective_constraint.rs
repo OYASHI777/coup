@@ -238,7 +238,7 @@ impl PathDependentMetaData {
 
 // 1: Test without any inference first, just to see if the recursion works for simple cases
 //      - Basic Cases
-//          - 1 life case
+//          - 1 life case - extend reveal_group_adjustment for player 6
 //          - First discard/revealredraw case
 //          - First Amb with known cards before case
 //      - game_start affected
@@ -1549,7 +1549,7 @@ impl PathDependentCollectiveConstraint {
         // Won't this remove many groups that will need to be readded by mutually exclusive additions...
         // Removes groups that are now redundant
         log::trace!("Player_cards_known: {}", player_cards_known);
-        if player_cards_known != 2 { // This is an invariant
+        if player_cards_known != 2 { 
             for (card_num, group_constraints) in [&mut self.group_constraints_amb, &mut self.group_constraints_ass, &mut self.group_constraints_cap, &mut self.group_constraints_duk, &mut self.group_constraints_con].iter_mut().enumerate() {
                 let mut i: usize = 0;
                 while i < group_constraints.len() {
