@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use env_logger::{Builder, Env, Target};
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
-pub const LOG_FILE_NAME: &str = "just_test_replay_000.log";
+pub const LOG_FILE_NAME: &str = "just_test_replay_0000.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
@@ -26,7 +26,7 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_000.log";
 // FIX: adding single group of 3 is ok in the case of pile
 fn main() {
     let game_no = 10000;
-    let log_bool = true;
+    let log_bool = false;
     let bool_know_priv_info = false;
     let print_frequency: usize = 50;
     let min_dead_check: usize = 8;
@@ -725,9 +725,9 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
     println!("Total Tries: {}", total_tries);
 }
 pub fn game_rnd_constraint_pd(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool, min_dead_check: usize){
-    // if log_bool{
-    //     logger(LOG_LEVEL);
-    // }
+    if log_bool{
+        logger(LOG_LEVEL);
+    }
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
@@ -751,7 +751,10 @@ pub fn game_rnd_constraint_pd(game_no: usize, bool_know_priv_info: bool, print_f
         }
         log::trace!("Game Made:");
         while !hh.game_won() {
-            
+            if log_bool {
+                log::logger().flush();
+                let _ = clear_log();
+            }
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
             prob.printlog();
@@ -783,6 +786,7 @@ pub fn game_rnd_constraint_pd(game_no: usize, bool_know_priv_info: bool, print_f
                         break    
                     }
                 } 
+                hh.print_replay_history_braindead();
                 hh.push_ao(output);
                 prob.push_ao(&output, bool_know_priv_info);
                 bit_prob.push_ao_public(&output);

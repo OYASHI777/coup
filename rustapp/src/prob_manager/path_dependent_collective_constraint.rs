@@ -238,6 +238,7 @@ impl PathDependentMetaData {
 //     }
 // }
 
+// 0: Document swap_mix()
 // 1: Test without any inference first, just to see if the recursion works for simple cases
 //      - Basic Cases
 //          - 1 life case - extend reveal_group_adjustment for player 6 && merge with add_inferred_cards
@@ -393,7 +394,7 @@ impl PathDependentCollectiveConstraint {
             ActionInfo::Discard{discard: discard_considered} => {
                 // Group A abstract to lookback_2 for inferred addition too
                 let player_index: u8 = considered_move.player();
-                for i in (0..index).rev() {
+                for i in (1..index).rev() {
                     let action_data = &mut self.history[i];
                     let action_player = action_data.player();
                     if action_player == player_index {
@@ -404,8 +405,9 @@ impl PathDependentCollectiveConstraint {
                             ActionInfoName::RevealRedraw => {
                                 let need_redraw_update = if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
                                     redraw_i.is_none()
-                                        && action_data.player_cards_known(action_player) == 1
-                                        && !action_data.player_has_inferred_constraint(action_player, discard_considered)
+                                        && action_data.player_cards_known(action_player) == 2 // This is after the reveal
+                                        && !action_data.player_has_inferred_constraint(action_player, discard_considered) 
+                                        // TODO: Consider maybe case where the player has 2 of discard_considered?
                                 } else {
                                     false
                                 };
@@ -417,10 +419,12 @@ impl PathDependentCollectiveConstraint {
                                         // panic!();
                                         return true;
                                     }
+                                } else {
+                                    return false;
                                 }
                             },
                             ActionInfoName::ExchangeDrawChoice => {
-                                // unimplemented!()
+                                return false;
                             }
                             _ => {},
                         }
@@ -470,22 +474,20 @@ impl PathDependentCollectiveConstraint {
                 // TODO: handle the known card case obviously lol
                 match redraw {
                     None => {
+                        // TODO: [OPTIMIZE] If lookback_1 checks based on reveal
+                        //  Then whenever u regenerate, you don't really have to lookback as there is nothing new to check
                         self.reveal_redraw(history_index, player_id, reveal);
                     },
-                    Some(card) => {
-                        if card == reveal {
+                    Some(drawn) => {
+                        if drawn == reveal {
                             // TODO: Probably check if inferred_card already there
                             // if so add it in.
-                            self.add_inferred_card(player_id, reveal, 1, &mut vec![Vec::with_capacity(1); 6]);
+                            self.reveal_redraw_same(player_id, reveal);
                         } else {
                             // TODO: Redraw can give you back info about the previous ambassador perhaps?
                             // TODO: Swap would be custom and required
-                            // I guess swap would be
-                            // Double inferred
-                            // specialised mix of only the groups where card in {reveal, redraw}
-                            // Double inferred 
-                            // Temp: Not handled yet
-                            self.reveal_redraw(history_index, player_id, reveal);
+                            // TODO: Refactor for neatness
+                            self.reveal_redraw_diff(player_id, reveal, drawn);
                         }
                     },
                 }
@@ -1327,7 +1329,12 @@ impl PathDependentCollectiveConstraint {
                         }
                     }
                 } else {
-                    debug_assert!(inferred_card_count == 1, "In the case where you have added a card, and dead_card + inferred_cards == 2, it should only be when inferred_cards == 1");
+                    if inferred_card_count != 1 {
+                        println!("{:?}", self.public_constraints);
+                        println!("{:?}", self.inferred_constraints);
+                        panic!();
+                    }
+                    debug_assert!(inferred_card_count == 1, "In the case where you have added a card, and dead_card + inferred_cards != 2, it should only be when inferred_cards == 1");
                     debug_assert!(self.inferred_constraints[player_id].first() == Some(&card), "Since bool_changes == true, you must have added Card == card in");
                     // Case C: 1 inferred no other card known => update group
                     // It should also only
@@ -2034,6 +2041,75 @@ impl PathDependentCollectiveConstraint {
         // self.add_inferred_groups();
         // self.group_redundant_prune();
         // Add the stuff here
+    }
+    /// Function to call when the card revealed and the redrawn card is the same card
+    pub fn reveal_redraw_same(&mut self, player_id: usize, card: Card) {
+        // No need to lookback_1 here as it would already have been done in the normal case
+        if !self.inferred_constraints[player_id].contains(&card) {
+            // TODO: refactor this
+            self.add_inferred_card(player_id, card, 1, &mut vec![Vec::with_capacity(0); 6]);
+        }
+    }
+    /// Function to call when both the card revealed and redrawn are known and not the same
+    pub fn reveal_redraw_diff(&mut self, player_id: usize, reveal: Card, redraw: Card) {
+        // Double inferred 
+        if !self.inferred_constraints[player_id].contains(&reveal) {
+            self.add_inferred_card(player_id, reveal, 1, &mut vec![Vec::with_capacity(0); 6]);
+        }
+        if !self.inferred_constraints[6].contains(&redraw) {
+            self.add_inferred_card(6, redraw, 1, &mut vec![Vec::with_capacity(0); 6]);
+        }
+        // Swapping Cards - removing from inventories
+        if let Some(pos) = self.inferred_constraints[player_id].iter().position(|c| *c == reveal) {
+            self.inferred_constraints[player_id].remove(pos);
+        }
+        if let Some(pos) = self.inferred_constraints[6].iter().position(|c| *c == redraw) {
+            self.inferred_constraints[6].remove(pos);
+        }
+        // Swapping Cards - adjusting group_constraints
+        self.swap_mix(player_id, reveal, 6, redraw);
+        // Double inferred - do not check for containment as this comes from pile not own hand
+        self.add_inferred_card(player_id, redraw, 1, &mut vec![Vec::with_capacity(0); 6]);
+        self.add_inferred_card(6, reveal, 1, &mut vec![Vec::with_capacity(0); 6]);
+        // TODO: Determine if we actually need this
+        //  How does this interact with add_inferred and swap_mix?
+        self.group_redundant_prune();
+    }
+    /// Mixes groups when some known cards of a player is swapped with some known cards of another player
+    /// For now its a unique card per player
+    /// TODO: Extend for Ambassador
+    /// Assumes groups where alive_counts == 0 does not exist
+    /// card_a [1 0 0 0 0 0 0] => card_a [1 0 0 0 0 0 1] (card_a moves from a to b)
+    /// card_a [0 0 0 0 0 0 1] => card_a [0 0 0 0 0 0 1] (card_a does not move from b to a)
+    /// card_b [1 0 0 0 0 0 0] => card_b [1 0 0 0 0 0 0] (card_b does not move from b to a)
+    /// card_b [0 0 0 0 0 0 1] => card_b [1 0 0 0 0 0 0] (card_b moves from b to a)
+    pub fn swap_mix(&mut self, player_a: usize, card_a: Card, player_b: usize, card_b: Card) {
+        // TODO: THEORY CHECK and DOCUMENT
+        // For now im thinking for player 0 and player 6
+        let player_b_dead_card_a: u8 = self.public_constraints[player_b].iter().filter(|c| **c == card_a).count() as u8;
+        let player_b_inferred_card_a: u8 = self.inferred_constraints[player_b].iter().filter(|c| **c == card_a).count() as u8;
+        let player_a_dead_card_b: u8 = self.public_constraints[player_a].iter().filter(|c| **c == card_b).count() as u8;
+        let player_a_inferred_card_b: u8 = self.inferred_constraints[player_a].iter().filter(|c| **c == card_b).count() as u8;
+        
+        let group_constraints = self.group_constraints_mut();
+        group_constraints[card_a as usize]
+        .iter_mut()
+        .filter(|group| group.get_player_flag(player_a) && !group.get_player_flag(player_b))
+        .for_each(|group| {
+            group.set_player_flag(player_b, true);
+            group.add_dead_count(player_b_dead_card_a);
+            group.add_alive_count(player_b_inferred_card_a);
+            group.add_total_count(player_b_dead_card_a + player_b_inferred_card_a);
+        });
+        group_constraints[card_b as usize]
+        .iter_mut()
+        .filter(|group| group.get_player_flag(player_b) && !group.get_player_flag(player_a))
+        .for_each(|group| {
+            group.set_player_flag(player_a, true);
+            group.add_dead_count(player_a_dead_card_b);
+            group.add_alive_count(player_a_inferred_card_b);
+            group.add_total_count(player_a_dead_card_b + player_a_inferred_card_b);
+        });
     }
     /// Function to call for move Ambassador, without considering private information seen by the player who used Ambassador
     pub fn ambassador_public(&mut self, player_id: usize) {
