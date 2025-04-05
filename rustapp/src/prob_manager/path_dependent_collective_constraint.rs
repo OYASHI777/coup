@@ -353,7 +353,7 @@ impl PathDependentCollectiveConstraint {
         self.group_constraints_con = group_constraints_con;
         self.impossible_constraints = [[false; 5]; 7];
         // !! Not gonna reset move_no i guess
-        // self.add_inferred_information();
+        self.add_inferred_information();
     }
     pub fn to_meta_data(&mut self) -> PathDependentMetaData {
         PathDependentMetaData { 
@@ -413,7 +413,7 @@ impl PathDependentCollectiveConstraint {
                                         self.regenerate_path();
                                         self.printlog();
                                         println!("LOOKBACK CASE 0");
-                                        panic!();
+                                        // panic!();
                                         return true;
                                     }
                                 }
@@ -834,10 +834,10 @@ impl PathDependentCollectiveConstraint {
         // self.add_dead_player_constraint(player_id, card);
         // [NEW]
         // Check before recursing
-        if self.lookback_1(history_index) {
-            // If true, it will have rerun the entire history including the current move
-            return
-        }
+        // if self.lookback_1(history_index) {
+        //     // If true, it will have rerun the entire history including the current move
+        //     return
+        // }
         self.add_dead_card(player_id, card);
         // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
         // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
@@ -848,7 +848,7 @@ impl PathDependentCollectiveConstraint {
         // TODO: [OPTIMIZE] Add subset groups like in RevealRedraw, so don't need to run add_inferred_groups
         self.printlog();
         self.group_redundant_prune();
-        // self.add_inferred_information();
+        self.add_inferred_information();
         println!("After add_inferred_information");
         // Change revealed_status at the end after all groups using it have been updated
         // This is handled in add_dead_card
@@ -928,7 +928,7 @@ impl PathDependentCollectiveConstraint {
         if self.public_constraints[player_id].len() == 2 {
             // Case A: Totally dead => update group
             // Handle groups where cards are same as discarded card
-            if !bool_all_cards_dead_or_known { // else handled in clear_group_constraints
+            if !bool_all_cards_dead_or_known && dead_card_counts[card as usize] != 3 { // else handled in clear_group_constraints
                 let groups = &mut group_constraints[card as usize];
                 let mut i: usize = 0;
                 while i < groups.len() {
@@ -959,28 +959,30 @@ impl PathDependentCollectiveConstraint {
             // Case A: Totally dead => update group
             // Handle groups where cards are not same as discarded card
             for card_num in card_num_range {
-                let groups = &mut group_constraints[card_num];
-                let mut i: usize = 0;
-                while i < groups.len() {
-                    let group = &mut groups[i];
-                    if group.get_player_flag(player_id) {
-                        group.set_player_flag(player_id, false);
-                        if alive_card_counts[card_num] < group.count_alive() {
-                            group.sub_alive_count(alive_card_counts[card_num]);
-                            group.sub_dead_count(dead_card_counts[card_num]);
-                            group.sub_total_count(alive_card_counts[card_num] + dead_card_counts[card_num]);
-                            if group.is_single_player_part_list() {
-                                new_inferred.push(*group);
+                if dead_card_counts[card_num] != 3{
+                    let groups = &mut group_constraints[card_num];
+                    let mut i: usize = 0;
+                    while i < groups.len() {
+                        let group = &mut groups[i];
+                        if group.get_player_flag(player_id) {
+                            group.set_player_flag(player_id, false);
+                            if alive_card_counts[card_num] < group.count_alive() {
+                                group.sub_alive_count(alive_card_counts[card_num]);
+                                group.sub_dead_count(dead_card_counts[card_num]);
+                                group.sub_total_count(alive_card_counts[card_num] + dead_card_counts[card_num]);
+                                if group.is_single_player_part_list() {
+                                    new_inferred.push(*group);
+                                    groups.swap_remove(i);
+                                    log::trace!("Group removed!");
+                                    continue;
+                                }
+                            } else {
                                 groups.swap_remove(i);
-                                log::trace!("Group removed!");
                                 continue;
                             }
-                        } else {
-                            groups.swap_remove(i);
-                            continue;
                         }
+                        i += 1;
                     }
-                    i += 1;
                 }
             }
         } else {
@@ -990,7 +992,7 @@ impl PathDependentCollectiveConstraint {
             if self.inferred_constraints[player_id].len() == 1 {
                 // Case B: 1 dead another card known => update group
                 // Handle groups where cards are same as discarded card
-                if !bool_all_cards_dead_or_known { // else handled in clear_group_constraints
+                if !bool_all_cards_dead_or_known && dead_card_counts[card as usize] != 3 { // else handled in clear_group_constraints
                     let groups = &mut group_constraints[card as usize];
                     let mut i: usize = 0;
                     while i < groups.len() {
@@ -1018,33 +1020,35 @@ impl PathDependentCollectiveConstraint {
                 // Case B: 1 dead another card known => update group
                 // Handle groups where cards are not same as discarded card
                 for card_num in card_num_range {
-                    let groups = &mut group_constraints[card_num];
-                    let mut i: usize = 0;
-                    while i < groups.len() {
-                        let group = &mut groups[i];
-                        if group.get_player_flag(player_id) {
-                            group.set_player_flag(player_id, false);
-                            if group.count_alive() > alive_card_counts[card_num] {
-                                group.sub_alive_count(alive_card_counts[card_num]);
-                                group.sub_total_count(alive_card_counts[card_num]);
-                                if group.is_single_player_part_list() {
-                                    new_inferred.push(*group);
+                    if dead_card_counts[card_num] != 3 {
+                        let groups = &mut group_constraints[card_num];
+                        let mut i: usize = 0;
+                        while i < groups.len() {
+                            let group = &mut groups[i];
+                            if group.get_player_flag(player_id) {
+                                group.set_player_flag(player_id, false);
+                                if group.count_alive() > alive_card_counts[card_num] {
+                                    group.sub_alive_count(alive_card_counts[card_num]);
+                                    group.sub_total_count(alive_card_counts[card_num]);
+                                    if group.is_single_player_part_list() {
+                                        new_inferred.push(*group);
+                                        groups.swap_remove(i);
+                                        log::trace!("Group removed!");
+                                        continue;
+                                    }
+                                } else {
                                     groups.swap_remove(i);
-                                    log::trace!("Group removed!");
                                     continue;
                                 }
-                            } else {
-                                groups.swap_remove(i);
-                                continue;
                             }
+                            i += 1;
                         }
-                        i += 1;
                     }
                 }
             } else {
                 // Case C: 1 dead another card unknown => update group
                 // Handle groups where cards are same as discarded card
-                if !bool_all_cards_dead_or_known { // else handled in clear_group_constraints
+                if !bool_all_cards_dead_or_known && dead_card_counts[card as usize] != 3{ // else handled in clear_group_constraints
                     let groups = &mut group_constraints[card as usize];
                     let mut i: usize = 0;
                     while i < groups.len() {
@@ -1142,6 +1146,8 @@ impl PathDependentCollectiveConstraint {
                     log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
                     log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
                     self.inferred_constraints[player_id].push(card);
+                    log::trace!("self.inferred_constraints: {:?}", self.inferred_constraints);
+                    debug_assert!(self.inferred_constraints[player_id].len() < 3, "F1");
                     card_changes[card as usize].push(player_id);
                     log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
                     log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -1155,8 +1161,11 @@ impl PathDependentCollectiveConstraint {
                     let current_count = self.inferred_constraints[player_id].iter().filter(|c| **c == card).count() as u8; 
                     if alive_count > current_count {
                         let no_to_push = alive_count - current_count;
+                        log::trace!("Add_inferred_card adding {no_to_push} of card: {:?}", card);
                         for _ in 0..no_to_push {
                             self.inferred_constraints[player_id].push(card);
+                            log::trace!("self.inferred_constraints: {:?}", self.inferred_constraints);
+                            debug_assert!(self.inferred_constraints[player_id].len() < 4, "F2");
                             bool_changes = true;
                         }
                     }
@@ -1171,6 +1180,8 @@ impl PathDependentCollectiveConstraint {
                         self.inferred_constraints[player_id].clear();
                         self.inferred_constraints[player_id].push(card);
                         self.inferred_constraints[player_id].push(card);
+                        log::trace!("self.inferred_constraints: {:?}", self.inferred_constraints);
+                        debug_assert!(self.inferred_constraints[player_id].len() < 3, "F3");
                         card_changes[card as usize].push(player_id);
                         log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -1187,6 +1198,8 @@ impl PathDependentCollectiveConstraint {
                         let no_to_push = alive_count - current_count;
                         for _ in 0..no_to_push {
                             self.inferred_constraints[player_id].push(card);
+                            log::trace!("self.inferred_constraints: {:?}", self.inferred_constraints);
+                            debug_assert!(self.inferred_constraints[player_id].len() < 4, "F4");
                             bool_changes = true;
                         }
                     }
@@ -1206,6 +1219,8 @@ impl PathDependentCollectiveConstraint {
         // TODO: But i think we maybe need prune part? lol (leave single flag alone)
         // For now im not gonna prune because I need supergroups anyways so.
         let new_inferred = Vec::with_capacity(0); // temp dummy
+
+        // TODO: Inferred card needs to prune too!
         (bool_changes, new_inferred)
     }
     // TODO: [THEORY CHECK]
@@ -1279,7 +1294,7 @@ impl PathDependentCollectiveConstraint {
         // TODO: Test without reveal_group_adjustment
         self.reveal_group_adjustment(player_id, card);
         // TODO: [TEST] Can this add_inferred_groups go above?
-        // self.add_inferred_information();
+        self.add_inferred_information();
         self.clear_group_constraints(card);
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
@@ -1788,10 +1803,10 @@ impl PathDependentCollectiveConstraint {
     /// Function to call for move RevealRedraw
     pub fn reveal_redraw(&mut self, history_index: usize, player_id: usize, card: Card) {
         // Abit dumb to seperate it like this, but if not it gets abit messy and I have more branchs :/
-        if self.lookback_1(history_index) {
-            // If true, it will have rerun the entire history including the current move
-            return
-        }
+        // if self.lookback_1(history_index) {
+        //     // If true, it will have rerun the entire history including the current move
+        //     return
+        // }
         self.reveal(player_id, card);
         // Actually shouldnt this only move the player's card in
         // mix here is not the same as ambassador, as inferred should not be touched. And since we know the revealed card
@@ -1840,7 +1855,7 @@ impl PathDependentCollectiveConstraint {
         // But if Player 1 Exchanges, since we no long have [0 1 0 0 0 0 1] has 2 Captains in group constraints
         // inferred pile constraints loses the [Captain] and becomes empty [] even though it can still be derived from the groups
         //      - This is because it is not picked up in self.total_known_alive_with_player_and_pile(player_id) in self.ambassador_inferred_adjustment()
-        // self.add_inferred_information(); // TODO: [OPTIMIZE] Maybe might only require add_subset groups?
+        self.add_inferred_information(); // TODO: [OPTIMIZE] Maybe might only require add_subset groups?
         // [FIX]
         // self.revealed_status[player_id].clear();
 
@@ -2090,30 +2105,31 @@ impl PathDependentCollectiveConstraint {
         let inf_exc_pl = self.add_inferred_except_player();
         log::info!("After add_inferred_except_player");
         self.printlog();
-        let inf_rem_neg = self.add_inferred_remaining_negation();
+        // let inf_rem_neg = self.add_inferred_remaining_negation();
+        let inf_rem_neg = false;
         log::info!("After add_inferred_remaining_negation");
         self.printlog();
-        // bool_continue = mut_excl_changes || inf_com_pl || inf_exc_pl || inf_rem_neg;
-        // // bool_continue = mut_excl_changes || inf_exc_pl;
-        // while bool_continue {
-        //     self.add_subset_groups_unopt();
-        //     log::info!("After add_subset_groups");
-        //     self.printlog();
-        //     let mut_excl_changes = self.add_mutually_exclusive_unions();
-        //     log::info!("After add_mutually_exclusive_unions");
-        //     self.printlog();
-        //     // This kinda needs to maximal informative set to work. Perhaps to run both above to completion first?
-        //     let inf_com_pl = self.add_inferred_complement_of_player();
-        //     self.printlog();
-        //     let inf_exc_pl = self.add_inferred_except_player();
-        //     log::info!("After add_inferred_except_player");
-        //     self.printlog();
-        //     let inf_rem_neg = self.add_inferred_remaining_negation();
-        //     log::info!("After add_inferred_remaining_negation");
-        //     self.printlog();
-        //     bool_continue = mut_excl_changes || inf_com_pl || inf_exc_pl || inf_rem_neg;
-        //     // bool_continue = mut_excl_changes || inf_exc_pl;
-        // }
+        bool_continue = mut_excl_changes || inf_com_pl || inf_exc_pl || inf_rem_neg;
+        // bool_continue = mut_excl_changes || inf_exc_pl;
+        while bool_continue {
+            self.add_subset_groups_unopt();
+            log::info!("After add_subset_groups");
+            self.printlog();
+            let mut_excl_changes = self.add_mutually_exclusive_unions();
+            log::info!("After add_mutually_exclusive_unions");
+            self.printlog();
+            // This kinda needs to maximal informative set to work. Perhaps to run both above to completion first?
+            let inf_com_pl = self.add_inferred_complement_of_player();
+            self.printlog();
+            let inf_exc_pl = self.add_inferred_except_player();
+            log::info!("After add_inferred_except_player");
+            self.printlog();
+            // let inf_rem_neg = self.add_inferred_remaining_negation();
+            log::info!("After add_inferred_remaining_negation");
+            self.printlog();
+            bool_continue = mut_excl_changes || inf_com_pl || inf_exc_pl || inf_rem_neg;
+            // bool_continue = mut_excl_changes || inf_exc_pl;
+        }
         // === adjusted to fix need for add_inferred_except_player to have maximal informative set else it adds wrongly
         // log::info!("Before add_subset_groups");
         // self.printlog();
@@ -2360,6 +2376,7 @@ impl PathDependentCollectiveConstraint {
                         log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
                         self.inferred_constraints[player_id].push(card);
+                        debug_assert!(self.inferred_constraints[player_id].len() < 3, "UO1");
                         card_changes[card as usize].push(player_id);
                         log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -2375,6 +2392,7 @@ impl PathDependentCollectiveConstraint {
                             let no_to_push = alive_count - current_count;
                             for _ in 0..no_to_push {
                                 self.inferred_constraints[player_id].push(card);
+                                debug_assert!(self.inferred_constraints[player_id].len() < 4, "UO2");
                                 bool_changes = true;
                             }
                         }
@@ -2390,6 +2408,7 @@ impl PathDependentCollectiveConstraint {
                             self.inferred_constraints[player_id].clear();
                             self.inferred_constraints[player_id].push(card);
                             self.inferred_constraints[player_id].push(card);
+                            debug_assert!(self.inferred_constraints[player_id].len() < 3, "UO3");
                             card_changes[card as usize].push(player_id);
                             log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
                             log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -2406,6 +2425,7 @@ impl PathDependentCollectiveConstraint {
                             let no_to_push = alive_count - current_count;
                             for _ in 0..no_to_push {
                                 self.inferred_constraints[player_id].push(card);
+                                debug_assert!(self.inferred_constraints[player_id].len() < 4, "UO4");
                                 bool_changes = true;
                             }
                         }
@@ -2573,6 +2593,7 @@ impl PathDependentCollectiveConstraint {
                         log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
                         self.inferred_constraints[player_id].push(card);
+                        debug_assert!(self.inferred_constraints[player_id].len() < 3, "SS5");
                         card_changes[card as usize].push(player_id);
                         log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -2587,6 +2608,7 @@ impl PathDependentCollectiveConstraint {
                             let no_to_push = 2 - current_count;
                             for _ in 0..no_to_push {
                                 self.inferred_constraints[player_id].push(card);
+                                debug_assert!(self.inferred_constraints[player_id].len() < 4, "SS6");
                             }
                         }
                     } else {
@@ -2601,6 +2623,7 @@ impl PathDependentCollectiveConstraint {
                             self.inferred_constraints[player_id].clear();
                             self.inferred_constraints[player_id].push(card);
                             self.inferred_constraints[player_id].push(card);
+                            debug_assert!(self.inferred_constraints[player_id].len() < 3, "SS7");
                             card_changes[card as usize].push(player_id);
                             log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
                             log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -2616,6 +2639,7 @@ impl PathDependentCollectiveConstraint {
                             let no_to_push = alive_count - current_count;
                             for _ in 0..no_to_push {
                                 self.inferred_constraints[player_id].push(card);
+                                debug_assert!(self.inferred_constraints[player_id].len() < 4, "SS8");
                             }
                         }
                     } else {
@@ -2776,6 +2800,7 @@ impl PathDependentCollectiveConstraint {
                         log::trace!("add_sub_groups_recurse Before self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups_recurse Before self.inferred_constraints: {:?}", self.inferred_constraints);
                         self.inferred_constraints[player_id].push(card);
+                        debug_assert!(self.inferred_constraints[player_id].len() < 4, "S1");
                         card_changes[card as usize].push(player_id);
                         log::trace!("add_sub_groups_recurse After self.public_constraints: {:?}", self.public_constraints);
                         log::trace!("add_sub_groups_recurse After self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -2791,6 +2816,7 @@ impl PathDependentCollectiveConstraint {
                             let no_to_push = alive_count - current_count;
                             for _ in 0..no_to_push {
                                 self.inferred_constraints[player_id].push(card);
+                                debug_assert!(self.inferred_constraints[player_id].len() < 4, "S2");
                             }
                         }
                     } else {
@@ -2805,6 +2831,7 @@ impl PathDependentCollectiveConstraint {
                             self.inferred_constraints[player_id].clear();
                             self.inferred_constraints[player_id].push(card);
                             self.inferred_constraints[player_id].push(card);
+                            debug_assert!(self.inferred_constraints[player_id].len() < 3, "S3");
                             card_changes[card as usize].push(player_id);
                             log::trace!("add_sub_groups_recurse After self.public_constraints: {:?}", self.public_constraints);
                             log::trace!("add_sub_groups_recurse After self.inferred_constraints: {:?}", self.inferred_constraints);
@@ -2820,6 +2847,7 @@ impl PathDependentCollectiveConstraint {
                             let no_to_push = alive_count - current_count;
                             for _ in 0..no_to_push {
                                 self.inferred_constraints[player_id].push(card);
+                                debug_assert!(self.inferred_constraints[player_id].len() < 3, "S4");
                             }
                         }
                     } else {
@@ -3021,6 +3049,8 @@ impl PathDependentCollectiveConstraint {
                             log::trace!("=== add_mutually_exclusive_unions ref vs inferred & public");
                             log::trace!("add_mutually_exclusive_unions public_constraints: {:?}", self.public_constraints);
                             log::trace!("add_mutually_exclusive_unions inferred_constraints: {:?}", self.inferred_constraints);
+                            log::trace!("same_alive_card_count: {}", same_alive_card_count);
+                            log::trace!("same_dead_card_count: {}", same_dead_card_count);
                             log::trace!("add_mutually_exclusive_unions reference_group_i: {}, player_id: {}, player_flag: {}", reference_group_i, player_id, player_flag);
                             new_group.set_player_flag(player_id, true);
                             new_group.add_alive_count(same_alive_card_count);
