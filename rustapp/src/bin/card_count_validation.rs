@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use env_logger::{Builder, Env, Target};
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
-pub const LOG_FILE_NAME: &str = "just_test_replay_00.log";
+pub const LOG_FILE_NAME: &str = "just_test_replay_000.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason

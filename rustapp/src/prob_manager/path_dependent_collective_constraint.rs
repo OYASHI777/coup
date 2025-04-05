@@ -1232,13 +1232,14 @@ impl PathDependentCollectiveConstraint {
 
         // Case A: 1 inferred other card dead => update group
         // Case B: all cards inferred or known => update group
-        // Case D: 1 inferred no other card known => update group
+        // Case C: 1 inferred no other card known => update group
         let mut group_constraints = [&mut self.group_constraints_amb, 
         &mut self.group_constraints_ass, 
         &mut self.group_constraints_cap, 
         &mut self.group_constraints_duk, 
         &mut self.group_constraints_con];
         if bool_changes {
+            // TODO: change card_num_range to exclude those with full inferred + dead card counts known
             let card_num_range = (0..5).filter(|x| *x != card as usize);
             let mut dead_card_counts: [u8; 5] = [0; 5];
             for card in self.public_constraints[player_id].iter() {
@@ -1250,82 +1251,166 @@ impl PathDependentCollectiveConstraint {
             }
             let dead_card_count = self.public_constraints[player_id].len();
             let inferred_card_count = self.inferred_constraints[player_id].len();
-            if dead_card_count + inferred_card_count == 1 {
-                // Case A: 1 inferred other card dead => update group
-                // Case B: all cards inferred or known => update group
-                // Handle groups where cards are same as inferred card
-                if !bool_all_cards_dead_or_known {
-                    let groups = &mut group_constraints[card as usize];
-                    let mut i: usize = 0;
-                    while i < groups.len() {
-                        let group = &mut groups[i];
-                        if group.get_player_flag(player_id) {
-                            group.set_player_flag(player_id, false);
-                            if group.count_alive() > inferred_card_counts[card as usize] {
-                                group.sub_alive_count(inferred_card_counts[card as usize]);
-                                group.sub_dead_count(dead_card_counts[card as usize]);
-                                group.sub_total_count(inferred_card_counts[card as usize] + dead_card_counts[card as usize]);
-                                if group.is_single_player_part_list() {
-                                    new_inferred.push(*group);
+            if player_id != 6 {
+
+                if dead_card_count + inferred_card_count == 2 {
+                    // Case A: 1 inferred other card dead => update group
+                    // Case B: all cards inferred or known => update group
+                    // Handle groups where cards are same as inferred card
+                    if !bool_all_cards_dead_or_known {
+                        let groups = &mut group_constraints[card as usize];
+                        let mut i: usize = 0;
+                        while i < groups.len() {
+                            let group = &mut groups[i];
+                            if group.get_player_flag(player_id) {
+                                group.set_player_flag(player_id, false);
+                                if group.count_alive() > inferred_card_counts[card as usize] {
+                                    group.sub_alive_count(inferred_card_counts[card as usize]);
+                                    group.sub_dead_count(dead_card_counts[card as usize]);
+                                    group.sub_total_count(inferred_card_counts[card as usize] + dead_card_counts[card as usize]);
+                                    if group.is_single_player_part_list() {
+                                        new_inferred.push(*group);
+                                        groups.swap_remove(i);
+                                        log::trace!("Group removed!");
+                                        continue;
+                                    }
+                                } else {
                                     groups.swap_remove(i);
-                                    log::trace!("Group removed!");
                                     continue;
                                 }
-                            } else {
+                            }
+                            i += 1;
+                        }
+                    }
+                    // Seems the same...
+                    // Case A: 1 inferred other card dead => update group
+                    // Case B: all cards inferred or known => update group
+                    // Handle groups where cards are not same as inferred card
+                    for card_num in card_num_range {
+                        let groups = &mut group_constraints[card_num];
+                        let mut i: usize = 0;
+                        while i < groups.len() {
+                            let group = &mut groups[i];
+                            if group.get_player_flag(player_id) {
+                                group.set_player_flag(player_id, false);
+                                if group.count_alive() > inferred_card_counts[card_num as usize] {
+                                    group.sub_alive_count(inferred_card_counts[card_num as usize]);
+                                    group.sub_dead_count(dead_card_counts[card_num]);
+                                    group.sub_total_count(inferred_card_counts[card_num as usize] + dead_card_counts[card_num]);
+                                    if group.is_single_player_part_list() {
+                                        new_inferred.push(*group);
+                                        groups.swap_remove(i);
+                                        log::trace!("Group removed!");
+                                        continue;
+                                    }
+                                } else {
+                                    groups.swap_remove(i);
+                                    continue;
+                                }
+                            }
+                            i += 1;
+                        }
+                    }
+                } else {
+                    debug_assert!(inferred_card_count == 1, "In the case where you have added a card, and dead_card + inferred_cards == 2, it should only be when inferred_cards == 1");
+                    debug_assert!(self.inferred_constraints[player_id].first() == Some(&card), "Since bool_changes == true, you must have added Card == card in");
+                    // Case C: 1 inferred no other card known => update group
+                    // It should also only
+                    if !bool_all_cards_dead_or_known {
+                        let groups = &mut group_constraints[card as usize];
+                        let mut i: usize = 0;
+                        while i < groups.len() {
+                            let group = &mut groups[i];
+                            if group.get_player_flag(player_id)  && group.count_alive() == 1{
                                 groups.swap_remove(i);
                                 continue;
                             }
+                            i += 1;
                         }
-                        i += 1;
                     }
-                }
-                // Seems the same...
-                // Case A: 1 inferred other card dead => update group
-                // Case B: all cards inferred or known => update group
-                // Handle groups where cards are not same as inferred card
-                for card_num in card_num_range {
-                    let groups = &mut group_constraints[card_num];
-                    let mut i: usize = 0;
-                    while i < groups.len() {
-                        let group = &mut groups[i];
-                        if group.get_player_flag(player_id) {
-                            group.set_player_flag(player_id, false);
-                            if group.count_alive() > inferred_card_counts[card_num as usize] {
-                                group.sub_alive_count(inferred_card_counts[card_num as usize]);
-                                group.sub_dead_count(dead_card_counts[card_num]);
-                                group.sub_total_count(inferred_card_counts[card_num as usize] + dead_card_counts[card_num]);
-                                if group.is_single_player_part_list() {
-                                    new_inferred.push(*group);
-                                    groups.swap_remove(i);
-                                    log::trace!("Group removed!");
-                                    continue;
-                                }
-                            } else {
-                                groups.swap_remove(i);
-                                continue;
-                            }
-                        }
-                        i += 1;
-                    }
-                }
+                }    
             } else {
-                debug_assert!(inferred_card_count == 1, "In the case where you have added a card, and dead_card + inferred_cards == 2, it should only be when inferred_cards == 1");
-                debug_assert!(self.inferred_constraints[player_id].first() == Some(&card), "Since bool_changes == true, you must have added Card == card in");
-                // Case D: 1 inferred no other card known => update group
-                // It should also only
-                if !bool_all_cards_dead_or_known {
-                    let groups = &mut group_constraints[card as usize];
-                    let mut i: usize = 0;
-                    while i < groups.len() {
-                        let group = &mut groups[i];
-                        if group.get_player_flag(player_id)  && group.count_alive() == 1{
-                            groups.swap_remove(i);
-                            continue;
+                if inferred_card_count == 3 {
+                    // Case B: all cards inferred or known => update group
+                    // Handle groups where cards are same as inferred card
+                    if !bool_all_cards_dead_or_known {
+                        let groups = &mut group_constraints[card as usize];
+                        let mut i: usize = 0;
+                        while i < groups.len() {
+                            let group = &mut groups[i];
+                            if group.get_player_flag(player_id) {
+                                group.set_player_flag(player_id, false);
+                                if group.count_alive() > inferred_card_counts[card as usize] {
+                                    group.sub_alive_count(inferred_card_counts[card as usize]);
+                                    group.sub_total_count(inferred_card_counts[card as usize]);
+                                    if group.is_single_player_part_list() {
+                                        new_inferred.push(*group);
+                                        groups.swap_remove(i);
+                                        log::trace!("Group removed!");
+                                        continue;
+                                    }
+                                } else {
+                                    groups.swap_remove(i);
+                                    continue;
+                                }
+                            }
+                            i += 1;
                         }
-                        i += 1;
+                    }
+                    // Case B: all cards inferred or known => update group
+                    // Handle groups where cards are not same as inferred card
+                    for card_num in card_num_range {
+                        let groups = &mut group_constraints[card_num];
+                        let mut i: usize = 0;
+                        while i < groups.len() {
+                            let group = &mut groups[i];
+                            if group.get_player_flag(player_id) {
+                                group.set_player_flag(player_id, false);
+                                if group.count_alive() > inferred_card_counts[card_num as usize] {
+                                    group.sub_alive_count(inferred_card_counts[card_num as usize]);
+                                    group.sub_total_count(inferred_card_counts[card_num as usize]);
+                                    if group.is_single_player_part_list() {
+                                        new_inferred.push(*group);
+                                        groups.swap_remove(i);
+                                        log::trace!("Group removed!");
+                                        continue;
+                                    }
+                                } else {
+                                    groups.swap_remove(i);
+                                    continue;
+                                }
+                            }
+                            i += 1;
+                        }
+                    }
+                } else {
+                    // Case D more than 0 inferred, but not full
+                    if !bool_all_cards_dead_or_known {
+                        let groups = &mut group_constraints[card as usize];
+                        let mut i: usize = 0;
+                        while i < groups.len() {
+                            let group = &mut groups[i];
+                            if group.get_player_flag(player_id) && group.count_alive() <= inferred_card_counts[card as usize] {
+                                groups.swap_remove(i);
+                                continue;
+                            }
+                            i += 1;
+                        }
+                    }
+                    for card_num in card_num_range {
+                        let groups = &mut group_constraints[card_num];
+                        let mut i: usize = 0;
+                        while i < groups.len() {
+                            let group = &mut groups[i];
+                            if group.get_player_flag(player_id) && group.count_alive() <= inferred_card_counts[card_num as usize] {
+                                groups.swap_remove(i);
+                                continue;
+                            }
+                            i += 1;
+                        }
                     }
                 }
-            }    
+            }
         }
 
         // TODO: Inferred card needs to prune too!
