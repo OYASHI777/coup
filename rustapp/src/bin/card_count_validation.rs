@@ -15,8 +15,8 @@ use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
-pub const LOG_FILE_NAME: &str = "just_test_replay_0.log";
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
+pub const LOG_FILE_NAME: &str = "just_test_replay_00.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
@@ -25,8 +25,8 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_0.log";
 // FIX: adding single group of 3 is ok in the case of pile
 fn main() {
 
-    let game_no = 100;
-    let log_bool = false;
+    let game_no = 100000;
+    let log_bool = true;
     let bool_know_priv_info = false;
     let print_frequency: usize = 100;
     let min_dead_check: usize = 8;
@@ -43,7 +43,8 @@ fn main() {
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
     // game_rnd_constraint_debug(game_no, bool_know_priv_info, print_frequency, log_bool);
-    game_rnd_constraint_debug_pd(game_no, print_frequency, log_bool);
+    // game_rnd_constraint_debug_pd(game_no, print_frequency, log_bool);
+    game_rnd_constraint_debug_pd_alone(game_no, print_frequency, log_bool);
     // {
     //     use ActionObservation::*;
     //     use Card::*;
@@ -751,6 +752,75 @@ pub fn game_rnd_constraint_debug_pd(game_no: usize, print_frequency: usize, log_
         }
         hh.print_replay_history_braindead();
         prob.reset();
+        bit_prob.reset();
+        game += 1;
+    }
+    println!("Most Steps: {}", max_steps);
+    println!("Public Constraints Correct: {}/{}", public_constraints_correct, total_tries);
+    println!("Inferred Constraints Correct: {}/{}", public_constraints_correct, total_tries);
+    println!("Impossible Cases Correct: {}/{}", public_constraints_correct, total_tries);
+    println!("Total Tries: {}", total_tries);
+}
+pub fn game_rnd_constraint_debug_pd_alone(game_no: usize, print_frequency: usize, log_bool: bool){
+    if log_bool{
+        logger(LOG_LEVEL);
+    }
+    let mut bool_know_priv_info = false;
+    let mut game: usize = 0;
+    let mut max_steps: usize = 0;
+    let mut bit_prob = PathDependentCardCountManager::new();
+    let mut public_constraints_correct: usize = 0;
+    let mut inferred_constraints_correct: usize = 0;
+    let mut impossible_constraints_correct: usize = 0;
+    let mut total_tries: usize = 0;
+    while game < game_no {
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        // if game % (game_no / 10) == 0 {
+        if log_bool {
+            let _ = clear_log();
+        }
+        if game % print_frequency == 0 {
+            println!("Game: {}", game);
+            println!("Public Constraints Correct: {}/{}", public_constraints_correct, total_tries);
+            println!("Inferred Constraints Correct: {}/{}", inferred_constraints_correct, total_tries);
+            println!("Impossible Cases Correct: {}/{}", impossible_constraints_correct, total_tries);
+        }
+        println!("Game: {}", game);
+        log::trace!("Game Made:");
+        while !hh.game_won() {
+            // log::info!("{}", format!("Step : {:?}",step));
+            hh.log_state();
+            // prob.printlog();
+            bit_prob.printlog();
+            new_moves = hh.generate_legal_moves();
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
+            new_moves.retain(|m| m.name() != AOName::Exchange);
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                log::info!("{}", format!("Choice: {:?}", output));
+                hh.push_ao(output);
+                hh.print_replay_history_braindead();
+                bit_prob.push_ao_public(&output);
+                // impossible_constraints_correct += pass_impossible_constraints as usize;
+                total_tries += 1;
+            } else {
+                log::trace!("Pushed bad move somewhere earlier!");
+                break;
+            }
+            bit_prob.debug_panicker();
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            log::info!("");
+        }
+        if step > max_steps {
+            max_steps = step;
+        }
+        hh.print_replay_history_braindead();
         bit_prob.reset();
         game += 1;
     }
