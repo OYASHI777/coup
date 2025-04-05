@@ -176,6 +176,8 @@ impl SignificantAction {
 // TODO: Implement move counter properly
 // TODO: implement Into<PathDependentMetaData> for PathDependentCollectiveConstraint
 // TODO: Store SignificantAction
+// TODO: Fix up add_inferred_cards API to not take vec_changes
+// TOD: Fix up reveal_redraw API to make inline with add_inferred_card, even though it also adds a group
 #[derive(Clone, Debug)]
 pub struct PathDependentMetaData {
     public_constraints: Vec<Vec<Card>>,
@@ -238,7 +240,10 @@ impl PathDependentMetaData {
 
 // 1: Test without any inference first, just to see if the recursion works for simple cases
 //      - Basic Cases
-//          - 1 life case - extend reveal_group_adjustment for player 6
+//          - 1 life case - extend reveal_group_adjustment for player 6 && merge with add_inferred_cards
+//                  - Handle swap API
+//                      - Fix add_inferred_cards
+//                      - refactor reveal_redraw methods
 //          - First discard/revealredraw case
 //          - First Amb with known cards before case
 //      - game_start affected
@@ -469,10 +474,16 @@ impl PathDependentCollectiveConstraint {
                     },
                     Some(card) => {
                         if card == reveal {
-                            self.reveal(history_index, player_id, reveal);
+                            // TODO: Probably check if inferred_card already there
+                            // if so add it in.
+                            self.add_inferred_card(player_id, reveal, 1, &mut vec![Vec::with_capacity(1); 6]);
                         } else {
                             // TODO: Redraw can give you back info about the previous ambassador perhaps?
-                            // TODO: Check if reveal works for pile?
+                            // TODO: Swap would be custom and required
+                            // I guess swap would be
+                            // Double inferred
+                            // specialised mix of only the groups where card in {reveal, redraw}
+                            // Double inferred 
                             // Temp: Not handled yet
                             self.reveal_redraw(history_index, player_id, reveal);
                         }
@@ -1140,11 +1151,11 @@ impl PathDependentCollectiveConstraint {
     /// [1] => More discovered inferred constraints expressed as a single flag CompressedGroupConstraint
     /// [2] => changes to be used for batch prune | Store? (player_id, bool_counts => false: 1, true: 2)
     /// TODO [OPTIMIZE] where even are we using the second return?
+    /// TODO: Create a standalone without changes vec
     pub fn add_inferred_card(&mut self, player_id: usize, card: Card, alive_count: u8, card_changes: &mut Vec<Vec<usize>>) -> (bool, Vec<CompressedGroupConstraint>) {
         // TODO: [IMPLEMENT] Need to add the case for single_card_flag on card != card_num ZZ2A as per add_dead_cards
         log::info!("In add_inferred_card");
         let mut bool_changes = false;
-        let mut card_increase: u8 = 0;
         // [OPTIMIZE] See bulk, maybe dont even need card_changes
         // [OPTIMIZE] cant u just add the difference here instead of a branch
         // nothing special just standard changes
@@ -1165,7 +1176,6 @@ impl PathDependentCollectiveConstraint {
                     log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
                     log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
                     bool_changes = true;
-                    card_increase += 1;
                     // TODO: Needs to prune the groups too...
                     // TODO: Adjust counts properly too... or remove inferred_counts
                 }
@@ -1181,7 +1191,6 @@ impl PathDependentCollectiveConstraint {
                             log::trace!("self.inferred_constraints: {:?}", self.inferred_constraints);
                             debug_assert!(self.inferred_constraints[player_id].len() < 4, "F2");
                             bool_changes = true;
-                            card_increase += 1;
                         }
                     }
                 } else {
@@ -1202,7 +1211,6 @@ impl PathDependentCollectiveConstraint {
                         log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
                         // TODO: Needs to prune the groups too... some batch function that prunes groups based on changes?
                         bool_changes = true;
-                        card_increase += 1;
                     }
                 }
                 // TODO: Adjust counts properly too... or remove inferred_counts
@@ -1217,7 +1225,6 @@ impl PathDependentCollectiveConstraint {
                             log::trace!("self.inferred_constraints: {:?}", self.inferred_constraints);
                             debug_assert!(self.inferred_constraints[player_id].len() < 4, "F4");
                             bool_changes = true;
-                            card_increase += 1;
                         }
                     }
                 } else {
