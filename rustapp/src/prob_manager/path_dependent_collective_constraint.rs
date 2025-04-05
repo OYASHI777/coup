@@ -3798,7 +3798,7 @@ impl PathDependentCollectiveConstraint {
                                                 let card_found= Card::try_from(card_num as u8).unwrap();
                                                 if !self.inferred_constraints[player].contains(&card_found) {
                                                     // This has been observed once before
-                                                    // println!("A1");
+                                                    println!("A1");
                                                     self.inferred_constraints[player].push(card_found);
                                                     return true;
                                                 }
@@ -4155,20 +4155,20 @@ impl PathDependentCollectiveConstraint {
                                                                             if player_lives[player] == 2 {
                                                                                 if self.inferred_constraints[player].len() == 0 {
                                                                                     log::trace!("add_inferred_remaining_negation 2 C added card_num: {}", card_num);
-                                                                                    // println!("Added 2CA");
+                                                                                    println!("Added 2CA");
                                                                                     self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
                                                                                     self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
                                                                                     return true;
                                                                                 } else if self.inferred_constraints[player].len() == 1 {
                                                                                     log::trace!("add_inferred_remaining_negation 2 C added card_num: {}", card_num);
-                                                                                    // println!("Added 2CB");
+                                                                                    println!("Added 2CB");
                                                                                     self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
                                                                                     return true;
                                                                                 }
                                                                             } else {
                                                                                 if self.inferred_constraints[player].len() < 2 {
                                                                                     log::trace!("add_inferred_remaining_negation 2 C added card_num: {}", card_num);
-                                                                                    // println!("Added 2CC");
+                                                                                    println!("Added 2CC");
                                                                                     self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
                                                                                     return true;
                                                                                 }
