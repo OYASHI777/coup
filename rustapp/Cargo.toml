@@ -49,3 +49,9 @@ target-dir = "D:/stuff/Code Project Folder/Coup AI/rustapp"
 [profile.release-lto]
 inherits = "release"
 lto = true
+
+[profile.release-debug]
+inherits = "release"
+opt-level = 3
+debug-assertions = true    # keep `debug_assert!` enabled
+overflow-checks = true     # (optional) bounds‐check on integer ops

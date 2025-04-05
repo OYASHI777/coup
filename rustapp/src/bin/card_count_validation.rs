@@ -24,7 +24,6 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_00.log";
 // ANOTHER BUG: groups_constraints can be empty even if all dead, but needs at least 1 3 dead set.. 3 dead is not redundant
 // FIX: adding single group of 3 is ok in the case of pile
 fn main() {
-
     let game_no = 100000;
     let log_bool = true;
     let bool_know_priv_info = false;
@@ -768,6 +767,7 @@ pub fn game_rnd_constraint_debug_pd_alone(game_no: usize, print_frequency: usize
     let mut bool_know_priv_info = false;
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
+    let mut prob = BruteCardCountManager::new();
     let mut bit_prob = PathDependentCardCountManager::new();
     let mut public_constraints_correct: usize = 0;
     let mut inferred_constraints_correct: usize = 0;
@@ -800,8 +800,30 @@ pub fn game_rnd_constraint_debug_pd_alone(game_no: usize, print_frequency: usize
             new_moves.retain(|m| m.name() != AOName::Exchange);
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                if output.name() == AOName::Discard{
+                    let true_legality = if output.no_cards() == 1 {
+                        // let start_time = Instant::now();
+                        prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
+                    } else {
+                        prob.player_can_have_cards(output.player_id(), output.cards())
+                    };
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::RevealRedraw {
+                    let true_legality: bool = prob.player_can_have_card_alive(output.player_id(), output.card());
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::ExchangeDraw {
+                    let true_legality: bool = prob.player_can_have_cards(6, output.cards());
+                    if !true_legality {
+                        break    
+                    }
+                } 
                 log::info!("{}", format!("Choice: {:?}", output));
                 hh.push_ao(output);
+                prob.push_ao(&output, false);
                 hh.print_replay_history_braindead();
                 bit_prob.push_ao_public(&output);
                 // impossible_constraints_correct += pass_impossible_constraints as usize;
@@ -822,6 +844,7 @@ pub fn game_rnd_constraint_debug_pd_alone(game_no: usize, print_frequency: usize
         }
         hh.print_replay_history_braindead();
         bit_prob.reset();
+        prob.reset();
         game += 1;
     }
     println!("Most Steps: {}", max_steps);

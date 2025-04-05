@@ -121,6 +121,9 @@ impl CompressedGroupConstraint {
     pub fn zero() -> Self {
         CompressedGroupConstraint(0)
     }
+    pub fn num(&self) -> u32 {
+        self.0
+    }
     pub fn set_player_flag(&mut self, player_id: usize, value: bool) {
         debug_assert!(player_id < 7);
         if value {
