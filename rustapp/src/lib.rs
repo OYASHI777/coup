@@ -21,6 +21,8 @@ pub mod prob_manager {
     pub mod loader;
     pub mod naive_prob;
     pub mod naive_sampler;
+    pub mod path_dependent_collective_constraint;
+    pub mod path_dependent_prob;
     pub mod permutation_generator;
     pub mod prob_state_old;
 }
