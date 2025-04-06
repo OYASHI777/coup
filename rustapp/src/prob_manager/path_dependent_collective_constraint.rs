@@ -269,6 +269,8 @@ impl PathDependentMetaData {
 //          - First Amb with known cards before case
 //      - game_start affected
 //          - ensure game_start can start from some inferred state
+//          - memoize the impossible constraints
+//              - store in meta_data if required for inference if not remove it
 // 2: Include all the inference, but do not recurse on finding inferred constraint
 // 3: Add recursion on finding inferred constraint
 // 4: Optimize to consider where we might not need to recurse (non recursive method can get 1/250 games wrong)
@@ -348,13 +350,13 @@ impl PathDependentCollectiveConstraint {
     /// TODO: change gamestart for different inferred starting hands
     /// Recreates start state based on Start ActionInfo which may include inferred cards
     fn regenerate_game_start(&mut self) {
-        self.public_constraints = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
-        self.inferred_constraints = self.history[0].inferred_constraints().clone(); 
-        let mut group_constraints_amb: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
-        let mut group_constraints_ass: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
-        let mut group_constraints_cap: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
-        let mut group_constraints_duk: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
-        let mut group_constraints_con: Vec<CompressedGroupConstraint> = Vec::with_capacity(5);
+        self.public_constraints.iter_mut().for_each(|v| v.clear());
+        self.inferred_constraints = self.history.first().unwrap().inferred_constraints().clone();
+        self.group_constraints_amb.clear();
+        self.group_constraints_ass.clear();
+        self.group_constraints_cap.clear();
+        self.group_constraints_duk.clear();
+        self.group_constraints_con.clear();
         // TODO: Make this nicer
         let mut card_num_constraint: CompressedGroupConstraint = CompressedGroupConstraint::zero();
         for i in 0..7 {
@@ -362,24 +364,27 @@ impl PathDependentCollectiveConstraint {
         }
         card_num_constraint.set_alive_count(3);
         card_num_constraint.set_total_count(3);
+
         card_num_constraint.set_card(Card::Ambassador);
-        group_constraints_amb.push(card_num_constraint);
+        self.group_constraints_amb.push(card_num_constraint);
+
         card_num_constraint.set_card(Card::Assassin);
-        group_constraints_ass.push(card_num_constraint);
+        self.group_constraints_ass.push(card_num_constraint);
+
         card_num_constraint.set_card(Card::Captain);
-        group_constraints_cap.push(card_num_constraint);
+        self.group_constraints_cap.push(card_num_constraint);
+
         card_num_constraint.set_card(Card::Duke);
-        group_constraints_duk.push(card_num_constraint);
+        self.group_constraints_duk.push(card_num_constraint);
+
         card_num_constraint.set_card(Card::Contessa);
-        group_constraints_con.push(card_num_constraint);
-        self.group_constraints_amb = group_constraints_amb;
-        self.group_constraints_ass = group_constraints_ass;
-        self.group_constraints_cap = group_constraints_cap;
-        self.group_constraints_duk = group_constraints_duk;
-        self.group_constraints_con = group_constraints_con;
+        self.group_constraints_con.push(card_num_constraint);
+
         self.impossible_constraints = [[false; 5]; 7];
-        // !! Not gonna reset move_no i guess
+        // !! Not gonna reset move_no
         self.add_inferred_information();
+        log::trace!("regenerate_game_start");
+        self.printlog();
     }
     pub fn to_meta_data(&mut self) -> PathDependentMetaData {
         PathDependentMetaData { 
@@ -452,12 +457,136 @@ impl PathDependentCollectiveConstraint {
                         }
                     }
                 }
+            },
+            _ => {
+                // unimplemented!();
+            }
+        }
+        false
+    }
+    /// Used on the initial addition of move to history, not recalculation
+    pub fn lookback_1_initial(&mut self) -> bool {
+        // index is the index for history
+        let index = self.history.len() - 1;
+        let action_info = self.history[index].action_info().clone();
+        let player_index = self.history[index].player();
+        match action_info {
+            ActionInfo::RevealRedraw{reveal: reveal_considered, redraw: redraw_considered} => {
+                match redraw_considered {
+                    Some(redraw_card) => {
+                        // TODO: [CASE] kinda same as discard
+                        unimplemented!("for public info games, moves added will only be without redraw known");
+                    },
+                    None => {
+                        // Logic same as discard below
+                        for i in (1..index).rev() {
+                            let action_data = &mut self.history[i];
+                            let action_player = action_data.player();
+                            if action_player == player_index {
+                                // Case 0
+                                // RR or AMB with 1 life
+                                let action_name = action_data.name();
+                                match action_name { // This is just a get around of the partial borrowing rules...
+                                    ActionInfoName::RevealRedraw => {
+                                        let need_redraw_update = if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
+                                            redraw_i.is_none()
+                                                && action_data.player_cards_known(action_player) == 2 // This is after the reveal
+                                                && !action_data.player_has_inferred_constraint(action_player, reveal_considered) 
+                                                // TODO: Consider maybe case where the player has 2 of reveal_considered?
+                                        } else {
+                                            false
+                                        };
+                                        if need_redraw_update {
+                                            if let ActionInfo::RevealRedraw { redraw, .. } = action_data.action_info_mut() {
+                                                *redraw = Some(reveal_considered);
+                                                self.lookback_1_continual(i);
+                                                self.regenerate_path();
+                                                self.printlog();
+                                                // panic!();
+                                                // TODO: [CASE] Knowing the redraw means we need to update the pile earlier!
+                                                return true;
+                                            }
+                                        } else {
+                                            return false;
+                                        }
+                                    },
+                                    ActionInfoName::ExchangeDrawChoice => {
+                                        return false;
+                                    }
+                                    _ => {},
+                                }
+                            }
+                        }
+                        // Else if its start (which means we did not hit a revealredraw or ambassador)
+                        // TODO: Update start here (inferred)
+                        // TODO: Somehow, maybe by regenerating, or not update impossible constraints too
+                        // TODO: Change, this should only be done for the first time its added for discard
+                        debug_assert!(self.history[0].name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
+                        log::trace!("lookback_1_initial processed item: {:?}", self.history.last().unwrap().action_info());
+                        log::trace!("lookback_1_initial adding inferred_constraint to start: (player: {}, card: {:?})", player_index, reveal_considered);
+                        log::trace!("lookback_1_initial start before: {:?}", self.history.first().unwrap().meta_data());
+                        self.history[0].add_inferred_constraints(player_index as usize, reveal_considered);
+                        log::trace!("lookback_1_initial start after: {:?}", self.history.first().unwrap().meta_data());
+                        // TODO: Have to change calculation for game start for this to work
+                        // TODO: Include impossible at game start too!
+                        self.regenerate_path();
+                        self.printlog();
+                        return true;
+                    }
+                }
+            },
+            ActionInfo::Discard{discard: discard_considered} => {
+                // Logic same as RevealRedraw above
+                // TODO: [REFACTOR]
+                // Group A abstract to lookback_2 for inferred addition too
+                for i in (1..index).rev() {
+                    let action_data = &mut self.history[i];
+                    let action_player = action_data.player();
+                    if action_player == player_index {
+                        // Case 0
+                        // RR or AMB with 1 life
+                        let action_name = action_data.name();
+                        match action_name { // This is just a get around of the partial borrowing rules...
+                            ActionInfoName::RevealRedraw => {
+                                let need_redraw_update = if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
+                                    redraw_i.is_none()
+                                        && action_data.player_cards_known(action_player) == 2 // This is after the reveal
+                                        && !action_data.player_has_inferred_constraint(action_player, discard_considered) 
+                                        // TODO: Consider maybe case where the player has 2 of discard_considered?
+                                } else {
+                                    false
+                                };
+                                if need_redraw_update {
+                                    if let ActionInfo::RevealRedraw { redraw, .. } = action_data.action_info_mut() {
+                                        *redraw = Some(discard_considered);
+                                        self.lookback_1_continual(i);
+                                        self.regenerate_path();
+                                        self.printlog();
+                                        // panic!();
+                                        // TODO: [CASE] Knowing the redraw means we need to update the pile earlier!
+                                        return true;
+                                    }
+                                } else {
+                                    return false;
+                                }
+                            },
+                            ActionInfoName::ExchangeDrawChoice => {
+                                return false;
+                            }
+                            _ => {},
+                        }
+                    }
+                }
                 // Else if its start (which means we did not hit a revealredraw or ambassador)
                 // TODO: Update start here (inferred)
                 // TODO: Somehow, maybe by regenerating, or not update impossible constraints too
-                let action_data = &mut self.history[0];
-                debug_assert!(action_data.name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
-                action_data.add_inferred_constraints(player_index as usize, discard_considered);
+                // TODO: Change, this should only be done for the first time its added for discard
+                debug_assert!(self.history[0].name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
+                log::trace!("lookback_1_initial processed item: {:?}", self.history.last().unwrap().action_info());
+                log::trace!("lookback_1_initial adding inferred_constraint to start: (player: {}, card: {:?})", player_index, discard_considered);
+                log::trace!("lookback_1_initial start before: {:?}", self.history.first().unwrap().meta_data());
+                self.history[0].add_inferred_constraints(player_index as usize, discard_considered);
+                log::trace!("lookback_1_initial start after: {:?}", self.history.first().unwrap().meta_data());
                 // TODO: Have to change calculation for game start for this to work
                 // TODO: Include impossible at game start too!
                 self.regenerate_path();
@@ -465,6 +594,82 @@ impl PathDependentCollectiveConstraint {
                 return true;
             },
             _ => {
+                // unimplemented!();
+            }
+        }
+        false
+    }
+    /// lookback for when we discover a previous item and want to continue for that
+    /// This happens e.g. when you discard => infer the redraw of a previous RevealRedraw
+    /// and you need to update those before the redraw
+    /// so you call this for the previous RevealRedraw
+    /// Assumes some inferred information has already been learnt before this.
+    /// => Assumes that regenerate will be called outside of this regardless
+    pub fn lookback_1_continual(&mut self, index: usize) -> bool {
+        // index is the index for history
+        let action_info = self.history[index].action_info().clone();
+        match action_info {
+            ActionInfo::RevealRedraw{reveal: reveal_considered, redraw: redraw_considered} => {
+                // TODO: [OPTIMIZE] Consider just 1 check instead of this merge
+                match redraw_considered {
+                    Some(redraw_card) => {
+                        // === CASE UPDATE START ===
+                        // reveal_considered != redraw_considered
+                        //  - Redraw card implies that the pile had the card before it was given to the player
+                        //  - Update the starting node if we can tell the pile had the card at start
+                        //      - Don't need to update the inferred of a none starting node as
+                        //        we do not need any intermediate accuracy, and we know that it will be reflected
+                        //        properly in the latest inferred constraints anyways
+                        //  - Conditions where pile card was in starting node
+                        //      - All Previous RevealRedraw, reveal != redraw
+                        //          - reveal == redraw => would mean the maybe the player put it in
+                        //      - All Previous RevealRedraw redraw card does not matter
+                        //          - reveal == redraw => redraw_considered would still be in pile
+                        //          - reveal != redraw => card was redrawn to player, but redraw_considered would still be in pile
+                        //      - No Previous Ambassador where no cards known
+                        //          - unable to infer further as reveal_considered could have been transferred from player to pile
+                        //      - More Ambassador
+                        //          - [TODO] unhandled
+                        // reveal_considered == redraw_considered
+                        //  - Redraw card may come from pile or may have been same card player put in
+                        for i in (1..index).rev() {
+                            match self.history[i].action_info_mut() {
+                                ActionInfo::RevealRedraw { reveal, redraw } => {
+                                    if Some(*reveal) == *redraw {
+                                        return false
+                                    }
+
+                                },
+                                ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                                    if !draw.is_empty() || !relinquish.is_empty() {
+                                        // TODO: [CASE] Technically there could be cases to handle where cards are known
+                                        // For now we stop at any Ambassador
+                                        return false
+                                    }
+                                },
+                                ActionInfo::Start => {
+                                    debug_assert!(false, "Should not have Start when index is not 0");
+                                },
+                                ActionInfo::Discard { discard } => {},
+                            }
+                        }
+                        // Add to start
+                        debug_assert!(self.history[0].name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
+                        self.history[0].add_inferred_constraints(6, redraw_card);
+                        return true;
+                    },
+                    None => {
+                        debug_assert!(false, "You should not be calling this on a RevealRedraw without a redraw card known");
+                    }
+                }
+            },
+            ActionInfo::Discard{discard: discard_considered} => {
+                debug_assert!(false, "You should not be calling this on a discard card");
+            },
+            ActionInfo::Start => {
+                panic!("You should not be calling this on Start");
+            }
+            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
                 // unimplemented!();
             }
         }
@@ -497,6 +702,7 @@ impl PathDependentCollectiveConstraint {
     
         match action_info {
             ActionInfo::Start => {
+                // TODO: Change
                 self.regenerate_game_start();
             },
             ActionInfo::Discard{ discard} => {
@@ -530,7 +736,56 @@ impl PathDependentCollectiveConstraint {
             },
         }
         self.history[history_index].meta_data = self.to_meta_data();
-        log::info!("calculated_stored_move: {}", history_index);
+        log::info!("recalculated_stored_move: {} {:?}", history_index, self.history[history_index].action_info());
+        self.printlog();
+    }   
+    /// Calculate for the latest addition
+    fn calculate_stored_move_initial(&mut self) {
+        // let action: &SignificantAction = &self.history[history_index];
+        let history_index = self.history.len() - 1;
+        let (player_id, action_info) = {
+            let action = &self.history[history_index];
+            (action.player() as usize, action.action_info().clone())
+        };
+    
+        match action_info {
+            ActionInfo::Start => {
+                self.regenerate_game_start();
+            },
+            ActionInfo::Discard{ discard} => {
+                self.death_initial(player_id as usize, discard);
+            },
+            ActionInfo::RevealRedraw{ reveal, redraw } => {
+                // TODO: handle the known card case obviously lol
+                match redraw {
+                    None => {
+                        // TODO: [OPTIMIZE] If lookback_1 checks based on reveal
+                        //  Then whenever u regenerate, you don't really have to lookback as there is nothing new to check
+                        self.reveal_redraw_initial(player_id, reveal);
+                    },
+                    Some(drawn) => {
+                        if drawn == reveal {
+                            // TODO: Probably check if inferred_card already there
+                            // if so add it in.
+                            // self.reveal_redraw_same(player_id, reveal);
+                            unimplemented!("Not handling private information cases yet")
+                        } else {
+                            // TODO: Redraw can give you back info about the previous ambassador perhaps?
+                            // TODO: Swap would be custom and required
+                            // TODO: Refactor for neatness
+                            // self.reveal_redraw_diff(player_id, reveal, drawn);
+                            unimplemented!("Not handling private information cases yet")
+                        }
+                    },
+                }
+            },
+            ActionInfo::ExchangeDrawChoice{ draw, relinquish } => {
+                // TODO: handle the known card case obviously lol
+                self.ambassador_public(player_id);
+            },
+        }
+        self.history[history_index].meta_data = self.to_meta_data();
+        log::info!("recalculated_stored_move_initial: {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
     }   
     // TODO: [OPTIMIZE] this to make it more ergonomic 
@@ -543,13 +798,13 @@ impl PathDependentCollectiveConstraint {
                 let significant_action = SignificantAction::initial(self.move_no, player_id, action_info);
                 // Pushing before due to recursion mechanic
                 self.history.push(significant_action);
-                self.calculate_stored_move(self.history.len() - 1);
+                self.calculate_stored_move_initial();
                 // Handle inference
             },
             ActionInfo::RevealRedraw { .. } => {
                 let significant_action = SignificantAction::initial(self.move_no, player_id, action_info);
                 self.history.push(significant_action);
-                self.calculate_stored_move(self.history.len() - 1);
+                self.calculate_stored_move_initial();
                 // Handle inference
             },
             ActionInfo::ExchangeDrawChoice { .. } => {
@@ -558,7 +813,7 @@ impl PathDependentCollectiveConstraint {
                 // TODO: This is temporary, unsure how might split between public and private
                 // It is possible that we can just use private, since public is just private with empty vec?
                 self.history.push(significant_action);
-                self.calculate_stored_move(self.history.len() - 1);
+                self.calculate_stored_move_initial();
             },
             ActionInfo::Start => {
                 // TODO: Consider removing Start, so we can eliminate this branch entirely
@@ -888,6 +1143,33 @@ impl PathDependentCollectiveConstraint {
         // [NEW]
         // Check before recursing
         if self.lookback_1(history_index) {
+            // If true, it will have rerun the entire history including the current move
+            return
+        }
+        self.add_dead_card(player_id, card);
+        // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
+        // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
+        //      - like if inferred info reflects the same thing as group constraint
+        // QUESTION: How does inferred constraints help in determining if group is redundant? Should this be pruned above?
+        // TODO: Needs to do dead player prune
+        log::trace!("After add_dead_player_constraint");
+        // TODO: [OPTIMIZE] Add subset groups like in RevealRedraw, so don't need to run add_inferred_groups
+        self.printlog();
+        self.group_redundant_prune();
+        self.add_inferred_information();
+        // Change revealed_status at the end after all groups using it have been updated
+        // This is handled in add_dead_card
+        // self.revealed_status[player_id].clear();
+    }
+    /// Used for when move is added to history and not for recalculation
+    pub fn death_initial(&mut self, player_id: usize, card: Card) {
+        log::trace!("In death");
+        // [THINK] does death_group adjustment need to occur before a wipe and add 3-group
+        // [OLD]
+        // self.add_dead_player_constraint(player_id, card);
+        // [NEW]
+        // Check before recursing
+        if self.lookback_1_initial() {
             // If true, it will have rerun the entire history including the current move
             return
         }
@@ -1550,6 +1832,31 @@ impl PathDependentCollectiveConstraint {
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
     }
+    pub fn reveal_initial(&mut self, player_id: usize, card: Card) {
+        // PD Obsolete
+        // self.increment_move_count();
+        log::trace!("In reveal");
+        if self.lookback_1_initial() {
+            // If true, it will have rerun the entire history including the current move
+            return
+        }
+        // TODO: Combine adjustment and addition to constraint to allow clear() like in death()
+        if !self.inferred_player_constraint_contains(player_id, card) {
+            // Adds information to inferred constraint if it isn't already there
+            self.add_inferred_player_constraint(player_id, card);
+        }
+        // Commented out as it removes some group required by mut excl addition
+        log::info!("After adding reveal inferred card");
+        self.printlog();
+        // But won't this be done in subset groups?
+        // TODO: Test without reveal_group_adjustment
+        self.reveal_group_adjustment(player_id, card);
+        // TODO: [TEST] Can this add_inferred_groups go above?
+        self.add_inferred_information();
+        self.clear_group_constraints(card);
+        // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
+        // [THOT] So one might be able to learn information about the hands of other players?
+    }
     // TODO: Review the purpose of this... should I match the amb case?
     /// Updates groups affected by revealing of information in reveal, removing groups and adding subset groups
     ///     - [A] [1 0 0 0 1 0 0] 1 Captain, player 0 reveals a Captain, this group is now redundant
@@ -2056,6 +2363,29 @@ impl PathDependentCollectiveConstraint {
         // Abit dumb to seperate it like this, but if not it gets abit messy and I have more branchs :/
         
         self.reveal(history_index, player_id, card);
+        // Actually shouldnt this only move the player's card in
+        // mix here is not the same as ambassador, as inferred should not be touched. And since we know the revealed card
+        // To rigorously show how to mix if group is not the same card, and 1 player 0 pile
+        log::trace!("=== After Reveal Intermediate State ===");
+        self.printlog();
+        self.redraw(player_id, card);
+        // PD Replace
+        // self.revealed_status[player_id].push((Some(card), self.reveal_redraw_move_counter));
+
+
+        // if !self.revealed_status[player_id].contains(&card) {
+        //     self.revealed_status[player_id].push(card);
+        // }
+        // TODO: add_inferred_groups() here and test if it adds anything by panicking
+        // self.add_inferred_groups();
+        // self.group_redundant_prune();
+        // Add the stuff here
+    }
+        /// Used for when move is added to history and not for recalculation
+    pub fn reveal_redraw_initial(&mut self, player_id: usize, card: Card) {
+        // Abit dumb to seperate it like this, but if not it gets abit messy and I have more branchs :/
+        
+        self.reveal_initial(player_id, card);
         // Actually shouldnt this only move the player's card in
         // mix here is not the same as ambassador, as inferred should not be touched. And since we know the revealed card
         // To rigorously show how to mix if group is not the same card, and 1 player 0 pile
