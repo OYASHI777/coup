@@ -106,49 +106,55 @@ pub fn test() {
         // println!("Testing: {}", stringify!(reveal_redraw_issue_0)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_issue_0, false, false);
         // PD Fails | PD with negation fails after adding Start inference && Pile Inference
-        // println!("Testing: {}", stringify!(reveal_redraw_replay_0)); count += 1;
-        // replay_game_constraint_pd(reveal_redraw_replay_0, false, false);
+        // PD with Start Inference Alone fails
+        // PD with Pile Inference Alone works
+        println!("Testing: {}", stringify!(reveal_redraw_replay_0)); count += 1;
+        replay_game_constraint_pd(reveal_redraw_replay_0, false, true);
         // println!("Testing: {}", stringify!(reveal_redraw_replay_1)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_replay_1, false, false);
         
         // PD Fails | PD with negation fails after adding Start inference && Pile Inference
+        // PD with Start Inference Alone passes
         // println!("Testing: {}", stringify!(reveal_redraw_replay_2)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_replay_2, false, false);
         // PD Fails | PD with negation fails after adding Start inference && Pile Inference
+        // PD with Start Inference Alone passes
         // println!("Testing: {}", stringify!(full_test_replay_0)); count += 1;
         // replay_game_constraint_pd(full_test_replay_0, false, false);
         // PD Fails | | PD with negation fails (not path dependent)
         // println!("Testing: {}", stringify!(full_test_replay_1)); count += 1;
         // replay_game_constraint_pd(full_test_replay_1, false, false);
-        println!("Testing: {}", stringify!(full_test_replay_2)); count += 1;
-        replay_game_constraint_pd(full_test_replay_2, false, false);
-        println!("Testing: {}", stringify!(full_test_replay_3)); count += 1;
-        replay_game_constraint_pd(full_test_replay_3, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_2)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_2, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_3)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_3, false, false);
         // PD Fails | PD with negation fails (not path dependent)
         // println!("Testing: {}", stringify!(full_test_replay_4)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_4, false, true);
+        // replay_game_constraint_pd(full_test_replay_4, false, false);
         
-        println!("Testing: {}", stringify!(full_test_replay_5)); count += 1;
-        replay_game_constraint_pd(full_test_replay_5, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_5)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_5, false, false);
         // Fails if self.revealed_status[player_id].swap_remove() is commented out
-        println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
-        replay_game_constraint_pd(full_test_replay_6, false, false);
-        println!("Testing: {}", stringify!(full_test_replay_7)); count += 1;
-        replay_game_constraint_pd(full_test_replay_7, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_6, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_7)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_7, false, false);
         // PD Fails | PD with negation works (--release !debug)
-        println!("Testing: {}", stringify!(full_test_replay_8)); count += 1;
-        replay_game_constraint_pd(full_test_replay_8, false, false);
-        println!("Testing: {}", stringify!(full_test_replay_9)); count += 1;
-        replay_game_constraint_pd(full_test_replay_9, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_8)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_8, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_9)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_9, false, false);
         
         // PD Fails | PD with negation works (--release !debug)
-        println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
-        replay_game_constraint_pd(full_test_replay_10, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_10, false, false);
         // PD Fails | PD with negation fails
         // println!("Testing: {}", stringify!(full_test_replay_11)); count += 1;
         // replay_game_constraint_pd(full_test_replay_11, false, false);
         // PD Fails | PD with negation works (--release)
         // PD Fails | PD with negation fails after adding Start inference && Pile Inference
+        // PD with Start Inference Alone Fails
+        // PD with Pile Inference Alone works
         // println!("Testing: {}", stringify!(full_test_replay_12)); count += 1;
         // replay_game_constraint_pd(full_test_replay_12, false, false);
         // PD Fails | PD with negation fails

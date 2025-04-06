@@ -187,8 +187,14 @@ impl SignificantAction {
     pub fn player_has_inferred_constraint<T>(&self, player_id: T, card: Card) -> bool 
     where
         T: Into<usize> + Copy,
-    {   
-        self.meta_data.player_has_inferred_constraint(player_id, card)
+        {   
+            self.meta_data.player_has_inferred_constraint(player_id, card)
+        }
+    pub fn player_inferred_constraint_all_full<T>(&self, player_id: T, card: Card) -> bool 
+    where
+        T: Into<usize> + Copy,
+    {
+        self.meta_data.player_inferred_constraint_all_full(player_id, card)
     }
 }
 // TODO: change gamestart for different inferred starting hands
@@ -245,6 +251,13 @@ impl PathDependentMetaData {
         T: Into<usize> + Copy,
     {   
         self.inferred_constraints[player_id.into()].contains(&card)
+    }
+    pub fn player_inferred_constraint_all_full<T>(&self, player_id: T, card: Card) -> bool 
+    where
+        T: Into<usize> + Copy,
+    {   
+        self.inferred_constraints[player_id.into()].len() == 2 &&
+        self.inferred_constraints[player_id.into()].iter().all(|&c| c == card)
     }
 }   
 
@@ -490,14 +503,23 @@ impl PathDependentCollectiveConstraint {
                                     ActionInfoName::RevealRedraw => {
                                         let need_redraw_update = if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
                                             redraw_i.is_none()
-                                                && action_data.player_cards_known(action_player) == 2 // This is after the reveal
-                                                && !action_data.player_has_inferred_constraint(action_player, reveal_considered) 
-                                                // TODO: Consider maybe case where the player has 2 of reveal_considered?
+                                            && (
+                                                action_data.player_cards_known(action_player) == 2 // This is after the reveal
+                                                && (
+                                                    !action_data.player_has_inferred_constraint(action_player, reveal_considered)
+                                                    // [CASE] All player cards are the same card
+                                                    // Then the person previously definitely redrew that
+                                                    || action_data.player_inferred_constraint_all_full(action_player, reveal_considered)
+                                                )
+                                            )
                                         } else {
                                             false
                                         };
                                         if need_redraw_update {
+                                            log::trace!("lookback_1_initial original RevealRedraw: {:?}", action_info);
+                                            log::trace!("lookback_1_initial considering: {:?}", action_data.action_info());
                                             if let ActionInfo::RevealRedraw { redraw, .. } = action_data.action_info_mut() {
+                                                log::trace!("lookback_1_initial setting redraw to: {:?}", reveal_considered);
                                                 *redraw = Some(reveal_considered);
                                                 self.lookback_1_continual(i);
                                                 self.regenerate_path();
@@ -522,6 +544,7 @@ impl PathDependentCollectiveConstraint {
                         // TODO: Somehow, maybe by regenerating, or not update impossible constraints too
                         // TODO: Change, this should only be done for the first time its added for discard
                         debug_assert!(self.history[0].name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
+                        log::trace!("lookback_1_initial index: {:?}", index);
                         log::trace!("lookback_1_initial processed item: {:?}", self.history.last().unwrap().action_info());
                         log::trace!("lookback_1_initial adding inferred_constraint to start: (player: {}, card: {:?})", player_index, reveal_considered);
                         log::trace!("lookback_1_initial start before: {:?}", self.history.first().unwrap().meta_data());
@@ -550,9 +573,15 @@ impl PathDependentCollectiveConstraint {
                             ActionInfoName::RevealRedraw => {
                                 let need_redraw_update = if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
                                     redraw_i.is_none()
-                                        && action_data.player_cards_known(action_player) == 2 // This is after the reveal
-                                        && !action_data.player_has_inferred_constraint(action_player, discard_considered) 
-                                        // TODO: Consider maybe case where the player has 2 of discard_considered?
+                                    && (
+                                        action_data.player_cards_known(action_player) == 2 // This is after the reveal
+                                        && (
+                                            !action_data.player_has_inferred_constraint(action_player, discard_considered)
+                                            // [CASE] All player cards are the same card
+                                            // Then the person previously definitely redrew that
+                                            || action_data.player_inferred_constraint_all_full(action_player, discard_considered)
+                                        )
+                                    )
                                 } else {
                                     false
                                 };
@@ -683,7 +712,7 @@ impl PathDependentCollectiveConstraint {
     /// Can recursively call itself
     fn regenerate_path(&mut self) {
         log::info!("Regenerating Path");
-        self.regenerate_game_start();
+        // self.regenerate_game_start();
         // TODO: Implement skipping starting empty ambassadors
         let mut skip_starting_empty_ambassador: bool = true;
         for index in 0..self.history.len() {
@@ -1142,10 +1171,10 @@ impl PathDependentCollectiveConstraint {
         // self.add_dead_player_constraint(player_id, card);
         // [NEW]
         // Check before recursing
-        if self.lookback_1(history_index) {
-            // If true, it will have rerun the entire history including the current move
-            return
-        }
+        // if self.lookback_1(history_index) {
+        //     // If true, it will have rerun the entire history including the current move
+        //     return
+        // }
         self.add_dead_card(player_id, card);
         // TODO: ADD COMPLEMENT PRUNE is probably useful here since its not done in group_redundant_prune()
         // TODO: [THOT] Group constraints being a subset of info in inferred constraints mean it can be pruned too
@@ -1811,10 +1840,10 @@ impl PathDependentCollectiveConstraint {
         // PD Obsolete
         // self.increment_move_count();
         log::trace!("In reveal");
-        if self.lookback_1(history_index) {
-            // If true, it will have rerun the entire history including the current move
-            return
-        }
+        // if self.lookback_1(history_index) {
+        //     // If true, it will have rerun the entire history including the current move
+        //     return
+        // }
         // TODO: Combine adjustment and addition to constraint to allow clear() like in death()
         if !self.inferred_player_constraint_contains(player_id, card) {
             // Adds information to inferred constraint if it isn't already there
@@ -2409,12 +2438,14 @@ impl PathDependentCollectiveConstraint {
         // No need to lookback_1 here as it would already have been done in the normal case
         if !self.inferred_constraints[player_id].contains(&card) {
             // TODO: refactor this
+            log::trace!("reveal_redraw_same player_id: {}, card: {:?}", player_id, card);
             self.add_inferred_card(player_id, card, 1, &mut vec![Vec::with_capacity(0); 6]);
         }
     }
     /// Function to call when both the card revealed and redrawn are known and not the same
     pub fn reveal_redraw_diff(&mut self, player_id: usize, reveal: Card, redraw: Card) {
         // Double inferred 
+        log::trace!("reveal_redraw_diff player_id: {}, reveal: {:?}, redraw: {:?}", player_id, reveal, redraw);
         if !self.inferred_constraints[player_id].contains(&reveal) {
             self.add_inferred_card(player_id, reveal, 1, &mut vec![Vec::with_capacity(0); 6]);
         }
