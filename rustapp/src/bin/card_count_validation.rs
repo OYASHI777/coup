@@ -101,26 +101,25 @@ pub fn test() {
         // replay_game_constraint_pd(full_test_overflow_0, false, false);
         // println!("Testing: {}", stringify!(full_test_overflow_1)); count += 1;
         // replay_game_constraint_pd(full_test_overflow_1, false, false);
-        // println!("Testing: {}", stringify!(full_test_overflow_2)); count += 1;
-        // replay_game_constraint_pd(full_test_overflow_2, false, false);
+        // 4 CAPTAINS
+        println!("Testing: {}", stringify!(full_test_overflow_2)); count += 1;
+        replay_game_constraint_pd(full_test_overflow_2, false, true);
         // println!("Testing: {}", stringify!(reveal_redraw_issue_0)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_issue_0, false, false);
         // PD Fails | PD with negation fails after adding Start inference && Pile Inference
-        // PD with Start Inference Alone fails
-        // PD with Pile Inference Alone works
-        println!("Testing: {}", stringify!(reveal_redraw_replay_0)); count += 1;
-        replay_game_constraint_pd(reveal_redraw_replay_0, false, true);
+        // println!("Testing: {}", stringify!(reveal_redraw_replay_0)); count += 1;
+        // replay_game_constraint_pd(reveal_redraw_replay_0, false, false);
         // println!("Testing: {}", stringify!(reveal_redraw_replay_1)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_replay_1, false, false);
         
         // PD Fails | PD with negation fails after adding Start inference && Pile Inference
         // PD with Start Inference Alone passes
-        // println!("Testing: {}", stringify!(reveal_redraw_replay_2)); count += 1;
-        // replay_game_constraint_pd(reveal_redraw_replay_2, false, false);
+        println!("Testing: {}", stringify!(reveal_redraw_replay_2)); count += 1;
+        replay_game_constraint_pd(reveal_redraw_replay_2, false, false);
         // PD Fails | PD with negation fails after adding Start inference && Pile Inference
         // PD with Start Inference Alone passes
-        // println!("Testing: {}", stringify!(full_test_replay_0)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_0, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_0)); count += 1;
+        replay_game_constraint_pd(full_test_replay_0, false, false);
         // PD Fails | | PD with negation fails (not path dependent)
         // println!("Testing: {}", stringify!(full_test_replay_1)); count += 1;
         // replay_game_constraint_pd(full_test_replay_1, false, false);
@@ -155,8 +154,8 @@ pub fn test() {
         // PD Fails | PD with negation fails after adding Start inference && Pile Inference
         // PD with Start Inference Alone Fails
         // PD with Pile Inference Alone works
-        // println!("Testing: {}", stringify!(full_test_replay_12)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_12, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_12)); count += 1;
+        replay_game_constraint_pd(full_test_replay_12, false, false);
         // PD Fails | PD with negation fails
         // println!("Testing: {}", stringify!(redundancy_replay_0)); count += 1;
         // replay_game_constraint_pd(redundancy_replay_0, false, false);
