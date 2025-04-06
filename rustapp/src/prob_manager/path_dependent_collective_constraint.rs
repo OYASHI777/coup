@@ -378,6 +378,7 @@ impl PathDependentCollectiveConstraint {
     /// or actually maybe don't need this, but you can repeat on the latest card over and over?
     /// might need to look forward too?
     /// TODO: Add for first Discard / RevealRedraw to update start state + its impossible states
+    /// TODO: Make impossible constraints something u always update man
     pub fn lookback_1(&mut self, index: usize) -> bool {
         // index is the index for history``
         let considered_move: &SignificantAction = &self.history[index];
@@ -432,7 +433,8 @@ impl PathDependentCollectiveConstraint {
                     }
                 }
                 // Else if its start (which means we did not hit a revealredraw or ambassador)
-                // TODO: Update start here
+                // TODO: Update start here (inferred)
+                // TODO: Somehow, maybe by regenerating, or not update impossible constraints too
             },
             _ => {
                 // unimplemented!();
