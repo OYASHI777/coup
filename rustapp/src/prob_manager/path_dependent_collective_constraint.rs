@@ -663,6 +663,10 @@ impl PathDependentCollectiveConstraint {
     /// => Assumes that regenerate will be called outside of this regardless
     pub fn lookback_1_continual(&mut self, index: usize) -> bool {
         // index is the index for history
+        log::trace!("In lookback1_continual index: {index}");
+        log::trace!("index: {:?}", self.history[index].meta_data());
+        self.printlog();
+        log::trace!("Start: {:?}", self.history[0].meta_data());
         let action_info = self.history[index].action_info().clone();
         match action_info {
             ActionInfo::RevealRedraw{reveal: reveal_considered, redraw: redraw_considered} => {
@@ -689,10 +693,10 @@ impl PathDependentCollectiveConstraint {
                         // reveal_considered == redraw_considered
                         //  - Redraw card may come from pile or may have been same card player put in
                         for i in (1..index).rev() {
-                            match self.history[i].action_info_mut() {
+                            match self.history[i].action_info() {
                                 ActionInfo::RevealRedraw { reveal, redraw } => {
-                                    if Some(*reveal) == *redraw {
-                                        return false
+                                    if Some(*reveal) != *redraw {
+                                        return false;
                                     }
 
                                 },
@@ -710,6 +714,7 @@ impl PathDependentCollectiveConstraint {
                             }
                         }
                         // Add to start
+                        log::trace!("lookback1_continual adding to Start player_id: 6, card: {:?}", redraw_card);
                         debug_assert!(self.history[0].name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
                         self.history[0].add_inferred_constraints(6, redraw_card);
                         return true;
@@ -751,6 +756,7 @@ impl PathDependentCollectiveConstraint {
     }
     fn calculate_stored_move(&mut self, history_index: usize) {
         // let action: &SignificantAction = &self.history[history_index];
+        log::trace!("calculate_stored_move history_index: {history_index}");
         let (player_id, action_info) = {
             let action = &self.history[history_index];
             (action.player() as usize, action.action_info().clone())

@@ -1237,6 +1237,7 @@ pub fn replay_game_constraint(replay: Vec<ActionObservation>, bool_know_priv_inf
         if let Some(output_ref) = replay.get(step) {
             let output = output_ref.clone();
             log::info!("{}", format!("Choice: {:?}", output));
+            hh.print_history();
             if output.name() == AOName::Discard{
                 let true_legality = if output.no_cards() == 1 {
                     // let start_time = Instant::now();
@@ -1420,6 +1421,7 @@ pub fn replay_game_constraint_pd(replay: Vec<ActionObservation>, bool_know_priv_
                 }
             } 
             hh.push_ao(output);
+            hh.print_replay_history_braindead();
             prob.push_ao(&output, bool_know_priv_info);
             bit_prob.push_ao_public(&output);
             match output.name() {
