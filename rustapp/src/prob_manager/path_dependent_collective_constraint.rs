@@ -681,8 +681,8 @@ impl PathDependentCollectiveConstraint {
                         //        we do not need any intermediate accuracy, and we know that it will be reflected
                         //        properly in the latest inferred constraints anyways
                         //  - Conditions where pile card was in starting node
-                        //      - All Previous RevealRedraw, reveal != redraw
-                        //          - reveal == redraw => would mean the maybe the player put it in
+                        //      - All Previous RevealRedraw, reveal != redraw_considered
+                        //          - reveal == redraw_considered => would mean the maybe the player put it in
                         //      - All Previous RevealRedraw redraw card does not matter
                         //          - reveal == redraw => redraw_considered would still be in pile
                         //          - reveal != redraw => card was redrawn to player, but redraw_considered would still be in pile
@@ -694,11 +694,11 @@ impl PathDependentCollectiveConstraint {
                         //  - Redraw card may come from pile or may have been same card player put in
                         for i in (1..index).rev() {
                             match self.history[i].action_info() {
-                                ActionInfo::RevealRedraw { reveal, redraw } => {
-                                    if Some(*reveal) != *redraw {
-                                        return false;
+                                ActionInfo::RevealRedraw { reveal, .. } => {
+                                    // CASE player put the considered card into the pile
+                                    if *reveal == redraw_card {
+                                        return false
                                     }
-
                                 },
                                 ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
                                     if !draw.is_empty() || !relinquish.is_empty() {
@@ -710,7 +710,7 @@ impl PathDependentCollectiveConstraint {
                                 ActionInfo::Start => {
                                     debug_assert!(false, "Should not have Start when index is not 0");
                                 },
-                                ActionInfo::Discard { discard } => {},
+                                ActionInfo::Discard { .. } => {},
                             }
                         }
                         // Add to start
