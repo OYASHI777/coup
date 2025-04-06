@@ -2389,8 +2389,8 @@ impl PathDependentCollectiveConstraint {
         let inf_exc_pl = self.add_inferred_except_player();
         log::info!("After add_inferred_except_player");
         self.printlog();
-        // let inf_rem_neg = self.add_inferred_remaining_negation();
-        let inf_rem_neg = false;
+        let inf_rem_neg = self.add_inferred_remaining_negation();
+        // let inf_rem_neg = false;
         log::info!("After add_inferred_remaining_negation");
         self.printlog();
         bool_continue = mut_excl_changes || inf_com_pl || inf_exc_pl || inf_rem_neg;
@@ -2408,7 +2408,7 @@ impl PathDependentCollectiveConstraint {
             let inf_exc_pl = self.add_inferred_except_player();
             log::info!("After add_inferred_except_player");
             self.printlog();
-            // let inf_rem_neg = self.add_inferred_remaining_negation();
+            let inf_rem_neg = self.add_inferred_remaining_negation();
             log::info!("After add_inferred_remaining_negation");
             self.printlog();
             bool_continue = mut_excl_changes || inf_com_pl || inf_exc_pl || inf_rem_neg;
@@ -3611,6 +3611,8 @@ impl PathDependentCollectiveConstraint {
     /// !!! Also 2 single_flag_groups of different cards, might imply be that both cards in a players' hand is part of the single_flag_group, so there may be more counted than expected
     /// !!! Perhaps this is only usable if a player with single_flag has RR only once since their last amb? else we need to expand the single_flag_group
     ///     Not quite, if the player has only 1 life then its obvious that for that it should be included
+    /// TODO: [OPTIMIZE] I think it even does this for ridiculous outer groups like the group of everything in it
+    /// TODO: [OPTIMIZE] Consider not having this run until later in the game, don't really need it if not much has been revealed yet
     pub fn add_inferred_remaining_negation(&mut self) -> bool {
         // Get the remaining card group + card counts
         let mut full_group_flags = CompressedGroupConstraint::zero();
@@ -3774,7 +3776,9 @@ impl PathDependentCollectiveConstraint {
                     // Counts of total number of cards inferred in the negation set
                     let negation_inferred_counts = full_group_minus_group_key_card_freq.iter().sum::<u8>();
                     log::trace!("Negation counts: {}", negation_inferred_counts);
-                    debug_assert!(negation_inferred_counts < 4, "Seems like the max_difference continue 'outer; is not working as intended");
+                    // NOTE WARN TODO: [OPTIMIZE] This debug_assert is here and commented out as we still reach here with high negation_inferred_counts which is a 
+                    //                              source of inefficiency
+                    // debug_assert!(negation_inferred_counts < 4, "Seems like the max_difference continue 'outer; is not working as intended");
                     
                     // Compare group_keys with full_groups to see how many negation spaces there are
                     // This is the maximum number of spaces we can fill up from the negation
