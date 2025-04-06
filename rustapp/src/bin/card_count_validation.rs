@@ -30,7 +30,7 @@ fn main() {
     let bool_know_priv_info = false;
     let print_frequency: usize = 50;
     let min_dead_check: usize = 8;
-    let num_threads = 16;
+    let num_threads = 8;
     // (DONE) [TEST 1000] Discard + Ambassador Release farm
     // [TEST 1000] Discard + RevealRedraw Release mode
     // (Ran 210) [TEST 1000] Discard + Ambassador Debug mode
@@ -62,6 +62,7 @@ fn main() {
 
 pub fn test() {
     {
+        // TODO: !!! You added both the start inference and the pile inference, test them seperately
         use ActionObservation::*;
         use Card::*;
         let reveal_redraw_issue_0 = vec![ForeignAid { player_id: 0 }, CollectiveBlock { participants: [false, false, true, false, true, true], opposing_player_id: 0, final_actioner: 4 }, CollectiveChallenge { participants: [true, true, true, true, false, false], opposing_player_id: 4, final_actioner: 2 }, Discard { player_id: 4, card: [Assassin, Assassin], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [false, false, true, true, false, false], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [true, true, false, true, true, true], opposing_player_id: 2, final_actioner: 0 }, Discard { player_id: 2, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [true, false, true, false, false, true], opposing_player_id: 3, final_actioner: 2 }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, false, false], opposing_player_id: 4, final_actioner: 3 }, RevealRedraw { player_id: 4, card: Captain }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, BlockSteal { player_id: 1, opposing_player_id: 4, card: Captain }, CollectiveChallenge { participants: [false, false, true, false, false, true], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 5, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, true, false], opposing_player_id: 5, final_actioner: 4 }, RevealRedraw { player_id: 5, card: Captain }, Discard { player_id: 4, card: [Contessa, Contessa], no_cards: 1 }];
@@ -104,47 +105,50 @@ pub fn test() {
         // replay_game_constraint_pd(full_test_overflow_2, false, false);
         // println!("Testing: {}", stringify!(reveal_redraw_issue_0)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_issue_0, false, false);
-        // PD fails | PD with negation works (--release !debug)
+        // PD Fails | PD with negation fails after adding Start inference && Pile Inference
         // println!("Testing: {}", stringify!(reveal_redraw_replay_0)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_replay_0, false, false);
         // println!("Testing: {}", stringify!(reveal_redraw_replay_1)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_replay_1, false, false);
         
+        // PD Fails | PD with negation fails after adding Start inference && Pile Inference
         // println!("Testing: {}", stringify!(reveal_redraw_replay_2)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_replay_2, false, false);
+        // PD Fails | PD with negation fails after adding Start inference && Pile Inference
         // println!("Testing: {}", stringify!(full_test_replay_0)); count += 1;
         // replay_game_constraint_pd(full_test_replay_0, false, false);
         // PD Fails | | PD with negation fails (not path dependent)
         // println!("Testing: {}", stringify!(full_test_replay_1)); count += 1;
         // replay_game_constraint_pd(full_test_replay_1, false, false);
-        // println!("Testing: {}", stringify!(full_test_replay_2)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_2, false, false);
-        // println!("Testing: {}", stringify!(full_test_replay_3)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_3, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_2)); count += 1;
+        replay_game_constraint_pd(full_test_replay_2, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_3)); count += 1;
+        replay_game_constraint_pd(full_test_replay_3, false, false);
         // PD Fails | PD with negation fails (not path dependent)
-        println!("Testing: {}", stringify!(full_test_replay_4)); count += 1;
-        replay_game_constraint_pd(full_test_replay_4, false, true);
+        // println!("Testing: {}", stringify!(full_test_replay_4)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_4, false, true);
         
-        // println!("Testing: {}", stringify!(full_test_replay_5)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_5, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_5)); count += 1;
+        replay_game_constraint_pd(full_test_replay_5, false, false);
         // Fails if self.revealed_status[player_id].swap_remove() is commented out
-        // println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_6, false, false);
-        // println!("Testing: {}", stringify!(full_test_replay_7)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_7, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
+        replay_game_constraint_pd(full_test_replay_6, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_7)); count += 1;
+        replay_game_constraint_pd(full_test_replay_7, false, false);
         // PD Fails | PD with negation works (--release !debug)
-        // println!("Testing: {}", stringify!(full_test_replay_8)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_8, false, false);
-        // println!("Testing: {}", stringify!(full_test_replay_9)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_9, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_8)); count += 1;
+        replay_game_constraint_pd(full_test_replay_8, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_9)); count += 1;
+        replay_game_constraint_pd(full_test_replay_9, false, false);
         
         // PD Fails | PD with negation works (--release !debug)
-        // println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_10, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
+        replay_game_constraint_pd(full_test_replay_10, false, false);
         // PD Fails | PD with negation fails
         // println!("Testing: {}", stringify!(full_test_replay_11)); count += 1;
         // replay_game_constraint_pd(full_test_replay_11, false, false);
         // PD Fails | PD with negation works (--release)
+        // PD Fails | PD with negation fails after adding Start inference && Pile Inference
         // println!("Testing: {}", stringify!(full_test_replay_12)); count += 1;
         // replay_game_constraint_pd(full_test_replay_12, false, false);
         // PD Fails | PD with negation fails
