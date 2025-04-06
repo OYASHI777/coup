@@ -39,7 +39,7 @@ fn main() {
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
     // game_rnd_constraint_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
-    game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // game_rnd_constraint_pd(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
@@ -57,7 +57,7 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    // test();
+    test();
 }
 
 pub fn test() {
@@ -105,8 +105,8 @@ pub fn test() {
         // println!("Testing: {}", stringify!(reveal_redraw_issue_0)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_issue_0, false, false);
         // PD fails | PD with negation works (--release !debug)
-        println!("Testing: {}", stringify!(reveal_redraw_replay_0)); count += 1;
-        replay_game_constraint_pd(reveal_redraw_replay_0, false, true);
+        // println!("Testing: {}", stringify!(reveal_redraw_replay_0)); count += 1;
+        // replay_game_constraint_pd(reveal_redraw_replay_0, false, false);
         // println!("Testing: {}", stringify!(reveal_redraw_replay_1)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_replay_1, false, false);
         
@@ -122,8 +122,8 @@ pub fn test() {
         // println!("Testing: {}", stringify!(full_test_replay_3)); count += 1;
         // replay_game_constraint_pd(full_test_replay_3, false, false);
         // PD Fails | PD with negation fails (not path dependent)
-        // println!("Testing: {}", stringify!(full_test_replay_4)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_4, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_4)); count += 1;
+        replay_game_constraint_pd(full_test_replay_4, false, true);
         
         // println!("Testing: {}", stringify!(full_test_replay_5)); count += 1;
         // replay_game_constraint_pd(full_test_replay_5, false, false);
