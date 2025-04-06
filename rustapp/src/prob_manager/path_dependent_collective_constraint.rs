@@ -96,7 +96,7 @@ impl ActionInfo {
         }
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ActionInfoName {
     Start,
     Discard, // Player | Card
@@ -151,6 +151,26 @@ impl SignificantAction {
     }
     pub fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
         self.meta_data.inferred_constraints()
+    }
+    pub fn add_inferred_constraints(&mut self, player_id: usize, card: Card)  {
+        self.meta_data.inferred_constraints[player_id].push(card);
+        debug_assert!(player_id < 6 
+            && self.meta_data.inferred_constraints[player_id].len() < 3 
+            || player_id == 6 
+            && self.meta_data.inferred_constraints[player_id].len() < 4, 
+            "bad push");
+    }
+    pub fn check_add_inferred_constraints(&mut self, player_id: usize, card: Card) -> bool {
+        if !self.meta_data.inferred_constraints[player_id].contains(&card) {
+            self.meta_data.inferred_constraints[player_id].push(card);
+            debug_assert!(player_id < 6 
+                && self.meta_data.inferred_constraints[player_id].len() < 3 
+                || player_id == 6 
+                && self.meta_data.inferred_constraints[player_id].len() < 4, 
+                "bad push");
+            return true;
+        }
+        false
     }
     pub fn player_cards_known<T>(&self, player_id: T) -> usize 
     where
@@ -435,6 +455,14 @@ impl PathDependentCollectiveConstraint {
                 // Else if its start (which means we did not hit a revealredraw or ambassador)
                 // TODO: Update start here (inferred)
                 // TODO: Somehow, maybe by regenerating, or not update impossible constraints too
+                let action_data = &mut self.history[0];
+                debug_assert!(action_data.name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
+                action_data.add_inferred_constraints(player_index as usize, discard_considered);
+                // TODO: Have to change calculation for game start for this to work
+                // TODO: Include impossible at game start too!
+                self.regenerate_path();
+                self.printlog();
+                return true;
             },
             _ => {
                 // unimplemented!();
