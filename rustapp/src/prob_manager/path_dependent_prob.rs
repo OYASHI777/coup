@@ -97,7 +97,7 @@ impl PathDependentCardCountManager {
             }
         } else if ao_name == AOName::RevealRedraw{
             let mut last_constraint = self.constraint_history.last().unwrap().clone();
-            let action_info = ActionInfo::RevealRedraw { reveal: ao.card(), redraw: None };
+            let action_info = ActionInfo::RevealRedraw { reveal: ao.card(), redraw: None, relinquish: None };
             log::trace!("Adding move RevealRedraw");
             last_constraint.add_move(ao.player_id() as u8, action_info);
             // last_constraint.sort_unstable();
