@@ -766,16 +766,23 @@ impl PathDependentCollectiveConstraint {
         // maybe needs to be not the original player?
         log::trace!("lookback_check history_index: {}, player_id: {}, card: {:?}", history_index, player_id, card);
         for i in (1..=history_index).rev() {
-            if self.history[i].player() != player_id {
-                if let ActionInfo::RevealRedraw { reveal, .. } = self.history[i].action_info() {
-                    if *reveal == card {
+            let player_i = self.history[i].player() as usize;
+            if player_i != player_id as usize {
+                if let ActionInfo::RevealRedraw { reveal, redraw, .. } = self.history[i].action_info() {
+                    // if self.history[i - 1].meta_data().public_constraints()[player_i].len() + self.history[i - 1].meta_data().inferred_constraints()[player_i].len() == 2
+                    // && !self.history[i - 1].player_has_inferred_constraint(player_i, card) 
+                    if *reveal == card && Some(*reveal) != *redraw {
                         return Some((i, self.history[i].player()));
                     }
                 }
             } else {
-                if self.history[i].name() == ActionInfoName::RevealRedraw {
-                    return None
-                }
+                // TODO: THEORY CHECK
+                // Technically arent there cases where this person could have redrawn that card into the pile
+                // Which is how the player later on could reveal it
+                // As per the case in lookback_initial
+                // if self.history[i].name() == ActionInfoName::RevealRedraw {
+                //     return None
+                // }
             }
         }
         None
@@ -977,14 +984,22 @@ impl PathDependentCollectiveConstraint {
             ActionInfo::Discard{ discard} => {
                 self.death(history_index, player_id as usize, discard);
             },
-            ActionInfo::RevealRedraw{ reveal, redraw, ..  } => {
+            ActionInfo::RevealRedraw{ reveal, redraw, relinquish  } => {
                 // TODO: reveal_relinquish?
                 // TODO: handle the known card case obviously lol
                 match redraw {
                     None => {
                         // TODO: [OPTIMIZE] If lookback_1 checks based on reveal
                         //  Then whenever u regenerate, you don't really have to lookback as there is nothing new to check
-                        self.reveal_redraw(history_index, player_id, reveal);
+                        match relinquish {
+                            Some(relinquish_card) => {
+                                debug_assert(relinquish_card == reveal, "We normally assume reveal and relinquish are the same else, one should use redraw";)
+                                self.reveal_redraw_relinquish();
+                            },
+                            None => {
+                                self.reveal_redraw(history_index, player_id, reveal);
+                            },
+                        }
                     },
                     Some(drawn) => {
                         if drawn == reveal {
@@ -2999,6 +3014,37 @@ impl PathDependentCollectiveConstraint {
         self.printlog();
         self.group_redundant_prune();
     }
+    /// Function to call when both the card revealed is left in the pile
+    /// Assumes redraw is None
+    /// Assumes what is revealed is relinquish and passed to the pile
+    pub fn reveal_redraw_relinquish(&mut self, player_id: usize, relinquish: Card) {
+        // Double inferred 
+        log::trace!("reveal_redraw_relinquish player_id: {}, relinquish: {:?}", player_id, relinquish);
+        self.printlog();
+        if !self.inferred_constraints[player_id].contains(&relinquish) {
+            self.add_inferred_card(player_id, relinquish, 1, &mut vec![Vec::with_capacity(0); 6]);
+        }
+        log::trace!("reveal_redraw_relinquish after adding inferred cards");
+        self.printlog();
+        // Relinquishing Card - removing from player inventory
+        if let Some(pos) = self.inferred_constraints[player_id].iter().position(|c| *c == relinquish) {
+            self.inferred_constraints[player_id].remove(pos);
+        }
+        log::trace!("reveal_redraw_relinquish after removing inferred cards");
+        self.printlog();
+        // Swapping Cards - adjusting group_constraints
+        // How to mix?
+        self.relinquish_mix(player_id, 6,relinquish);
+        log::trace!("reveal_redraw_diff after swap_mix");
+        self.printlog();
+        // Double inferred - do not check for containment as this comes from pile not own hand
+        self.add_inferred_card_unchecked(6, relinquish, 1, &mut vec![Vec::with_capacity(0); 6]);
+        // TODO: Determine if we actually need this
+        //  How does this interact with add_inferred and swap_mix?
+        log::trace!("reveal_redraw_diff after swap add_inferred_cards");
+        self.printlog();
+        self.group_redundant_prune();
+    }
     /// Mixes groups when some known cards of a player is swapped with some known cards of another player
     /// For now its a unique card per player
     /// TODO: Extend for Ambassador
@@ -3038,6 +3084,29 @@ impl PathDependentCollectiveConstraint {
             group.add_alive_count(player_a_inferred_card_b);
             group.add_total_count(player_a_dead_card_b + player_a_inferred_card_b);
         });
+    }
+    /// Used in revealredraw_relinquish
+    /// Player a and Player b swap a card 
+    ///     - the card player_a gave player_b is known
+    ///     - the card player_b gave player_a is unknown
+    /// The convention here is that player_a relinquishes card to player b
+    /// Assumptions follow that of revealredraw_relinquish
+    pub fn relinquish_mix(&mut self, player_a: usize, player_b: usize, relinquish_card: Card) {
+        // TODO: THEORY CHECK and DOCUMENT
+        // For now im thinking for player 0 and player 6
+        // get all card counts
+        let player_a_dead_card_count = self.player_dead_card_count(player_a, relinquish_card);
+        let player_a_inferred_card_count = self.player_inferred_card_count(player_a, relinquish_card);
+        let player_a_dead_card_counts = self.player_dead_card_counts(player_a);
+        let player_b_dead_card_counts = self.player_dead_card_counts(player_b);
+        let player_a_inferred_card_counts = self.player_inferred_card_counts(player_a);
+        let player_b_inferred_card_counts = self.player_inferred_card_counts(player_b);
+        // log::trace!("swap_mix player_a: {player_a}, card_a: {:?}, player_b: {player_b}, card_b: {:?}", card_a, card_b);
+        // log::trace!("swap_mix player_b_dead_card_a: {:?}", player_b_dead_card_a);
+        // log::trace!("swap_mix player_b_inferred_card_a: {:?}", player_b_inferred_card_a);
+        // log::trace!("swap_mix player_a_dead_card_b: {:?}", player_a_dead_card_b);
+        // log::trace!("swap_mix player_a_inferred_card_b: {:?}", player_a_inferred_card_b);
+        let group_constraints = self.group_constraints_mut();
     }
     /// Function to call for move Ambassador, without considering private information seen by the player who used Ambassador
     pub fn ambassador_public(&mut self, player_id: usize) {
