@@ -152,6 +152,9 @@ impl SignificantAction {
     pub fn meta_data(&self) -> &PathDependentMetaData {
         &self.meta_data
     }
+    pub fn public_constraints(&self) -> &Vec<Vec<Card>> {
+        self.meta_data.public_constraints()
+    }
     pub fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
         self.meta_data.inferred_constraints()
     }
@@ -202,6 +205,9 @@ impl SignificantAction {
     pub fn known_card_count(&self, card: Card) -> u8 {
         self.meta_data.inferred_constraints().iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>()
         + self.meta_data.public_constraints().iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>()
+    }
+    pub fn action_info_str(&self) -> String {
+        format!("Player: {} {:?} public_constraints: {:?}, inferred_constraints: {:?}", self.player, self.action_info, self.public_constraints(), self.inferred_constraints())
     }
 }
 // TODO: change gamestart for different inferred starting hands
@@ -520,8 +526,8 @@ impl PathDependentCollectiveConstraint {
                                             redraw_i.is_none()
                                             // This is after the discard
                                             // This is just before the RevealRedraw
+                                            // CASE when all cards are known and not reveal_considered
                                             && (
-                                                // CASE when all cards are known and not reveal_considered
                                                 self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2
                                                 && !self.history[i - 1].player_has_inferred_constraint(action_player, reveal_considered) // REQUIRED FOR MARKER A
                                                 || (
@@ -541,6 +547,8 @@ impl PathDependentCollectiveConstraint {
                                                     //  - This ASSUMES that the latest_move played is legal (which it should be)
 
                                                     // 2 cards outside of player, and player reveals reveal_considered
+                                                    // !self.history[i - 1].player_has_inferred_constraint(action_player, reveal_considered)
+                                                    // ^ Imported from above (full_test_replay_11 fails with this)
                                                     self.history[i - 1].known_card_count(reveal_considered) == 2 
                                                     && (
                                                         *reveal_i == reveal_considered
@@ -644,11 +652,11 @@ impl PathDependentCollectiveConstraint {
                                     redraw_i.is_none()
                                     // This is after the discard
                                     // This is just before the RevealRedraw
+                                    // CASE In previous RevealRedraw, 
+                                    // Player hand fully known
+                                    // Player did not have discard_considered
+                                    // Then the person previously definitely redrew that
                                     && (
-                                        // CASE In previous RevealRedraw, 
-                                        // Player hand fully known
-                                        // Player did not have discard_considered
-                                        // Then the person previously definitely redrew that
                                         self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2
                                         && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered) // required for MARKER A
                                         || (
@@ -668,12 +676,14 @@ impl PathDependentCollectiveConstraint {
                                             // self.history[i - 1].known_card_count(discard_considered) >= 2
                                             // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
                                             // TODO: [OPTIMIZE] don't call known_card_count twice, use a match statement
+                                            // !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered) // [OPTIMIZE] Repeated above
+                                            // ^ Imported from above (full_test_replay_11 fails with this)
                                             self.history[i - 1].known_card_count(discard_considered) == 2 
                                             && (
                                                 // 2 cards outside of player, and player reveals discard_considered
                                                 *reveal_i == discard_considered
                                                 // 2 cards outside of player, and player redraws discard_considered
-                                                // i.e someone revealredraw of ambassador an item into it
+                                                // i.e someone revealredraw or ambassador an item into it
                                                 || self.lookback_check(i - 1, action_player, discard_considered).is_some()
                                             )
                                             // 3 cards outside of player and (implied that player obviously won't reveal discard_considered)
@@ -772,6 +782,8 @@ impl PathDependentCollectiveConstraint {
                 if let ActionInfo::RevealRedraw { reveal, redraw, .. } = self.history[i].action_info() {
                     // if self.history[i - 1].meta_data().public_constraints()[player_i].len() + self.history[i - 1].meta_data().inferred_constraints()[player_i].len() == 2
                     // && !self.history[i - 1].player_has_inferred_constraint(player_i, card) 
+                    log::trace!("*reveal == card reveal: {:?} card: {:?}", reveal, card);
+                    log::trace!("Some(*reveal) != *redraw *reveal: {:?}, *redraw: {:?}", reveal, redraw);
                     if *reveal == card && Some(*reveal) != *redraw {
                         return Some((i, self.history[i].player()));
                     }
@@ -784,6 +796,20 @@ impl PathDependentCollectiveConstraint {
                 // if self.history[i].name() == ActionInfoName::RevealRedraw {
                 //     return None
                 // }
+                match self.history[i].action_info() {
+                    ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
+                        // TODO: THEORY Handle relinquish
+                        if redraw.is_none() {
+                            return None;
+                        }
+                    },
+                    ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                        // TODO: THEORY Handle relinquish cases
+                        return None;
+                    },
+                    ActionInfo::Start => {debug_assert!(false, "Start should only be in index = 0")},
+                    ActionInfo::Discard { .. } => {},
+                }
             }
         }
         None
@@ -971,7 +997,7 @@ impl PathDependentCollectiveConstraint {
     }
     fn calculate_stored_move(&mut self, history_index: usize) {
         // let action: &SignificantAction = &self.history[history_index];
-        log::trace!("calculate_stored_move history_index: {history_index}");
+        log::trace!("calculate_stored_move history_index: {history_index}, player: {} {:?}", self.history[history_index].player(), self.history[history_index].action_info());
         let (player_id, action_info) = {
             let action = &self.history[history_index];
             (action.player() as usize, action.action_info().clone())
@@ -1217,7 +1243,8 @@ impl PathDependentCollectiveConstraint {
         log::info!("{}", format!("\t CAP: {:?}", self.group_constraints_cap));
         log::info!("{}", format!("\t DUK: {:?}", self.group_constraints_duk));
         log::info!("{}", format!("\t CON: {:?}", self.group_constraints_con));
-        log::info!("{}", format!("History: {:?}", self.history));
+        let info_strings = self.history.iter().map(|s| s.action_info_str()).collect::<Vec<String>>();
+        log::info!("{}", format!("History: {:?}", info_strings));
     }
     /// Gets the number of dead cards a player has for a particular card
     /// NOTE:
@@ -4596,6 +4623,7 @@ impl PathDependentCollectiveConstraint {
         .iter_mut()
         .zip(player_alive_counts_to_subtract.iter())
             {
+                // TODO: WARN: ERROR: There is an attemt to subtract with overflow here
                 for (r, s) in remaining.iter_mut().zip(subtract.iter()) {
                     *r = *r - *s;
                 }
