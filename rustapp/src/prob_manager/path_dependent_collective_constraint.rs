@@ -486,7 +486,7 @@ impl PathDependentCollectiveConstraint {
         false
     }
     /// Used on the initial addition of move to history, not recalculation
-    /// This is ran before any reveal and after discard
+    /// This is ran after reveal and after discard
     pub fn lookback_1_initial(&mut self) -> bool {
         // index is the index for history
         log::trace!("In lookback_1_initial");
@@ -513,16 +513,16 @@ impl PathDependentCollectiveConstraint {
                                     ActionInfoName::RevealRedraw => {
                                         return false;
                                         log::trace!("lookback_1_initial RevealRedraw checking past RevealRedraw");
-                                        log::trace!("lookback_1_initial original RevealRedraw: {:?}", action_info);
-                                        log::trace!("lookback_1_initial checked RevealRedraw: {:?}", action_data.action_info());
-                                        let need_redraw_update = if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
+                                        log::trace!("lookback_1_initial original player: {} RevealRedraw: {:?}", player_index, action_info);
+                                        log::trace!("lookback_1_initial checked player: {} RevealRedraw: {:?}", action_data.player(), action_data.action_info());
+                                        let need_redraw_update = if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
                                             redraw_i.is_none()
                                             // This is after the discard
                                             // This is just before the RevealRedraw
                                             && (
                                                 // CASE when all cards are known and not reveal_considered
                                                 self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2
-                                                && !self.history[i - 1].player_has_inferred_constraint(action_player, reveal_considered)
+                                                && !self.history[i - 1].player_has_inferred_constraint(action_player, reveal_considered) // REQUIRED FOR MARKER A
                                                 || (
                                                     // [CASE] All player cards are the same card
                                                     // Then the person previously definitely redrew that
@@ -532,13 +532,19 @@ impl PathDependentCollectiveConstraint {
                                                     && self.public_constraints[action_player as usize].iter().all(|&c| c == reveal_considered)
                                                 )
                                                 || (
+                                                    // MARKER A
                                                     // before the RevealRedraw
                                                     // All discard_considered known and outside of player
                                                     // Either 2 cards known and last in pile (therefore they could even redraw)
                                                     // Or 3 cards known and 1 is in pile (therefore they can redraw)
                                                     //  - This ASSUMES that the latest_move played is legal (which it should be)
-                                                    self.history[i - 1].known_card_count(reveal_considered) >= 2
-                                                    // && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered)
+
+                                                    // 2 cards outside of player, and player reveals reveal_considered
+                                                    self.history[i - 1].known_card_count(reveal_considered) == 2 
+                                                    && *reveal_i == reveal_considered
+                                                    // 3 cards outside of player and (implied that player obviously won't reveal reveal_considered)
+                                                    || self.history[i - 1].known_card_count(reveal_considered) == 3
+                                                    // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
                                                 )
                                             )
                                         } else {
@@ -550,6 +556,7 @@ impl PathDependentCollectiveConstraint {
                                             log::trace!("!action_data.player_has_inferred_constraint(action_player, reveal_considered) = {}", !self.inferred_constraints[action_player as usize].contains(&reveal_considered));
                                             log::trace!("self.player_constraints_all_full(action_player, reveal_considered)) = {}", self.inferred_constraints[action_player as usize].iter().all(|&c| c == reveal_considered) &&
                                             self.public_constraints[action_player as usize].iter().all(|&c| c == reveal_considered));
+                                            log::trace!("self.history[i - 1].known_card_count(reveal_considered) >= 2 = {}", self.history[i - 1].known_card_count(reveal_considered) >= 2);
                                         }
                                         log::trace!("need_redraw_update evaluated to {need_redraw_update}");
                                         if need_redraw_update {
@@ -609,9 +616,9 @@ impl PathDependentCollectiveConstraint {
                         match action_name { // This is just a get around of the partial borrowing rules...
                             ActionInfoName::RevealRedraw => {
                                 log::trace!("lookback_1_initial Discard checking past RevealRedraw");
-                                log::trace!("lookback_1_initial original player: {}, Discard: {:?}", action_data.player(), action_info);
-                                log::trace!("lookback_1_initial checked RevealRedraw: {:?}", action_data.action_info());
-                                let need_redraw_update = if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
+                                log::trace!("lookback_1_initial original player: {}, Discard: {:?}", player_index, action_info);
+                                log::trace!("lookback_1_initial checked player: {}, RevealRedraw: {:?}", action_data.player(), action_data.action_info());
+                                let need_redraw_update = if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
                                     redraw_i.is_none()
                                     // This is after the discard
                                     // This is just before the RevealRedraw
@@ -621,7 +628,7 @@ impl PathDependentCollectiveConstraint {
                                         // Player did not have discard_considered
                                         // Then the person previously definitely redrew that
                                         self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2
-                                        && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered)
+                                        && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered) // required for MARKER A
                                         || (
                                             // [CASE] All player cards are the same card
                                             // Then the person previously definitely redrew that
@@ -630,13 +637,21 @@ impl PathDependentCollectiveConstraint {
                                             && self.public_constraints[action_player as usize].iter().all(|&c| c == discard_considered)
                                         )
                                         || (
+                                            // MARKER A
                                             // before the RevealRedraw
                                             // All discard_considered known and outside of player
                                             // Either 2 cards known and last in pile (therefore they could even redraw)
                                             // Or 3 cards known and 1 is in pile (therefore they can redraw)
                                             //  - This ASSUMES that the latest_move played is legal (which it should be)
-                                            self.history[i - 1].known_card_count(discard_considered) >= 2
-                                            // && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered)
+                                            // self.history[i - 1].known_card_count(discard_considered) >= 2
+                                            // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
+
+                                            // 2 cards outside of player, and player reveals reveal_considered
+                                            self.history[i - 1].known_card_count(discard_considered) == 2 
+                                            && *reveal_i == discard_considered
+                                            // 3 cards outside of player and (implied that player obviously won't reveal discard_considered)
+                                            || self.history[i - 1].known_card_count(discard_considered) == 3
+                                            // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
                                         )
                                     )
                                 } else {
@@ -650,6 +665,7 @@ impl PathDependentCollectiveConstraint {
                                     log::trace!("!action_data.player_has_inferred_constraint(action_player, discard_considered) = {}", !self.history[i].player_has_inferred_constraint(action_player, discard_considered));
                                     log::trace!("self.player_constraints_all_full(action_player, discard_considered) = {}", self.inferred_constraints[action_player as usize].iter().all(|&c| c == discard_considered) &&
                                     self.public_constraints[action_player as usize].iter().all(|&c| c == discard_considered));
+                                    log::trace!("self.history[i - 1].known_card_count(reveal_considered) >= 2 = {}", self.history[i - 1].known_card_count(discard_considered) >= 2);
                                 }
                                 log::trace!("need_redraw_update evaluated to {need_redraw_update}");
                                 if need_redraw_update {
