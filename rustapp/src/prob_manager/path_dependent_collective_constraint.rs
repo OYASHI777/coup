@@ -543,7 +543,7 @@ impl PathDependentCollectiveConstraint {
                                                     self.history[i - 1].known_card_count(reveal_considered) == 2 
                                                     && (
                                                         *reveal_i == reveal_considered
-                                                        || self.lookback_check(i - 1, reveal_considered).is_some()
+                                                        || self.lookback_check(i - 1, action_player, reveal_considered).is_some()
                                                     )
                                                     // 3 cards outside of player and (implied that player obviously won't reveal reveal_considered)
                                                     || self.history[i - 1].known_card_count(reveal_considered) == 3
@@ -555,11 +555,29 @@ impl PathDependentCollectiveConstraint {
                                         };
                                         if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
                                             log::trace!("redraw_i.is_none() = : {}", redraw_i.is_none());
-                                            log::trace!("self.public_constraints[action_player as usize].len() + self.inferred_constraints[action_player as usize].len() == 2 = {}", self.public_constraints[action_player as usize].len() + self.inferred_constraints[action_player as usize].len() == 2);
+                                            log::trace!("&&");
+                                            log::trace!("self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2 = {}", self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2);
+                                            log::trace!("&&");
                                             log::trace!("!action_data.player_has_inferred_constraint(action_player, reveal_considered) = {}", !self.inferred_constraints[action_player as usize].contains(&reveal_considered));
+                                            log::trace!("||");
+                                            log::trace!("(");
+                                            log::trace!("self.public_constraints[action_player as usize].len() + self.inferred_constraints[action_player as usize].len() == 2 = {}", self.public_constraints[action_player as usize].len() + self.inferred_constraints[action_player as usize].len() == 2);
+                                            log::trace!("&&");
                                             log::trace!("self.player_constraints_all_full(action_player, reveal_considered)) = {}", self.inferred_constraints[action_player as usize].iter().all(|&c| c == reveal_considered) &&
                                             self.public_constraints[action_player as usize].iter().all(|&c| c == reveal_considered));
-                                            log::trace!("self.history[i - 1].known_card_count(reveal_considered) >= 2 = {}", self.history[i - 1].known_card_count(reveal_considered) >= 2);
+                                            log::trace!(")");
+                                            log::trace!("||");
+                                            log::trace!("(");
+                                            log::trace!("self.history[i - 1].known_card_count(reveal_considered) == 2 = {}", self.history[i - 1].known_card_count(reveal_considered) == 2);
+                                            log::trace!("&&");
+                                            log::trace!("   (");
+                                            log::trace!("*reveal_i == reveal_considered = ?? reveal_i: {:?}, reveal_considered: {:?}", action_data.action_info(), reveal_considered);
+                                            log::trace!("||");
+                                            log::trace!("self.lookback_check(i - 1, action_player, reveal_considered).is_some() = {}", self.lookback_check(i - 1, action_player, reveal_considered).is_some());
+                                            log::trace!("   )");
+                                            log::trace!("||");
+                                            log::trace!("self.history[i - 1].known_card_count(reveal_considered) == 3 = {}", self.history[i - 1].known_card_count(reveal_considered) == 3);
+                                            log::trace!(")");
                                         }
                                         log::trace!("need_redraw_update evaluated to {need_redraw_update}");
                                         if need_redraw_update {
@@ -648,14 +666,14 @@ impl PathDependentCollectiveConstraint {
                                             //  - This ASSUMES that the latest_move played is legal (which it should be)
                                             // self.history[i - 1].known_card_count(discard_considered) >= 2
                                             // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
-
+                                            // TODO: [OPTIMIZE] don't call known_card_count twice, use a match statement
                                             self.history[i - 1].known_card_count(discard_considered) == 2 
                                             && (
                                                 // 2 cards outside of player, and player reveals discard_considered
                                                 *reveal_i == discard_considered
                                                 // 2 cards outside of player, and player redraws discard_considered
                                                 // i.e someone revealredraw of ambassador an item into it
-                                                || self.lookback_check(i - 1, discard_considered).is_some()
+                                                || self.lookback_check(i - 1, action_player, discard_considered).is_some()
                                             )
                                             // 3 cards outside of player and (implied that player obviously won't reveal discard_considered)
                                             || self.history[i - 1].known_card_count(discard_considered) == 3
@@ -667,13 +685,29 @@ impl PathDependentCollectiveConstraint {
                                 };
                                 if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
                                     log::trace!("redraw_i.is_none() = : {}", redraw_i.is_none());
-                                    log::trace!("self.history[i - 1].meta_data().public_constraints(): {:?}", self.history[i - 1].meta_data().public_constraints());
-                                    log::trace!("self.history[i - 1].meta_data().inferred_constraints(): {:?}", self.history[i - 1].meta_data().inferred_constraints());
-                                    log::trace!("self.player_cards_known(action_player as usize) == 2 = {}", self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2);
-                                    log::trace!("!action_data.player_has_inferred_constraint(action_player, discard_considered) = {}", !self.history[i].player_has_inferred_constraint(action_player, discard_considered));
-                                    log::trace!("self.player_constraints_all_full(action_player, discard_considered) = {}", self.inferred_constraints[action_player as usize].iter().all(|&c| c == discard_considered) &&
+                                    log::trace!("&&");
+                                    log::trace!("self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2 = {}", self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2);
+                                    log::trace!("&&");
+                                    log::trace!("!action_data.player_has_inferred_constraint(action_player, discard_considered) = {}", !self.inferred_constraints[action_player as usize].contains(&discard_considered));
+                                    log::trace!("||");
+                                    log::trace!("(");
+                                    log::trace!("self.public_constraints[action_player as usize].len() + self.inferred_constraints[action_player as usize].len() == 2 = {}", self.public_constraints[action_player as usize].len() + self.inferred_constraints[action_player as usize].len() == 2);
+                                    log::trace!("&&");
+                                    log::trace!("self.player_constraints_all_full(action_player, discard_considered)) = {}", self.inferred_constraints[action_player as usize].iter().all(|&c| c == discard_considered) &&
                                     self.public_constraints[action_player as usize].iter().all(|&c| c == discard_considered));
-                                    log::trace!("self.history[i - 1].known_card_count(reveal_considered) >= 2 = {}", self.history[i - 1].known_card_count(discard_considered) >= 2);
+                                    log::trace!(")");
+                                    log::trace!("||");
+                                    log::trace!("(");
+                                    log::trace!("self.history[i - 1].known_card_count(discard_considered) == 2 = {}", self.history[i - 1].known_card_count(discard_considered) == 2);
+                                    log::trace!("&&");
+                                    log::trace!("   (");
+                                    log::trace!("*reveal_i == discard_considered = ?? reveal_i: {:?}, discard_considered: {:?}", action_data.action_info(), discard_considered);
+                                    log::trace!("||");
+                                    log::trace!("self.lookback_check(i - 1, action_player, discard_considered).is_some() = {}", self.lookback_check(i - 1, action_player, discard_considered).is_some());
+                                    log::trace!("   )");
+                                    log::trace!("||");
+                                    log::trace!("self.history[i - 1].known_card_count(discard_considered) == 3 = {}", self.history[i - 1].known_card_count(discard_considered) == 3);
+                                    log::trace!(")");
                                 }
                                 log::trace!("need_redraw_update evaluated to {need_redraw_update}");
                                 if need_redraw_update {
@@ -725,15 +759,22 @@ impl PathDependentCollectiveConstraint {
     /// Checks if anybody has revealredrawn a card into pile before
     /// return Some(index, player_id) if exists
     /// None
-    pub fn lookback_check(&self, index: usize, card: Card) -> Option<(usize, u8)> {
+    pub fn lookback_check(&self, history_index: usize, player_id: u8, card: Card) -> Option<(usize, u8)> {
         // TODO: See full_test_repay_1.log
         // If player 4 RR Duke instead of P2
         // might have to update that too a re
         // maybe needs to be not the original player?
-        for i in (1..=index).rev() {
-            if let ActionInfo::RevealRedraw { reveal, .. } = self.history[i].action_info() {
-                if *reveal == card {
-                    return Some((i, self.history[i].player()));
+        log::trace!("lookback_check history_index: {}, player_id: {}, card: {:?}", history_index, player_id, card);
+        for i in (1..=history_index).rev() {
+            if self.history[i].player() != player_id {
+                if let ActionInfo::RevealRedraw { reveal, .. } = self.history[i].action_info() {
+                    if *reveal == card {
+                        return Some((i, self.history[i].player()));
+                    }
+                }
+            } else {
+                if self.history[i].name() == ActionInfoName::RevealRedraw {
+                    return None
                 }
             }
         }
@@ -937,6 +978,7 @@ impl PathDependentCollectiveConstraint {
                 self.death(history_index, player_id as usize, discard);
             },
             ActionInfo::RevealRedraw{ reveal, redraw, ..  } => {
+                // TODO: reveal_relinquish?
                 // TODO: handle the known card case obviously lol
                 match redraw {
                     None => {
@@ -2926,6 +2968,7 @@ impl PathDependentCollectiveConstraint {
     pub fn reveal_redraw_diff(&mut self, player_id: usize, reveal: Card, redraw: Card) {
         // Double inferred 
         log::trace!("reveal_redraw_diff player_id: {}, reveal: {:?}, redraw: {:?}", player_id, reveal, redraw);
+        self.printlog();
         if !self.inferred_constraints[player_id].contains(&reveal) {
             self.add_inferred_card(player_id, reveal, 1, &mut vec![Vec::with_capacity(0); 6]);
         }

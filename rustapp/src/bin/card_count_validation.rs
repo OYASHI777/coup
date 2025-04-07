@@ -120,7 +120,7 @@ pub fn test() {
         // println!("Testing: {}", stringify!(full_test_replay_1)); count += 1;
         // replay_game_constraint_pd(full_test_replay_1, false, false);
         // println!("Testing: {}", stringify!(full_test_replay_1_modified)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_1_modified, false, true);
+        // replay_game_constraint_pd(full_test_replay_1_modified, false, false);
         // println!("Testing: {}", stringify!(full_test_replay_2)); count += 1;
         // replay_game_constraint_pd(full_test_replay_2, false, false);
         // Fails after continual fix
@@ -138,8 +138,8 @@ pub fn test() {
         // Fails after continual fix
         // Fails after initial fix
         // Fails after lookback_check
-        // println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_6, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
+        replay_game_constraint_pd(full_test_replay_6, false, true);
         // Fails after initial fix
         // println!("Testing: {}", stringify!(full_test_replay_7)); count += 1;
         // replay_game_constraint_pd(full_test_replay_7, false, false);
@@ -171,6 +171,7 @@ pub fn test() {
         // replay_game_constraint_pd(redundancy_replay_0, false, false);
         // No Attempt to solve this yet
         // Fails after continual fix
+        // Passes after lookback_check
         // println!("Testing: {}", stringify!(whole_replay_0)); count += 1;
         // replay_game_constraint_pd(whole_replay_0, false, false);
         // println!("Testing: {}", stringify!(whole_replay_1)); count += 1;
@@ -183,8 +184,8 @@ pub fn test() {
         // println!("Testing: {}", stringify!(whole_replay_4)); count += 1;
         // replay_game_constraint_pd(whole_replay_4, false, false);
         
-        // println!("Testing: {}", stringify!(backward_compat_0)); count += 1;
-        // replay_game_constraint_pd(backward_compat_0, false, false);
+        println!("Testing: {}", stringify!(backward_compat_0)); count += 1;
+        replay_game_constraint_pd(backward_compat_0, false, false);
         println!("ALL PASSED");
     }
 }
