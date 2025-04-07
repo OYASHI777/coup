@@ -4442,7 +4442,20 @@ impl PathDependentCollectiveConstraint {
                             let mut part_list_excl_player: CompressedGroupConstraint = group.get_blank_part_list();
                             part_list_excl_player.set_player_flag(player, false);
                             // Gets maximal holdable number of cards in the group outside of the player
+
                             let mut maximal_alive_card_counts: [u8; 5] = [0; 5];
+                            //  ==== Handles case where no groups in group_constraints
+                            // TODO: [OPTIMIZE] Initialise an all counts_alive [[u8; 5]; 7] array outside of loop
+                            //      Then gather number here
+                            for temp_id in part_list_excl_player.iter_true_player_flags() {
+                                for temp_card in self.inferred_constraints[temp_id].iter() {
+                                    if *temp_card as usize != card_num {
+                                        maximal_alive_card_counts[*temp_card as usize] += 1;
+                                    }
+                                }
+                            }
+                            //  ==== End Handles case where no groups in group_constraints
+                            // TODO: [OPTIMIZE] with a filter on card_num_inner so the loop does not have the conditional
                             for (card_num_inner, complement_groups) in self.group_constraints().iter().enumerate() {
                                 if card_num_inner != card_num {
                                     for complement_group in complement_groups.iter() {
@@ -4456,7 +4469,13 @@ impl PathDependentCollectiveConstraint {
                                 }
                             }
                             // All dead other than player
+                            log::trace!("player: {player} self.public_constraints before maximal_holdable_dead: {:?}", self.public_constraints);
                             let mut complement_maximal_holdable_dead: u8 = 0;
+                            // TODO: [OPTIMIZE] Change to this
+                            // let mut complement_maximal_holdable_dead: u8 = (0..7 as usize)
+                            //     .filter(|i| group.get_player_flag(i) && i != player)
+                            //     .map(|i| self.public_constraints[i].len() as u8)
+                            //     .sum();
                             for i in 0..7 as usize {
                                 if group.get_player_flag(i) && i != player {
                                     complement_maximal_holdable_dead += self.public_constraints[i].len() as u8;
@@ -4476,6 +4495,7 @@ impl PathDependentCollectiveConstraint {
                             log::info!("Complement_max_alive array: {:?}", maximal_alive_card_counts);
                             log::info!("Complement_max_dead: {}", complement_maximal_holdable_dead);
                             log::info!("Complement_max_alive: {}", complement_maximal_holdable_alive);
+                            log::trace!("group_alive_count: {} >? max_free_spaces{}", group_alive_count, max_free_spaces);
                             if group_alive_count > max_free_spaces {
                                 let inferred_counts = group_alive_count - max_free_spaces;
                                 let known_counts= self.inferred_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
