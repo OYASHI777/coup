@@ -279,6 +279,7 @@ impl PathDependentMetaData {
 //     }
 // }
 
+// LAST UPDATED REVEALREDRAW_RELINQUISH
 // 0: Document swap_mix()
 // 1: Test without any inference first, just to see if the recursion works for simple cases
 //      - Basic Cases
@@ -995,6 +996,7 @@ impl PathDependentCollectiveConstraint {
                             Some(relinquish_card) => {
                                 debug_assert!(relinquish_card == reveal, "We normally assume reveal and relinquish are the same else, one should use redraw");
                                 self.reveal_redraw_relinquish(player_id, relinquish_card);
+                                // self.reveal_redraw(history_index, player_id, reveal);
                             },
                             None => {
                                 self.reveal_redraw(history_index, player_id, reveal);
