@@ -541,7 +541,10 @@ impl PathDependentCollectiveConstraint {
 
                                                     // 2 cards outside of player, and player reveals reveal_considered
                                                     self.history[i - 1].known_card_count(reveal_considered) == 2 
-                                                    && *reveal_i == reveal_considered
+                                                    && (
+                                                        *reveal_i == reveal_considered
+                                                        || self.lookback_check(i - 1, reveal_considered).is_some()
+                                                    )
                                                     // 3 cards outside of player and (implied that player obviously won't reveal reveal_considered)
                                                     || self.history[i - 1].known_card_count(reveal_considered) == 3
                                                     // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
@@ -646,9 +649,14 @@ impl PathDependentCollectiveConstraint {
                                             // self.history[i - 1].known_card_count(discard_considered) >= 2
                                             // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
 
-                                            // 2 cards outside of player, and player reveals reveal_considered
                                             self.history[i - 1].known_card_count(discard_considered) == 2 
-                                            && *reveal_i == discard_considered
+                                            && (
+                                                // 2 cards outside of player, and player reveals discard_considered
+                                                *reveal_i == discard_considered
+                                                // 2 cards outside of player, and player redraws discard_considered
+                                                // i.e someone revealredraw of ambassador an item into it
+                                                || self.lookback_check(i - 1, discard_considered).is_some()
+                                            )
                                             // 3 cards outside of player and (implied that player obviously won't reveal discard_considered)
                                             || self.history[i - 1].known_card_count(discard_considered) == 3
                                             // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
@@ -713,6 +721,23 @@ impl PathDependentCollectiveConstraint {
             }
         }
         false
+    }
+    /// Checks if anybody has revealredrawn a card into pile before
+    /// return Some(index, player_id) if exists
+    /// None
+    pub fn lookback_check(&self, index: usize, card: Card) -> Option<(usize, u8)> {
+        // TODO: See full_test_repay_1.log
+        // If player 4 RR Duke instead of P2
+        // might have to update that too a re
+        // maybe needs to be not the original player?
+        for i in (1..=index).rev() {
+            if let ActionInfo::RevealRedraw { reveal, .. } = self.history[i].action_info() {
+                if *reveal == card {
+                    return Some((i, self.history[i].player()));
+                }
+            }
+        }
+        None
     }
     /// lookback for when we discover a previous item and want to continue for that
     /// This happens e.g. when you discard => infer the redraw of a previous RevealRedraw
