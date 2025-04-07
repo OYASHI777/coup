@@ -150,9 +150,14 @@ pub fn test() {
         // replay_game_constraint_pd(full_test_replay_11, false, false);
         // println!("Testing: {}", stringify!(full_test_replay_12)); count += 1;
         // replay_game_constraint_pd(full_test_replay_12, false, false);
-        // PD Fails | PD with negation fails
+        // NEW tests
+        // println!("Testing: {}", stringify!(full_test_replay_13)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_13, false, false);
+        // println!("Testing: {}", stringify!(full_test_replay_14)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_14, false, false);
+        // PD Fails | PD with negation fails 
         // Fails after continual fix
-        // Fails after lookback_check
+        // Fails after lookback_check even without negation
         println!("Testing: {}", stringify!(redundancy_replay_0)); count += 1;
         replay_game_constraint_pd(redundancy_replay_0, false, true);
         // println!("Testing: {}", stringify!(whole_replay_0)); count += 1;
@@ -163,12 +168,13 @@ pub fn test() {
         // replay_game_constraint_pd(whole_replay_2, false, false);
         // println!("Testing: {}", stringify!(whole_replay_3)); count += 1;
         // replay_game_constraint_pd(whole_replay_3, false, false);
+        // PD without negation fails
         // Fails after lookback_check
         // println!("Testing: {}", stringify!(whole_replay_4)); count += 1;
         // replay_game_constraint_pd(whole_replay_4, false, false);
         
-        // println!("Testing: {}", stringify!(backward_compat_0)); count += 1;
-        // replay_game_constraint_pd(backward_compat_0, false, false);
+        println!("Testing: {}", stringify!(backward_compat_0)); count += 1;
+        replay_game_constraint_pd(backward_compat_0, false, false);
         println!("ALL PASSED");
     }
 }

@@ -993,8 +993,8 @@ impl PathDependentCollectiveConstraint {
                         //  Then whenever u regenerate, you don't really have to lookback as there is nothing new to check
                         match relinquish {
                             Some(relinquish_card) => {
-                                debug_assert(relinquish_card == reveal, "We normally assume reveal and relinquish are the same else, one should use redraw";)
-                                self.reveal_redraw_relinquish();
+                                debug_assert!(relinquish_card == reveal, "We normally assume reveal and relinquish are the same else, one should use redraw");
+                                self.reveal_redraw_relinquish(player_id, relinquish_card);
                             },
                             None => {
                                 self.reveal_redraw(history_index, player_id, reveal);
@@ -3095,6 +3095,7 @@ impl PathDependentCollectiveConstraint {
         // TODO: THEORY CHECK and DOCUMENT
         // For now im thinking for player 0 and player 6
         // get all card counts
+        let relinquish_card_num = relinquish_card as usize;
         let player_a_dead_card_count = self.player_dead_card_count(player_a, relinquish_card);
         let player_a_inferred_card_count = self.player_inferred_card_count(player_a, relinquish_card);
         let player_a_dead_card_counts = self.player_dead_card_counts(player_a);
@@ -3107,6 +3108,37 @@ impl PathDependentCollectiveConstraint {
         // log::trace!("swap_mix player_a_dead_card_b: {:?}", player_a_dead_card_b);
         // log::trace!("swap_mix player_a_inferred_card_b: {:?}", player_a_inferred_card_b);
         let group_constraints = self.group_constraints_mut();
+        group_constraints[relinquish_card_num]
+        .iter_mut()
+        .filter(
+            |group| group.get_player_flag(player_a) && !group.get_player_flag(player_b)
+        )
+        .for_each(
+            |group| {
+                let player_b_dead_card_count = player_b_dead_card_counts[relinquish_card_num];
+                let player_b_inferred_card_count = player_b_inferred_card_counts[relinquish_card_num];
+                group.set_player_flag(player_b, true);
+                group.add_dead_count(player_b_dead_card_count);
+                group.add_alive_count(player_b_inferred_card_count);
+                group.add_total_count(player_b_dead_card_count + player_b_inferred_card_count);
+        });
+        for card_num in 0..5 {
+            group_constraints[card_num]
+            .iter_mut()
+            .filter(
+                |group| group.get_player_flag(player_b) && !group.get_player_flag(player_a)
+            )
+            .for_each(
+                |group| {
+                    let player_a_dead_card_count = player_a_dead_card_counts[card_num];
+                    let player_a_inferred_card_count = player_a_inferred_card_counts[card_num];
+                    group.set_player_flag(player_a, true);
+                    group.add_dead_count(player_a_dead_card_count);
+                    group.add_alive_count(player_a_inferred_card_count);
+                    group.add_total_count(player_a_dead_card_count + player_a_inferred_card_count);
+                }
+            )
+        }
     }
     /// Function to call for move Ambassador, without considering private information seen by the player who used Ambassador
     pub fn ambassador_public(&mut self, player_id: usize) {
