@@ -530,7 +530,7 @@ impl PathDependentCollectiveConstraint {
                                         log::trace!("need_redraw_update evaluated to {need_redraw_update}");
                                         if need_redraw_update {
                                             log::trace!("lookback_1_initial original RevealRedraw: {:?}", action_info);
-                                            log::trace!("lookback_1_initial considering: {:?}", action_data.action_info());
+                                            log::trace!("lookback_1_initial considering: player: {} {:?}", action_data.player(), action_data.action_info());
                                             if let ActionInfo::RevealRedraw { redraw, .. } = action_data.action_info_mut() {
                                                 log::trace!("lookback_1_initial setting redraw to: {:?}", reveal_considered);
                                                 *redraw = Some(reveal_considered);
@@ -611,11 +611,11 @@ impl PathDependentCollectiveConstraint {
                                 log::trace!("need_redraw_update evaluated to {need_redraw_update}");
                                 if need_redraw_update {
                                     log::trace!("lookback_1_initial original Discard: {:?}", action_info);
-                                    log::trace!("lookback_1_initial considering: {:?}", action_data.action_info());
+                                    log::trace!("lookback_1_initial considering: player: {} {:?}", action_data.player(), action_data.action_info());
                                     if let ActionInfo::RevealRedraw { redraw, .. } = action_data.action_info_mut() {
                                         log::trace!("lookback_1_initial setting redraw to: {:?}", discard_considered);
                                         *redraw = Some(discard_considered);
-                                        self.lookback_1_continual(i);
+                                        // self.lookback_1_continual(i);
                                         self.regenerate_path();
                                         self.printlog();
                                         // panic!();
@@ -783,11 +783,15 @@ impl PathDependentCollectiveConstraint {
                             // TODO: Probably check if inferred_card already there
                             // if so add it in.
                             self.reveal_redraw_same(player_id, reveal);
+                            log::trace!("After reveal_redraw_same");
+                            self.printlog();
                         } else {
                             // TODO: Redraw can give you back info about the previous ambassador perhaps?
                             // TODO: Swap would be custom and required
                             // TODO: Refactor for neatness
                             self.reveal_redraw_diff(player_id, reveal, drawn);
+                            log::trace!("After reveal_redraw_diff");
+                            self.printlog();
                         }
                     },
                 }
@@ -1840,9 +1844,256 @@ impl PathDependentCollectiveConstraint {
                 }
             }
         }
-
+        // TODO: REMOVE commented above when this is stable
+        // let new_inferred = if bool_changes {
+        //     self.inferred_card_prune(player_id, card)
+        // } else {
+        //     Vec::with_capacity(0)
+        // };
         // TODO: Inferred card needs to prune too!
         (bool_changes, new_inferred)
+    }
+    pub fn add_inferred_card_unchecked(&mut self, player_id: usize, card: Card, alive_count: u8, card_changes: &mut Vec<Vec<usize>>) -> (bool, Vec<CompressedGroupConstraint>) {
+        // TODO: [IMPLEMENT] Need to add the case for single_card_flag on card != card_num ZZ2A as per add_dead_cards
+        log::info!("In add_inferred_card");
+        let mut bool_changes = false;
+        // [OPTIMIZE] See bulk, maybe dont even need card_changes
+        // [OPTIMIZE] cant u just add the difference here instead of a branch
+        // nothing special just standard changes
+        // [OPTIMIZE][IMPT] check for if inferred_constraints contains card before pushing it in! Its unneeded allocations
+        match alive_count {
+            1 => {
+                // One card known
+                log::trace!("");
+                log::trace!("=== add_subset_groups Inferred 1 === ");
+                log::trace!("add_sub_groups adding player considered: {}", player_id);
+                log::trace!("add_sub_groups Before self.public_constraints: {:?}", self.public_constraints);
+                log::trace!("add_sub_groups Before self.inferred_constraints: {:?}", self.inferred_constraints);
+                self.inferred_constraints[player_id].push(card);
+                log::trace!("self.inferred_constraints: {:?}", self.inferred_constraints);
+                debug_assert!(self.inferred_constraints[player_id].len() < 4, "F1");
+                card_changes[card as usize].push(player_id);
+                log::trace!("add_sub_groups After self.public_constraints: {:?}", self.public_constraints);
+                log::trace!("add_sub_groups After self.inferred_constraints: {:?}", self.inferred_constraints);
+                bool_changes = true;
+                // TODO: Needs to prune the groups too...
+                // TODO: Adjust counts properly too... or remove inferred_counts
+            },
+            2 => {
+                unimplemented!();
+            },
+            3 => {
+                unimplemented!()
+            },
+            _ => {
+                log::trace!("alive_count: {}", alive_count);
+                debug_assert!(false, "You really should not be here... there should only be alive_count of 2 or 1 for a single player!");
+            }
+        }
+        let new_inferred = if bool_changes {
+            self.inferred_card_prune(player_id, card)
+        } else {
+            Vec::with_capacity(0)
+        };
+        // TODO: Inferred card needs to prune too!
+        (bool_changes, new_inferred)
+    }
+    fn inferred_card_prune(&mut self, player_id: usize, card: Card) -> Vec<CompressedGroupConstraint>{
+        let bool_all_cards_dead_or_known: bool = self.clear_group_constraints(card);
+        // === REMOVED REVEALED_STATUS LOGIC ===
+        // TODO: But i think we maybe need prune part? lol (leave single flag alone)
+        // For now im not gonna prune because I need supergroups anyways so.
+        let mut new_inferred = Vec::with_capacity(5); // temp dummy
+
+        // Case A: 1 inferred other card dead => update group
+        // Case B: all cards inferred or known => update group
+        // Case C: 1 inferred no other card known => update group
+        let mut group_constraints = [&mut self.group_constraints_amb, 
+        &mut self.group_constraints_ass, 
+        &mut self.group_constraints_cap, 
+        &mut self.group_constraints_duk, 
+        &mut self.group_constraints_con];
+        // TODO: [FIX/OPTIMIZE] change card_num_range to exclude those with full inferred + dead card counts known
+        //      - Not having this leaves empty group_constraints, which may or may not be a good thing
+        let card_num_range = (0..5).filter(|x| *x != card as usize);
+        let mut dead_card_counts: [u8; 5] = [0; 5];
+        for card in self.public_constraints[player_id].iter() {
+            dead_card_counts[*card as usize] += 1;
+        }
+        let mut inferred_card_counts: [u8; 5] = [0; 5];
+        for card in self.inferred_constraints[player_id].iter() {
+            inferred_card_counts[*card as usize] += 1;
+        }
+        let dead_card_count = self.public_constraints[player_id].len();
+        let inferred_card_count = self.inferred_constraints[player_id].len();
+        if player_id != 6 {
+
+            if dead_card_count + inferred_card_count == 2 {
+                // Case A: 1 inferred other card dead => update group
+                // Case B: all cards inferred or known => update group
+                // Handle groups where cards are same as inferred card
+                if !bool_all_cards_dead_or_known {
+                    let groups = &mut group_constraints[card as usize];
+                    let mut i: usize = 0;
+                    while i < groups.len() {
+                        let group = &mut groups[i];
+                        if group.get_player_flag(player_id) {
+                            group.set_player_flag(player_id, false);
+                            if group.count_alive() > inferred_card_counts[card as usize] {
+                                group.sub_alive_count(inferred_card_counts[card as usize]);
+                                group.sub_dead_count(dead_card_counts[card as usize]);
+                                group.sub_total_count(inferred_card_counts[card as usize] + dead_card_counts[card as usize]);
+                                if group.is_single_player_part_list() {
+                                    new_inferred.push(*group);
+                                    groups.swap_remove(i);
+                                    log::trace!("Group removed!");
+                                    continue;
+                                }
+                            } else {
+                                groups.swap_remove(i);
+                                continue;
+                            }
+                        }
+                        i += 1;
+                    }
+                }
+                // Seems the same...
+                // Case A: 1 inferred other card dead => update group
+                // Case B: all cards inferred or known => update group
+                // Handle groups where cards are not same as inferred card
+                for card_num in card_num_range {
+                    let groups = &mut group_constraints[card_num];
+                    let mut i: usize = 0;
+                    while i < groups.len() {
+                        let group = &mut groups[i];
+                        if group.get_player_flag(player_id) {
+                            group.set_player_flag(player_id, false);
+                            if group.count_alive() > inferred_card_counts[card_num as usize] {
+                                group.sub_alive_count(inferred_card_counts[card_num as usize]);
+                                group.sub_dead_count(dead_card_counts[card_num]);
+                                group.sub_total_count(inferred_card_counts[card_num as usize] + dead_card_counts[card_num]);
+                                if group.is_single_player_part_list() {
+                                    new_inferred.push(*group);
+                                    groups.swap_remove(i);
+                                    log::trace!("Group removed!");
+                                    continue;
+                                }
+                            } else {
+                                groups.swap_remove(i);
+                                continue;
+                            }
+                        }
+                        i += 1;
+                    }
+                }
+            } else {
+                if inferred_card_count != 1 {
+                    println!("{:?}", self.public_constraints);
+                    println!("{:?}", self.inferred_constraints);
+                    panic!();
+                }
+                debug_assert!(inferred_card_count == 1, "In the case where you have added a card, and dead_card + inferred_cards != 2, it should only be when inferred_cards == 1");
+                debug_assert!(self.inferred_constraints[player_id].first() == Some(&card), "Since bool_changes == true, you must have added Card == card in");
+                // Case C: 1 inferred no other card known => update group
+                // It should also only
+                if !bool_all_cards_dead_or_known {
+                    let groups = &mut group_constraints[card as usize];
+                    let mut i: usize = 0;
+                    while i < groups.len() {
+                        let group = &mut groups[i];
+                        if group.get_player_flag(player_id)  && group.count_alive() == 1{
+                            groups.swap_remove(i);
+                            continue;
+                        }
+                        i += 1;
+                    }
+                }
+            }    
+        } else {
+            if inferred_card_count == 3 {
+                // Case B: all cards inferred or known => update group
+                // Handle groups where cards are same as inferred card
+                if !bool_all_cards_dead_or_known {
+                    let groups = &mut group_constraints[card as usize];
+                    let mut i: usize = 0;
+                    while i < groups.len() {
+                        let group = &mut groups[i];
+                        if group.get_player_flag(player_id) {
+                            group.set_player_flag(player_id, false);
+                            if group.count_alive() > inferred_card_counts[card as usize] {
+                                group.sub_alive_count(inferred_card_counts[card as usize]);
+                                group.sub_total_count(inferred_card_counts[card as usize]);
+                                if group.is_single_player_part_list() {
+                                    new_inferred.push(*group);
+                                    groups.swap_remove(i);
+                                    log::trace!("Group removed!");
+                                    continue;
+                                }
+                            } else {
+                                groups.swap_remove(i);
+                                continue;
+                            }
+                        }
+                        i += 1;
+                    }
+                }
+                // Case B: all cards inferred or known => update group
+                // Handle groups where cards are not same as inferred card
+                for card_num in card_num_range {
+                    let groups = &mut group_constraints[card_num];
+                    let mut i: usize = 0;
+                    while i < groups.len() {
+                        let group = &mut groups[i];
+                        if group.get_player_flag(player_id) {
+                            group.set_player_flag(player_id, false);
+                            if group.count_alive() > inferred_card_counts[card_num as usize] {
+                                group.sub_alive_count(inferred_card_counts[card_num as usize]);
+                                group.sub_total_count(inferred_card_counts[card_num as usize]);
+                                if group.is_single_player_part_list() {
+                                    new_inferred.push(*group);
+                                    groups.swap_remove(i);
+                                    log::trace!("Group removed!");
+                                    continue;
+                                }
+                            } else {
+                                groups.swap_remove(i);
+                                continue;
+                            }
+                        }
+                        i += 1;
+                    }
+                }
+            } else {
+                // Case D more than 0 inferred, but not full
+                if !bool_all_cards_dead_or_known {
+                    let groups = &mut group_constraints[card as usize];
+                    let mut i: usize = 0;
+                    while i < groups.len() {
+                        let group = &mut groups[i];
+                        if group.get_player_flag(player_id) && group.count_alive() <= inferred_card_counts[card as usize] {
+                            groups.swap_remove(i);
+                            continue;
+                        }
+                        i += 1;
+                    }
+                }
+                for card_num in card_num_range {
+                    let groups = &mut group_constraints[card_num];
+                    let mut i: usize = 0;
+                    while i < groups.len() {
+                        let group = &mut groups[i];
+                        if group.get_player_flag(player_id) && group.count_alive() <= inferred_card_counts[card_num as usize] {
+                            groups.swap_remove(i);
+                            continue;
+                        }
+                        i += 1;
+                    }
+                }
+            }
+        }
+
+        // TODO: Inferred card needs to prune too!
+        new_inferred
     }
     // TODO: [THEORY CHECK]
     // - !!! If already inside, should not add. because the player could just be reveal info we already know
@@ -2515,6 +2766,8 @@ impl PathDependentCollectiveConstraint {
         if !self.inferred_constraints[6].contains(&redraw) {
             self.add_inferred_card(6, redraw, 1, &mut vec![Vec::with_capacity(0); 6]);
         }
+        log::trace!("reveal_redraw_diff after adding inferred cards");
+        self.printlog();
         // Swapping Cards - removing from inventories
         if let Some(pos) = self.inferred_constraints[player_id].iter().position(|c| *c == reveal) {
             self.inferred_constraints[player_id].remove(pos);
@@ -2522,13 +2775,19 @@ impl PathDependentCollectiveConstraint {
         if let Some(pos) = self.inferred_constraints[6].iter().position(|c| *c == redraw) {
             self.inferred_constraints[6].remove(pos);
         }
+        log::trace!("reveal_redraw_diff after removing inferred cards");
+        self.printlog();
         // Swapping Cards - adjusting group_constraints
         self.swap_mix(player_id, reveal, 6, redraw);
+        log::trace!("reveal_redraw_diff after swap_mix");
+        self.printlog();
         // Double inferred - do not check for containment as this comes from pile not own hand
-        self.add_inferred_card(player_id, redraw, 1, &mut vec![Vec::with_capacity(0); 6]);
-        self.add_inferred_card(6, reveal, 1, &mut vec![Vec::with_capacity(0); 6]);
+        self.add_inferred_card_unchecked(player_id, redraw, 1, &mut vec![Vec::with_capacity(0); 6]);
+        self.add_inferred_card_unchecked(6, reveal, 1, &mut vec![Vec::with_capacity(0); 6]);
         // TODO: Determine if we actually need this
         //  How does this interact with add_inferred and swap_mix?
+        log::trace!("reveal_redraw_diff after swap add_inferred_cards");
+        self.printlog();
         self.group_redundant_prune();
     }
     /// Mixes groups when some known cards of a player is swapped with some known cards of another player
@@ -2546,7 +2805,11 @@ impl PathDependentCollectiveConstraint {
         let player_b_inferred_card_a: u8 = self.inferred_constraints[player_b].iter().filter(|c| **c == card_a).count() as u8;
         let player_a_dead_card_b: u8 = self.public_constraints[player_a].iter().filter(|c| **c == card_b).count() as u8;
         let player_a_inferred_card_b: u8 = self.inferred_constraints[player_a].iter().filter(|c| **c == card_b).count() as u8;
-        
+        log::trace!("swap_mix player_a: {player_a}, card_a: {:?}, player_b: {player_b}, card_b: {:?}", card_a, card_b);
+        log::trace!("swap_mix player_b_dead_card_a: {:?}", player_b_dead_card_a);
+        log::trace!("swap_mix player_b_inferred_card_a: {:?}", player_b_inferred_card_a);
+        log::trace!("swap_mix player_a_dead_card_b: {:?}", player_a_dead_card_b);
+        log::trace!("swap_mix player_a_inferred_card_b: {:?}", player_a_inferred_card_b);
         let group_constraints = self.group_constraints_mut();
         group_constraints[card_a as usize]
         .iter_mut()

@@ -26,7 +26,7 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_00000.log";
 // FIX: adding single group of 3 is ok in the case of pile
 fn main() {
     let game_no = 10000;
-    let log_bool = false;
+    let log_bool = true;
     let bool_know_priv_info = false;
     let print_frequency: usize = 50;
     let min_dead_check: usize = 8;
@@ -107,9 +107,8 @@ pub fn test() {
         // replay_game_constraint_pd(reveal_redraw_issue_0, false, false);
         // println!("Testing: {}", stringify!(reveal_redraw_replay_0)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_replay_0, false, false);
-        // Fails after continual fix
         // println!("Testing: {}", stringify!(reveal_redraw_replay_1)); count += 1;
-        // replay_game_constraint_pd(reveal_redraw_replay_1, false, false);
+        // replay_game_constraint_pd(reveal_redraw_replay_1, false, true);
         
         // println!("Testing: {}", stringify!(reveal_redraw_replay_2)); count += 1;
         // replay_game_constraint_pd(reveal_redraw_replay_2, false, false);
@@ -117,8 +116,8 @@ pub fn test() {
         // replay_game_constraint_pd(full_test_replay_0, false, false);
         // PD Fails | | PD with negation fails (not path dependent)
         // Fails after continual fix
-        // println!("Testing: {}", stringify!(full_test_replay_1)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_1, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_1)); count += 1;
+        replay_game_constraint_pd(full_test_replay_1, false, false);
         // println!("Testing: {}", stringify!(full_test_replay_2)); count += 1;
         // replay_game_constraint_pd(full_test_replay_2, false, false);
         // Fails after continual fix
@@ -129,54 +128,54 @@ pub fn test() {
         // println!("Testing: {}", stringify!(full_test_replay_4)); count += 1;
         // replay_game_constraint_pd(full_test_replay_4, false, false);
         
-        // println!("Testing: {}", stringify!(full_test_replay_5)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_5, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_5)); count += 1;
+        replay_game_constraint_pd(full_test_replay_5, false, false);
         // Fails if self.revealed_status[player_id].swap_remove() is commented out
         // Fails after continual fix
-        // println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_6, false, false);
-        // println!("Testing: {}", stringify!(full_test_replay_7)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_7, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_6)); count += 1;
+        replay_game_constraint_pd(full_test_replay_6, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_7)); count += 1;
+        replay_game_constraint_pd(full_test_replay_7, false, false);
         // PD Fails | PD with negation works (--release !debug)
-        // println!("Testing: {}", stringify!(full_test_replay_8)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_8, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_8)); count += 1;
+        replay_game_constraint_pd(full_test_replay_8, false, false);
         // Fails after continual fix
-        // println!("Testing: {}", stringify!(full_test_replay_9)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_9, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_9)); count += 1;
+        replay_game_constraint_pd(full_test_replay_9, false, false);
         
         // PD Fails | PD with negation works (--release !debug)
-        // println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_10, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
+        replay_game_constraint_pd(full_test_replay_10, false, false);
         // PD Fails | PD with negation fails
         // Fails after continual fix
-        // println!("Testing: {}", stringify!(full_test_replay_11)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_11, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_11)); count += 1;
+        replay_game_constraint_pd(full_test_replay_11, false, false);
         // PD Fails | PD with negation works (--release)
         // PD Fails | PD with negation fails after adding Start inference && Pile Inference
         // PD with Start Inference Alone Fails
         // PD with Pile Inference Alone works
         // Fails after continual fix
-        // println!("Testing: {}", stringify!(full_test_replay_12)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_12, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_12)); count += 1;
+        replay_game_constraint_pd(full_test_replay_12, false, false);
         // PD Fails | PD with negation fails
         // Fails after continual fix
-        // println!("Testing: {}", stringify!(redundancy_replay_0)); count += 1;
-        // replay_game_constraint_pd(redundancy_replay_0, false, false);
+        println!("Testing: {}", stringify!(redundancy_replay_0)); count += 1;
+        replay_game_constraint_pd(redundancy_replay_0, false, false);
         // No Attempt to solve this yet
         // Fails after continual fix
-        // println!("Testing: {}", stringify!(whole_replay_0)); count += 1;
-        // replay_game_constraint_pd(whole_replay_0, false, false);
-        // println!("Testing: {}", stringify!(whole_replay_1)); count += 1;
-        // replay_game_constraint_pd(whole_replay_1, false, false);
-        // println!("Testing: {}", stringify!(whole_replay_2)); count += 1;
-        // replay_game_constraint_pd(whole_replay_2, false, false);
-        // println!("Testing: {}", stringify!(whole_replay_3)); count += 1;
-        // replay_game_constraint_pd(whole_replay_3, false, false);
-        // println!("Testing: {}", stringify!(whole_replay_4)); count += 1;
-        // replay_game_constraint_pd(whole_replay_4, false, false);
+        println!("Testing: {}", stringify!(whole_replay_0)); count += 1;
+        replay_game_constraint_pd(whole_replay_0, false, false);
+        println!("Testing: {}", stringify!(whole_replay_1)); count += 1;
+        replay_game_constraint_pd(whole_replay_1, false, false);
+        println!("Testing: {}", stringify!(whole_replay_2)); count += 1;
+        replay_game_constraint_pd(whole_replay_2, false, false);
+        println!("Testing: {}", stringify!(whole_replay_3)); count += 1;
+        replay_game_constraint_pd(whole_replay_3, false, false);
+        println!("Testing: {}", stringify!(whole_replay_4)); count += 1;
+        replay_game_constraint_pd(whole_replay_4, false, false);
         
-        // println!("Testing: {}", stringify!(backward_compat_0)); count += 1;
-        // replay_game_constraint_pd(backward_compat_0, false, false);
+        println!("Testing: {}", stringify!(backward_compat_0)); count += 1;
+        replay_game_constraint_pd(backward_compat_0, false, false);
         println!("ALL PASSED");
     }
 }
@@ -826,13 +825,13 @@ pub fn game_rnd_constraint_pd(game_no: usize, bool_know_priv_info: bool, print_f
                         over_inferred_count += 1;
                         break;
                         let replay = hh.get_history(hh.store_len());
-                        replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                        replay_game_constraint_pd(replay, bool_know_priv_info, log_bool);
                         panic!("Inferred to many items!")
                     }
                     if !pass_inferred_constraints {
                         break;
                         let replay = hh.get_history(hh.store_len());
-                        replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                        replay_game_constraint_pd(replay, bool_know_priv_info, log_bool);
                         panic!("Inferred constraints do not match!")
                     }
                     // if !pass_brute_prob_validity{
