@@ -523,7 +523,6 @@ impl PathDependentCollectiveConstraint {
                                 let action_name = action_data.name();
                                 match action_name { // This is just a get around of the partial borrowing rules...
                                     ActionInfoName::RevealRedraw => {
-                                        return false;
                                         log::trace!("lookback_1_initial RevealRedraw checking past RevealRedraw");
                                         log::trace!("lookback_1_initial original player: {} RevealRedraw: {:?}", player_index, action_info);
                                         log::trace!("lookback_1_initial checked player: {} RevealRedraw: {:?}", action_data.player(), action_data.action_info());
@@ -625,7 +624,7 @@ impl PathDependentCollectiveConstraint {
                                             log::trace!("   (");
                                             log::trace!("*reveal_i == reveal_considered = ?? reveal_i: {:?}, reveal_considered: {:?}", action_data.action_info(), reveal_considered);
                                             log::trace!("||");
-                                            log::trace!("self.lookback_check(i - 1, action_player, reveal_considered).is_some() = {}", self.lookback_check(i - 1, action_player, reveal_considered).is_some());
+                                            log::trace!("self.lookback_check_2({i}, {action_player}, reveal_considered) = {}", self.lookback_check_2(i, action_player as usize, reveal_considered));
                                             log::trace!("   )");
                                             log::trace!("||");
                                             log::trace!("self.history[i - 1].known_card_count(reveal_considered) == 3 = {}", self.history[i - 1].known_card_count(reveal_considered) == 3);
@@ -788,7 +787,7 @@ impl PathDependentCollectiveConstraint {
                                     log::trace!("   (");
                                     log::trace!("*reveal_i == discard_considered = ?? reveal_i: {:?}, discard_considered: {:?}", *reveal_i, discard_considered);
                                     log::trace!("||");
-                                    log::trace!("self.lookback_check(i - 1, action_player, discard_considered).is_some() = {}", self.lookback_check(i - 1, action_player, discard_considered).is_some());
+                                    log::trace!("self.lookback_check_2({i}, {action_player}, discard_considered) = {}", self.lookback_check_2(i, action_player as usize, discard_considered));
                                     log::trace!("   )");
                                     log::trace!("||");
                                     log::trace!("self.history[i - 1].known_card_count(discard_considered) == 3 = {}", self.history[i - 1].known_card_count(discard_considered) == 3);
