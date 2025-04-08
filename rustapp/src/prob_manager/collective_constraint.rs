@@ -4592,6 +4592,7 @@ impl CompressedCollectiveConstraint {
     /// true => impossible
     /// false => possible
     pub fn generate_one_card_impossibilities_player_card_indexing(&mut self) -> [[bool; 5]; 7] {
+        return self.impossible_constraints.clone();
         let mut impossible_cards: [[bool; 5]; 7] = [[false; 5]; 7];
         // This first part is here until the grouping part auto includes the inferred groups... probably in mutual exclusive groups
         // TODO: Remove this for loop

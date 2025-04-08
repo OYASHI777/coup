@@ -1185,6 +1185,7 @@ impl PathDependentCollectiveConstraint {
                 self.ambassador_public(player_id);
             },
         }
+        self.generate_impossible_constraints();
         self.history[history_index].meta_data = self.to_meta_data();
         log::info!("recalculated_stored_move: {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
@@ -1234,6 +1235,7 @@ impl PathDependentCollectiveConstraint {
                 self.ambassador_public(player_id);
             },
         }
+        self.generate_impossible_constraints();
         self.history[history_index].meta_data = self.to_meta_data();
         log::info!("recalculated_stored_move_initial: {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
@@ -1270,7 +1272,6 @@ impl PathDependentCollectiveConstraint {
                 debug_assert!(false, "should not be pushing this!");
             },
         }
-        self.generate_impossible_constraints();
         // post increment
         self.move_no += 1;
     }
@@ -5530,6 +5531,9 @@ impl PathDependentCollectiveConstraint {
             .iter()
             .flatten()
             .for_each(|&c| dead_cards[c as usize] += 1);
+        log::trace!("generate_impossible_constraints public_constraint: {:?}", self.public_constraints);
+        log::trace!("generate_impossible_constraints inferred_constraint: {:?}", self.inferred_constraints);
+        log::trace!("generate_impossible_constraints dead_cards: {:?}", dead_cards);
         // TODO: [OPTIMIZE], because there are too many groups, maybe only check for player-ids that are not dead players (or are eligible)
         for (card_num, group_constraints) in  [&self.group_constraints_amb, 
             &self.group_constraints_ass, 
@@ -5540,19 +5544,20 @@ impl PathDependentCollectiveConstraint {
             for group in group_constraints.iter() {
                 if group.count() == 3 { 
                     for player_id in group.iter_false_player_flags() {
-                        log::trace!("self.impossible_constraints group: {:?}", group);
-                        log::trace!("self.impossible_constraints B setting: {:?}, card: {:?}", player_id, card_num);
+                        // log::trace!("self.impossible_constraints group: {:?}", group);
+                        // log::trace!("self.impossible_constraints B setting: {:?}, card: {:?}", player_id, card_num);
                         self.impossible_constraints[player_id][card_num] = true;
                     }
                 } else if group.count_alive() + dead_cards[card_num] == 3 {
                     for player_id in group.iter_false_player_flags() {
-                        log::trace!("self.impossible_constraints group: {:?}", group);
-                        log::trace!("self.impossible_constraints C setting: {:?}, card: {:?}", player_id, card_num);
+                        // log::trace!("self.impossible_constraints group: {:?}", group);
+                        // log::trace!("self.impossible_constraints C setting: {:?}, card: {:?}", player_id, card_num);
                         self.impossible_constraints[player_id][card_num] = true;
                     }
                 }
             }
         }
+        log::trace!("generate_impossible_constraints after group pass: {:?}", self.impossible_constraints);
         for card_num in 0..5 as usize{
             if dead_cards[card_num] == 3 {
                 self.impossible_constraints[0][card_num] = true;
@@ -5564,6 +5569,7 @@ impl PathDependentCollectiveConstraint {
                 self.impossible_constraints[6][card_num] = true;
             }
         }
+        log::trace!("generate_impossible_constraints after dead_card pass: {:?}", self.impossible_constraints);
         for player_id in 0..6 {
             // Setting impossible constraints when player's entire hand is known
             if self.public_constraints[player_id].len() + self.inferred_constraints[player_id].len() == 2 {
@@ -5580,6 +5586,7 @@ impl PathDependentCollectiveConstraint {
                 self.impossible_constraints[6][*card as usize] = false;
             }
         }
+        log::trace!("generate_impossible_constraints after full_hand pass: {:?}", self.impossible_constraints);
     }
     /// Temp name, checks if should include the incumbent group
     /// Full Group: The General large group for which we know all the cards of
@@ -5602,6 +5609,7 @@ impl PathDependentCollectiveConstraint {
     /// true => impossible
     /// false => possible
     pub fn generate_one_card_impossibilities_player_card_indexing(&self) -> [[bool; 5]; 7] {
+        return self.impossible_constraints.clone();
         let mut impossible_cards: [[bool; 5]; 7] = [[false; 5]; 7];
         // This first part is here until the grouping part auto includes the inferred groups... probably in mutual exclusive groups
         // TODO: Remove this for loop
