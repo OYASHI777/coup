@@ -1185,6 +1185,7 @@ impl PathDependentCollectiveConstraint {
                 self.ambassador_public(player_id);
             },
         }
+        log::trace!("calculate_stored_move generate_impossible_constraints history_index: {history_index}");
         self.generate_impossible_constraints();
         self.history[history_index].meta_data = self.to_meta_data();
         log::info!("recalculated_stored_move: {} {:?}", history_index, self.history[history_index].action_info());
@@ -5526,6 +5527,7 @@ impl PathDependentCollectiveConstraint {
     }
     /// Assumes a maximally informative group is present
     fn generate_impossible_constraints(&mut self) {
+        // TODO: [OPTIMIZE] this dead_cards and card_player_counts can be combined
         let mut dead_cards: [u8; 5] = [0; 5];
         let mut inferred_cards: [u8; 5] = [0; 5];
         self.public_constraints
@@ -5536,6 +5538,24 @@ impl PathDependentCollectiveConstraint {
             .iter()
             .flatten()
             .for_each(|&c| inferred_cards[c as usize] += 1);
+        let mut dead_card_player_counts: [[u8; 7]; 5] = [[0; 7]; 5];
+        let mut inferred_card_player_counts: [[u8; 7]; 5] = [[0; 7]; 5];
+        self.public_constraints
+        .iter()
+        .enumerate()
+        .for_each(|(player_id, v)| {
+            for card in v.iter() {
+                dead_card_player_counts[*card as usize][player_id] += 1;
+            }
+        });
+        self.inferred_constraints
+        .iter()
+        .enumerate()
+        .for_each(|(player_id, v)| {
+            for card in v.iter() {
+                inferred_card_player_counts[*card as usize][player_id] += 1;
+            }
+        });
         // TODO: OPTIMIZE? You probably could update each move
         self.impossible_constraints = [[false; 5]; 7];
         log::trace!("generate_impossible_constraints public_constraint: {:?}", self.public_constraints);
@@ -5560,6 +5580,26 @@ impl PathDependentCollectiveConstraint {
                         // log::trace!("self.impossible_constraints group: {:?}", group);
                         // log::trace!("self.impossible_constraints C setting: {:?}, card: {:?}", player_id, card_num);
                         self.impossible_constraints[player_id][card_num] = true;
+                    }
+                } else {
+                    // Since I don't always add all the groups
+                    let mut count_outside_group: u8 = 0;
+                    let mut player_flags: Vec<usize> = group.iter_false_player_flags().collect();
+                    group.iter_false_player_flags().for_each(|player| {
+                        count_outside_group += dead_card_player_counts[card_num][player];
+                        count_outside_group += inferred_card_player_counts[card_num][player];
+                        if inferred_card_player_counts[card_num][player] > 0 {
+                            if let Some(pos) = player_flags.iter().position(|p| *p == player) {
+                                player_flags.remove(pos);
+                            }
+                        }
+                    });
+                    if count_outside_group + group.count() == 3 {
+                        for player_id in player_flags {
+                            if !self.inferred_constraints[player_id].contains(&Card::try_from(card_num as u8).unwrap()) {
+                                self.impossible_constraints[player_id][card_num] = true;
+                            }
+                        }
                     }
                 }
             }
