@@ -40,7 +40,7 @@ fn main() {
     // [Passed 1100] Discard + Ambassador Release farm
     // game_rnd_constraint_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // game_rnd_constraint_pd(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
@@ -110,7 +110,7 @@ pub fn test() {
         // println!("Testing: {}", stringify!(impossible_0)); count += 1;
         // replay_game_constraint_pd(impossible_0, false, false);
         // println!("Testing: {}", stringify!(impossible_1)); count += 1;
-        // replay_game_constraint_pd(impossible_1, false, true);
+        // replay_game_constraint_pd(impossible_1, false, false);
         // println!("Testing: {}", stringify!(full_test_replay_1)); count += 1;
         // replay_game_constraint_pd(full_test_replay_1, false, false);
         // println!("Testing: {}", stringify!(full_test_overflow_0)); count += 1;

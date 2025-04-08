@@ -997,6 +997,12 @@ impl PathDependentCollectiveConstraint {
                                         // - did not change the pile state => no early exit
                                         if Some(*reveal) == *redraw {
                                             continue;
+                                        } else if Some(*reveal) == redraw_considered {
+                                            // Testing this
+                                            // CASE when a player RevealRedraw the card and it was not redrawn
+                                            // Could be in pile or player
+                                            // TODO: Maybe need to handle relinquish case
+                                            return false;
                                         }
                                     }
                                     let bool_change_relinquish = self.history[i - 1].known_card_count(redraw_card) == 2 
