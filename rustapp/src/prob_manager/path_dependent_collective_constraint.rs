@@ -210,7 +210,7 @@ impl SignificantAction {
         + self.meta_data.public_constraints().iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>()
     }
     pub fn action_info_str(&self) -> String {
-        format!("Player: {} {:?} public_constraints: {:?}, inferred_constraints: {:?}", self.player, self.action_info, self.public_constraints(), self.inferred_constraints())
+        format!("Player: {} {:?} public_constraints: {:?}, inferred_constraints: {:?}, impossible_constraints: {:?}", self.player, self.action_info, self.public_constraints(), self.inferred_constraints(), self.impossible_constraints())
     }
 }
 // TODO: change gamestart for different inferred starting hands
