@@ -16,7 +16,7 @@ use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use env_logger::{Builder, Env, Target};
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 pub const LOG_FILE_NAME: &str = "just_test_replay_0000000.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
@@ -28,7 +28,7 @@ fn main() {
     let game_no = 10000;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 50;
+    let print_frequency: usize = 1;
     let min_dead_check: usize = 8;
     let num_threads = 8;
     // (DONE) [TEST 1000] Discard + Ambassador Release farm
@@ -40,9 +40,9 @@ fn main() {
     // [Passed 1100] Discard + Ambassador Release farm
     // game_rnd_constraint_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
-    // game_rnd_constraint_pd(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
+    game_rnd_constraint_pd(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
     // game_rnd_constraint_debug(game_no, bool_know_priv_info, print_frequency, log_bool);
@@ -53,7 +53,7 @@ fn main() {
     //     use Card::*;
     //     // Please test out different redundancies
     //     let replay = vec![Steal { player_id: 0, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, false, true], opposing_player_id: 0, final_actioner: 2 }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, Tax { player_id: 1 }, CollectiveChallenge { participants: [true, false, false, true, true, true], opposing_player_id: 1, final_actioner: 0 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Tax { player_id: 2 }, CollectiveChallenge { participants: [true, false, false, true, true, true], opposing_player_id: 2, final_actioner: 5 }, Discard { player_id: 2, card: [Captain, Captain], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [false, true, false, false, true, false], opposing_player_id: 3, final_actioner: 1 }, RevealRedraw { player_id: 3, card: Captain }, Discard { player_id: 1, card: [Duke, Duke], no_cards: 1 }, BlockSteal { player_id: 2, opposing_player_id: 3, card: Captain }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 2, final_actioner: 0 }, RevealRedraw { player_id: 2, card: Captain }, Discard { player_id: 0, card: [Ambassador, Ambassador], no_cards: 1 }, Tax { player_id: 4 }, CollectiveChallenge { participants: [false, false, true, false, false, false], opposing_player_id: 4, final_actioner: 2 }, RevealRedraw { player_id: 4, card: Duke }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, Income { player_id: 5 }, Tax { player_id: 3 }, CollectiveChallenge { participants: [false, false, false, false, false, true], opposing_player_id: 3, final_actioner: 5 }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, Tax { player_id: 4 }, CollectiveChallenge { participants: [false, false, false, true, false, true], opposing_player_id: 4, final_actioner: 3 }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 1 }];
-    //     replay_game_constraint(replay, bool_know_priv_info, log_bool);
+    //     replay_game_constraint_pd(replay, bool_know_priv_info, log_bool);
     // }
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();

@@ -4655,21 +4655,21 @@ impl PathDependentCollectiveConstraint {
                             let complement_maximal_holdable_spaces = part_list_excl_player.max_spaces();
                             // This should not overflow as spaces should always be > both
                             let max_free_spaces = complement_maximal_holdable_spaces - complement_maximal_holdable_dead - complement_maximal_holdable_alive; 
-                            log::info!("=== add_inferred_except_player discovery ===");
-                            log::info!("Parent Group: {}", group);
-                            log::info!("part list excl player: {}, count: {}", part_list_excl_player, part_list_excl_player.part_list_count());
-                            log::info!("Current Player: {}", player);
-                            log::info!("Max_free_spaces: {} = complement_maximal_holdable_spaces: {} - complement_maximal_holdable_dead: {} - complement_maximal_holdable_alive: {}", max_free_spaces, complement_maximal_holdable_spaces, complement_maximal_holdable_dead, complement_maximal_holdable_alive);
-                            log::info!("Complement_max_alive array: {:?}", maximal_alive_card_counts);
-                            log::info!("Complement_max_dead: {}", complement_maximal_holdable_dead);
-                            log::info!("Complement_max_alive: {}", complement_maximal_holdable_alive);
+                            log::trace!("=== add_inferred_except_player discovery ===");
+                            log::trace!("Parent Group: {}", group);
+                            log::trace!("part list excl player: {}, count: {}", part_list_excl_player, part_list_excl_player.part_list_count());
+                            log::trace!("Current Player: {}", player);
+                            log::trace!("Max_free_spaces: {} = complement_maximal_holdable_spaces: {} - complement_maximal_holdable_dead: {} - complement_maximal_holdable_alive: {}", max_free_spaces, complement_maximal_holdable_spaces, complement_maximal_holdable_dead, complement_maximal_holdable_alive);
+                            log::trace!("Complement_max_alive array: {:?}", maximal_alive_card_counts);
+                            log::trace!("Complement_max_dead: {}", complement_maximal_holdable_dead);
+                            log::trace!("Complement_max_alive: {}", complement_maximal_holdable_alive);
                             log::trace!("group_alive_count: {} >? max_free_spaces{}", group_alive_count, max_free_spaces);
                             if group_alive_count > max_free_spaces {
                                 let inferred_counts = group_alive_count - max_free_spaces;
                                 let known_counts= self.inferred_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;
-                                log::info!("inferred_counts: {} = group_alive_count: {} - max_free_spaces: {}", inferred_counts, group_alive_count, max_free_spaces);
+                                log::trace!("inferred_counts: {} = group_alive_count: {} - max_free_spaces: {}", inferred_counts, group_alive_count, max_free_spaces);
                                 if inferred_counts > known_counts {
-                                    log::info!("add_inferred_except_player DISCOVERED player: {player} has card: {:?}", Card::try_from(card_num as u8).unwrap());
+                                    log::trace!("add_inferred_except_player DISCOVERED player: {player} has card: {:?}", Card::try_from(card_num as u8).unwrap());
                                     for _ in 0..(inferred_counts - known_counts) {
                                         self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
                                         bool_change = true;
