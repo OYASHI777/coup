@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use env_logger::{Builder, Env, Target};
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
-pub const LOG_FILE_NAME: &str = "just_test_replay_00000.log";
+pub const LOG_FILE_NAME: &str = "just_test_replay_0000000.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
@@ -103,8 +103,8 @@ pub fn test() {
         let whole_replay_4 = vec![Steal { player_id: 0, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, false], opposing_player_id: 0, final_actioner: 1 }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [true, false, true, false, false, true], opposing_player_id: 1, final_actioner: 0 }, RevealRedraw { player_id: 1, card: Captain }, Discard { player_id: 0, card: [Captain, Captain], no_cards: 1 }, BlockSteal { player_id: 4, opposing_player_id: 1, card: Captain }, CollectiveChallenge { participants: [false, false, false, true, false, true], opposing_player_id: 4, final_actioner: 3 }, Discard { player_id: 4, card: [Contessa, Contessa], no_cards: 1 }, Exchange { player_id: 2 }, CollectiveChallenge { participants: [false, true, false, true, true, false], opposing_player_id: 2, final_actioner: 4 }, RevealRedraw { player_id: 2, card: Ambassador }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 1 }, ExchangeDraw { player_id: 2, card: [Captain, Duke] }, ExchangeChoice { player_id: 2, no_cards: 2 }, Steal { player_id: 3, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 3, final_actioner: 2 }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, true, true, false, false, false], opposing_player_id: 5, final_actioner: 2 }, CollectiveChallenge { participants: [false, true, false, true, false, true], opposing_player_id: 2, final_actioner: 3 }, RevealRedraw { player_id: 2, card: Duke }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, Assassinate { player_id: 1, opposing_player_id: 5 }, CollectiveChallenge { participants: [false, false, true, false, false, true], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Duke, Duke], no_cards: 1 }, Exchange { player_id: 2 }, CollectiveChallenge { participants: [false, true, false, false, false, true], opposing_player_id: 2, final_actioner: 5 }, Discard { player_id: 2, card: [Captain, Captain], no_cards: 1 }];
         let backward_compat_0 = vec![Tax { player_id: 0 }, CollectiveChallenge { participants: [false, true, false, false, true, true], opposing_player_id: 0, final_actioner: 4 }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, true, false], opposing_player_id: 1, final_actioner: 4 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Income { player_id: 2 }, Steal { player_id: 3, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 3, final_actioner: 5 }, Discard { player_id: 3, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, false, true], opposing_player_id: 4, final_actioner: 2 }, RevealRedraw { player_id: 4, card: Captain }, Discard { player_id: 2, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 1, opposing_player_id: 4, card: Captain }, CollectiveChallenge { participants: [false, false, true, true, false, false], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 5, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [true, false, false, true, true, false], opposing_player_id: 5, final_actioner: 3 }, RevealRedraw { player_id: 5, card: Captain }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, BlockSteal { player_id: 0, opposing_player_id: 0, card: Captain }, Steal { player_id: 0, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, true, true], opposing_player_id: 0, final_actioner: 2 }, RevealRedraw { player_id: 0, card: Captain }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, Income { player_id: 4 }, Steal { player_id: 5, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 5, final_actioner: 0 }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, Income { player_id: 0 }, Steal { player_id: 4, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [false, false, false, false, false, true], opposing_player_id: 4, final_actioner: 5 }, Discard { player_id: 4, card: [Ambassador, Ambassador], no_cards: 1 }, Assassinate { player_id: 5, opposing_player_id: 4 }, CollectiveChallenge { participants: [true, false, false, false, true, false], opposing_player_id: 5, final_actioner: 0 }, Discard { player_id: 5, card: [Ambassador, Ambassador], no_cards: 1 }];
         let mut count = 0;
-        println!("Testing: {}", stringify!(reveal_redraw_replay_4)); count += 1;
-        replay_game_constraint_pd(reveal_redraw_replay_4, false, false);
+        println!("Testing: {}", stringify!(reveal_redraw_replay_3)); count += 1;
+        replay_game_constraint_pd(reveal_redraw_replay_3, false, false);
         println!("Testing: {}", stringify!(full_test_overflow_0)); count += 1;
         replay_game_constraint_pd(full_test_overflow_0, false, false);
         println!("Testing: {}", stringify!(full_test_overflow_1)); count += 1;
@@ -119,6 +119,8 @@ pub fn test() {
         replay_game_constraint_pd(reveal_redraw_replay_1, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_2)); count += 1;
         replay_game_constraint_pd(reveal_redraw_replay_2, false, false);
+        println!("Testing: {}", stringify!(reveal_redraw_replay_4)); count += 1;
+        replay_game_constraint_pd(reveal_redraw_replay_4, false, false);
         println!("Testing: {}", stringify!(full_test_replay_0)); count += 1;
         replay_game_constraint_pd(full_test_replay_0, false, false);
         println!("Testing: {}", stringify!(full_test_replay_1)); count += 1;
@@ -143,24 +145,23 @@ pub fn test() {
         replay_game_constraint_pd(full_test_replay_9, false, false);
         println!("Testing: {}", stringify!(full_test_replay_10)); count += 1;
         replay_game_constraint_pd(full_test_replay_10, false, false);
+        // This Fails after added constraint
         println!("Testing: {}", stringify!(full_test_replay_11)); count += 1;
-        replay_game_constraint_pd(full_test_replay_11, false, false);
+        replay_game_constraint_pd(full_test_replay_11, false, true);
         println!("Testing: {}", stringify!(full_test_replay_12)); count += 1;
         replay_game_constraint_pd(full_test_replay_12, false, false);
         println!("Testing: {}", stringify!(full_test_replay_13)); count += 1;
         replay_game_constraint_pd(full_test_replay_13, false, false);
+        // This Fails after added constraint
         println!("Testing: {}", stringify!(full_test_replay_14)); count += 1;
         replay_game_constraint_pd(full_test_replay_14, false, false);
 
-        // New test Fails after lookback_check
-        // println!("Testing: {}", stringify!(full_test_replay_15)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_15, false, false);
-        // New test Fails after lookback_check
-        // println!("Testing: {}", stringify!(full_test_replay_16)); count += 1;
-        // replay_game_constraint_pd(full_test_replay_16, false, false);
-
+        println!("Testing: {}", stringify!(full_test_replay_16)); count += 1;
+        replay_game_constraint_pd(full_test_replay_16, false, false);
+        // This Fails with public_constraint
         println!("Testing: {}", stringify!(redundancy_replay_0)); count += 1;
         replay_game_constraint_pd(redundancy_replay_0, false, true);
+        // This Fails after added constraint
         println!("Testing: {}", stringify!(whole_replay_0)); count += 1;
         replay_game_constraint_pd(whole_replay_0, false, false);
         println!("Testing: {}", stringify!(whole_replay_1)); count += 1;
@@ -174,6 +175,9 @@ pub fn test() {
         
         println!("Testing: {}", stringify!(backward_compat_0)); count += 1;
         replay_game_constraint_pd(backward_compat_0, false, false);
+        // === New Test ===
+        // println!("Testing: {}", stringify!(full_test_replay_15)); count += 1;
+        // replay_game_constraint_pd(full_test_replay_15, false, false);
         println!("ALL PASSED");
     }
 }
@@ -1327,8 +1331,8 @@ pub fn replay_game_constraint(replay: Vec<ActionObservation>, bool_know_priv_inf
             impossible_constraints_correct += pass_impossible_constraints as usize;
             total_tries += 1;
         } else {
-            log::trace!("Pushed bad move somewhere earlier!");
-            break;
+            log::trace!("End of Replay!");
+            return;
         }
         bit_prob.debug_panicker();
         step += 1;
@@ -1486,8 +1490,9 @@ pub fn replay_game_constraint_pd(replay: Vec<ActionObservation>, bool_know_priv_
             impossible_constraints_correct += pass_impossible_constraints as usize;
             total_tries += 1;
         } else {
-            log::trace!("Pushed bad move somewhere earlier!");
-            break;
+            log::trace!("End of Replay!");
+            println!("=> no issues");
+            return;
         }
         bit_prob.debug_panicker();
         step += 1;
@@ -1505,11 +1510,12 @@ pub fn replay_game_constraint_pd(replay: Vec<ActionObservation>, bool_know_priv_
     // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
     log::info!("");
     log::info!("Most Steps: {}", max_steps);
-    println!("Most Steps: {}", max_steps);
-    println!("Public Constraints Correct: {}/{}", public_constraints_correct, total_tries);
-    println!("Inferred Constraints Correct: {}/{}", public_constraints_correct, total_tries);
-    println!("Impossible Cases Correct: {}/{}", public_constraints_correct, total_tries);
-    println!("Total Tries: {}", total_tries);
+    println!("=> no issues");
+    // println!("Most Steps: {}", max_steps);
+    // println!("Public Constraints Correct: {}/{}", public_constraints_correct, total_tries);
+    // println!("Inferred Constraints Correct: {}/{}", public_constraints_correct, total_tries);
+    // println!("Impossible Cases Correct: {}/{}", public_constraints_correct, total_tries);
+    // println!("Total Tries: {}", total_tries);
 }
 pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool){
     if log_bool{

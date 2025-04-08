@@ -158,6 +158,9 @@ impl SignificantAction {
     pub fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
         self.meta_data.inferred_constraints()
     }
+    pub fn impossible_constraints(&self) -> &[[bool; 5]; 7] {
+        self.meta_data.impossible_constraints()
+    }
     pub fn add_inferred_constraints(&mut self, player_id: usize, card: Card)  {
         self.meta_data.inferred_constraints[player_id].push(card);
         debug_assert!(player_id < 6 
@@ -217,6 +220,7 @@ impl SignificantAction {
 // TODO: Store SignificantAction
 // TODO: Fix up add_inferred_cards API to not take vec_changes
 // TOD: Fix up reveal_redraw API to make inline with add_inferred_card, even though it also adds a group
+// TODO: [OPTIMIZE] impossible_constraints can be stored as a u64 / 7 u8s (56 bits)
 #[derive(Clone, Debug)]
 pub struct PathDependentMetaData {
     public_constraints: Vec<Vec<Card>>,
@@ -494,6 +498,7 @@ impl PathDependentCollectiveConstraint {
     }
     /// Used on the initial addition of move to history, not recalculation
     /// This is ran after reveal and after discard
+    /// NOTE: A pretty good lookback would also be to check if player impossible to have some card at start of game
     pub fn lookback_1_initial(&mut self) -> bool {
         // index is the index for history
         log::trace!("In lookback_1_initial");
@@ -528,8 +533,10 @@ impl PathDependentCollectiveConstraint {
                                             // This is just before the RevealRedraw
                                             // CASE when all cards are known and not reveal_considered
                                             && (
-                                                self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2
-                                                && !self.history[i - 1].player_has_inferred_constraint(action_player, reveal_considered) // REQUIRED FOR MARKER A
+                                                (
+                                                    self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2
+                                                    && !self.history[i - 1].player_has_inferred_constraint(action_player, reveal_considered) // REQUIRED FOR MARKER A
+                                                )
                                                 || (
                                                     // [CASE] All player cards are the same card
                                                     // Then the person previously definitely redrew that
@@ -545,20 +552,55 @@ impl PathDependentCollectiveConstraint {
                                                     // Either 2 cards known and last in pile (therefore they could even redraw)
                                                     // Or 3 cards known and 1 is in pile (therefore they can redraw)
                                                     //  - This ASSUMES that the latest_move played is legal (which it should be)
-
-                                                    // 2 cards outside of player, and player reveals reveal_considered
-                                                    // !self.history[i - 1].player_has_inferred_constraint(action_player, reveal_considered)
-                                                    // ^ Imported from above (full_test_replay_11 fails with this)
-                                                    self.history[i - 1].known_card_count(reveal_considered) == 2 
-                                                    && !self.history[i - 1].inferred_constraints()[6].contains(&discard_considered)
-                                                    && (
-                                                        *reveal_i == reveal_considered
-                                                        || self.lookback_check(i - 1, action_player, reveal_considered).is_some()
+                                                    //
+                                                    (
+                                                        // TODO：[OPTIMIZE]
+                                                        // CASE 2 cards outside of player, player has 2 lives, and player reveals reveal_considered
+                                                        //  - 2 players != action_player have card and != pile
+                                                        //      - if player reveal == reveal_considered => must have withdrawn
+                                                        self.history[i - 1].known_card_count(reveal_considered) == 2 
+                                                        && !self.history[i - 1].inferred_constraints()[action_player as usize].contains(&reveal_considered)
+                                                        && *reveal_i == reveal_considered
+                                                    ) 
+                                                    || (
+                                                        // Case where player cannot possibly have the card if not for the redraw
+                                                        //  => all 3 cards are outside of the player
+                                                        // TODO: [OPTIMIZE] you probably can use impossible constraints to figure this out
+                                                        // CASE where 2 are known and we know theres one group with 1 alive 
+                                                        // That excludes the current player
+                                                        // maybe more specifically some are known dead, some are known alive
+                                                        // and there is one group with 1 alive which includes pile and
+                                                        // excludes players whom have known alive
+                                                        // TODO: Document lookback_check
+                                                        // *reveal_i != reveal_considered
+                                                        // && self.history[i - 1].known_card_count(reveal_considered) == 2 
+                                                        // && !self.history[i - 1].inferred_constraints()[6].contains(&reveal_considered) 
+                                                        // && self.lookback_check(i - 1, action_player, reveal_considered).is_some()
+                                                        self.lookback_check_2(i, action_player as usize, reveal_considered)
                                                     )
-                                                    // 3 cards outside of player and (implied that player obviously won't reveal reveal_considered)
+                                                    // && (
+                                                    //     || self.lookback_check(i - 1, action_player, reveal_considered).is_some()
+                                                    //     // Temp test change location
+                                                    // )
+                                                    // === OLD ===
+                                                    // self.history[i - 1].known_card_count(reveal_considered) == 2 
+                                                    // && !self.history[i - 1].inferred_constraints()[6].contains(&reveal_considered)
+                                                    // // This doesnt actually make sense as *reveal_i == reveal_considered won't ever be true
+                                                    // // && !self.history[i - 1].inferred_constraints()[action_player as usize].contains(&reveal_considered)
+                                                    // && (
+                                                    //     // Consider seperating this and the above case
+                                                    //     *reveal_i == reveal_considered
+                                                    //     || self.lookback_check(i - 1, action_player, reveal_considered).is_some()
+                                                    //     // Temp test change location
+                                                    // )
+                                                    // === OLD ===
                                                     || self.history[i - 1].known_card_count(reveal_considered) == 3
+                                                    // CASE 3 cards outside of player and (implied that player obviously won't reveal reveal_considered)
                                                     // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
                                                 )
+                                                // I think this below can be checked much earlier
+                                                // This shit breaks for some reason
+                                                || self.history[i - 1].public_constraints()[action_player as usize].len() == 1
                                             )
                                         } else {
                                             false
@@ -658,8 +700,10 @@ impl PathDependentCollectiveConstraint {
                                     // Player did not have discard_considered
                                     // Then the person previously definitely redrew that
                                     && (
-                                        self.history[i - 1].public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2
-                                        && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered) // required for MARKER A
+                                        (
+                                            self.history[i - 1].public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2
+                                            && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered) // required for MARKER A
+                                        )
                                         || (
                                             // [CASE] All player cards are the same card
                                             // Then the person previously definitely redrew that
@@ -679,23 +723,42 @@ impl PathDependentCollectiveConstraint {
                                             // TODO: [OPTIMIZE] don't call known_card_count twice, use a match statement
                                             // !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered) // [OPTIMIZE] Repeated above
                                             // ^ Imported from above (full_test_replay_11 fails with this)
-                                            self.history[i - 1].known_card_count(discard_considered) == 2 
-                                            // Might be hacky, Idea Is that there are 2 non-pile players we know that have the card
-                                            // And because of a previous RevealRedraw the last card is between pile and another player
-                                            && !self.history[i - 1].inferred_constraints()[6].contains(&discard_considered) 
-                                            && (
-                                                // 2 cards outside of player, and player reveals discard_considered
-                                                *reveal_i == discard_considered
-                                                // 2 cards outside of player, and player redraws discard_considered
-                                                // i.e someone revealredraw or ambassador an item into it
-                                                // I'm wondering if the lookback_check revealredraw player should also be excluded
-                                                // Just like pile above
-                                                || self.lookback_check(i - 1, action_player, discard_considered).is_some()
+                                            (
+                                                // TODO：[OPTIMIZE]
+                                                self.history[i - 1].known_card_count(discard_considered) == 2 
+                                                && !self.history[i - 1].inferred_constraints()[action_player as usize].contains(&discard_considered)
+                                                && *reveal_i == discard_considered
+                                            ) 
+                                            || (
+                                                self.lookback_check_2(i, action_player as usize, discard_considered)
                                             )
-                                            // 3 cards outside of player and (implied that player obviously won't reveal discard_considered)
+                                            // === OLD ===
+                                            // self.history[i - 1].known_card_count(discard_considered) == 2 
+                                            // // Might be hacky, Idea Is that there are 2 non-pile players we know that have the card
+                                            // // And because of a previous RevealRedraw the last card is between pile and another player
+                                            // && !self.history[i - 1].inferred_constraints()[6].contains(&discard_considered) 
+                                            //     // This below breaks shit
+                                            // // && !self.history[i - 1].inferred_constraints()[action_player as usize].contains(&discard_considered)
+                                                
+                                            // && (
+                                            //     // 2 cards outside of player, and player reveals discard_considered
+                                            //     *reveal_i == discard_considered
+                                            //     // 2 cards outside of player, and player redraws discard_considered
+                                            //     // i.e someone revealredraw or ambassador an item into it
+                                            //     // I'm wondering if the lookback_check revealredraw player should also be excluded
+                                            //     // Just like pile above
+                                            //     || self.lookback_check(i - 1, action_player, discard_considered).is_some()
+                                            //     // Temp test change location
+                                            //     // || !self.history[i - 1].inferred_constraints()[action_player as usize].contains(&discard_considered)
+                                            // )
+                                            // === OLD ===
                                             || self.history[i - 1].known_card_count(discard_considered) == 3
+                                            // 3 cards outside of player and (implied that player obviously won't reveal discard_considered)
                                             // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
                                         )
+                                        // I guess player could have 1 life and so would have to redraw that card
+                                        // TODO: [OPTIMIZE] the arrangement of these
+                                        || self.history[i - 1].public_constraints()[action_player as usize].len() == 1
                                     )
                                 } else {
                                     false
@@ -825,6 +888,64 @@ impl PathDependentCollectiveConstraint {
             }
         }
         None
+    }
+    /// Checks for sase where player cannot possibly have the card if not for the redraw
+    ///  => all 3 cards are outside of the player at history_index/revealredraw_index
+    ///  => impossible for player to have that card alive
+    pub fn lookback_check_2(&self, history_index: usize, player_id: usize, card: Card) -> bool {
+        // I think for basically the same reasons as I had to rerepresent the code
+        // I would need to rerun the calculations all the way, to figure out if its impossible
+        // The best way would be to rely on impossible_constraints
+        self.history[history_index - 1].impossible_constraints()[player_id][card as usize]
+        // Getting first position where some player revealredraw the card to add it into pile network
+        // if let Some(pos) = self.history
+        // .iter()
+        // .position(
+        //     |a| 
+        //     match a.action_info() {
+        //         ActionInfo::RevealRedraw{reveal, redraw, relinquish} => {
+        //             a.player() != player_id 
+        //             && *reveal == card 
+        //             && redraw.is_none()
+        //             // If redraw is_some() it will be known in inferred cards
+        //         },
+        //         _ => {
+        //             // There is probably an ambassador private information case to handle too
+        //             false
+        //         }
+        //     }
+        // ) {
+        //     let mut group_constraint = CompressedGroupConstraint::zero();
+        //     for i in pos..history_index {
+        //         let action_player = self.history[i].player() as usize;
+        //         match self.history[i].action_info() {
+        //             ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
+        //                 if redraw.is_some() {
+        //                     if !group_constraint.get_player_flag(action_player) {
+        //                         group_constraint.
+        //                     }
+        //                     group_constraint.set_player_flag(action_player, true);
+        //                     group_constraint.set_player_flag(6, true);
+        //                 }
+        //             },
+        //             ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+        //                 // Handle private information in future
+        //                 // unimplemented!()
+        //                 group_constraint.set_player_flag(action_player, true);
+        //                 group_constraint.set_player_flag(6, true);
+        //             },
+        //             ActionInfo::Start => {
+        //                 debug_assert!("Start should only be in index 0");
+        //             },
+        //             ActionInfo::Discard { discard } => {
+        //                 if group_constraint.get_player_flag(action_player) {
+
+        //                 }
+        //             },
+        //         }
+        //     }
+        // }
+        // false
     }
     /// lookback for when we discover a previous item and want to continue for that
     /// This happens e.g. when you discard => infer the redraw of a previous RevealRedraw
@@ -1149,6 +1270,7 @@ impl PathDependentCollectiveConstraint {
                 debug_assert!(false, "should not be pushing this!");
             },
         }
+        self.generate_impossible_constraints();
         // post increment
         self.move_no += 1;
     }
@@ -5400,6 +5522,64 @@ impl PathDependentCollectiveConstraint {
 
         // Checking for possible cards to infer
         false
+    }
+    /// Assumes a maximally informative group is present
+    fn generate_impossible_constraints(&mut self) {
+        let mut dead_cards: [u8; 5] = [0; 5];
+        self.public_constraints
+            .iter()
+            .flatten()
+            .for_each(|&c| dead_cards[c as usize] += 1);
+        // TODO: [OPTIMIZE], because there are too many groups, maybe only check for player-ids that are not dead players (or are eligible)
+        for (card_num, group_constraints) in  [&self.group_constraints_amb, 
+            &self.group_constraints_ass, 
+            &self.group_constraints_cap, 
+            &self.group_constraints_duk, 
+            &self.group_constraints_con]
+            .iter().enumerate() {
+            for group in group_constraints.iter() {
+                if group.count() == 3 { 
+                    for player_id in group.iter_false_player_flags() {
+                        log::trace!("self.impossible_constraints group: {:?}", group);
+                        log::trace!("self.impossible_constraints B setting: {:?}, card: {:?}", player_id, card_num);
+                        self.impossible_constraints[player_id][card_num] = true;
+                    }
+                } else if group.count_alive() + dead_cards[card_num] == 3 {
+                    for player_id in group.iter_false_player_flags() {
+                        log::trace!("self.impossible_constraints group: {:?}", group);
+                        log::trace!("self.impossible_constraints C setting: {:?}, card: {:?}", player_id, card_num);
+                        self.impossible_constraints[player_id][card_num] = true;
+                    }
+                }
+            }
+        }
+        for card_num in 0..5 as usize{
+            if dead_cards[card_num] == 3 {
+                self.impossible_constraints[0][card_num] = true;
+                self.impossible_constraints[1][card_num] = true;
+                self.impossible_constraints[2][card_num] = true;
+                self.impossible_constraints[3][card_num] = true;
+                self.impossible_constraints[4][card_num] = true;
+                self.impossible_constraints[5][card_num] = true;
+                self.impossible_constraints[6][card_num] = true;
+            }
+        }
+        for player_id in 0..6 {
+            // Setting impossible constraints when player's entire hand is known
+            if self.public_constraints[player_id].len() + self.inferred_constraints[player_id].len() == 2 {
+                self.impossible_constraints[player_id] = [true; 5];
+                for card in self.inferred_constraints[player_id].iter() {
+                    self.impossible_constraints[player_id][*card as usize] = false;
+                }
+            }
+        }
+        // Setting impossible constraints when pile's entire hand is known
+        if self.inferred_constraints[6].len() == 3 {
+            self.impossible_constraints[6] = [true; 5];
+            for card in self.inferred_constraints[6].iter() {
+                self.impossible_constraints[6][*card as usize] = false;
+            }
+        }
     }
     /// Temp name, checks if should include the incumbent group
     /// Full Group: The General large group for which we know all the cards of

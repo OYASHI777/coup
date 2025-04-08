@@ -147,6 +147,16 @@ impl CompressedGroupConstraint {
         })
     }
     /// Iterator over only the true values
+    pub fn iter_false_player_flags(&self) -> impl Iterator<Item = usize> + '_ {
+        (0..7).filter_map(move |player| {
+            if self.get_player_flag(player) {
+                None
+            } else {
+                Some(player)
+            }
+        })
+    }
+    /// Iterator over only the true values
     pub fn iter_true_player_single_card_flags(&self) -> impl Iterator<Item = usize> + '_ {
         (0..7).filter_map(move |player| {
             if self.get_single_card_flag(player) {
