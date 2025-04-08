@@ -5527,10 +5527,17 @@ impl PathDependentCollectiveConstraint {
     /// Assumes a maximally informative group is present
     fn generate_impossible_constraints(&mut self) {
         let mut dead_cards: [u8; 5] = [0; 5];
+        let mut inferred_cards: [u8; 5] = [0; 5];
         self.public_constraints
             .iter()
             .flatten()
             .for_each(|&c| dead_cards[c as usize] += 1);
+        self.inferred_constraints
+            .iter()
+            .flatten()
+            .for_each(|&c| inferred_cards[c as usize] += 1);
+        // TODO: OPTIMIZE? You probably could update each move
+        self.impossible_constraints = [[false; 5]; 7];
         log::trace!("generate_impossible_constraints public_constraint: {:?}", self.public_constraints);
         log::trace!("generate_impossible_constraints inferred_constraint: {:?}", self.inferred_constraints);
         log::trace!("generate_impossible_constraints dead_cards: {:?}", dead_cards);
@@ -5570,6 +5577,17 @@ impl PathDependentCollectiveConstraint {
             }
         }
         log::trace!("generate_impossible_constraints after dead_card pass: {:?}", self.impossible_constraints);
+        // TODO: [OPTIMIZE] not sure which order of loops is better
+        for player_id in 0..7 {
+            for card_num in 0..5 as usize {
+                if dead_cards[card_num] + inferred_cards[card_num] == 3 {
+                    if !self.inferred_constraints[player_id].contains(&Card::try_from(card_num as u8).unwrap()) {
+                        self.impossible_constraints[player_id][card_num] = true;
+                    }
+                }
+            }
+        }
+        log::trace!("generate_impossible_constraints after inferred_card pass: {:?}", self.impossible_constraints);
         for player_id in 0..6 {
             // Setting impossible constraints when player's entire hand is known
             if self.public_constraints[player_id].len() + self.inferred_constraints[player_id].len() == 2 {
@@ -5735,6 +5753,7 @@ impl PathDependentCollectiveConstraint {
     }
     /// This is currently broken
     pub fn generate_one_card_impossibilities_card_player_indexing(&mut self) -> [[bool; 7]; 5] {
+        unimplemented!("Yet to integrate with self.impossible_constraints");
         let mut impossible_cards: [[bool; 7]; 5] = [[false; 7]; 5];
         for player_id in 0..7 as usize{
             if self.public_constraints[player_id].len() + self.inferred_constraints[player_id].len() == 2 {
