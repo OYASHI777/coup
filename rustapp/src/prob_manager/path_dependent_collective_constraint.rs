@@ -665,18 +665,22 @@ impl PathDependentCollectiveConstraint {
                         // TODO: Somehow, maybe by regenerating, or not update impossible constraints too
                         // TODO: Change, this should only be done for the first time its added for discard
                         debug_assert!(self.history[0].name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
-                        log::trace!("lookback_1_initial index: {:?}", index);
-                        log::trace!("lookback_1_initial processed item: {:?}", self.history.last().unwrap().action_info());
-                        log::trace!("lookback_1_initial adding inferred_constraint to start: (player: {}, card: {:?})", player_index, reveal_considered);
-                        log::trace!("lookback_1_initial start before: {:?}", self.history.first().unwrap().meta_data());
-                        self.history[0].add_inferred_constraints(player_index as usize, reveal_considered);
-                        log::trace!("lookback_1_initial start after: {:?}", self.history.first().unwrap().meta_data());
-                        // TODO: Have to change calculation for game start for this to work
-                        // TODO: Include impossible at game start too!
-                        self.regenerate_path();
-                        log::trace!("End Regenerate Path lookback_initial B");
-                        self.printlog();
-                        return true;
+                        // TODO: Fix bad_push TEMP
+                        // Add 2 same cards case
+                        // if !self.history[0].inferred_constraints()[player_index as usize].contains(&reveal_considered) {
+                            log::trace!("lookback_1_initial index: {:?}", index);
+                            log::trace!("lookback_1_initial processed item: {:?}", self.history.last().unwrap().action_info());
+                            log::trace!("lookback_1_initial adding inferred_constraint to start: (player: {}, card: {:?})", player_index, reveal_considered);
+                            log::trace!("lookback_1_initial start before: {:?}", self.history.first().unwrap().meta_data());
+                            self.history[0].add_inferred_constraints(player_index as usize, reveal_considered);
+                            log::trace!("lookback_1_initial start after: {:?}", self.history.first().unwrap().meta_data());
+                            // TODO: Have to change calculation for game start for this to work
+                            // TODO: Include impossible at game start too!
+                            self.regenerate_path();
+                            log::trace!("End Regenerate Path lookback_initial B");
+                            self.printlog();
+                            return true;
+                        }
                     }
                 }
             },
@@ -832,17 +836,23 @@ impl PathDependentCollectiveConstraint {
                 // TODO: Somehow, maybe by regenerating, or not update impossible constraints too
                 // TODO: Change, this should only be done for the first time its added for discard
                 debug_assert!(self.history[0].name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
-                log::trace!("lookback_1_initial processed item: {:?}", self.history.last().unwrap().action_info());
-                log::trace!("lookback_1_initial adding inferred_constraint to start: (player: {}, card: {:?})", player_index, discard_considered);
-                log::trace!("lookback_1_initial start before: {:?}", self.history.first().unwrap().meta_data());
-                self.history[0].add_inferred_constraints(player_index as usize, discard_considered);
-                log::trace!("lookback_1_initial start after: {:?}", self.history.first().unwrap().meta_data());
-                // TODO: Have to change calculation for game start for this to work
-                // TODO: Include impossible at game start too!
-                self.regenerate_path();
-                log::trace!("End Regenerate Path lookback_initial D");
-                self.printlog();
-                return true;
+                // TODO: Fix bad_push TEMP
+                // add 2 same cards case
+                // Trying without conditional as Discard means player surely had the card?
+                // But i think we need to handle the case where there are 2 dead cards and u need to add another in
+                // if !self.history[0].inferred_constraints()[player_index as usize].contains(&discard_considered) {
+                    log::trace!("lookback_1_initial processed item: {:?}", self.history.last().unwrap().action_info());
+                    log::trace!("lookback_1_initial adding inferred_constraint to start: (player: {}, card: {:?})", player_index, discard_considered);
+                    log::trace!("lookback_1_initial start before: {:?}", self.history.first().unwrap().meta_data());
+                    self.history[0].add_inferred_constraints(player_index as usize, discard_considered);
+                    log::trace!("lookback_1_initial start after: {:?}", self.history.first().unwrap().meta_data());
+                    // TODO: Have to change calculation for game start for this to work
+                    // TODO: Include impossible at game start too!
+                    self.regenerate_path();
+                    log::trace!("End Regenerate Path lookback_initial D");
+                    self.printlog();
+                    return true;
+                // }
             },
             _ => {
                 // unimplemented!();
