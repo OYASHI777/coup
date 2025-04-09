@@ -108,7 +108,7 @@ pub fn test() {
         let impossible_0 = vec![Steal { player_id: 0, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, true, true, true, true, false], opposing_player_id: 0, final_actioner: 2 }, Discard { player_id: 0, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [true, false, true, true, true, false], opposing_player_id: 1, final_actioner: 0 }, Discard { player_id: 1, card: [Ambassador, Ambassador], no_cards: 1 }, Tax { player_id: 2 }, CollectiveChallenge { participants: [true, true, false, true, true, false], opposing_player_id: 2, final_actioner: 1 }, Discard { player_id: 2, card: [Captain, Captain], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, true, true], opposing_player_id: 3, final_actioner: 5 }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [true, true, true, true, false, true], opposing_player_id: 4, final_actioner: 0 }, Discard { player_id: 4, card: [Assassin, Assassin], no_cards: 1 }, Steal { player_id: 5, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, false, false], opposing_player_id: 5, final_actioner: 3 }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, ForeignAid { player_id: 0 }, CollectiveBlock { participants: [false, false, false, true, true, false], opposing_player_id: 0, final_actioner: 3 }, CollectiveChallenge { participants: [true, true, true, false, true, true], opposing_player_id: 3, final_actioner: 1 }, RevealRedraw { player_id: 3, card: Duke }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Tax { player_id: 2 }, CollectiveChallenge { participants: [true, false, false, false, true, false], opposing_player_id: 2, final_actioner: 0 }, Discard { player_id: 2, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [false, false, false, false, true, false], opposing_player_id: 3, final_actioner: 4 }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }];
         let impossible_1 = vec![Income { player_id: 0 }, ForeignAid { player_id: 1 }, CollectiveBlock { participants: [true, false, true, false, true, true], opposing_player_id: 1, final_actioner: 5 }, CollectiveChallenge { participants: [false, true, false, true, true, false], opposing_player_id: 5, final_actioner: 1 }, RevealRedraw { player_id: 5, card: Duke }, Discard { player_id: 1, card: [Assassin, Assassin], no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [true, true, false, true, true, true], opposing_player_id: 2, final_actioner: 0 }, Discard { player_id: 2, card: [Contessa, Contessa], no_cards: 1 }, Income { player_id: 3 }, Steal { player_id: 4, opposing_player_id: 3, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 4, final_actioner: 5 }, RevealRedraw { player_id: 4, card: Captain }, Discard { player_id: 5, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 3, opposing_player_id: 4, card: Captain }, CollectiveChallenge { participants: [false, true, true, false, true, true], opposing_player_id: 3, final_actioner: 4 }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, false, true, true, false, false], opposing_player_id: 5, final_actioner: 3 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 3, final_actioner: 5 }, RevealRedraw { player_id: 3, card: Duke }, Discard { player_id: 5, card: [Captain, Captain], no_cards: 1 }, Steal { player_id: 0, opposing_player_id: 3, amount: 1 }, CollectiveChallenge { participants: [false, true, true, true, false, false], opposing_player_id: 0, final_actioner: 3 }, Discard { player_id: 0, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [true, false, true, true, true, false], opposing_player_id: 1, final_actioner: 0 }, Discard { player_id: 1, card: [Ambassador, Ambassador], no_cards: 1 }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [false, false, false, false, true, false], opposing_player_id: 2, final_actioner: 4 }, CollectiveChallenge { participants: [false, false, true, true, false, false], opposing_player_id: 4, final_actioner: 3 }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [true, false, true, false, false, false], opposing_player_id: 3, final_actioner: 0 }, Discard { player_id: 3, card: [Duke, Duke], no_cards: 1 }, Tax { player_id: 4 }, CollectiveChallenge { participants: [true, false, true, false, false, false], opposing_player_id: 4, final_actioner: 0 }, RevealRedraw { player_id: 4, card: Duke }];
         // println!("Testing: {}", stringify!(subtract_overflow));
-        // replay_game_constraint_pd(subtract_overflow, false, true);
+        // replay_game_constraint_pd(subtract_overflow, false, false);
         // println!("Testing: {}", stringify!(impossible_0));
         // replay_game_constraint_pd(impossible_0, false, false);
         // println!("Testing: {}", stringify!(impossible_1));
@@ -134,8 +134,8 @@ pub fn test() {
         // println!("Testing: {}", stringify!(reveal_redraw_replay_4));
         // replay_game_constraint_pd(reveal_redraw_replay_4, false, false);
         // New test overinferred
-        println!("Testing: {}", stringify!(reveal_redraw_replay_5));
-        replay_game_constraint_pd(reveal_redraw_replay_5, false, true);
+        // println!("Testing: {}", stringify!(reveal_redraw_replay_5));
+        // replay_game_constraint_pd(reveal_redraw_replay_5, false, false);
         // println!("Testing: {}", stringify!(full_test_replay_0));
         // replay_game_constraint_pd(full_test_replay_0, false, false);
         // println!("Testing: {}", stringify!(full_test_replay_1_modified));
@@ -160,7 +160,7 @@ pub fn test() {
         // replay_game_constraint_pd(full_test_replay_10, false, false);
         // This Fails after added constraint
         // println!("Testing: {}", stringify!(full_test_replay_11));
-        // replay_game_constraint_pd(full_test_replay_11, false, true);
+        // replay_game_constraint_pd(full_test_replay_11, false, false);
         // println!("Testing: {}", stringify!(full_test_replay_12));
         // replay_game_constraint_pd(full_test_replay_12, false, false);
         // println!("Testing: {}", stringify!(full_test_replay_13));
@@ -172,7 +172,7 @@ pub fn test() {
         // println!("Testing: {}", stringify!(full_test_replay_16));
         // replay_game_constraint_pd(full_test_replay_16, false, false);
         // println!("Testing: {}", stringify!(redundancy_replay_0));
-        // replay_game_constraint_pd(redundancy_replay_0, false, true);
+        // replay_game_constraint_pd(redundancy_replay_0, false, false);
         // This Fails after added constraint
         // println!("Testing: {}", stringify!(whole_replay_0));
         // replay_game_constraint_pd(whole_replay_0, false, false);

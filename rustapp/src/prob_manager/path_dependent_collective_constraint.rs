@@ -643,7 +643,7 @@ impl PathDependentCollectiveConstraint {
                                                     self.lookback_1_continual(i);
                                                 }
                                                 self.regenerate_path();
-                                                log::trace!("End Regenerate Path lookback_initial");
+                                                log::trace!("End Regenerate Path lookback_initial A");
                                                 self.printlog();
                                                 // panic!();
                                                 // TODO: [CASE] Knowing the redraw means we need to update the pile earlier!
@@ -674,7 +674,7 @@ impl PathDependentCollectiveConstraint {
                         // TODO: Have to change calculation for game start for this to work
                         // TODO: Include impossible at game start too!
                         self.regenerate_path();
-                        log::trace!("End Regenerate Path lookback_initial");
+                        log::trace!("End Regenerate Path lookback_initial B");
                         self.printlog();
                         return true;
                     }
@@ -810,7 +810,7 @@ impl PathDependentCollectiveConstraint {
                                             self.lookback_1_continual(i);
                                         }
                                         self.regenerate_path();
-                                        log::trace!("End Regenerate Path lookback_initial");
+                                        log::trace!("End Regenerate Path lookback_initial C");
                                         self.printlog();
                                         // panic!();
                                         // TODO: [CASE] Knowing the redraw means we need to update the pile earlier!
@@ -840,7 +840,7 @@ impl PathDependentCollectiveConstraint {
                 // TODO: Have to change calculation for game start for this to work
                 // TODO: Include impossible at game start too!
                 self.regenerate_path();
-                log::trace!("End Regenerate Path lookback_initial");
+                log::trace!("End Regenerate Path lookback_initial D");
                 self.printlog();
                 return true;
             },
@@ -3142,24 +3142,39 @@ impl PathDependentCollectiveConstraint {
     pub fn reveal_redraw_initial(&mut self, player_id: usize, card: Card) {
         // Abit dumb to seperate it like this, but if not it gets abit messy and I have more branchs :/
         
-        self.reveal_initial(player_id, card);
+        
+        
+        // self.reveal_initial(player_id, card);
+        // PD Obsolete
+        // self.increment_move_count();
+        log::trace!("In reveal_redraw_initial");
+        // TODO: Combine adjustment and addition to constraint to allow clear() like in death()
+        if !self.inferred_player_constraint_contains(player_id, card) {
+            // Adds information to inferred constraint if it isn't already there
+            self.add_inferred_player_constraint(player_id, card);
+        }
+        if self.lookback_1_initial() {
+            // If true, it will have rerun the entire history including the current move
+            return
+        }
+        // Commented out as it removes some group required by mut excl addition
+        log::info!("After adding reveal inferred card");
+        self.printlog();
+        // But won't this be done in subset groups?
+        // TODO: Test without reveal_group_adjustment
+        self.reveal_group_adjustment(player_id, card);
+        // TODO: [TEST] Can this add_inferred_groups go above?
+        self.add_inferred_information();
+        self.clear_group_constraints(card);
+        // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
+        // [THOT] So one might be able to learn information about the hands of other players?
+        
         // Actually shouldnt this only move the player's card in
         // mix here is not the same as ambassador, as inferred should not be touched. And since we know the revealed card
         // To rigorously show how to mix if group is not the same card, and 1 player 0 pile
         log::trace!("=== After Reveal Intermediate State ===");
         self.printlog();
         self.redraw(player_id, card);
-        // PD Replace
-        // self.revealed_status[player_id].push((Some(card), self.reveal_redraw_move_counter));
-
-
-        // if !self.revealed_status[player_id].contains(&card) {
-        //     self.revealed_status[player_id].push(card);
-        // }
-        // TODO: add_inferred_groups() here and test if it adds anything by panicking
-        // self.add_inferred_groups();
-        // self.group_redundant_prune();
-        // Add the stuff here
     }
     /// Function to call when the card revealed and the redrawn card is the same card
     pub fn reveal_redraw_same(&mut self, player_id: usize, card: Card) {
