@@ -122,15 +122,13 @@ pub fn test() {
         // ===================================
         // println!("Testing: {}", stringify!(subtract_overflow));
         // replay_game_constraint_pd(subtract_overflow, false, false);
-        // TODO: Fix 2 same card case when adding to inferred_constraints
-        // Could also just not push if its full? but that may not work that well...
-        // Actually in this case, it doesnt work cos the Start had inferred everything, so pushing made no sense
-        println!("Testing: {}", stringify!(bad_push));
-        replay_game_constraint_pd(bad_push, false, false);
+        // println!("Testing: {}", stringify!(bad_push));
+        // replay_game_constraint_pd(bad_push, false, false);
         // println!("Testing: {}", stringify!(impossible_0));
         // replay_game_constraint_pd(impossible_0, false, false);
         // println!("Testing: {}", stringify!(impossible_1));
         // replay_game_constraint_pd(impossible_1, false, false);
+        // Unsolved
         // println!("Testing: {}", stringify!(impossible_2));
         // replay_game_constraint_pd(impossible_2, false, true);
         // println!("Testing: {}", stringify!(full_test_replay_1));
