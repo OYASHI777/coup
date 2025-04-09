@@ -1098,7 +1098,10 @@ impl PathDependentCollectiveConstraint {
                         // Add to start
                         log::trace!("lookback1_continual adding to Start player_id: 6, card: {:?}", redraw_card);
                         debug_assert!(self.history[0].name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
-                        self.history[0].add_inferred_constraints(6, redraw_card);
+                        // TODO: HMMMMMMMM, i feel like there may be cases where it could have 2?
+                        if !self.history[0].inferred_constraints()[6].contains(&redraw_card) {
+                            self.history[0].add_inferred_constraints(6, redraw_card);
+                        }
                         return true;
                     },
                     None => {
