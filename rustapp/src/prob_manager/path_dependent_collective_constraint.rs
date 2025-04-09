@@ -634,10 +634,13 @@ impl PathDependentCollectiveConstraint {
                                         if need_redraw_update {
                                             log::trace!("lookback_1_initial original RevealRedraw: {:?}", action_info);
                                             log::trace!("lookback_1_initial considering: player: {} {:?}", action_data.player(), action_data.action_info());
-                                            if let ActionInfo::RevealRedraw { redraw, .. } = self.history[i].action_info_mut() {
+                                            if let ActionInfo::RevealRedraw { reveal, redraw, .. } = self.history[i].action_info_mut() {
                                                 log::trace!("lookback_1_initial setting redraw to: {:?}", reveal_considered);
                                                 *redraw = Some(reveal_considered);
-                                                self.lookback_1_continual(i);
+                                                // Continuing only if the card had to have come from the pile
+                                                if Some(*reveal) != *redraw {
+                                                    self.lookback_1_continual(i);
+                                                }
                                                 self.regenerate_path();
                                                 self.printlog();
                                                 // panic!();
