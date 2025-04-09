@@ -404,7 +404,10 @@ impl PathDependentCollectiveConstraint {
         // let revealed_status = vec![Vec::with_capacity(5); 7];
         // TODO: Add inferred_card_count
         let mut history: Vec<SignificantAction> = Vec::with_capacity(50);
+        // Start takes the inferred information discovered via a pathdependent lookback
         history.push(SignificantAction::start());
+        // StartInferred takes the inferred information from start, and runs add_inferred_information
+        // This seperation prevents handling cases where you add discovered information that is already inside due to add_inferred_information
         history.push(SignificantAction::start_inferred());
         Self {
             public_constraints,
