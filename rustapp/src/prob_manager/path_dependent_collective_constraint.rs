@@ -680,7 +680,7 @@ impl PathDependentCollectiveConstraint {
                             log::trace!("End Regenerate Path lookback_initial B");
                             self.printlog();
                             return true;
-                        }
+                        // }
                     }
                 }
             },

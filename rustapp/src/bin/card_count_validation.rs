@@ -40,7 +40,7 @@ fn main() {
     // [Passed 1100] Discard + Ambassador Release farm
     // game_rnd_constraint_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // game_rnd_constraint_pd(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
@@ -58,7 +58,7 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    test();
+    // test();
 }
 
 pub fn test() {
