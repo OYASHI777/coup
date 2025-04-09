@@ -474,6 +474,7 @@ impl PathDependentCollectiveConstraint {
                                     if let ActionInfo::RevealRedraw { redraw, .. } = action_data.action_info_mut() {
                                         *redraw = Some(discard_considered);
                                         self.regenerate_path();
+                                        log::trace!("End Regenerate Path lookback_initial");
                                         self.printlog();
                                         // panic!();
                                         return true;
@@ -642,6 +643,7 @@ impl PathDependentCollectiveConstraint {
                                                     self.lookback_1_continual(i);
                                                 }
                                                 self.regenerate_path();
+                                                log::trace!("End Regenerate Path lookback_initial");
                                                 self.printlog();
                                                 // panic!();
                                                 // TODO: [CASE] Knowing the redraw means we need to update the pile earlier!
@@ -672,6 +674,7 @@ impl PathDependentCollectiveConstraint {
                         // TODO: Have to change calculation for game start for this to work
                         // TODO: Include impossible at game start too!
                         self.regenerate_path();
+                        log::trace!("End Regenerate Path lookback_initial");
                         self.printlog();
                         return true;
                     }
@@ -800,11 +803,14 @@ impl PathDependentCollectiveConstraint {
                                 if need_redraw_update {
                                     log::trace!("lookback_1_initial original Discard: {:?}", action_info);
                                     log::trace!("lookback_1_initial considering: player: {} {:?}", action_data.player(), action_data.action_info());
-                                    if let ActionInfo::RevealRedraw { redraw, .. } = self.history[i].action_info_mut() {
+                                    if let ActionInfo::RevealRedraw { reveal, redraw, .. } = self.history[i].action_info_mut() {
                                         log::trace!("lookback_1_initial setting redraw to: {:?}", discard_considered);
                                         *redraw = Some(discard_considered);
-                                        // self.lookback_1_continual(i);
+                                        if Some(*reveal) != *redraw {
+                                            self.lookback_1_continual(i);
+                                        }
                                         self.regenerate_path();
+                                        log::trace!("End Regenerate Path lookback_initial");
                                         self.printlog();
                                         // panic!();
                                         // TODO: [CASE] Knowing the redraw means we need to update the pile earlier!
@@ -834,6 +840,7 @@ impl PathDependentCollectiveConstraint {
                 // TODO: Have to change calculation for game start for this to work
                 // TODO: Include impossible at game start too!
                 self.regenerate_path();
+                log::trace!("End Regenerate Path lookback_initial");
                 self.printlog();
                 return true;
             },
@@ -1030,6 +1037,7 @@ impl PathDependentCollectiveConstraint {
                                                     log::trace!("lookback1_continual set relinquish_card to: {:?}", *reveal);
                                                     *relinquish_card = *reveal;
                                                     self.regenerate_path();
+                                                    log::trace!("End Regenerate Path lookback_continual");
                                                     self.printlog();
                                                     return true
                                                 }
@@ -1138,6 +1146,7 @@ impl PathDependentCollectiveConstraint {
             // Should just run 2 loops so you skip the branch really
             self.calculate_stored_move(index);
         }
+        log::trace!("End Regenerate End");
     }
     fn calculate_stored_move(&mut self, history_index: usize) {
         // let action: &SignificantAction = &self.history[history_index];
@@ -1199,7 +1208,7 @@ impl PathDependentCollectiveConstraint {
         log::trace!("calculate_stored_move generate_impossible_constraints history_index: {history_index}");
         self.generate_impossible_constraints();
         self.history[history_index].meta_data = self.to_meta_data();
-        log::info!("recalculated_stored_move: {} {:?}", history_index, self.history[history_index].action_info());
+        log::info!("recalculated_stored_move end: player: {player_id} {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
     }   
     /// Calculate for the latest addition
@@ -2570,6 +2579,8 @@ impl PathDependentCollectiveConstraint {
         self.reveal_group_adjustment(player_id, card);
         // TODO: [TEST] Can this add_inferred_groups go above?
         self.add_inferred_information();
+        log::info!("After adding add_inferred_information");
+        self.printlog();
         self.clear_group_constraints(card);
         // [THOT] It feels like over here when you reveal something, you lead to information discovery! 
         // [THOT] So one might be able to learn information about the hands of other players?
@@ -2884,15 +2895,15 @@ impl PathDependentCollectiveConstraint {
                                                                             &mut self.group_constraints_duk, 
                                                                             &mut self.group_constraints_con];
 
-        // log::trace!("=== After redraw_inferred_adjustment inferred adjustment ===");
-        // log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));
-        // log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints));
-        // log::info!("{}", format!("Group Constraints:"));
-        // log::info!("{}", format!("\t AMB: {:?}", group_constraints[0]));
-        // log::info!("{}", format!("\t ASS: {:?}", group_constraints[1]));
-        // log::info!("{}", format!("\t CAP: {:?}", group_constraints[2]));
-        // log::info!("{}", format!("\t DUK: {:?}", group_constraints[3]));
-        // log::info!("{}", format!("\t CON: {:?}", group_constraints[4]));
+        log::trace!("=== Start redraw inferred adjustment ===");
+        log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));
+        log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints));
+        log::info!("{}", format!("Group Constraints:"));
+        log::info!("{}", format!("\t AMB: {:?}", group_constraints[0]));
+        log::info!("{}", format!("\t ASS: {:?}", group_constraints[1]));
+        log::info!("{}", format!("\t CAP: {:?}", group_constraints[2]));
+        log::info!("{}", format!("\t DUK: {:?}", group_constraints[3]));
+        log::info!("{}", format!("\t CON: {:?}", group_constraints[4]));
         // Adjust groups
         // CASE revealed card
         // player true pile false => set pile to true 
@@ -3033,10 +3044,14 @@ impl PathDependentCollectiveConstraint {
                 Self::non_redundant_push(group_constraints[inferred_card as usize], group);
             }
         }
+        log::trace!("=== End Redraw Inferred Subtractions ===");
+        self.printlog();
         // let player_count_dead = self.public_constraints[player_id].iter().filter(|c| **c == card).count() as u8;
         // let player_pile_reveal_card_group = CompressedGroupConstraint::new_with_pile(player_id, card, player_count_dead, 1);
         // Self::non_redundant_push(group_constraints[card as usize], player_pile_reveal_card_group);
         self.group_redundant_prune();
+        log::trace!("=== End Redraw ===");
+        self.printlog();
     }
     // TODO: Review group_constraint addition method
     /// Ambassador Dilution of inferred knowledge
