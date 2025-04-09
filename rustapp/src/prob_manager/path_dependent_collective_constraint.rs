@@ -414,7 +414,10 @@ impl PathDependentCollectiveConstraint {
 
         self.impossible_constraints = [[false; 5]; 7];
         // !! Not gonna reset move_no
-        self.add_inferred_information();
+        // Not adding inferred information as sometimes a discard could try to insert
+        // info that has been inferred from add_inferred_information
+        // TODO: TEST or I could just not save the meta_data but let it infer anyways
+        // self.add_inferred_information();
         log::trace!("regenerate_game_start");
         self.printlog();
     }
@@ -1170,6 +1173,18 @@ impl PathDependentCollectiveConstraint {
             ActionInfo::Start => {
                 // TODO: Change
                 self.regenerate_game_start();
+                self.generate_impossible_constraints();
+                // We try saving only the state before additional inference
+                // The issue with this is that we won't get to read impossible?
+                self.history[history_index].meta_data = self.to_meta_data();
+                self.add_inferred_information();
+                // But we save impossible constraints anyway so future states can read it
+                // TODO: THEORY CHECK
+                self.generate_impossible_constraints();
+                log::trace!("calculate_stored_move generate_impossible_constraints history_index: {history_index}");
+                log::info!("recalculated_stored_move end: player: {player_id} {} {:?}", history_index, self.history[history_index].action_info());
+                self.printlog();
+                return
             },
             ActionInfo::Discard{ discard} => {
                 self.death(history_index, player_id as usize, discard);
