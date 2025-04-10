@@ -3448,8 +3448,9 @@ impl PathDependentCollectiveConstraint {
         log::trace!("reveal_redraw_diff after swap_mix");
         self.printlog();
         // Double inferred - do not check for containment as this comes from pile not own hand
-        self.add_inferred_card_unchecked(player_id, redraw, 1, &mut vec![Vec::with_capacity(0); 6]);
-        self.add_inferred_card_unchecked(6, reveal, 1, &mut vec![Vec::with_capacity(0); 6]);
+        // self.add_inferred_card_unchecked(player_id, redraw, 1, &mut vec![Vec::with_capacity(0); 6]);
+        // self.add_inferred_card_unchecked(6, reveal, 1, &mut vec![Vec::with_capacity(0); 6]);
+        self.swap_add_inferred_cards_unchecked(player_id, redraw, 6, reveal);
         // TODO: Determine if we actually need this
         //  How does this interact with add_inferred and swap_mix?
         log::trace!("reveal_redraw_diff after swap add_inferred_cards");
@@ -3526,6 +3527,38 @@ impl PathDependentCollectiveConstraint {
             group.add_alive_count(player_a_inferred_card_b);
             group.add_total_count(player_a_dead_card_b + player_a_inferred_card_b);
         });
+        // TEST
+        if card_a != card_b {
+            group_constraints[card_a as usize]
+            .iter_mut()
+            .filter(|group| !group.get_player_flag(player_a) && group.get_player_flag(player_b))
+            .for_each(|group| {
+                group.add_alive_count(1);
+                group.add_total_count(1);
+            });
+            group_constraints[card_b as usize]
+            .iter_mut()
+            .filter(|group| !group.get_player_flag(player_b) && group.get_player_flag(player_a))
+            .for_each(|group| {
+                group.add_alive_count(1);
+                group.add_total_count(1);
+            });
+            // ANOTHER CASE:
+            // maybe since P3 has 1 life when they RR
+            // the card moving means P3 can't have it!
+            // swap_mix
+        }
+    }
+    /// Adds inferred cards at the end of a reveal_redraw_diff
+    pub fn swap_add_inferred_cards_unchecked(&mut self, player_a: usize, card_a: Card, player_b: usize, card_b: Card) {
+        // TODO: [IMPLEMENT] Need to add the case for single_card_flag on card != card_num ZZ2A as per add_dead_cards
+        log::info!("In add_inferred_card");
+        // Custom inferred_prune
+        // self.inferred_card_prune(player_a, card_a);
+        // self.inferred_card_prune(player_b, card_b);
+        self.inferred_constraints[player_b].push(card_b);
+        self.inferred_constraints[player_a].push(card_a);
+        // TODO: Inferred card needs to prune too!
     }
     /// Used in revealredraw_relinquish
     /// Player a and Player b swap a card 

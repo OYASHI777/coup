@@ -115,14 +115,15 @@ pub fn test() {
         // These Fails after added constraint
         // println!("Testing: {}", stringify!(full_test_replay_11));
         // replay_game_constraint_pd(full_test_replay_11, false, false);
-        // println!("Testing: {}", stringify!(full_test_replay_14));
-        // replay_game_constraint_pd(full_test_replay_14, false, false);
         // println!("Testing: {}", stringify!(whole_replay_0));
         // replay_game_constraint_pd(whole_replay_0, false, false);
         // println!("Testing: {}", stringify!(overinferred_0));
-        // replay_game_constraint_pd(overinferred_0, false, false);
+        // replay_game_constraint_pd(overinferred_0, false, true);
         // println!("Testing: {}", stringify!(overinferred_1));
         // replay_game_constraint_pd(overinferred_1, false, false);
+        // Passes with other player redraw inference
+        println!("Testing: {}", stringify!(full_test_replay_14));
+        replay_game_constraint_pd(full_test_replay_14, false, false);
         // ===================================
         println!("Testing: {}", stringify!(subtract_overflow));
         replay_game_constraint_pd(subtract_overflow, false, false);
