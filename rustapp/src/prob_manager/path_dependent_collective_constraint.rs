@@ -4125,10 +4125,18 @@ impl PathDependentCollectiveConstraint {
                                 3 // Not 0
                             };
                             let player_inferred_diff_cards: u8 = self.inferred_constraints[player].iter().filter(|c| **c as usize != card_num).count() as u8;
+                            log::trace!("add_subset_groups_unopt group: {:?}", group);
+                            log::trace!("player: {player}, public_constraints: {:?}", self.public_constraints);
+                            log::trace!("player: {player}, inferred_constraints: {:?}", self.inferred_constraints);
+                            log::trace!("player_lives: {player_lives}, player_inferred_diff_cards: {player_inferred_diff_cards}");
                             let max_holdable_spaces: u8 = if player_lives == 1 && player_inferred_diff_cards == 1 {
                                 1
+                            } else if self.inferred_constraints[player].len() == 2 {
+                                player_lives - player_inferred_diff_cards
+                                // 0 // Handles case where we know both of a players' cards
                             } else {
-                                // This should not overflow as player can't have more cards than he has lives
+                                // TESTING subtract_overflow_1
+                                // Actually this can overflow if we know both of a players' cards
                                 player_lives - player_inferred_diff_cards
                             };
                             // if group.count_alive() + player_inferred_diff_cards > player_lives {
