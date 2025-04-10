@@ -3527,6 +3527,24 @@ impl PathDependentCollectiveConstraint {
             group.add_alive_count(player_a_inferred_card_b);
             group.add_total_count(player_a_dead_card_b + player_a_inferred_card_b);
         });
+        // UNSURE: no case that this fixes so far
+        // TODO: OPTIMIZE, actually don't need both for if player_id is 6
+        // CASE:
+        //  both have flags but the player has single_flag
+        //  since we don't know for certain if that card that was previously given from the player is the same that returned
+        //  we have to tag it as false
+        group_constraints[card_b as usize]
+        .iter_mut()
+        .filter(|group| group.get_player_flag(player_a) && group.get_player_flag(player_b))
+        .for_each(|group| {
+            group.set_single_card_flag(player_a, false);
+        });
+        group_constraints[card_a as usize]
+        .iter_mut()
+        .filter(|group| group.get_player_flag(player_a) && group.get_player_flag(player_b))
+        .for_each(|group| {
+            group.set_single_card_flag(player_b, false);
+        });
         // TEST
         if card_a != card_b {
             group_constraints[card_a as usize]
@@ -3543,6 +3561,10 @@ impl PathDependentCollectiveConstraint {
                 group.add_alive_count(1);
                 group.add_total_count(1);
             });
+            // CASE:
+            //  both have flags but the player has single_flag
+            //  since we don't know for certain if that card that was previously given from the player is the same that returned
+            //  we have to tag it as false
             // ANOTHER CASE:
             // maybe since P3 has 1 life when they RR
             // the card moving means P3 can't have it!
