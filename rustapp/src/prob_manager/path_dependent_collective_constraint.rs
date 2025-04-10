@@ -644,6 +644,7 @@ impl PathDependentCollectiveConstraint {
                                                     // )
                                                     // === OLD ===
                                                     || self.history[i - 1].known_card_count(reveal_considered) == 3
+                                                    && !self.history[i - 1].player_has_inferred_constraint(action_player, reveal_considered)
                                                     // CASE 3 cards outside of player and (implied that player obviously won't reveal reveal_considered)
                                                     // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
                                                 )
@@ -817,6 +818,7 @@ impl PathDependentCollectiveConstraint {
                                             // )
                                             // === OLD ===
                                             || self.history[i - 1].known_card_count(discard_considered) == 3
+                                            && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered)
                                             // 3 cards outside of player and (implied that player obviously won't reveal discard_considered)
                                             // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
                                         )
@@ -833,7 +835,7 @@ impl PathDependentCollectiveConstraint {
                                     log::trace!("redraw_i.is_none() = : {}", redraw_i.is_none());
                                     log::trace!("&&");
                                     log::trace!("self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2 = {}", self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2);
-                                    log::trace!("self.history[i - 1]public_constraints(): {:?} + self.history[i - 1]inferred_constraints(): {:?}", self.history[i - 1].public_constraints(), self.history[i - 1].inferred_constraints());
+                                    log::trace!("!self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered): {:?}", !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered));
                                     log::trace!("i: {} self.history: {:?}",i , self.history);
                                     log::trace!("&&");
                                     log::trace!("!action_data.player_has_inferred_constraint(action_player, discard_considered) = {}", !self.inferred_constraints[action_player as usize].contains(&discard_considered));
@@ -3527,7 +3529,6 @@ impl PathDependentCollectiveConstraint {
             group.add_alive_count(player_a_inferred_card_b);
             group.add_total_count(player_a_dead_card_b + player_a_inferred_card_b);
         });
-        // UNSURE: no case that this fixes so far
         // TODO: OPTIMIZE, actually don't need both for if player_id is 6
         // CASE:
         //  both have flags but the player has single_flag
