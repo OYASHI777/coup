@@ -6,7 +6,9 @@
 
 use crate::history_public::{Card, AOName, ActionObservation};
 use super::path_dependent_collective_constraint::{ActionInfo, PathDependentCollectiveConstraint};
-
+// TODO: Store also a version of constraint_history but split by players
+// So it is easier to know the first time a player does something
+// May be useful later
 pub struct PathDependentCardCountManager {
     // a vec of constraints to push and pop
     // dead cards to push or pop

@@ -328,23 +328,12 @@ impl PathDependentMetaData {
 //     }
 // }
 
-// LAST UPDATED REVEALREDRAW_RELINQUISH
-// 0: Document swap_mix()
-// 1: Test without any inference first, just to see if the recursion works for simple cases
-//      - Basic Cases
-//          - 1 life case - extend reveal_group_adjustment for player 6 && merge with add_inferred_cards
-//                  - Handle swap API
-//                      - Fix add_inferred_cards
-//                      - refactor reveal_redraw methods
-//          - First discard/revealredraw case
-//          - First Amb with known cards before case
-//      - game_start affected
-//          - ensure game_start can start from some inferred state
-//          - memoize the impossible constraints
-//              - store in meta_data if required for inference if not remove it
-// 2: Include all the inference, but do not recurse on finding inferred constraint
-// 3: Add recursion on finding inferred constraint
-// 4: Optimize to consider where we might not need to recurse (non recursive method can get 1/250 games wrong)
+
+// 1: Add recursion on finding inferred constraint
+//      - Can possibly store a boolean that determines if any empty redraw is before a number, so no need to lookback for that
+// 2: Optimize to consider where we might not need to recurse (non recursive method can get 1/250 games wrong)
+//      - Consider memoizing by storing a card, that a revealredraw might need to redraw
+//          - during forward pass, if its impossible for player to have that card, then redraw it
 #[derive(Clone, Debug)]
 /// A struct that helps in card counting. Stores all information known about cards by a particular player.
 pub struct PathDependentCollectiveConstraint {
@@ -738,11 +727,13 @@ impl PathDependentCollectiveConstraint {
                 // Logic same as RevealRedraw above
                 // TODO: [REFACTOR]
                 // Group A abstract to lookback_2 for inferred addition too
+                // TODO: THINK Why not just collect from self.public_constraints???
                 let mut discard_players: Vec<u8> = Vec::with_capacity(3);
                 // Add here as we don't loop over current index
                 // May expand to all cards known later
                 let bool_all_cards_dead = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>() == 3;
 
+                // Handled earlier
                 discard_players.push(self.history[index].player());
                 'iter_loop: for i in (2..index).rev() {
                     let action_data = &self.history[i];
