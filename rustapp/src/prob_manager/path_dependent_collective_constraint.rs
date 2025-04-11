@@ -772,7 +772,7 @@ impl PathDependentCollectiveConstraint {
                             ActionInfoName::RevealRedraw => {
                                 // Temp for testing [REFACTOR]
                                 if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                    if *reveal_i == discard_considered {
+                                    if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) {
                                         reveal_players.push(action_player);
                                     }
                                 }
@@ -985,7 +985,7 @@ impl PathDependentCollectiveConstraint {
                     } else {
                         // TEMP TEST [REFACTOR]
                         if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                            if *reveal_i == discard_considered {
+                            if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) {
                                 reveal_players.push(action_player);
                             }
                         }
@@ -1005,7 +1005,7 @@ impl PathDependentCollectiveConstraint {
                                 ActionInfoName::RevealRedraw => {
                                     // TEMP TEST [REFACTOR]
                                     if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                        if *reveal_i == discard_considered {
+                                        if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) {
                                             reveal_players.push(action_player);
                                         }
                                     }
