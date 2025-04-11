@@ -887,7 +887,7 @@ impl PathDependentCollectiveConstraint {
                                                 // Like if we pass a reveal == redraw must we kick them?
                                                 // What does this do
                                                 // if redraw.is_none() {
-                                                    card_assured_players.retain(|p| *p != action_player);
+                                                card_assured_players.retain(|p| *p != action_player);
                                                 // }
                                             }
                                         }
@@ -1183,7 +1183,7 @@ impl PathDependentCollectiveConstraint {
                             }
                         }
                         // TODO: THEORY CHECK [OPTIMIZE] Do we really need this bool_all_cards_dead? can mirror above?
-                        if bool_all_cards_dead {
+                        // if bool_all_cards_dead {
                             let action_name = action_data.name();
                             match action_name {
                                 ActionInfoName::Discard => {
@@ -1219,6 +1219,7 @@ impl PathDependentCollectiveConstraint {
                                                 // else they could not have discarded it
                                                 // Here we assume bool_all_cards_dead == true
                                                 *reveal_i == discard_considered
+                                                && bool_all_cards_dead
                                             )
                                         )
                                     } else {
@@ -1283,7 +1284,7 @@ impl PathDependentCollectiveConstraint {
                                     debug_assert!(false, "You should not be here!");
                                 },
                             }
-                        }
+                        // }
                     }
                 }
                 // Else if its start (which means we did not hit a revealredraw or ambassador)
