@@ -749,7 +749,10 @@ impl PathDependentCollectiveConstraint {
                 // TODO: [REFACTOR]
                 // Group A abstract to lookback_2 for inferred addition too
                 // TODO: THINK Why not just collect from self.public_constraints???
+                // Try this out
                 let mut discard_players: Vec<u8> = Vec::with_capacity(3);
+                // TEST UNSURE how this interacts with AMB
+                let mut reveal_players: Vec<u8> = Vec::with_capacity(3);
                 // Add here as we don't loop over current index
                 // May expand to all cards known later
                 let bool_all_cards_dead = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>() == 3;
@@ -765,6 +768,12 @@ impl PathDependentCollectiveConstraint {
                         let action_name = action_data.name();
                         match action_name { // This is just a get around of the partial borrowing rules...
                             ActionInfoName::RevealRedraw => {
+                                // Temp for testing [REFACTOR]
+                                if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
+                                    if *reveal_i == discard_considered {
+                                        reveal_players.push(action_player);
+                                    }
+                                }
                                 log::trace!("lookback_initial Discard checking past RevealRedraw");
                                 log::trace!("lookback_initial original player: {}, Discard: {:?}", player_index, action_info);
                                 log::trace!("lookback_initial checked player: {}, RevealRedraw: {:?}", action_data.player(), action_data.action_info());
@@ -816,12 +825,23 @@ impl PathDependentCollectiveConstraint {
                                                 // As pile does not have the card to discard
                                                 // Comparable case for RevealRedraw might be if 2 cards are dead + 1 revealed?
                                                 // Unsure if all known is usable?
-                                                bool_all_cards_dead
-                                                && *reveal_i == discard_considered
+                                                (
+                                                    bool_all_cards_dead
+                                                    && *reveal_i == discard_considered
+                                                )
                                                 // Won't always have this as this requires a forward pass of recalculations to know this
                                                 // After a new card has been added
                                                 // && self.history[i-1].impossible_constraints()[6][*reveal_i as usize]
                                                 // && self.history[i-1].inferred_constraints()[action_player as usize].iter().filter(|c| **c == discard_considered).count() < 2
+                                                || (
+                                                    // TEMP TEST HACKY UNSURE how this interacts with Ambassador
+                                                    // I wonder if there is a case where P1 RR 4 times in  a row
+                                                    // and somehow this updates wrongly
+                                                    // NOTE: This somehow fixes alot of shit omg
+                                                    // TODO: Extend
+                                                    *reveal_i == discard_considered
+                                                    && reveal_players.len() >= 3 - discard_players.len()
+                                                )
                                             )
                                             // === OLD ===
                                             // self.history[i - 1].known_card_count(discard_considered) == 2 
@@ -886,6 +906,8 @@ impl PathDependentCollectiveConstraint {
                                     log::trace!("   (");
                                     log::trace!("bool_all_cards_dead = {}", bool_all_cards_dead);
                                     log::trace!("*reveal_i == discard_considered = {}", *reveal_i == discard_considered);
+                                    log::trace!("reveal_players.len() >= 3 - discard_players.len() = {}", reveal_players.len() >= 3 - discard_players.len());
+                                    log::trace!("reveal_players.len() {:?} discard_players.len() {:?}", reveal_players, discard_players);
                                     log::trace!("   )");
                                     log::trace!("||");
                                     log::trace!("self.history[i - 1].known_card_count(discard_considered) == 3 = {}", self.history[i - 1].known_card_count(discard_considered) == 3);
@@ -940,7 +962,12 @@ impl PathDependentCollectiveConstraint {
                             _ => {},
                         }
                     } else {
-
+                        // TEMP TEST [REFACTOR]
+                        if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
+                            if *reveal_i == discard_considered {
+                                reveal_players.push(action_player);
+                            }
+                        }
                         if bool_all_cards_dead {
                             let action_name = action_data.name();
                             match action_name {
@@ -953,6 +980,12 @@ impl PathDependentCollectiveConstraint {
                                     }
                                 },
                                 ActionInfoName::RevealRedraw => {
+                                    // TEMP TEST [REFACTOR]
+                                    if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
+                                        if *reveal_i == discard_considered {
+                                            reveal_players.push(action_player);
+                                        }
+                                    }
                                     // TODO: Consider that we could pass a RR, the see a discard, thus adding back into discard_players
                                     // This leads us to look at multiple RevealRedraws after the first one
                                     log::trace!("lookback_initial Discard checking past RevealRedraw");
@@ -4893,13 +4926,13 @@ impl PathDependentCollectiveConstraint {
                         let same_dead_card_count: u8 = self.public_constraints[player_id].iter().filter(|c| **c as usize == card_num).count() as u8;
                         if same_alive_card_count + same_dead_card_count > 0 {
                             let mut new_group: CompressedGroupConstraint = *reference_group_i;
-                            log::trace!("");
-                            log::trace!("=== add_mutually_exclusive_unions ref vs inferred & public");
-                            log::trace!("add_mutually_exclusive_unions public_constraints: {:?}", self.public_constraints);
-                            log::trace!("add_mutually_exclusive_unions inferred_constraints: {:?}", self.inferred_constraints);
-                            log::trace!("same_alive_card_count: {}", same_alive_card_count);
-                            log::trace!("same_dead_card_count: {}", same_dead_card_count);
-                            log::trace!("add_mutually_exclusive_unions reference_group_i: {}, player_id: {}, player_flag: {}", reference_group_i, player_id, player_flag);
+                            // log::trace!("");
+                            // log::trace!("=== add_mutually_exclusive_unions ref vs inferred & public");
+                            // log::trace!("add_mutually_exclusive_unions public_constraints: {:?}", self.public_constraints);
+                            // log::trace!("add_mutually_exclusive_unions inferred_constraints: {:?}", self.inferred_constraints);
+                            // log::trace!("same_alive_card_count: {}", same_alive_card_count);
+                            // log::trace!("same_dead_card_count: {}", same_dead_card_count);
+                            // log::trace!("add_mutually_exclusive_unions reference_group_i: {}, player_id: {}, player_flag: {}", reference_group_i, player_id, player_flag);
                             new_group.set_player_flag(player_id, true);
                             new_group.add_alive_count(same_alive_card_count);
                             new_group.add_dead_count(same_dead_card_count);
@@ -5022,15 +5055,15 @@ impl PathDependentCollectiveConstraint {
                             let complement_maximal_holdable_spaces = part_list_excl_player.max_spaces();
                             // This should not overflow as spaces should always be > both
                             let max_free_spaces = complement_maximal_holdable_spaces - complement_maximal_holdable_dead - complement_maximal_holdable_alive; 
-                            log::trace!("=== add_inferred_except_player discovery ===");
-                            log::trace!("Parent Group: {}", group);
-                            log::trace!("part list excl player: {}, count: {}", part_list_excl_player, part_list_excl_player.part_list_count());
-                            log::trace!("Current Player: {}", player);
-                            log::trace!("Max_free_spaces: {} = complement_maximal_holdable_spaces: {} - complement_maximal_holdable_dead: {} - complement_maximal_holdable_alive: {}", max_free_spaces, complement_maximal_holdable_spaces, complement_maximal_holdable_dead, complement_maximal_holdable_alive);
-                            log::trace!("Complement_max_alive array: {:?}", maximal_alive_card_counts);
-                            log::trace!("Complement_max_dead: {}", complement_maximal_holdable_dead);
-                            log::trace!("Complement_max_alive: {}", complement_maximal_holdable_alive);
-                            log::trace!("group_alive_count: {} >? max_free_spaces{}", group_alive_count, max_free_spaces);
+                            // log::trace!("=== add_inferred_except_player discovery ===");
+                            // log::trace!("Parent Group: {}", group);
+                            // log::trace!("part list excl player: {}, count: {}", part_list_excl_player, part_list_excl_player.part_list_count());
+                            // log::trace!("Current Player: {}", player);
+                            // log::trace!("Max_free_spaces: {} = complement_maximal_holdable_spaces: {} - complement_maximal_holdable_dead: {} - complement_maximal_holdable_alive: {}", max_free_spaces, complement_maximal_holdable_spaces, complement_maximal_holdable_dead, complement_maximal_holdable_alive);
+                            // log::trace!("Complement_max_alive array: {:?}", maximal_alive_card_counts);
+                            // log::trace!("Complement_max_dead: {}", complement_maximal_holdable_dead);
+                            // log::trace!("Complement_max_alive: {}", complement_maximal_holdable_alive);
+                            // log::trace!("group_alive_count: {} >? max_free_spaces{}", group_alive_count, max_free_spaces);
                             if group_alive_count > max_free_spaces {
                                 let inferred_counts = group_alive_count - max_free_spaces;
                                 let known_counts= self.inferred_constraints[player].iter().filter(|c| **c as usize == card_num).count() as u8;

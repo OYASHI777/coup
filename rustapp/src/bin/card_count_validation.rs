@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use env_logger::{Builder, Env, Target};
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
-pub const LOG_FILE_NAME: &str = "just_test_replay_0000000.log";
+pub const LOG_FILE_NAME: &str = "just_test_replay_00000000.log";
 // CURRENT BUG: add_subset_group never adds => check all redundant checks => to reconsider what really is redundant
 // ANOTHER BUG: ok even if nothing is added, why on earth does it keep panicking
 // ANOTHER BUG: 0 dead 0 alive groups are possible for some reason
@@ -116,10 +116,8 @@ pub fn test() {
         let overinferred_2 = vec![ForeignAid { player_id: 0 }, CollectiveBlock { participants: [false, true, false, true, false, false], opposing_player_id: 0, final_actioner: 3 }, CollectiveChallenge { participants: [true, false, false, false, true, true], opposing_player_id: 3, final_actioner: 4 }, Discard { player_id: 3, card: [Captain, Captain], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 1, final_actioner: 4 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 3, amount: 2 }, CollectiveChallenge { participants: [true, true, false, true, false, false], opposing_player_id: 2, final_actioner: 1 }, Discard { player_id: 2, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [true, true, false, false, true, false], opposing_player_id: 3, final_actioner: 0 }, RevealRedraw { player_id: 3, card: Captain }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 4, opposing_player_id: 4, card: Captain }, Income { player_id: 4 }, Steal { player_id: 5, opposing_player_id: 0, amount: 2 }, CollectiveChallenge { participants: [true, true, true, true, true, false], opposing_player_id: 5, final_actioner: 0 }, RevealRedraw { player_id: 5, card: Captain }, Discard { player_id: 0, card: [Assassin, Assassin], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 3, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, true, true], opposing_player_id: 1, final_actioner: 5 }, Discard { player_id: 1, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 4, amount: 1 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 2, final_actioner: 3 }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 4, amount: 1 }, CollectiveChallenge { participants: [false, false, false, false, true, false], opposing_player_id: 3, final_actioner: 4 }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, Tax { player_id: 4 }, CollectiveChallenge { participants: [false, false, false, false, false, false], opposing_player_id: 4, final_actioner: 4 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, false, false, false, true, false], opposing_player_id: 5, final_actioner: 4 }, CollectiveChallenge { participants: [false, false, false, false, false, true], opposing_player_id: 4, final_actioner: 5 }, Discard { player_id: 4, card: [Ambassador, Ambassador], no_cards: 1 }, Assassinate { player_id: 4, opposing_player_id: 5 }, CollectiveChallenge { participants: [false, false, false, false, false, true], opposing_player_id: 4, final_actioner: 5 }, RevealRedraw { player_id: 4, card: Assassin }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }];
         
         // These Fails after added constraint
-        println!("Testing: {}", stringify!(full_test_replay_11));
-        replay_game_constraint_pd(full_test_replay_11, false, true);
-        // println!("Testing: {}", stringify!(whole_replay_0));
-        // replay_game_constraint_pd(whole_replay_0, false, false);
+        println!("Testing: {}", stringify!(whole_replay_0));
+        replay_game_constraint_pd(whole_replay_0, false, false);
         // ===================================
         // Future features / weird bugs
         // Can't find root of this bug
@@ -189,6 +187,8 @@ pub fn test() {
         replay_game_constraint_pd(full_test_replay_9, false, false);
         println!("Testing: {}", stringify!(full_test_replay_10));
         replay_game_constraint_pd(full_test_replay_10, false, false);
+        println!("Testing: {}", stringify!(full_test_replay_11));
+        replay_game_constraint_pd(full_test_replay_11, false, true);
         println!("Testing: {}", stringify!(full_test_replay_12));
         replay_game_constraint_pd(full_test_replay_12, false, false);
         println!("Testing: {}", stringify!(full_test_replay_13));
