@@ -39,7 +39,7 @@ fn main() {
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_pd(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
@@ -121,18 +121,8 @@ pub fn test() {
         // retain is_none() needed in discard?
         // ordering of discard_player pushes?
         // bool_all_dead in discard?
-        println!("Testing: {}", stringify!(full_test_overflow_0));
-        replay_game_constraint_pd(full_test_overflow_0, false, false);
-        println!("Testing: {}", stringify!(reveal_redraw_replay_7));
-        replay_game_constraint_pd(reveal_redraw_replay_7, false, false);
         // This might fail when AMB is reintroduced
         // Hacky cases for Redraw inference
-        println!("Testing: {}", stringify!(overinferred_3));
-        replay_game_constraint_pd(overinferred_3, false, false);
-        println!("Testing: {}", stringify!(overinferred_4));
-        replay_game_constraint_pd(overinferred_4, false, false);
-        println!("Testing: {}", stringify!(whole_replay_0));
-        replay_game_constraint_pd(whole_replay_0, false, false);
         // ===================================
         // Future features / weird bugs
         // Can't find root of this bug
@@ -145,14 +135,20 @@ pub fn test() {
         // println!("Testing: {}", stringify!(reveal_redraw_replay_6));
         // replay_game_constraint_pd(reveal_redraw_replay_6, false, false);
         // ===================================
-
+        
         // Broke this
+        println!("Testing: {}", stringify!(full_test_overflow_0));
+        replay_game_constraint_pd(full_test_overflow_0, false, false);
         println!("Testing: {}", stringify!(overinferred_0));
         replay_game_constraint_pd(overinferred_0, false, false);
         println!("Testing: {}", stringify!(overinferred_1));
         replay_game_constraint_pd(overinferred_1, false, false);
         println!("Testing: {}", stringify!(overinferred_2));
         replay_game_constraint_pd(overinferred_2, false, false);
+        println!("Testing: {}", stringify!(overinferred_3));
+        replay_game_constraint_pd(overinferred_3, false, false);
+        println!("Testing: {}", stringify!(overinferred_4));
+        replay_game_constraint_pd(overinferred_4, false, false);
         println!("Testing: {}", stringify!(subtract_overflow_0));
         replay_game_constraint_pd(subtract_overflow_0, false, false);
         println!("Testing: {}", stringify!(bad_push));
@@ -165,7 +161,7 @@ pub fn test() {
         replay_game_constraint_pd(impossible_2, false, false);
         println!("Testing: {}", stringify!(full_test_replay_1));
         replay_game_constraint_pd(full_test_replay_1, false, false);
-
+        
         println!("Testing: {}", stringify!(full_test_overflow_1));
         replay_game_constraint_pd(full_test_overflow_1, false, false);
         println!("Testing: {}", stringify!(full_test_overflow_2));
@@ -184,7 +180,9 @@ pub fn test() {
         replay_game_constraint_pd(reveal_redraw_replay_4, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_5));
         replay_game_constraint_pd(reveal_redraw_replay_5, false, false);
-
+        println!("Testing: {}", stringify!(reveal_redraw_replay_7));
+        replay_game_constraint_pd(reveal_redraw_replay_7, false, false);
+        
         println!("Testing: {}", stringify!(full_test_replay_0));
         replay_game_constraint_pd(full_test_replay_0, false, false);
         println!("Testing: {}", stringify!(full_test_replay_1_modified));
@@ -219,6 +217,8 @@ pub fn test() {
         replay_game_constraint_pd(full_test_replay_15, false, false);
         println!("Testing: {}", stringify!(full_test_replay_16));
         replay_game_constraint_pd(full_test_replay_16, false, false);
+        println!("Testing: {}", stringify!(whole_replay_0));
+        replay_game_constraint_pd(whole_replay_0, false, false);
         println!("Testing: {}", stringify!(whole_replay_1));
         replay_game_constraint_pd(whole_replay_1, false, false);
         println!("Testing: {}", stringify!(whole_replay_2));
@@ -636,7 +636,7 @@ pub fn game_rnd_constraint_pd_st(game_no: usize, bool_know_priv_info: bool, min_
                         // panic!("Inferred constraints do not match!")
                     }
                     if !pass_impossible_constraints {
-                        // break;
+                        break;
                         // let replay = hh.get_history(hh.store_len());
                         // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                         // panic!()
