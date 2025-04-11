@@ -535,6 +535,27 @@ impl PathDependentCollectiveConstraint {
     /// Used on the initial addition of move to history, not recalculation
     /// This is ran after reveal and after discard
     /// NOTE: A pretty good lookback would also be to check if player impossible to have some card at start of game
+    /// 
+    /// 3 ways to recursively go about this
+    /// 1)  Call lookback once, if updated regenerate everything
+    ///     - every step of regeneration calls a lookback too
+    ///     - O(n) + O(n^2)
+    ///     - But this may run the calculation on each node multiple times (expensive)
+    /// 2)  Call lookback once
+    ///     - As you traverse back in moves, if required call lookback on another move found along the way
+    ///     - When reaching the end, regenerate everything
+    ///     - O(n) + O(n)
+    ///     - regeneration done once (if feasible)
+    ///     - less complex for branching
+    ///     - less cache efficient than (3)
+    /// 3)  Call lookback once
+    ///     - maintain a store of things to lookback on (Discard P1, RR P2)
+    ///     - for each move check in the store if anything to update
+    ///     - when reaching the end, regenerate everything
+    ///     - O(n) + O(n)
+    ///     - regeneration done once (if feasible)
+    ///     - but more complex due to branches and search over store
+    ///     - more cache efficient than (2)
     pub fn lookback_initial(&mut self) -> bool {
         // index is the index for history
         log::trace!("In lookback_initial");
@@ -788,6 +809,20 @@ impl PathDependentCollectiveConstraint {
                                             || (
                                                 self.lookback_check_2(i, action_player as usize, discard_considered)
                                             )
+                                            || (
+                                                // TEST
+                                                // CASE
+                                                // All cards dead and player had to have redrawn the same card revealed
+                                                // As pile does not have the card to discard
+                                                // Comparable case for RevealRedraw might be if 2 cards are dead + 1 revealed?
+                                                // Unsure if all known is usable?
+                                                bool_all_cards_dead
+                                                && *reveal_i == discard_considered
+                                                // Won't always have this as this requires a forward pass of recalculations to know this
+                                                // After a new card has been added
+                                                // && self.history[i-1].impossible_constraints()[6][*reveal_i as usize]
+                                                // && self.history[i-1].inferred_constraints()[action_player as usize].iter().filter(|c| **c == discard_considered).count() < 2
+                                            )
                                             // === OLD ===
                                             // self.history[i - 1].known_card_count(discard_considered) == 2 
                                             // // Might be hacky, Idea Is that there are 2 non-pile players we know that have the card
@@ -846,6 +881,11 @@ impl PathDependentCollectiveConstraint {
                                     log::trace!("*reveal_i == discard_considered = ?? reveal_i: {:?}, discard_considered: {:?}", *reveal_i, discard_considered);
                                     log::trace!("||");
                                     log::trace!("self.lookback_check_2({i}, {action_player}, discard_considered) = {}", self.lookback_check_2(i, action_player as usize, discard_considered));
+                                    log::trace!("   )");
+                                    log::trace!("||");
+                                    log::trace!("   (");
+                                    log::trace!("bool_all_cards_dead = {}", bool_all_cards_dead);
+                                    log::trace!("*reveal_i == discard_considered = {}", *reveal_i == discard_considered);
                                     log::trace!("   )");
                                     log::trace!("||");
                                     log::trace!("self.history[i - 1].known_card_count(discard_considered) == 3 = {}", self.history[i - 1].known_card_count(discard_considered) == 3);
