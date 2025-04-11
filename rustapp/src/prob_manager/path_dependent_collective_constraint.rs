@@ -886,9 +886,9 @@ impl PathDependentCollectiveConstraint {
                                                 // TODO: I have a feeling I only need to kick them out if reveal_redraw is None?
                                                 // Like if we pass a reveal == redraw must we kick them?
                                                 // What does this do
-                                                if redraw.is_none() {
+                                                // if redraw.is_none() {
                                                     card_assured_players.retain(|p| *p != action_player);
-                                                }
+                                                // }
                                             }
                                         }
 
@@ -1265,15 +1265,15 @@ impl PathDependentCollectiveConstraint {
                                             // In case where its a different player RevealRedraw, don't need to break yet
                                             // iter_loop, break only when its same player
                                             // break 'iter_loop;
+                                            // TODO: I have a feeling I need an exclude group for where there are multiple RevealRedraws
+                                            // TODO: I have a feeling I only need to kick them out if reveal_redraw is None?
+                                            // Like if we pass a reveal == redraw must we kick them?
+                                            // What does this do
+                                            discard_players.retain(|p| *p != action_player);
                                         }
                                     } else {
                                         // return false;
                                     }
-                                    // TODO: I have a feeling I need an exclude group for where there are multiple RevealRedraws
-                                    // TODO: I have a feeling I only need to kick them out if reveal_redraw is None?
-                                    // Like if we pass a reveal == redraw must we kick them?
-                                    // What does this do
-                                    discard_players.retain(|p| *p != action_player);
                                 },
                                 ActionInfoName::ExchangeDrawChoice => {
                                     // Do nothing as its a differ
