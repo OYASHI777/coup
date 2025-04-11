@@ -758,9 +758,11 @@ impl PathDependentCollectiveConstraint {
                 let bool_all_cards_dead = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>() == 3;
 
                 // Handled earlier
+                log::trace!("Pushing index_player: {} into discard_considered", self.history[index].player());
                 discard_players.push(self.history[index].player());
                 'iter_loop: for i in (2..index).rev() {
                     let action_data = &self.history[i];
+                    log::trace!("iter saw action_data: {:?}", action_data);
                     let action_player = action_data.player();
                     if action_player == player_index { // TODO: [OPTIMIZE] Im thinking maybe you only need to do this check in the match statement
                         // Case 0
@@ -838,9 +840,26 @@ impl PathDependentCollectiveConstraint {
                                                     // I wonder if there is a case where P1 RR 4 times in  a row
                                                     // and somehow this updates wrongly
                                                     // NOTE: This somehow fixes alot of shit omg
-                                                    // TODO: Extend
+                                                    // NOTE: If overinference happens it is recommended to check if it does so with this commented out
                                                     *reveal_i == discard_considered
-                                                    && reveal_players.len() >= 3 - discard_players.len()
+                                                    // && reveal_players.len() >= 3 - discard_players.len()
+                                                    // && reveal_players.iter().chain(discard_players.iter()).collect::<AHashSet<_>>().len() >= 3
+                                                    // && reveal_players.iter().collect::<AHashSet<_>>().len() >= 3 - discard_players.len()
+                                                    // Try 3:
+                                                    // After the player reveals
+                                                    // 2 other players discard / reveal (without AMB)
+                                                    // I guess can .retain() if player AMB
+                                                    // Then player discards again / reveals
+                                                    // && reveal_players.iter().filter(|p| **p != player_index).collect::<AHashSet<_>>().len() >= 3 - discard_players.len()
+                                                    && {
+                                                        let mut temp = reveal_players.clone();
+                                                        temp.sort_unstable();
+                                                        temp.dedup();
+                                                        log::trace!("reveal_players {:?}, discard_players: {:?}", temp, discard_players);
+                                                        log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
+                                                        temp.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len()
+                                                    }
+                                                    // false
                                                 )
                                             )
                                             // === OLD ===
@@ -954,7 +973,9 @@ impl PathDependentCollectiveConstraint {
                             ActionInfoName::Discard => {
                                 // Collecting same card discards found along the way
                                 if let ActionInfo::Discard { discard } = action_data.action_info() {
+                                    log::trace!("saw action_player: {action_player} discard: {:?} in iter", discard);
                                     if *discard == discard_considered {
+                                        log::trace!("Pushing action_player: {action_player} into discard_considered");
                                         discard_players.push(action_player);
                                     }
                                 }
@@ -968,16 +989,18 @@ impl PathDependentCollectiveConstraint {
                                 reveal_players.push(action_player);
                             }
                         }
+                        // Collecting same card discards found along the way
+                        if let ActionInfo::Discard { discard } = action_data.action_info() {
+                            if *discard == discard_considered {
+                                log::trace!("Pushing action_player: {action_player} into discard_considered");
+                                discard_players.push(action_player);
+                            }
+                        }
                         if bool_all_cards_dead {
                             let action_name = action_data.name();
                             match action_name {
                                 ActionInfoName::Discard => {
-                                    // Collecting same card discards found along the way
-                                    if let ActionInfo::Discard { discard } = action_data.action_info() {
-                                        if *discard == discard_considered {
-                                            discard_players.push(action_player);
-                                        }
-                                    }
+                                    
                                 },
                                 ActionInfoName::RevealRedraw => {
                                     // TEMP TEST [REFACTOR]
@@ -1061,6 +1084,7 @@ impl PathDependentCollectiveConstraint {
                                     // TODO: I have a feeling I need an exclude group for where there are multiple RevealRedraws
                                     // TODO: I have a feeling I only need to kick them out if reveal_redraw is None?
                                     // Like if we pass a reveal == redraw must we kick them?
+                                    // What does this do
                                     discard_players.retain(|p| *p != action_player);
                                 },
                                 ActionInfoName::ExchangeDrawChoice => {
