@@ -128,11 +128,12 @@ pub fn test() {
         // bool_all_dead in discard?
         // This might fail when AMB is reintroduced
         // Hacky cases for Redraw inference
-        // println!("Testing: {}", stringify!(overinferred_7));
-        // replay_game_constraint_pd(overinferred_7, false, false);
-        println!("Testing: {}", stringify!(overinferred_8));
-        replay_game_constraint_pd(overinferred_8, false, true);
-        // === RevealRedraw cases
+        // === Non PD inference
+        // I have no idea whats wrong here lol, maybe same as subtract overflow
+        // println!("Testing: {}", stringify!(overinferred_8));
+        // replay_game_constraint_pd(overinferred_8, false, true);
+        // === Non PD inference
+        // === PD RevealRedraw cases
         // Hmm what about revealredraws that happen before?
         // P1 RR D
         // P2 RR D
@@ -147,14 +148,17 @@ pub fn test() {
         // P2 D D
         // P1 D D
         // P3 D D
-        // println!("Testing: {}", stringify!(reveal_redraw_replay_8));
-        // replay_game_constraint_pd(reveal_redraw_replay_8, false, false);
+        // println!("Testing: {}", stringify!(overinferred_7));
+        // replay_game_constraint_pd(overinferred_7, false, false);
+        println!("Testing: {}", stringify!(reveal_redraw_replay_8));
+        replay_game_constraint_pd(reveal_redraw_replay_8, false, false);
         println!("Testing: {}", stringify!(overinferred_6));
         replay_game_constraint_pd(overinferred_6, false, false);
         println!("Testing: {}", stringify!(overinferred_5));
         replay_game_constraint_pd(overinferred_5, false, false);
         println!("Testing: {}", stringify!(impossible_2));
         replay_game_constraint_pd(impossible_2, false, false);
+        // === PD RevealRedraw cases
         // ===================================
         // Future features / weird bugs
         // Can't find root of this bug
