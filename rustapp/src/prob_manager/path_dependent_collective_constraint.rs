@@ -659,6 +659,10 @@ impl PathDependentCollectiveConstraint {
                                                     //     && *reveal_i == reveal_considered
                                                     // )
                                                     || (
+                                                        // We actually only need to check *reveal == reveal_considered && last 2 cards outside of player at that time
+                                                        // => 2 not player_index revealed for first time before and player has not revealed redraw none before this
+                                                        // => 2 outside player_index discarded after
+                                                        // // maybe I can measure maximum/minimum possible outside player?
                                                         *reveal_i == reveal_considered
                                                         && {
                                                             // Getting total unique first time reveal_redraw before player, excluding player
@@ -1415,6 +1419,7 @@ impl PathDependentCollectiveConstraint {
                                                                     // visited_players_opp[sig_act.player() as usize] = true;
                                                                     // erasure of progress because of AMB or redraw
                                                                     // hmm could there be some stack action here?
+                                                                    // maybe it kinda nullifies itself? oh tthats just visited_players lol
                                                                     visited_players = [false; 6];
                                                                 } else if *redraw == Some(discard_considered) {
                                                                     redraw_stack_pop_count += 1;
