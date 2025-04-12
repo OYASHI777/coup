@@ -669,10 +669,14 @@ impl PathDependentCollectiveConstraint {
                                                             // 1 is added as first reveal is an assured card
                                                             // let total_assured_cards = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>() + 1;
                                                             // log::trace!("temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards = :{}", temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards);
-                                                            let total_assured_cards = card_assured_players.len();
-                                                            log::trace!("total_assured_cards: {}", total_assured_cards);
-                                                            log::trace!("temp: {:?}", temp);
-                                                            temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards
+                                                            temp.iter().filter(|p| **p != player_index).count() 
+                                                            + card_assured_players.len()  // valid dead from latest move to current iter + dead before
+                                                            + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
+                                                            >= 3
+                                                            // let total_assured_cards = card_assured_players.len();
+                                                            // log::trace!("total_assured_cards: {}", total_assured_cards);
+                                                            // log::trace!("temp: {:?}", temp);
+                                                            // temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards
                                                             // temp.len() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
                                                         }
                                                         || {
@@ -865,8 +869,12 @@ impl PathDependentCollectiveConstraint {
                                                         // NOTE: discard_pl
                                                         // Adding 1 as the reveal_considered is counted toward total_assured_cards
                                                         // let total_assured_cards = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>() + 1;
-                                                        let total_assured_cards = card_assured_players.len();
-                                                        temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards
+                                                        temp.iter().filter(|p| **p != player_index).count() 
+                                                        + card_assured_players.len()  // valid dead from latest move to current iter + dead before
+                                                        + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
+                                                        >= 3
+                                                        // let total_assured_cards = card_assured_players.len();
+                                                        // temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards
                                                         // temp.len() >= 3 - card_assured_players.len()
                                                         // temp.len() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
                                                     } 
@@ -1090,8 +1098,12 @@ impl PathDependentCollectiveConstraint {
                                                         temp.dedup();
                                                         log::trace!("reveal_players {:?}, discard_players: {:?}", temp, discard_players);
                                                         log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
+                                                        temp.iter().filter(|p| **p != player_index).count() 
+                                                        + discard_players.len()  // valid dead from latest move to current iter + dead before
+                                                        + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                        >= 3
                                                         // temp.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len()
-                                                        temp.iter().filter(|p| **p != player_index).count() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                        // temp.iter().filter(|p| **p != player_index).count() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
                                                         // Checking for first time reveal_redraws too (+ extra inferred)!
                                                         // Problem with this is that it can also include the current reveal_redraw in iter_loop => add 1 to deal with that
                                                         // Its also not so simple
@@ -1303,8 +1315,11 @@ impl PathDependentCollectiveConstraint {
                                                     temp.dedup();
                                                     log::trace!("reveal_players {:?}, discard_players: {:?}", temp, discard_players);
                                                     log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
-                                                    // temp.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len()
-                                                    temp.iter().filter(|p| **p != player_index).count() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                    temp.iter().filter(|p| **p != player_index).count() 
+                                                    + discard_players.len()  // valid dead from latest move to current iter + dead before
+                                                    + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                    >= 3
+                                                    // temp.iter().filter(|p| **p != player_index).count() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
                                                     // Checking for first time reveal_redraws too (+ extra inferred)!
                                                     // Problem with this is that it can also include the current reveal_redraw in iter_loop => add 1 to deal with that
                                                     // Not so simple
