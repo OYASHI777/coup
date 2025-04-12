@@ -713,9 +713,11 @@ impl PathDependentCollectiveConstraint {
                                             && !card_assured_players.contains(&action_player) {
                                                 reveal_players.push(action_player);
                                             }
-                                            // if redraw_i.is_none() {
-                                            //     illegal_to_change.push(action_player);
-                                            // }
+                                            if redraw_i.is_none() && i != index {
+                                                // Exclude the revealredraw that was just played as its effectively considered a 
+                                                // inferred_constraint
+                                                illegal_to_change.push(action_player);
+                                            }
                                         }
                                         if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
                                             log::trace!("redraw_i.is_none() = : {}", redraw_i.is_none());
@@ -874,9 +876,11 @@ impl PathDependentCollectiveConstraint {
                                             && !card_assured_players.contains(&action_player) {
                                                 reveal_players.push(action_player);
                                             }
-                                            // if redraw_i.is_none() {
-                                            //     illegal_to_change.push(action_player);
-                                            // }
+                                            if redraw_i.is_none() && i != index {
+                                                // Exclude the revealredraw that was just played as its effectively considered a 
+                                                // inferred_constraint
+                                                illegal_to_change.push(action_player);
+                                            }
                                         }
                                         log::trace!("before need_redraw_update: {need_redraw_update}");
                                         if need_redraw_update {
