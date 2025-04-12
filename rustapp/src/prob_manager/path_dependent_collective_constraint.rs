@@ -577,7 +577,7 @@ impl PathDependentCollectiveConstraint {
                         let mut card_assured_players: Vec<u8> = Vec::with_capacity(3);
                         // TEST UNSURE how this interacts with AMB
                         let mut reveal_players: Vec<u8> = Vec::with_capacity(3);
-                        let mut illegal_to_change: Vec<u8> = Vec::with_capacity(6);
+                        let mut illegal_to_change: Vec<u8> = Vec::with_capacity(12);
                         // Only really cos at this point of inference we only regard the reveal of RevealRedraw as basically an inferred_constraint
                         card_assured_players.push(self.history[index].player());
                         // Logic same as discard below
@@ -968,7 +968,7 @@ impl PathDependentCollectiveConstraint {
                 let mut reveal_players: Vec<u8> = Vec::with_capacity(3);
                 // Add here as we don't loop over current index
                 // May expand to all cards known later
-                let mut illegal_players: Vec<u8> = Vec::with_capacity(6);
+                let mut illegal_players: Vec<u8> = Vec::with_capacity(12);
                 let bool_all_cards_dead = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>() == 3;
 
                 // Handled earlier
