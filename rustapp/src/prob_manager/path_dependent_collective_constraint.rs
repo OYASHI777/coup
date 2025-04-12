@@ -576,7 +576,8 @@ impl PathDependentCollectiveConstraint {
                     None => {
                         let mut card_assured_players: Vec<u8> = Vec::with_capacity(3);
                         // TEST UNSURE how this interacts with AMB
-                        let mut reveal_players: Vec<u8> = Vec::with_capacity(3);
+                        // let mut reveal_players: Vec<u8> = Vec::with_capacity(3);
+                        let mut reveal_players = [false; 6];
                         let mut illegal_to_change: Vec<u8> = Vec::with_capacity(12);
                         // Only really cos at this point of inference we only regard the reveal of RevealRedraw as basically an inferred_constraint
                         card_assured_players.push(self.history[index].player());
@@ -677,16 +678,17 @@ impl PathDependentCollectiveConstraint {
                                                             }
 
 
-                                                            let mut temp = reveal_players.clone();
-                                                            temp.sort_unstable();
-                                                            temp.dedup();
+                                                            // let mut temp = reveal_players.clone();
+                                                            // temp.sort_unstable();
+                                                            // temp.dedup();
                                                             // log::trace!("reveal_players {:?}, discard_players: {:?}", temp, card_assured_players);
                                                             // log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - card_assured_players.len());
                                                             // temp.iter().filter(|p| **p != player_index).count() >= 3 - card_assured_players.len()
                                                             // 1 is added as first reveal is an assured card
                                                             // let total_assured_cards = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>() + 1;
                                                             // log::trace!("temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards = :{}", temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards);
-                                                            temp.iter().filter(|p| **p != player_index).count() 
+                                                            // temp.iter().filter(|p| **p != player_index).count() 
+                                                            reveal_players.iter().enumerate().filter(|(i, v)| *i != player_index as usize && **v).count()
                                                             + card_assured_players.len()  // valid dead from latest move to current iter + dead before
                                                             + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
                                                             + historical_first_time_reveal_count
@@ -737,7 +739,8 @@ impl PathDependentCollectiveConstraint {
                                             if *reveal_i == reveal_considered && 
                                             *redraw_i != Some(*reveal_i) 
                                             && !card_assured_players.contains(&action_player) {
-                                                reveal_players.push(action_player);
+                                                // reveal_players.push(action_player);
+                                                reveal_players[action_player as usize] = true;
                                             }
                                             if redraw_i.is_none() && i != index {
                                                 // Exclude the revealredraw that was just played as its effectively considered a 
@@ -852,7 +855,8 @@ impl PathDependentCollectiveConstraint {
                                             // && redraw_i.is_none()
                                             // In this case the original reveal_considered is added to discard
                                             // TODO: Consider naming it inferred card?
-                                            reveal_players.contains(&action_player)
+                                            // reveal_players.contains(&action_player)
+                                            reveal_players[action_player as usize]
                                             && redraw_i.is_none()
                                             && (
                                                 (
@@ -889,19 +893,20 @@ impl PathDependentCollectiveConstraint {
                                                                 }
                                                             }
                                                         }
-                                                        let mut temp = reveal_players.clone();
-                                                        temp.sort_unstable();
-                                                        temp.dedup();
+                                                        // let mut temp = reveal_players.clone();
+                                                        // temp.sort_unstable();
+                                                        // temp.dedup();
                                                         log::trace!("*reveal_i: {:?} == reveal_considered: {:?} = : {}", *reveal_i, reveal_considered, *reveal_i == reveal_considered);
                                                         log::trace!("player_index {:?}", player_index);
-                                                        log::trace!("reveal_players {:?}, discard_players: {:?}", temp, card_assured_players);
+                                                        log::trace!("reveal_players {:?}, discard_players: {:?}", reveal_players, card_assured_players);
                                                         // log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", temp.iter().filter(|p| **p != player_index).count() >= 3 - card_assured_players.len());
-                                                        log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", temp.len() >= 3 - card_assured_players.len());
+                                                        // log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", temp.len() >= 3 - card_assured_players.len());
                                                         // Not excluding the RR here as the initial one was a RR
                                                         // NOTE: discard_pl
                                                         // Adding 1 as the reveal_considered is counted toward total_assured_cards
                                                         // let total_assured_cards = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>() + 1;
-                                                        temp.iter().filter(|p| **p != player_index).count() 
+                                                        // temp.iter().filter(|p| **p != player_index).count() 
+                                                        reveal_players.iter().enumerate().filter(|(i, v)| *i != player_index as usize && **v).count()
                                                         + card_assured_players.len()  // valid dead from latest move to current iter + dead before
                                                         + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
                                                         + historical_first_time_reveal_count
@@ -928,7 +933,8 @@ impl PathDependentCollectiveConstraint {
                                         if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
                                             if *reveal_i == reveal_considered && *redraw_i != Some(*reveal_i) 
                                             && !card_assured_players.contains(&action_player) {
-                                                reveal_players.push(action_player);
+                                                // reveal_players.push(action_player);
+                                                reveal_players[action_player as usize] = true;
                                             }
                                             if redraw_i.is_none() && i != index {
                                                 // Exclude the revealredraw that was just played as its effectively considered a 
@@ -1022,7 +1028,8 @@ impl PathDependentCollectiveConstraint {
                 // Try this out
                 let mut discard_players: Vec<u8> = Vec::with_capacity(3);
                 // TEST UNSURE how this interacts with AMB
-                let mut reveal_players: Vec<u8> = Vec::with_capacity(3);
+                // let mut reveal_players: Vec<u8> = Vec::with_capacity(3);
+                let mut reveal_players = [false; 6];
                 // Add here as we don't loop over current index
                 // May expand to all cards known later
                 let mut illegal_players: Vec<u8> = Vec::with_capacity(12);
@@ -1140,12 +1147,13 @@ impl PathDependentCollectiveConstraint {
                                                                 }
                                                             }
                                                         }
-                                                        let mut temp = reveal_players.clone();
-                                                        temp.sort_unstable();
-                                                        temp.dedup();
-                                                        log::trace!("reveal_players {:?}, discard_players: {:?}", temp, discard_players);
-                                                        log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
-                                                        temp.iter().filter(|p| **p != player_index).count() 
+                                                        // let mut temp = reveal_players.clone();
+                                                        // temp.sort_unstable();
+                                                        // temp.dedup();
+                                                        log::trace!("reveal_players {:?}, discard_players: {:?}", reveal_players, discard_players);
+                                                        // log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
+                                                        // temp.iter().filter(|p| **p != player_index).count() 
+                                                        reveal_players.iter().enumerate().filter(|(i, v)| *i != player_index as usize && **v).count()
                                                         + discard_players.len()  // valid dead from latest move to current iter + dead before
                                                         + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
                                                         + historical_first_time_reveal_count
@@ -1204,7 +1212,8 @@ impl PathDependentCollectiveConstraint {
                                     if *reveal_i == discard_considered 
                                     && *redraw_i != Some(*reveal_i) 
                                     && !discard_players.contains(&action_player){
-                                        reveal_players.push(action_player);
+                                        // reveal_players.push(action_player);
+                                        reveal_players[action_player as usize] = true;
                                     }
                                     if redraw_i.is_none() {
                                         illegal_players.push(action_player);
@@ -1372,12 +1381,14 @@ impl PathDependentCollectiveConstraint {
                                                             }
                                                         }
                                                     }
-                                                    let mut temp = reveal_players.clone();
-                                                    temp.sort_unstable();
-                                                    temp.dedup();
-                                                    log::trace!("reveal_players {:?}, discard_players: {:?}", temp, discard_players);
-                                                    log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
-                                                    temp.iter().filter(|p| **p != player_index).count() 
+                                                    // let mut temp = reveal_players.clone();
+                                                    // temp.sort_unstable();
+                                                    // temp.dedup();
+                                                    // log::trace!("reveal_players {:?}, discard_players: {:?}", temp, discard_players);
+                                                    log::trace!("reveal_players {:?}, discard_players: {:?}", reveal_players, discard_players);
+                                                    // log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
+                                                    // temp.iter().filter(|p| **p != player_index).count() 
+                                                    reveal_players.iter().enumerate().filter(|(i, v)| *i != player_index as usize && **v).count()
                                                     + discard_players.len()  // valid dead from latest move to current iter + dead before
                                                     + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
                                                     + historical_first_time_reveal_count
@@ -1412,7 +1423,8 @@ impl PathDependentCollectiveConstraint {
                                     if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
                                         if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) 
                                         && !discard_players.contains(&action_player){
-                                            reveal_players.push(action_player);
+                                            // reveal_players.push(action_player);
+                                            reveal_players[action_player as usize] = true;
                                         }
                                         if redraw_i.is_none() {
                                             illegal_players.push(action_player);
