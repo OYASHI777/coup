@@ -577,6 +577,7 @@ impl PathDependentCollectiveConstraint {
                         let mut card_assured_players: Vec<u8> = Vec::with_capacity(3);
                         // TEST UNSURE how this interacts with AMB
                         let mut reveal_players: Vec<u8> = Vec::with_capacity(3);
+                        let mut illegal_to_change: Vec<u8> = Vec::with_capacity(6);
                         // Only really cos at this point of inference we only regard the reveal of RevealRedraw as basically an inferred_constraint
                         card_assured_players.push(self.history[index].player());
                         // Logic same as discard below
@@ -670,6 +671,13 @@ impl PathDependentCollectiveConstraint {
                                                             temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards
                                                             // temp.len() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
                                                         }
+                                                        || {
+                                                            *reveal_i == reveal_considered &&
+                                                            // had to have withdrawn if other 2 cards are outside player
+                                                            self.history[i - 1].public_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
+                                                            + self.history[i - 1].inferred_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
+                                                            == 2
+                                                        }
                                                     )
                                                     // && (
                                                     //     || self.lookback_check(i - 1, action_player, reveal_considered).is_some()
@@ -705,6 +713,9 @@ impl PathDependentCollectiveConstraint {
                                             && !card_assured_players.contains(&action_player) {
                                                 reveal_players.push(action_player);
                                             }
+                                            // if redraw_i.is_none() {
+                                            //     illegal_to_change.push(action_player);
+                                            // }
                                         }
                                         if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
                                             log::trace!("redraw_i.is_none() = : {}", redraw_i.is_none());
@@ -843,6 +854,13 @@ impl PathDependentCollectiveConstraint {
                                                         temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards
                                                         // temp.len() >= 3 - card_assured_players.len()
                                                         // temp.len() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
+                                                    } 
+                                                    || {
+                                                        *reveal_i == reveal_considered &&
+                                                        // had to have withdrawn if other 2 cards are outside player
+                                                        self.history[i - 1].public_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
+                                                        + self.history[i - 1].inferred_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
+                                                        == 2
                                                     }
                                                     // false
                                                 )
@@ -856,6 +874,9 @@ impl PathDependentCollectiveConstraint {
                                             && !card_assured_players.contains(&action_player) {
                                                 reveal_players.push(action_player);
                                             }
+                                            // if redraw_i.is_none() {
+                                            //     illegal_to_change.push(action_player);
+                                            // }
                                         }
                                         log::trace!("before need_redraw_update: {need_redraw_update}");
                                         if need_redraw_update {
@@ -943,6 +964,7 @@ impl PathDependentCollectiveConstraint {
                 let mut reveal_players: Vec<u8> = Vec::with_capacity(3);
                 // Add here as we don't loop over current index
                 // May expand to all cards known later
+                let mut illegal_players: Vec<u8> = Vec::with_capacity(6);
                 let bool_all_cards_dead = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>() == 3;
 
                 // Handled earlier
@@ -959,13 +981,13 @@ impl PathDependentCollectiveConstraint {
                         match action_name { // This is just a get around of the partial borrowing rules...
                             ActionInfoName::RevealRedraw => {
                                 // Temp for testing [REFACTOR]
-                                if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                    if *reveal_i == discard_considered 
-                                    && *redraw_i != Some(*reveal_i) 
-                                    && !discard_players.contains(&action_player){
-                                        reveal_players.push(action_player);
-                                    }
-                                }
+                                // if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
+                                //     if *reveal_i == discard_considered 
+                                //     && *redraw_i != Some(*reveal_i) 
+                                //     && !discard_players.contains(&action_player){
+                                //         reveal_players.push(action_player);
+                                //     }
+                                // }
                                 log::trace!("lookback_initial Discard checking past RevealRedraw");
                                 log::trace!("lookback_initial original player: {}, Discard: {:?}", player_index, action_info);
                                 log::trace!("lookback_initial checked player: {}, RevealRedraw: {:?}", action_data.player(), action_data.action_info());
@@ -1049,6 +1071,17 @@ impl PathDependentCollectiveConstraint {
                                                         log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
                                                         // temp.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len()
                                                         temp.iter().filter(|p| **p != player_index).count() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                        // Checking for first time reveal_redraws too (+ extra inferred)!
+                                                        // Problem with this is that it can also include the current reveal_redraw in iter_loop => add 1 to deal with that
+                                                        // Its also not so simple
+                                                        // self.history[1].inferred_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                        // + self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>() >= 3
+                                                    }
+                                                    || {
+                                                        *reveal_i == discard_considered && 
+                                                        self.history[i - 1].public_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                        + self.history[i - 1].inferred_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                        == 2
                                                     }
                                                     // false
                                                 )
@@ -1086,11 +1119,16 @@ impl PathDependentCollectiveConstraint {
                                     false
                                 };
                                 // TESTING matching above not letting reveal count to its own redraw
-                                // if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                //     if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) {
-                                //         reveal_players.push(action_player);
-                                //     }
-                                // }
+                                if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
+                                    if *reveal_i == discard_considered 
+                                    && *redraw_i != Some(*reveal_i) 
+                                    && !discard_players.contains(&action_player){
+                                        reveal_players.push(action_player);
+                                    }
+                                    if redraw_i.is_none() {
+                                        illegal_players.push(action_player);
+                                    }
+                                }
                                 if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
                                     log::trace!("reveal_i: {:?}, *reveal_i: {:?}, redraw_i: {:?}", reveal_i, *reveal_i, redraw_i);
                                     log::trace!("action_data.action_info(), {:?}", action_data.action_info());
@@ -1181,12 +1219,15 @@ impl PathDependentCollectiveConstraint {
                         }
                     } else {
                         // TEMP TEST [REFACTOR]
-                        if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                            if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) 
-                            && !discard_players.contains(&action_player){
-                                reveal_players.push(action_player);
-                            }
-                        }
+                        // if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
+                        //     if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) 
+                        //     && !discard_players.contains(&action_player){
+                        //         reveal_players.push(action_player);
+                        //     }
+                        //     if redraw_i.is_none() {
+                        //         illegal_players.push(action_player);
+                        //     }
+                        // }
                         // Collecting same card discards found along the way
                         if let ActionInfo::Discard { discard } = action_data.action_info() {
                             if *discard == discard_considered {
@@ -1229,6 +1270,7 @@ impl PathDependentCollectiveConstraint {
                                                 // This player had discarded the card
                                                 // So if they had revealed it in the past, they had to have redrawn it
                                                 // else they could not have discarded it
+                                                // because it was impossible for them to have that card the turn before
                                                 // Here we assume bool_all_cards_dead == true
                                                 *reveal_i == discard_considered
                                                 // && bool_all_cards_dead
@@ -1240,7 +1282,19 @@ impl PathDependentCollectiveConstraint {
                                                     log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
                                                     // temp.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len()
                                                     temp.iter().filter(|p| **p != player_index).count() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                    // Checking for first time reveal_redraws too (+ extra inferred)!
+                                                    // Problem with this is that it can also include the current reveal_redraw in iter_loop => add 1 to deal with that
+                                                    // Not so simple
+                                                    // self.history[1].inferred_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                    // + self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>() >= 3
                                                     
+                                                }
+                                                || {
+                                                    *reveal_i == discard_considered &&
+                                                    // had to have withdrawn if other 2 cards are outside player
+                                                    self.history[i - 1].public_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                    + self.history[i - 1].inferred_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
+                                                    == 2
                                                 }
                                             )
                                         )
@@ -1254,7 +1308,15 @@ impl PathDependentCollectiveConstraint {
                                     //         reveal_players.push(action_player);
                                     //     }
                                     // }
-                                    
+                                    if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
+                                        if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) 
+                                        && !discard_players.contains(&action_player){
+                                            reveal_players.push(action_player);
+                                        }
+                                        if redraw_i.is_none() {
+                                            illegal_players.push(action_player);
+                                        }
+                                    }
                                     if need_redraw_update {
                                         log::trace!("lookback_initial original Discard: {:?}", action_info);
                                         log::trace!("lookback_initial considering: player: {} {:?}", action_data.player(), action_data.action_info());
