@@ -39,7 +39,7 @@ fn main() {
     // [Running] Discard + Ambassador Debug mode
     // [Passed 1100] Discard + Ambassador Release farm
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_pd(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
@@ -162,8 +162,8 @@ pub fn test() {
         // P2 D D
         // P1 D D
         // P3 D D
-        println!("Testing: {}", stringify!(impossible_5));
-        replay_game_constraint_pd(impossible_5, false, false);
+        // println!("Testing: {}", stringify!(impossible_5));
+        // replay_game_constraint_pd(impossible_5, false, false);
         // TODO: TEST THIS => Single Group constraint of all known at start forward pass?
         println!("Testing: {}", stringify!(overinferred_12)); // stored but untested
         replay_game_constraint_pd(overinferred_12, false, false);

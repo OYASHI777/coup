@@ -663,6 +663,7 @@ impl PathDependentCollectiveConstraint {
                                                         && {
                                                             // Getting total unique first time reveal_redraw before player, excluding player
                                                             let mut historical_first_time_reveal_count = 0;
+                                                            let mut redraw_stack_pop_count = 0;
                                                             // Size expected to be small
                                                             let mut visited_players = [false; 6];
                                                             let mut visited_players_opp = [false; 6];
@@ -677,6 +678,8 @@ impl PathDependentCollectiveConstraint {
                                                                             // visited_players_opp[sig_act.player() as usize] = true;
                                                                             // erasure of progress because of AMB or redraw
                                                                             visited_players = [false; 6];
+                                                                        } else if *redraw == Some(reveal_considered) {
+                                                                            redraw_stack_pop_count += 1;
                                                                         }
                                                                     }
                                                                 }
@@ -697,7 +700,7 @@ impl PathDependentCollectiveConstraint {
                                                             + card_assured_players.len()  // valid dead from latest move to current iter + dead before
                                                             + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
                                                             // + historical_first_time_reveal_count
-                                                            >= 3
+                                                            >= 3 + redraw_stack_pop_count
                                                             // let total_assured_cards = card_assured_players.len();
                                                             // log::trace!("total_assured_cards: {}", total_assured_cards);
                                                             // log::trace!("temp: {:?}", temp);
@@ -885,6 +888,7 @@ impl PathDependentCollectiveConstraint {
                                                     *reveal_i == reveal_considered
                                                     && {
                                                         let mut historical_first_time_reveal_count = 0;
+                                                        let mut redraw_stack_pop_count = 0; 
                                                             // Size expected to be small
                                                         let mut visited_players = [false; 6];
                                                         let mut visited_players_opp = [false; 6];
@@ -899,6 +903,8 @@ impl PathDependentCollectiveConstraint {
                                                                         // visited_players_opp[sig_act.player() as usize] = true;
                                                                         // erasure of progress because of AMB or redraw
                                                                         visited_players = [false; 6];
+                                                                    } else if *redraw == Some(reveal_considered) {
+                                                                        redraw_stack_pop_count += 1;
                                                                     }
                                                                 }
                                                             }
@@ -919,7 +925,7 @@ impl PathDependentCollectiveConstraint {
                                                         + card_assured_players.len()  // valid dead from latest move to current iter + dead before
                                                         + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
                                                         // + historical_first_time_reveal_count
-                                                        >= 3
+                                                        >= 3 + redraw_stack_pop_count
                                                         // let total_assured_cards = card_assured_players.len();
                                                         // temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards
                                                         // temp.len() >= 3 - card_assured_players.len()
@@ -1144,6 +1150,7 @@ impl PathDependentCollectiveConstraint {
                                                     && {
                                                         // TODO: Change this is a really dumb implementation
                                                         let mut historical_first_time_reveal_count = 0;
+                                                        let mut redraw_stack_pop_count = 0;
                                                         // Size expected to be small
                                                         let mut visited_players = [false; 6];
                                                         let mut visited_players_opp = [false; 6];
@@ -1158,6 +1165,8 @@ impl PathDependentCollectiveConstraint {
                                                                         // visited_players_opp[sig_act.player() as usize] = true;
                                                                         // erasure of progress because of AMB or redraw
                                                                         visited_players = [false; 6];
+                                                                    } else if *redraw == Some(discard_considered) {
+                                                                        redraw_stack_pop_count += 1;
                                                                     }
                                                                 }
                                                             }
@@ -1168,6 +1177,7 @@ impl PathDependentCollectiveConstraint {
                                                         log::trace!("self.history[i - 1].public_constraints(): {:?}", self.history[i - 1].public_constraints());
                                                         log::trace!("reveal + visited_players: {}", reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| **v0 || **v1).count());
                                                         log::trace!("discard_players.len(): {}", discard_players.len());
+                                                        log::trace!("discard_players.len(): {}", discard_players.len());
                                                         log::trace!("dead before: {}", self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>());
                                                         // log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
                                                         // reveal_players.iter().enumerate().filter(|(i, v)| *i != player_index as usize && **v).count()
@@ -1177,7 +1187,7 @@ impl PathDependentCollectiveConstraint {
                                                         + discard_players.len()  // valid dead from latest move to current iter + dead before
                                                         + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
                                                         // + historical_first_time_reveal_count
-                                                        >= 3
+                                                        >= 3 + redraw_stack_pop_count
                                                         // temp.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len()
                                                         // temp.iter().filter(|p| **p != player_index).count() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
                                                         // Checking for first time reveal_redraws too (+ extra inferred)!
@@ -1390,6 +1400,7 @@ impl PathDependentCollectiveConstraint {
                                                     // TODO: REFACTOR
                                                     // But also consider may not needing to run this every iteration
                                                     let mut historical_first_time_reveal_count = 0;
+                                                    let mut redraw_stack_pop_count = 0;
                                                     // Size expected to be small
                                                     let mut visited_players = [false; 6];
                                                     let mut visited_players_opp = [false; 6];
@@ -1403,7 +1414,10 @@ impl PathDependentCollectiveConstraint {
                                                                 } else if redraw.is_none() {
                                                                     // visited_players_opp[sig_act.player() as usize] = true;
                                                                     // erasure of progress because of AMB or redraw
+                                                                    // hmm could there be some stack action here?
                                                                     visited_players = [false; 6];
+                                                                } else if *redraw == Some(discard_considered) {
+                                                                    redraw_stack_pop_count += 1;
                                                                 }
                                                             }
                                                         }
@@ -1425,7 +1439,7 @@ impl PathDependentCollectiveConstraint {
                                                     + discard_players.len()  // valid dead from latest move to current iter + dead before
                                                     + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
                                                     // + historical_first_time_reveal_count
-                                                    >= 3
+                                                    >= 3 + redraw_stack_pop_count
                                                     // temp.iter().filter(|p| **p != player_index).count() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
                                                     // Checking for first time reveal_redraws too (+ extra inferred)!
                                                     // Problem with this is that it can also include the current reveal_redraw in iter_loop => add 1 to deal with that
