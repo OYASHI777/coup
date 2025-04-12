@@ -143,10 +143,10 @@ pub fn test() {
         // P3 D D
         // println!("Testing: {}", stringify!(reveal_redraw_replay_8));
         // replay_game_constraint_pd(reveal_redraw_replay_8, false, false);
+        println!("Testing: {}", stringify!(overinferred_6));
+        replay_game_constraint_pd(overinferred_6, false, false);
         println!("Testing: {}", stringify!(overinferred_5));
         replay_game_constraint_pd(overinferred_5, false, false);
-        // println!("Testing: {}", stringify!(overinferred_6));
-        // replay_game_constraint_pd(overinferred_6, false, false);
         println!("Testing: {}", stringify!(impossible_2));
         replay_game_constraint_pd(impossible_2, false, false);
         // ===================================

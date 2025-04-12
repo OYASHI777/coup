@@ -992,7 +992,8 @@ impl PathDependentCollectiveConstraint {
                                 log::trace!("lookback_initial original player: {}, Discard: {:?}", player_index, action_info);
                                 log::trace!("lookback_initial checked player: {}, RevealRedraw: {:?}", action_data.player(), action_data.action_info());
                                 let need_redraw_update = if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                    redraw_i.is_none()
+                                    !illegal_players.contains(&action_player)
+                                    && redraw_i.is_none()
                                     // This is after the discard
                                     // This is just before the RevealRedraw
                                     // CASE In previous RevealRedraw, 
@@ -1250,7 +1251,8 @@ impl PathDependentCollectiveConstraint {
                                     // TODO: Ok we need to expand this
                                     // Player may have had 2 lives at that point in time, so we don't really know
                                     let need_redraw_update = if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                        discard_players.contains(&action_player)
+                                        !illegal_players.contains(&action_player) // skip if player RR after too (dk which revealredraw the player redrew)
+                                        && discard_players.contains(&action_player)
                                         && redraw_i.is_none()
                                         && (
                                             (
