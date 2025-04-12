@@ -164,6 +164,7 @@ pub fn test() {
         // P3 D D
         println!("Testing: {}", stringify!(impossible_5));
         replay_game_constraint_pd(impossible_5, false, false);
+        // TODO: TEST THIS => Single Group constraint of all known at start forward pass?
         println!("Testing: {}", stringify!(overinferred_12)); // stored but untested
         replay_game_constraint_pd(overinferred_12, false, false);
         // overinferred_11 This tells us the merging did not work out very well
