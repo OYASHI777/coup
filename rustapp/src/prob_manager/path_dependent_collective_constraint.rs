@@ -663,14 +663,14 @@ impl PathDependentCollectiveConstraint {
                                                             // Getting total unique first time reveal_redraw before player, excluding player
                                                             let mut historical_first_time_reveal_count = 0;
                                                             // Size expected to be small
-                                                            let mut visited_players: Vec<u8> = Vec::with_capacity(12);
-                                                            visited_players.push(player_index); // skip this without branchs
+                                                            let mut visited_players = [false; 6];
+                                                            visited_players[player_index as usize] = true;
                                                             for sig_act in self.history[2..i].iter() {
-                                                                if !visited_players.contains(&sig_act.player()) {
+                                                                if !visited_players[sig_act.player() as usize] {
                                                                     if let ActionInfo::RevealRedraw { reveal, .. } = sig_act.action_info() {
                                                                         if *reveal == reveal_considered {
                                                                             historical_first_time_reveal_count += 1;
-                                                                            visited_players.push(sig_act.player());
+                                                                            visited_players[sig_act.player() as usize];
                                                                         }
                                                                     }
                                                                 }
@@ -877,14 +877,14 @@ impl PathDependentCollectiveConstraint {
                                                     && {
                                                         let mut historical_first_time_reveal_count = 0;
                                                             // Size expected to be small
-                                                        let mut visited_players: Vec<u8> = Vec::with_capacity(12);
-                                                        visited_players.push(player_index); // skip this without branchs
+                                                        let mut visited_players = [false; 6];
+                                                        visited_players[player_index as usize] = true;
                                                         for sig_act in self.history[2..i].iter() {
-                                                            if !visited_players.contains(&sig_act.player()) {
+                                                            if !visited_players[sig_act.player() as usize] {
                                                                 if let ActionInfo::RevealRedraw { reveal, .. } = sig_act.action_info() {
                                                                     if *reveal == reveal_considered {
                                                                         historical_first_time_reveal_count += 1;
-                                                                        visited_players.push(sig_act.player());
+                                                                        visited_players[sig_act.player() as usize];
                                                                     }
                                                                 }
                                                             }
@@ -1128,14 +1128,14 @@ impl PathDependentCollectiveConstraint {
                                                     && {
                                                         let mut historical_first_time_reveal_count = 0;
                                                         // Size expected to be small
-                                                        let mut visited_players: Vec<u8> = Vec::with_capacity(12);
-                                                        visited_players.push(player_index); // skip this without branchs
+                                                        let mut visited_players = [false; 6];
+                                                        visited_players[player_index as usize] = true;
                                                         for sig_act in self.history[2..i].iter() {
-                                                            if !visited_players.contains(&sig_act.player()) {
+                                                            if !visited_players[sig_act.player() as usize] {
                                                                 if let ActionInfo::RevealRedraw { reveal, .. } = sig_act.action_info() {
                                                                     if *reveal == discard_considered {
                                                                         historical_first_time_reveal_count += 1;
-                                                                        visited_players.push(sig_act.player());
+                                                                        visited_players[sig_act.player() as usize];
                                                                     }
                                                                 }
                                                             }
@@ -1360,14 +1360,14 @@ impl PathDependentCollectiveConstraint {
                                                 && {
                                                     let mut historical_first_time_reveal_count = 0;
                                                     // Size expected to be small
-                                                    let mut visited_players: Vec<u8> = Vec::with_capacity(12);
-                                                    visited_players.push(player_index); // skip this without branchs
+                                                    let mut visited_players = [false; 6];
+                                                    visited_players[player_index as usize] = true;
                                                     for sig_act in self.history[2..i].iter() {
-                                                        if !visited_players.contains(&sig_act.player()) {
+                                                        if !visited_players[sig_act.player() as usize] {
                                                             if let ActionInfo::RevealRedraw { reveal, .. } = sig_act.action_info() {
                                                                 if *reveal == discard_considered {
                                                                     historical_first_time_reveal_count += 1;
-                                                                    visited_players.push(sig_act.player());
+                                                                    visited_players[sig_act.player() as usize] = true;
                                                                 }
                                                             }
                                                         }
