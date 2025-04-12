@@ -3974,6 +3974,47 @@ impl PathDependentCollectiveConstraint {
         log::trace!("swap_mix player_a_dead_card_b: {:?}", player_a_dead_card_b);
         log::trace!("swap_mix player_a_inferred_card_b: {:?}", player_a_inferred_card_b);
         let group_constraints = self.group_constraints_mut();
+        // remove groups that are known when cards were revealed
+        if card_a == card_b {
+            group_constraints[card_a as usize].retain(
+                |group| {
+                    // Gonna let compiler optimize this one for better documentation
+                    !(
+                        // Removing groups where both flags true
+                        // And count <= 2
+                        group.get_player_flag(player_a)
+                        && group.get_player_flag(player_b)
+                        && group.count_alive() < 3
+                    )
+                    ||
+                    !(
+                        // If any alive and count == 1
+                        group.count_alive() < 2
+                        && (
+                            group.get_player_flag(player_a)
+                            || group.get_player_flag(player_b)
+                        )
+                    )
+                }
+            )
+        } else {
+            group_constraints[card_a as usize].retain(
+                |group| {
+                    // Removing groups is player_a flag == true
+                    // and the count_alive is 1
+                    !group.get_player_flag(player_a)
+                    || group.count_alive() > 1
+                }
+            );
+            group_constraints[card_b as usize].retain(
+                |group| {
+                    // Removing groups is player_b flag == true
+                    // and the count_alive is 1
+                    !group.get_player_flag(player_b)
+                    || group.count_alive() > 1
+                }
+            );
+        }
         group_constraints[card_a as usize]
         .iter_mut()
         .filter(|group| group.get_player_flag(player_a) && !group.get_player_flag(player_b))
@@ -4009,7 +4050,6 @@ impl PathDependentCollectiveConstraint {
         .for_each(|group| {
             group.set_single_card_flag(player_b, false);
         });
-        // TEST
         if card_a != card_b {
             group_constraints[card_a as usize]
             .iter_mut()
@@ -4035,6 +4075,80 @@ impl PathDependentCollectiveConstraint {
             // swap_mix
         }
     }
+    // pub fn swap_mix(&mut self, player_a: usize, card_a: Card, player_b: usize, card_b: Card) {
+    //     // TODO: THEORY CHECK and DOCUMENT
+    //     // For now im thinking for player 0 and player 6
+    //     let player_b_dead_card_a: u8 = self.public_constraints[player_b].iter().filter(|c| **c == card_a).count() as u8;
+    //     let player_b_inferred_card_a: u8 = self.inferred_constraints[player_b].iter().filter(|c| **c == card_a).count() as u8;
+    //     let player_a_dead_card_b: u8 = self.public_constraints[player_a].iter().filter(|c| **c == card_b).count() as u8;
+    //     let player_a_inferred_card_b: u8 = self.inferred_constraints[player_a].iter().filter(|c| **c == card_b).count() as u8;
+    //     log::trace!("swap_mix player_a: {player_a}, card_a: {:?}, player_b: {player_b}, card_b: {:?}", card_a, card_b);
+    //     log::trace!("swap_mix player_b_dead_card_a: {:?}", player_b_dead_card_a);
+    //     log::trace!("swap_mix player_b_inferred_card_a: {:?}", player_b_inferred_card_a);
+    //     log::trace!("swap_mix player_a_dead_card_b: {:?}", player_a_dead_card_b);
+    //     log::trace!("swap_mix player_a_inferred_card_b: {:?}", player_a_inferred_card_b);
+    //     let group_constraints = self.group_constraints_mut();
+    //     group_constraints[card_a as usize]
+    //     .iter_mut()
+    //     .filter(|group| group.get_player_flag(player_a) && !group.get_player_flag(player_b))
+    //     .for_each(|group| {
+    //         group.set_player_flag(player_b, true);
+    //         group.add_dead_count(player_b_dead_card_a);
+    //         group.add_alive_count(player_b_inferred_card_a);
+    //         group.add_total_count(player_b_dead_card_a + player_b_inferred_card_a);
+    //     });
+    //     group_constraints[card_b as usize]
+    //     .iter_mut()
+    //     .filter(|group| group.get_player_flag(player_b) && !group.get_player_flag(player_a))
+    //     .for_each(|group| {
+    //         group.set_player_flag(player_a, true);
+    //         group.add_dead_count(player_a_dead_card_b);
+    //         group.add_alive_count(player_a_inferred_card_b);
+    //         group.add_total_count(player_a_dead_card_b + player_a_inferred_card_b);
+    //     });
+    //     // TODO: OPTIMIZE, actually don't need both for if player_id is 6
+    //     // CASE:
+    //     //  both have flags but the player has single_flag
+    //     //  since we don't know for certain if that card that was previously given from the player is the same that returned
+    //     //  we have to tag it as false
+    //     group_constraints[card_b as usize]
+    //     .iter_mut()
+    //     .filter(|group| group.get_player_flag(player_a) && group.get_player_flag(player_b))
+    //     .for_each(|group| {
+    //         group.set_single_card_flag(player_a, false);
+    //     });
+    //     group_constraints[card_a as usize]
+    //     .iter_mut()
+    //     .filter(|group| group.get_player_flag(player_a) && group.get_player_flag(player_b))
+    //     .for_each(|group| {
+    //         group.set_single_card_flag(player_b, false);
+    //     });
+    //     // TEST
+    //     if card_a != card_b {
+    //         group_constraints[card_a as usize]
+    //         .iter_mut()
+    //         .filter(|group| !group.get_player_flag(player_a) && group.get_player_flag(player_b))
+    //         .for_each(|group| {
+    //             group.add_alive_count(1);
+    //             group.add_total_count(1);
+    //         });
+    //         group_constraints[card_b as usize]
+    //         .iter_mut()
+    //         .filter(|group| !group.get_player_flag(player_b) && group.get_player_flag(player_a))
+    //         .for_each(|group| {
+    //             group.add_alive_count(1);
+    //             group.add_total_count(1);
+    //         });
+    //         // CASE:
+    //         //  both have flags but the player has single_flag
+    //         //  since we don't know for certain if that card that was previously given from the player is the same that returned
+    //         //  we have to tag it as false
+    //         // ANOTHER CASE:
+    //         // maybe since P3 has 1 life when they RR
+    //         // the card moving means P3 can't have it!
+    //         // swap_mix
+    //     }
+    // }
     /// Adds inferred cards at the end of a reveal_redraw_diff
     pub fn swap_add_inferred_cards_unchecked(&mut self, player_a: usize, card_a: Card, player_b: usize, card_b: Card) {
         // TODO: [IMPLEMENT] Need to add the case for single_card_flag on card != card_num ZZ2A as per add_dead_cards
