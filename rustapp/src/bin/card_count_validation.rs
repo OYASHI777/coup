@@ -160,8 +160,8 @@ pub fn test() {
         // P2 D D
         // P1 D D
         // P3 D D
-        // println!("Testing: {}", stringify!(impossible_5));
-        // replay_game_constraint_pd(impossible_5, false, true);
+        println!("Testing: {}", stringify!(impossible_5));
+        replay_game_constraint_pd(impossible_5, false, false);
         println!("Testing: {}", stringify!(overinferred_7));
         replay_game_constraint_pd(overinferred_7, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_8));
