@@ -4014,25 +4014,41 @@ impl PathDependentCollectiveConstraint {
                     || group.count_alive() > 1
                 }
             );
+            // Groups certainly lost a card as the card left their group
+            // and a differnt card came in 
+            group_constraints[card_a as usize]
+            .iter_mut()
+            .filter(|group| group.get_player_flag(player_a) && !group.get_player_flag(player_b))
+            .for_each(|group| {
+                group.sub_alive_count(1);
+                group.sub_total_count(1);
+            });
+            group_constraints[card_b as usize]
+            .iter_mut()
+            .filter(|group| group.get_player_flag(player_b) && !group.get_player_flag(player_a))
+            .for_each(|group| {
+                group.sub_alive_count(1);
+                group.sub_total_count(1);
+            });
         }
-        group_constraints[card_a as usize]
-        .iter_mut()
-        .filter(|group| group.get_player_flag(player_a) && !group.get_player_flag(player_b))
-        .for_each(|group| {
-            group.set_player_flag(player_b, true);
-            group.add_dead_count(player_b_dead_card_a);
-            group.add_alive_count(player_b_inferred_card_a);
-            group.add_total_count(player_b_dead_card_a + player_b_inferred_card_a);
-        });
-        group_constraints[card_b as usize]
-        .iter_mut()
-        .filter(|group| group.get_player_flag(player_b) && !group.get_player_flag(player_a))
-        .for_each(|group| {
-            group.set_player_flag(player_a, true);
-            group.add_dead_count(player_a_dead_card_b);
-            group.add_alive_count(player_a_inferred_card_b);
-            group.add_total_count(player_a_dead_card_b + player_a_inferred_card_b);
-        });
+        // group_constraints[card_a as usize]
+        // .iter_mut()
+        // .filter(|group| group.get_player_flag(player_a) && !group.get_player_flag(player_b))
+        // .for_each(|group| {
+        //     group.set_player_flag(player_b, true);
+        //     group.add_dead_count(player_b_dead_card_a);
+        //     group.add_alive_count(player_b_inferred_card_a);
+        //     group.add_total_count(player_b_dead_card_a + player_b_inferred_card_a);
+        // });
+        // group_constraints[card_b as usize]
+        // .iter_mut()
+        // .filter(|group| group.get_player_flag(player_b) && !group.get_player_flag(player_a))
+        // .for_each(|group| {
+        //     group.set_player_flag(player_a, true);
+        //     group.add_dead_count(player_a_dead_card_b);
+        //     group.add_alive_count(player_a_inferred_card_b);
+        //     group.add_total_count(player_a_dead_card_b + player_a_inferred_card_b);
+        // });
         // TODO: OPTIMIZE, actually don't need both for if player_id is 6
         // CASE:
         //  both have flags but the player has single_flag
