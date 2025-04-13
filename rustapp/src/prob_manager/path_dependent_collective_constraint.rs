@@ -1868,9 +1868,11 @@ impl PathDependentCollectiveConstraint {
         //      they only use GroupConstraint as a convenient datastructure
         let mut backward_pass_group = CompressedGroupConstraint::zero();
         backward_pass_group.set_player_flag(self.history[self.history.len() - 1].player() as usize, true);
-        backward_pass_group.add_alive_count(1);
+        // backward_pass_group.add_alive_count(1);
+        backward_pass_group.add_total_count(1);
         let mut forward_pass_group = CompressedGroupConstraint::zero();
         // backward pass
+        // TODO: fix total count exceeding error
         log::trace!("backwardpass start: {:?}", backward_pass_group);
         log::trace!("fwd_bwd_pass last move: {:?}", self.history[self.history.len() - 1]);
         for i in (index+1..self.history.len()-1).rev() {
@@ -1880,30 +1882,63 @@ impl PathDependentCollectiveConstraint {
                 ActionInfo::Discard { discard: discard_i } => {
                     if *discard_i == card_of_interest {
                         backward_pass_group.set_player_flag(player_i, true);
-                        backward_pass_group.add_alive_count(1);
+                        // backward_pass_group.add_alive_count(1);
+                        backward_pass_group.add_total_count(1);
                     }
                 },
                 ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, relinquish } => {
                     // if redraw_i.is_none() && self.history[i].player() == action_player as u8 {
-                    if redraw_i.is_none() {
-                        // illegal
-                        // return false
-                        if backward_pass_group.get_player_flag(player_i) {
-                            backward_pass_group.set_player_flag(player_i, false);
-                            backward_pass_group.sub_alive_count(1);
-                        }
-                    }
+                    // if redraw_i.is_none() && relinquish.is_none() {
+                    //     // illegal
+                    //     // return false
+                    //     if *reveal_i != card_of_interest {
+                    //         if backward_pass_group.get_player_flag(player_i) {
+                    //             backward_pass_group.set_player_flag(player_i, false);
+                    //             // backward_pass_group.sub_alive_count(1);
+                    //             backward_pass_group.sub_total_count(1);
+                    //         }
+                    //     } else {
+                    //         if !backward_pass_group.get_player_flag(player_i) {
+                    //             backward_pass_group.set_player_flag(player_i, true);
+                    //             // backward_pass_group.sub_alive_count(1);
+                    //             backward_pass_group.add_total_count(1);
+                    //         }
+                    //     }
+                    // } 
                     if *reveal_i == card_of_interest {
                         // Reflecting that the player had this card before move i
                         if *relinquish == Some(card_of_interest) {
                             // No check as it went from player to pile
                             // Not setting pile as we don't actually need to use it
                             // backward_pass_group.set_player_flag(6, true);
-                            backward_pass_group.add_alive_count(1);
+                            // backward_pass_group.add_alive_count(1);
+                            backward_pass_group.add_total_count(1);
                         } else if relinquish.is_none() {
-                            if !backward_pass_group.get_player_flag(player_i) {
-                                backward_pass_group.set_player_flag(player_i, true);
-                                backward_pass_group.add_alive_count(1);
+                            if redraw_i.is_none() {
+                                if !backward_pass_group.get_player_flag(player_i) {
+                                    backward_pass_group.set_player_flag(player_i, true);
+                                    // backward_pass_group.add_alive_count(1);
+                                    backward_pass_group.add_total_count(1);
+                                } 
+                            } else if *redraw_i == Some(card_of_interest) {
+                                // TODO: Actually order of discard then revealredraw matters!
+                                // So i guess I should track in single_card_flags too huh
+                                // P2 Discard DUK
+                                // P2 RR DUK
+                                // => 2 DUKS
+                                // P2 RR DUK
+                                // P2 Discard DUK
+                                // => 1 DUK
+                                if !backward_pass_group.get_player_flag(player_i) {
+                                    backward_pass_group.set_player_flag(player_i, true);
+                                    // backward_pass_group.add_alive_count(1);
+                                    backward_pass_group.add_total_count(1);
+                                }
+                            } else {
+                                // Not setting pile as we don't actually need to use it
+                                // backward_pass_group.set_player_flag(6, true);
+                                // backward_pass_group.add_alive_count(1);
+                                backward_pass_group.add_total_count(1);
                             }
                         }
                     } else if *redraw_i == Some(card_of_interest) {
@@ -1911,14 +1946,26 @@ impl PathDependentCollectiveConstraint {
                         if !backward_pass_group.get_player_flag(player_i) { // This check is rightly player_i
                             // Not setting pile as we don't actually need to use it
                             // backward_pass_group.set_player_flag(6, true);
-                            backward_pass_group.add_alive_count(1);
+                            // backward_pass_group.add_alive_count(1);
+                            backward_pass_group.add_total_count(1);
                         }
-                    } 
+                    } else {
+                        // redraw.is_none() && *reveal_i != card_of_interest
+                        if relinquish.is_none() {
+                            if backward_pass_group.get_player_flag(player_i) {
+                                backward_pass_group.set_player_flag(player_i, false);
+                                // backward_pass_group.sub_alive_count(1);
+                                backward_pass_group.sub_total_count(1);
+                            }
+                        }
+                        // handleWhat if relinquish is known?
+                    }
                 },
                 ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
                     if backward_pass_group.get_player_flag(player_i) {
                         backward_pass_group.set_player_flag(player_i, false);
-                        backward_pass_group.sub_alive_count(1);
+                        // backward_pass_group.sub_alive_count(1);
+                        backward_pass_group.sub_total_count(1);
                     }
                     // if self.history[i].player() == action_player as u8 {
                     //     // illegal
@@ -1994,7 +2041,7 @@ impl PathDependentCollectiveConstraint {
                         log::trace!("lookback_check_3_fwd_bwd_pass A : {}", true);
                         return true
                     }
-                    if forward_pass_group.count_dead() + backward_pass_group.count_alive() == 3 {
+                    if forward_pass_group.count_dead() + backward_pass_group.get_total_count() == 3 {
                         log::trace!("lookback_check_3_fwd_bwd_pass B : {}", true);
                         return true
                     }
