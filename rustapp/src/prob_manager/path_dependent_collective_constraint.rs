@@ -1887,24 +1887,7 @@ impl PathDependentCollectiveConstraint {
                     }
                 },
                 ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, relinquish } => {
-                    // if redraw_i.is_none() && self.history[i].player() == action_player as u8 {
-                    // if redraw_i.is_none() && relinquish.is_none() {
-                    //     // illegal
-                    //     // return false
-                    //     if *reveal_i != card_of_interest {
-                    //         if backward_pass_group.get_player_flag(player_i) {
-                    //             backward_pass_group.set_player_flag(player_i, false);
-                    //             // backward_pass_group.sub_alive_count(1);
-                    //             backward_pass_group.sub_total_count(1);
-                    //         }
-                    //     } else {
-                    //         if !backward_pass_group.get_player_flag(player_i) {
-                    //             backward_pass_group.set_player_flag(player_i, true);
-                    //             // backward_pass_group.sub_alive_count(1);
-                    //             backward_pass_group.add_total_count(1);
-                    //         }
-                    //     }
-                    // } 
+                    // Maybe it exceeds maximum because I need to consider the pile for revealredraw redraw is known
                     if *reveal_i == card_of_interest {
                         // Reflecting that the player had this card before move i
                         if *relinquish == Some(card_of_interest) {
@@ -1912,7 +1895,14 @@ impl PathDependentCollectiveConstraint {
                             // Not setting pile as we don't actually need to use it
                             // backward_pass_group.set_player_flag(6, true);
                             // backward_pass_group.add_alive_count(1);
-                            backward_pass_group.add_total_count(1);
+                            // backward_pass_group.add_total_count(1);
+                            // TESTING, was thinking i might need to consider how the pile moves too?
+                            // Also consider needing to subtract?
+                            if !backward_pass_group.get_player_flag(6) {
+                                backward_pass_group.set_player_flag(6, true);
+                                // backward_pass_group.add_alive_count(1);
+                                backward_pass_group.add_total_count(1);
+                            }
                         } else if relinquish.is_none() {
                             if redraw_i.is_none() {
                                 if !backward_pass_group.get_player_flag(player_i) {
@@ -1938,7 +1928,15 @@ impl PathDependentCollectiveConstraint {
                                 // Not setting pile as we don't actually need to use it
                                 // backward_pass_group.set_player_flag(6, true);
                                 // backward_pass_group.add_alive_count(1);
-                                backward_pass_group.add_total_count(1);
+                                // TESTING
+                                // If u reveal the card that means pile had the card before that turn
+                                // How does it interact with a RR None group?
+                                // if !backward_pass_group.get_player_flag(6) {
+                                //     backward_pass_group.set_player_flag(6, true);
+                                //     // backward_pass_group.add_alive_count(1);
+                                //     backward_pass_group.add_total_count(1);
+                                // }
+                                // backward_pass_group.add_total_count(1);
                             }
                         }
                     } else if *redraw_i == Some(card_of_interest) {
@@ -1951,15 +1949,46 @@ impl PathDependentCollectiveConstraint {
                         }
                     } else {
                         // redraw.is_none() && *reveal_i != card_of_interest
-                        if relinquish.is_none() {
-                            if backward_pass_group.get_player_flag(player_i) {
-                                backward_pass_group.set_player_flag(player_i, false);
-                                // backward_pass_group.sub_alive_count(1);
-                                backward_pass_group.sub_total_count(1);
-                            }
-                        }
+                        // if relinquish.is_none() {
+                        //     if backward_pass_group.get_player_flag(player_i) {
+                        //         backward_pass_group.set_player_flag(player_i, false);
+                        //         // backward_pass_group.sub_alive_count(1);
+                        //         backward_pass_group.sub_total_count(1);
+                        //     }
+                        // }
                         // handleWhat if relinquish is known?
                     }
+                    // OLD
+                    // if redraw_i.is_none() && self.history[i].player() == action_player as u8 {
+                    // if redraw_i.is_none() {
+                    //     // illegal
+                    //     // return false
+                    //     if backward_pass_group.get_player_flag(player_i) {
+                    //         backward_pass_group.set_player_flag(player_i, false);
+                    //         backward_pass_group.sub_total_count(1);
+                    //     }
+                    // }
+                    // if *reveal_i == card_of_interest {
+                    //     // Reflecting that the player had this card before move i
+                    //     if *relinquish == Some(card_of_interest) {
+                    //         // No check as it went from player to pile
+                    //         // Not setting pile as we don't actually need to use it
+                    //         // backward_pass_group.set_player_flag(6, true);
+                    //         backward_pass_group.add_total_count(1);
+                    //     } else if relinquish.is_none() {
+                    //         if !backward_pass_group.get_player_flag(player_i) {
+                    //             backward_pass_group.set_player_flag(player_i, true);
+                    //             backward_pass_group.add_total_count(1);
+                    //         }
+                    //     }
+                    // } else if *redraw_i == Some(card_of_interest) {
+                    //     // Reflecting that the pile had this card before move i
+                    //     if !backward_pass_group.get_player_flag(player_i) { // This check is rightly player_i
+                    //         // Not setting pile as we don't actually need to use it
+                    //         // backward_pass_group.set_player_flag(6, true);
+                    //         backward_pass_group.add_total_count(1);
+                    //     }
+                    // } 
                 },
                 ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
                     if backward_pass_group.get_player_flag(player_i) {
