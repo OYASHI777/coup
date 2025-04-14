@@ -2508,15 +2508,12 @@ impl PathDependentCollectiveConstraint {
     }
     /// returns false if possible
     /// TODO: Consider passing in array to count inferred_so_far
+    /// Backtracking by tracing where current known cards could have come from
+    /// 
     pub fn possible_to_have_cards_recurse(&self, index_loop: usize, index_of_interest: usize, inferred_counts: &mut [u8; 5], inferred_constraints: &mut Vec<Vec<Card>>, cards: &Vec<Card>) -> Option<bool> {
         // Will temporarily not use memo and generate all group_constraints from start
         // TODO: OPTIMIZE store the group_constraints in history
         //      - or store all impossible_combinations in history to make checking invalid states faster and less memory usage too
-        fn recurse(parent: &PathDependentCollectiveConstraint, index_loop: usize, index_of_interest: usize, inferred_counts: &mut [u8; 5], inferred_constraints: &mut Vec<Vec<Card>>, cards: &Vec<Card>) {
-            let response = parent.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, inferred_constraints, cards);
-            inferred_constraints[player_loop].pop();
-            return response
-        }
         if self.is_valid_combination(index_loop, index_of_interest, inferred_counts, inferred_constraints, cards).is_none() {
             // early exit before terminal node
             return None
@@ -2526,7 +2523,7 @@ impl PathDependentCollectiveConstraint {
             ActionInfo::Discard { discard } => {
                 inferred_constraints[player_loop].push(*discard);
                 // recurse
-                return recurse(self, index_loop - 1, index_of_interest, public_constraints, inferred_constraints, cards);
+                return self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, public_constraints, inferred_constraints, cards);
             },
             ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
                 // Check if will burst before pushing
@@ -2534,15 +2531,27 @@ impl PathDependentCollectiveConstraint {
                     Some(redraw_i) => {
                         if *reveal == *redraw_i {
                             // CASE 0: Redrew same card
-                            //      - Nothing to handle
-                            //      - recurse
-                            inferred_constraints[player_loop].push(*reveal);
+                            //      If had the card after this move either:
+                            //          - had card already before move
+                            //          - gained card from the redraw
                             if inferred_counts[*reveal as usize] < 3 {
-                                inferred_counts[*reveal as usize] += 1;
-                                let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, inferred_constraints, cards);
-                                inferred_counts[*reveal as usize] -= 1;
-                                inferred_constraints[player_loop].pop();
-                                return response
+                                // Had card already before the move
+                                // Need to check if player had redraw_i, redraw_i could have come from pile or already had it
+
+                                if inferred_constraints[player_loop].len() < 2 {
+                                    // reveal came from players' hand
+                                    inferred_constraints[player_loop].push(*reveal);
+                                    inferred_counts[*reveal as usize] += 1;
+                                    let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, inferred_constraints, cards);
+                                    inferred_counts[*reveal as usize] -= 1;
+                                    inferred_constraints[player_loop].pop();
+                                    // THIS IS CORRECT
+                                    // Case 0: card == redraw in inferred_constraint was redraw from pile?
+                                    // Case 1: card == redraw in inferred_constraint was in hand originally?
+                                    // Case 2: card == reveal in inferred_constraint was relinquished from player?
+                                    // Case 3: card == reveal in inferred_constraint was in pile originally?
+
+                                }
                             } else {
                                 // invalid state
                                 return None
@@ -2558,29 +2567,22 @@ impl PathDependentCollectiveConstraint {
                             // }
                         } else {
                             // Case 0: pile had *redraw_i before this state and player had *reveal
-                            if inferred_counts[*redraw_i as usize] < 3 && inferred_counts[*reveal as usize] < 3 {
-                                inferred_constraints[6].push(*redraw_i);
-                                inferred_constraints[player_loop].push(*reveal);
-                                inferred_counts[*redraw_i as usize] += 1;
-                                inferred_counts[*reveal as usize] += 1;
-                                let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, inferred_constraints, cards);
-                                inferred_counts[*redraw_i as usize] -= 1;
-                                inferred_counts[*reveal as usize] -= 1;
-                                return response
-                            } else {
-                                return None
-                            }
-                            // relinquish == reveal here
                         }
                     },
                     None => {
                         match relinquish {
                             Some(relinquish_i) => {
-                                // Case 0: Redrew same card
-                                // 
+                                // swap cards around sir
+                                // relinquish_i == *reveal always
+                                // Case 0: player redrew card != reveal
+                                // Case 1: player redrew card == reveal (reveal from pile)
+
+                                
                             },
                             None => {
-
+                                // Case 0: player redrew card != reveal
+                                // Case 1: player redrew card == reveal (same as original)
+                                // Case 2: player redrew card == reveal (reveal from pile)
                             },
                         }
                     },
