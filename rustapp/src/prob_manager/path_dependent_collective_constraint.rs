@@ -2547,16 +2547,22 @@ impl PathDependentCollectiveConstraint {
                                     inferred_constraints[player_loop].pop();
                                     // THIS IS CORRECT
                                     // inferred_constraints[player_loop] contains redraw
-                                    // Case 0: card == redraw in inferred_constraint was redraw from pile?
-                                    // Case 1: card == redraw in inferred_constraint was in hand originally?
+                                    // Case 0: card == redraw in inferred_constraint (player_loop) was redraw from pile?
+                                    // Case 1: card == redraw in inferred_constraint (player_loop) was in hand originally?
                                     // inferred_constraints[6] contains reveal
-                                    // Case 2: card == reveal in inferred_constraint was relinquished from player?
-                                    // Case 3: card == reveal in inferred_constraint was in pile originally?
+                                    // Case 2: card == reveal in inferred_constraint (pile) was relinquished from player?
+                                    // Case 3: card == reveal in inferred_constraint (pile) was in pile originally?
                                     if inferred_constraints[player_loop].contains(redraw_i) {
                                         if inferred_constraints[6].contains(reveal) {
-                                            
+                                            // Case 0 && Case 2
+                                            // Case 0 && Case 3
+                                            // Case 1 && Case 2
+                                            // Case 1 && Case 3
                                         } else {
-                                            
+                                            // No need to find options available inside to consider to swap?
+                                            // as reveal and redraw are known in this case
+                                            // Case 0 ()
+                                            // Case 1 ()
                                         }
                                     } else {
                                         if inferred_constraints[6].contains(reveal) {
