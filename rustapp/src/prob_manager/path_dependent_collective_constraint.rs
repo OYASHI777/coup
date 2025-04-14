@@ -2508,8 +2508,10 @@ impl PathDependentCollectiveConstraint {
     }
     /// returns false if possible
     /// TODO: Consider passing in array to count inferred_so_far
-    /// Backtracking by tracing where current known cards could have come from
-    /// 
+    /// Traces the game tree in reverse (from latest move to earliest move) by backtracking
+    /// Tracks possible paths known cards could have come from in the past
+    /// If a state is found to satisfy cards at the index_of_interest return Some(true)
+    /// If no state is every found return Some(false) or None
     pub fn possible_to_have_cards_recurse(&self, index_loop: usize, index_of_interest: usize, inferred_counts: &mut [u8; 5], inferred_constraints: &mut Vec<Vec<Card>>, cards: &Vec<Card>) -> Option<bool> {
         // Will temporarily not use memo and generate all group_constraints from start
         // TODO: OPTIMIZE store the group_constraints in history
