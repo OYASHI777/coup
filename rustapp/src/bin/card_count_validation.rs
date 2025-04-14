@@ -173,16 +173,16 @@ pub fn test() {
         // esp if someone amb
         // println!("Testing: {}", stringify!(overinferred_11)); 
         // replay_game_constraint_pd(overinferred_11, false, false);
-        // println!("Testing: {}", stringify!(overinferred_7));
-        // replay_game_constraint_pd(overinferred_7, false, false);
+        println!("Testing: {}", stringify!(overinferred_7));
+        replay_game_constraint_pd(overinferred_7, false, true);
         // println!("Testing: {}", stringify!(reveal_redraw_replay_8));
         // replay_game_constraint_pd(reveal_redraw_replay_8, false, false);
-        // println!("Testing: {}", stringify!(overinferred_6));
-        // replay_game_constraint_pd(overinferred_6, false, false);
+        println!("Testing: {}", stringify!(overinferred_6));
+        replay_game_constraint_pd(overinferred_6, false, false);
         // println!("Testing: {}", stringify!(overinferred_5));
         // replay_game_constraint_pd(overinferred_5, false, false);
-        println!("Testing: {}", stringify!(impossible_2));
-        replay_game_constraint_pd(impossible_2, false, true);
+        // println!("Testing: {}", stringify!(impossible_2));
+        // replay_game_constraint_pd(impossible_2, false, false);
         // === PD RevealRedraw cases
         // ===================================
         // Future features / weird bugs

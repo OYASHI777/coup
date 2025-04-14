@@ -1,6 +1,7 @@
 use crate::history_public::{AOName, ActionObservation, Card};
 use super::{collective_constraint::CompressedCollectiveConstraint, compressed_group_constraint::CompressedGroupConstraint};
 use ahash::AHashSet;
+use crossbeam::channel::after;
 use std::{marker::Copy, path::Path};
 
 #[derive(Clone, Debug)]
@@ -2074,20 +2075,91 @@ impl PathDependentCollectiveConstraint {
         let mut backward_pass_groups: Vec<CompressedGroupConstraint> = Vec::with_capacity(3);
         backward_pass_groups.push(backward_pass_group);
         log::trace!("backward_pass_groups after adding latest move: {:?}", backward_pass_groups);
-        let max_player_cards_combination = self.backward_max_player_cards_recurse(self.history.len() - 2, index, card_of_interest, backward_pass_groups.clone());
+        let max_player_cards_combination = self.backward_max_player_cards_recurse(self.history.len() - 2, index, card_of_interest, backward_pass_groups.clone()).unwrap_or(Vec::with_capacity(0));
         log::trace!("max_player_cards_combination returned: {:?}", max_player_cards_combination);
         log::trace!("backward_max_player_cards player: {:?}, action: {:?}, max_count: {}", self.history[index].player(), self.history[index].action_info(), max_player_cards_combination.iter().filter(|group| group.get_player_flag(self.history[index].player() as usize)).count() as u8);
         // 1 is added because we do not check the index_of_interest!
         // and it adds another of that card for player of interest
         max_player_cards_combination.iter().filter(|group| group.get_player_flag(self.history[index].player() as usize)).count() as u8
     }
-    pub fn backward_max_player_cards_recurse(&self, index_loop: usize, index_of_interest: usize, card_of_interest: Card, backward_pass_groups: Vec<CompressedGroupConstraint>) -> Vec<CompressedGroupConstraint> {
-        if index_loop == index_of_interest - 1{
-            return backward_pass_groups
-        }
-        let player_i = self.history[index_loop].player() as usize;
-         
+    /// NOTE: It is quite likely that in future
+    /// Will need to use the actual proper forward pass
+    /// And a backward pass including all possible cards TT
+    /// TODO: Change the redraw logic to try both cases
+    /// TODO: Add ambassador logic
+    /// TODO: Check all logic
+    pub fn backward_max_player_cards_recurse(&self, index_loop: usize, index_of_interest: usize, card_of_interest: Card, backward_pass_groups: Vec<CompressedGroupConstraint>) -> Option<Vec<CompressedGroupConstraint>> {
 
+        let player_of_interest = self.history[index_of_interest].player() as usize;
+        // Can't have more than 3 cards in the game!
+        if backward_pass_groups.len() > 3 {
+            log::trace!("backward_pass_groups len too long!: {:?}", backward_pass_groups);
+            return None
+        }
+        // Goal here is to check if the reached state is a legitimate state to be checked
+        if index_loop == index_of_interest - 1{
+            // Do check here
+            // but i think will need to do more than just the card_of_interest next
+            // The revealed card_of_interest won't be in the index_loop constraint
+            // Think will need to do a legit forward pass at this rate
+            let mut after_reveal_constraint = self.history[index_loop].clone();
+            if !after_reveal_constraint.inferred_constraints()[player_of_interest].contains(&card_of_interest) {
+                after_reveal_constraint.add_inferred_constraints(player_of_interest, card_of_interest);
+            }
+
+            let total_known_cards = after_reveal_constraint.public_constraints().iter().map(|v| v.iter().filter(|c| **c == card_of_interest).count() as u8).sum::<u8>()
+            + after_reveal_constraint.inferred_constraints().iter().map(|v| v.iter().filter(|c| **c == card_of_interest).count() as u8).sum::<u8>();
+            // TODO: [OPTIMIZE] THIS can just use the thing above
+            let mut total_required_cards: [u8; 7] = [0; 7];
+            after_reveal_constraint.public_constraints()
+            .iter()
+            .enumerate()
+            .for_each(|(p, v)| total_required_cards[p] += v.iter().filter(|c| **c == card_of_interest).count() as u8);
+            after_reveal_constraint.inferred_constraints()
+            .iter()
+            .enumerate()
+            .for_each(|(p, v)| total_required_cards[p] += v.iter().filter(|c| **c == card_of_interest).count() as u8);
+
+            let mut degrees_of_freedom: u8 = 0;
+            let mut backward_pass_card_counts: [u8; 7] = [0; 7];
+            backward_pass_groups.iter()
+            .for_each(
+                |group| {
+                    if let Some(player) = group.iter_true_player_flags().next() {
+                        backward_pass_card_counts[player] += 1;
+                    }
+                }
+            );
+            backward_pass_card_counts.iter().zip(total_required_cards.iter())
+            .for_each(|(b, r)| {
+                degrees_of_freedom += if b > r {
+                    b - r
+                } else {
+                    0
+                }
+            });
+            // impossibe state
+            if degrees_of_freedom + total_known_cards> 3 {
+                log::trace!("after_reveal_constraint : {:?}", after_reveal_constraint);
+                log::trace!("total_required_cards : {:?}", total_required_cards);
+                log::trace!("backward_pass_groups to {:?}", backward_pass_groups);
+                log::trace!("backward_pass_card_counts : {:?}", backward_pass_card_counts);
+                log::trace!("backward_pass_groups evaluated: {:?}", false);
+                log::trace!("total_known_cards : {:?}", total_known_cards);
+                log::trace!("degrees_of_freedom : {:?}", degrees_of_freedom);
+                return None
+            } 
+            log::trace!("after_reveal_constraint : {:?}", after_reveal_constraint);
+            log::trace!("total_required_cards : {:?}", total_required_cards);
+            log::trace!("backward_pass_groups to {:?}", backward_pass_groups);
+            log::trace!("backward_pass_card_counts : {:?}", backward_pass_card_counts);
+            log::trace!("backward_pass_groups evaluated: {:?}", false);
+            log::trace!("total_known_cards : {:?}", total_known_cards);
+            log::trace!("degrees_of_freedom : {:?}", degrees_of_freedom);
+            return Some(backward_pass_groups)
+        } 
+         
+        let player_i = self.history[index_loop].player() as usize;
         match self.history[index_loop].action_info() {
             ActionInfo::Discard { discard } => {
                 if *discard == card_of_interest {
@@ -2096,13 +2168,16 @@ impl PathDependentCollectiveConstraint {
                     new_groups.set_player_flag(player_i, true);
                     new_groups.set_total_count(1);
                     recurse_groups.push(new_groups);
-                    log::trace!("backward_pass_groups is : {:?} after considering player {}, action {:?}", backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                    log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                                    log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
                     return self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups)
                 }
             },
             ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, relinquish } => {
                 let mut max_backward_pass_groups: Option<Vec<CompressedGroupConstraint>> = None;
                 let bool_some_group_pile_flag_is_true: bool = backward_pass_groups.iter().any(|g| g.get_player_flag(6));
+                // TODO: OPTIMIZE Its actually better to bring this loop inside, as the conditionals are invariant...
                 'outer: for (index_group, backward_pass_group) in backward_pass_groups.iter().enumerate() {
                     if *reveal_i == card_of_interest {
                         // Reflecting that the player had this card before move i
@@ -2120,74 +2195,35 @@ impl PathDependentCollectiveConstraint {
                                 new_groups.set_player_flag(player_i, true);
                                 new_groups.set_total_count(1);
                                 recurse_groups.push(new_groups);
-                                let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
-                                max_backward_pass_groups = Some(
-                                    match max_backward_pass_groups.take() {
-                                        Some(curr) => {
-                                            if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
-                                            < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
-                                                found_group
-                                            } else {
-                                                curr
-                                            }
-                                        },
-                                        None => found_group,
-                                    }
-                                );
-                                log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                                log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                                                log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
+                                if let Some(found_group) = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups) {
+                                    max_backward_pass_groups = Some(
+                                        match max_backward_pass_groups.take() {
+                                            Some(curr) => {
+                                                if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                                < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                    found_group
+                                                } else {
+                                                    curr
+                                                }
+                                            },
+                                            None => found_group,
+                                        }
+                                    );
+                                }
+
                             } else {
                                 if backward_pass_group.get_player_flag(6) {
                                     // This is greedy, may consider backtracking for min
                                     let mut recurse_groups = backward_pass_groups.clone();
                                     recurse_groups[index_group].set_player_flag(6, false);
                                     recurse_groups[index_group].set_player_flag(player_i, true);
-                                    let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
-                                    max_backward_pass_groups = Some(
-                                        match max_backward_pass_groups.take() {
-                                            Some(curr) => {
-                                                if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
-                                                < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
-                                                    found_group
-                                                } else {
-                                                    curr
-                                                }
-                                            },
-                                            None => found_group,
-                                        }
-                                    );
-                                    log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
-                                }
-                                continue 'outer;
-                            }
-                        } else if relinquish.is_none() {
-                            if redraw_i.is_none() {
-                                if !bool_some_group_pile_flag_is_true {
-                                    let mut recurse_groups = backward_pass_groups.clone();
-                                    let mut new_groups = CompressedGroupConstraint::zero();
-                                    new_groups.set_player_flag(player_i, true);
-                                    new_groups.set_total_count(1);
-                                    recurse_groups.push(new_groups);
-                                    let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
-                                    max_backward_pass_groups = Some(
-                                        match max_backward_pass_groups.take() {
-                                            Some(curr) => {
-                                                if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
-                                                < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
-                                                    found_group
-                                                } else {
-                                                    curr
-                                                }
-                                            },
-                                            None => found_group,
-                                        }
-                                    );
-                                    log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
-                                } else {
-                                    if backward_pass_group.get_player_flag(6) {
-                                        let mut recurse_groups = backward_pass_groups.clone();
-                                        recurse_groups[index_group].set_player_flag(6, false);
-                                        recurse_groups[index_group].set_player_flag(player_i, true);
-                                        let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                    log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                    log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                    log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
+                                    if let Some(found_group) = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups) {
                                         max_backward_pass_groups = Some(
                                             match max_backward_pass_groups.take() {
                                                 Some(curr) => {
@@ -2201,7 +2237,63 @@ impl PathDependentCollectiveConstraint {
                                                 None => found_group,
                                             }
                                         );
-                                        log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                                    }
+
+                                }
+                                continue 'outer;
+                            }
+                        } else if relinquish.is_none() {
+                            if redraw_i.is_none() {
+                                // CASE when the player did not relinquish the card
+                                let mut recurse_groups = backward_pass_groups.clone();
+                                let mut new_groups = CompressedGroupConstraint::zero();
+                                new_groups.set_player_flag(player_i, true);
+                                new_groups.set_total_count(1);
+                                recurse_groups.push(new_groups);
+                                log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                log::trace!("max_backward_pass_groups considering case where player redrew card");
+                                log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
+                                if let Some(found_group) = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups) {
+                                    max_backward_pass_groups = Some(
+                                        match max_backward_pass_groups.take() {
+                                            Some(curr) => {
+                                                if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                                < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                    found_group
+                                                } else {
+                                                    curr
+                                                }
+                                            },
+                                            None => found_group,
+                                        }
+                                    );
+                                }
+
+                                if bool_some_group_pile_flag_is_true {
+                                    // CASE when the player did relinquish the card
+                                    if backward_pass_group.get_player_flag(6) {
+                                        let mut recurse_groups = backward_pass_groups.clone();
+                                        recurse_groups[index_group].set_player_flag(6, false);
+                                        recurse_groups[index_group].set_player_flag(player_i, true);
+                                        log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                        log::trace!("max_backward_pass_groups considering case where player relinquish card");
+                                        log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
+                                        if let Some(found_group) = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups) {
+                                            max_backward_pass_groups = Some(
+                                                match max_backward_pass_groups.take() {
+                                                    Some(curr) => {
+                                                        if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                                        < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                            found_group
+                                                        } else {
+                                                            curr
+                                                        }
+                                                    },
+                                                    None => found_group,
+                                                }
+                                            );
+                                        }
+  
                                     }
                                     continue 'outer;
                                 }
@@ -2214,11 +2306,16 @@ impl PathDependentCollectiveConstraint {
                                 // P2 RR DUK
                                 // P2 Discard DUK
                                 // => 1 DUK
+                                // TODO: THEORY FIX what if they do this twice?
+                                // TODO: Add a check for if player already has the card
+                                // TODO: go 2 different paths for if its the current card or if its another card
                                 let mut recurse_groups = backward_pass_groups.clone();
                                 let mut new_groups = CompressedGroupConstraint::zero();
                                 new_groups.set_player_flag(player_i, true);
                                 new_groups.set_total_count(1);
                                 recurse_groups.push(new_groups);
+                                log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
                                 return self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups)
                             } else {
                                 if !bool_some_group_pile_flag_is_true {
@@ -2227,27 +2324,9 @@ impl PathDependentCollectiveConstraint {
                                     new_groups.set_player_flag(player_i, true);
                                     new_groups.set_total_count(1);
                                     recurse_groups.push(new_groups);
-                                    let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
-                                    max_backward_pass_groups = Some(
-                                        match max_backward_pass_groups.take() {
-                                            Some(curr) => {
-                                                if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
-                                                < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
-                                                    found_group
-                                                } else {
-                                                    curr
-                                                }
-                                            },
-                                            None => found_group,
-                                        }
-                                    );
-                                    log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
-                                } else {
-                                    if backward_pass_group.get_player_flag(6) {
-                                        let mut recurse_groups = backward_pass_groups.clone();
-                                        recurse_groups[index_group].set_player_flag(6, false);
-                                        recurse_groups[index_group].set_player_flag(player_i, true);
-                                        let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                    log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                    log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
+                                    if let Some(found_group) = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups) {
                                         max_backward_pass_groups = Some(
                                             match max_backward_pass_groups.take() {
                                                 Some(curr) => {
@@ -2261,7 +2340,32 @@ impl PathDependentCollectiveConstraint {
                                                 None => found_group,
                                             }
                                         );
-                                        log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                                    }
+
+                                } else {
+                                    if backward_pass_group.get_player_flag(6) {
+                                        let mut recurse_groups = backward_pass_groups.clone();
+                                        recurse_groups[index_group].set_player_flag(6, false);
+                                        recurse_groups[index_group].set_player_flag(player_i, true);
+                                        log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                                                        log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
+                                        if let Some(found_group) = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups) {
+                                            max_backward_pass_groups = Some(
+                                                match max_backward_pass_groups.take() {
+                                                    Some(curr) => {
+                                                        if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                                        < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                            found_group
+                                                        } else {
+                                                            curr
+                                                        }
+                                                    },
+                                                    None => found_group,
+                                                }
+                                            );
+                                        }
+                                        
                                     }
                                     continue 'outer;
                                 }
@@ -2276,27 +2380,9 @@ impl PathDependentCollectiveConstraint {
                             new_groups.set_player_flag(6, true);
                             new_groups.set_total_count(1);
                             recurse_groups.push(new_groups);
-                            let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
-                            max_backward_pass_groups = Some(
-                                match max_backward_pass_groups.take() {
-                                    Some(curr) => {
-                                        if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
-                                        < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
-                                            found_group
-                                        } else {
-                                            curr
-                                        }
-                                    },
-                                    None => found_group,
-                                }
-                            );
-                            log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
-                        } else {
-                            if backward_pass_group.get_player_flag(player_i) {
-                                let mut recurse_groups = backward_pass_groups.clone();
-                                recurse_groups[index_group].set_player_flag(6, true);
-                                recurse_groups[index_group].set_player_flag(player_i, false);
-                                let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                            log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                            log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
+                            if let Some(found_group) = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups) {
                                 max_backward_pass_groups = Some(
                                     match max_backward_pass_groups.take() {
                                         Some(curr) => {
@@ -2310,11 +2396,67 @@ impl PathDependentCollectiveConstraint {
                                         None => found_group,
                                     }
                                 );
-                                log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                            }
+                        } else {
+                            if backward_pass_group.get_player_flag(player_i) {
+                                let mut recurse_groups = backward_pass_groups.clone();
+                                recurse_groups[index_group].set_player_flag(6, true);
+                                recurse_groups[index_group].set_player_flag(player_i, false);
+                                log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
+                                if let Some(found_group) = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups) {
+                                    max_backward_pass_groups = Some(
+                                        match max_backward_pass_groups.take() {
+                                            Some(curr) => {
+                                                if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                                < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                    found_group
+                                                } else {
+                                                    curr
+                                                }
+                                            },
+                                            None => found_group,
+                                        }
+                                    );
+                                }
+
                             }
                             continue 'outer;
                         }
+                    } else if redraw_i.is_none() {
+                        // Case when player redrew same card back
+                        max_backward_pass_groups = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, backward_pass_groups.clone());
+                        log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                        log::trace!("max_backward_pass_groups considering case where player redrew the same card back");
+                        log::trace!("backward_pass_groups is : {:?}", max_backward_pass_groups);
+                        // Case where player relinquished and redrew card of interest
+                        // So a card may have gone from pile to player, and we should reverse that 
+                        if backward_pass_groups[index_group].get_player_flag(player_i) {
+                            // Lmao u really only need to check the current group omg
+                            let mut recurse_groups = backward_pass_groups.clone();
+                            recurse_groups[index_group].set_player_flag(6, true);
+                            recurse_groups[index_group].set_player_flag(player_i, false);
+                            log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                            log::trace!("max_backward_pass_groups considering case where player redrew the card of interest");
+                            log::trace!("backward_pass_groups is : {:?}", &recurse_groups);
+                            if let Some(found_group) = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups) {
+                                max_backward_pass_groups = Some(
+                                    match max_backward_pass_groups.take() {
+                                        Some(curr) => {
+                                            if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                            < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                found_group
+                                            } else {
+                                                curr
+                                            }
+                                        },
+                                        None => found_group,
+                                    }
+                                );
+                            }
+                        }
                     } else {
+                        
                         // redraw.is_none() && *reveal_i != card_of_interest
                         // if relinquish.is_none() {
                         //     if backward_pass_group.get_player_flag(player_i) {
@@ -2327,13 +2469,15 @@ impl PathDependentCollectiveConstraint {
 
                         // redraw is_some() -> no need for change
                         // redraw is_none9) -> handled in illegal_players
-                        max_backward_pass_groups = Some(self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, backward_pass_groups.clone()));
-                        log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                        max_backward_pass_groups = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, backward_pass_groups.clone());
+                        log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                        log::trace!("backward_pass_groups is : {:?}", max_backward_pass_groups);
                     }
                 }
-                // TODO: THINK about unwrap
+                log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                log::trace!("max_backward_pass_groups considering player {}, action {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
                 log::trace!("max_backward_pass_groups returned node : {:?}", max_backward_pass_groups);
-                return max_backward_pass_groups.unwrap()
+                return max_backward_pass_groups
             },
             ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
                 // TODO:
