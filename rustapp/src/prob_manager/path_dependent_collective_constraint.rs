@@ -2546,11 +2546,26 @@ impl PathDependentCollectiveConstraint {
                                     inferred_counts[*reveal as usize] -= 1;
                                     inferred_constraints[player_loop].pop();
                                     // THIS IS CORRECT
+                                    // inferred_constraints[player_loop] contains redraw
                                     // Case 0: card == redraw in inferred_constraint was redraw from pile?
                                     // Case 1: card == redraw in inferred_constraint was in hand originally?
+                                    // inferred_constraints[6] contains reveal
                                     // Case 2: card == reveal in inferred_constraint was relinquished from player?
                                     // Case 3: card == reveal in inferred_constraint was in pile originally?
+                                    if inferred_constraints[player_loop].contains(redraw_i) {
+                                        if inferred_constraints[6].contains(reveal) {
+                                            
+                                        } else {
+                                            
+                                        }
+                                    } else {
+                                        if inferred_constraints[6].contains(reveal) {
 
+                                        } else {
+
+                                        }
+
+                                    }
                                 }
                             } else {
                                 // invalid state
