@@ -2485,47 +2485,120 @@ impl PathDependentCollectiveConstraint {
         debug_assert!(self.history[index].player == 6 && cards.len() == 3, "cards too long! should have size of at most 3 for pile");
         let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2), Vec::with_capacity(2), Vec::with_capacity(2), Vec::with_capacity(2), Vec::with_capacity(2), Vec::with_capacity(2), Vec::with_capacity(3), ];
         let mut inferred_constraints: Vec<Vec<Card>> = public_constraints.clone();
+        let mut inferred_counts: [u8; 5] = [0; 5];
         let latest_move = self.history.last().unwrap(); 
         match latest_move.action_info() {
             ActionInfo::Discard { discard } => {
                 inferred_constraints[latest_move.player() as usize].push(*discard);
             },
-            ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
+            ActionInfo::RevealRedraw { reveal, redraw, .. } => {
                 inferred_constraints[latest_move.player() as usize].push(*reveal);
+                redraw.map(|pile_original_card| inferred_constraints[6].push(pile_original_card));
             },
             ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
-                for player_original_card in relinquish.iter() {
-                    inferred_constraints[latest_move.player() as usize].push(*player_original_card);
-                }
-                for pile_original_card in draw.iter() {
-                    inferred_constraints[6].push(*pile_original_card);
-                }
+                inferred_constraints[latest_move.player() as usize].extend(relinquish.iter().copied());
+                inferred_constraints[6].extend(draw.iter().copied());
             },
             ActionInfo::Start
             | ActionInfo::StartInferred => {},
         }
 
         // Do an unwrap_or false
-        self.impossible_to_have_cards_recurse(self.history.len() - 2, index, &mut public_constraints, &mut inferred_constraints).unwrap_or(false)
+        !self.possible_to_have_cards_recurse(self.history.len() - 2, index, &mut inferred_counts, &mut inferred_constraints, cards).unwrap_or(false)
     }
-    pub fn impossible_to_have_cards_recurse(&self, index_loop: usize, index_of_interest: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, cards: &Vec<Card>) -> Option<bool> {
+    /// returns false if possible
+    /// TODO: Consider passing in array to count inferred_so_far
+    pub fn possible_to_have_cards_recurse(&self, index_loop: usize, index_of_interest: usize, inferred_counts: &mut [u8; 5], inferred_constraints: &mut Vec<Vec<Card>>, cards: &Vec<Card>) -> Option<bool> {
         // Will temporarily not use memo and generate all group_constraints from start
         // TODO: OPTIMIZE store the group_constraints in history
         //      - or store all impossible_combinations in history to make checking invalid states faster and less memory usage too
-        if self.is_valid_combination(index_loop, index_of_interest, &public_constraints, &inferred_constraints, cards).is_none() {
+        fn recurse(parent: &PathDependentCollectiveConstraint, index_loop: usize, index_of_interest: usize, inferred_counts: &mut [u8; 5], inferred_constraints: &mut Vec<Vec<Card>>, cards: &Vec<Card>) {
+            let response = parent.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, inferred_constraints, cards);
+            inferred_constraints[player_loop].pop();
+            return response
+        }
+        if self.is_valid_combination(index_loop, index_of_interest, inferred_counts, inferred_constraints, cards).is_none() {
             // early exit before terminal node
             return None
         }
+        let player_loop = self.history[index_loop].player() as usize;
+        match self.history[index_loop].action_info() {
+            ActionInfo::Discard { discard } => {
+                inferred_constraints[player_loop].push(*discard);
+                // recurse
+                return recurse(self, index_loop - 1, index_of_interest, public_constraints, inferred_constraints, cards);
+            },
+            ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
+                // Check if will burst before pushing
+                match redraw {
+                    Some(redraw_i) => {
+                        if *reveal == *redraw_i {
+                            // CASE 0: Redrew same card
+                            //      - Nothing to handle
+                            //      - recurse
+                            inferred_constraints[player_loop].push(*reveal);
+                            if inferred_counts[*reveal as usize] < 3 {
+                                inferred_counts[*reveal as usize] += 1;
+                                let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, inferred_constraints, cards);
+                                inferred_counts[*reveal as usize] -= 1;
+                                inferred_constraints[player_loop].pop();
+                                return response
+                            } else {
+                                // invalid state
+                                return None
+                            }
+                            // Unsure if this is a realistic thing to explore yet
+                            // if let Some(relinquish_i) = relinquish {
+                            //     // CASE 1: Redrew different card from pile -> 1 card in player before and 1 card in pile before
+                            //     //      - Add another to pile
+                            //     //      - recurse
+                            //     inferred_constraints[player_loop].push(*redraw_i);
+                            //     inferred_constraints[6].push(*relinquish_i);
+                            //     return recurse(self, index_loop - 1, index_of_interest, public_constraints, inferred_constraints, cards);
+                            // }
+                        } else {
+                            // Case 0: pile had *redraw_i before this state and player had *reveal
+                            if inferred_counts[*redraw_i as usize] < 3 && inferred_counts[*reveal as usize] < 3 {
+                                inferred_constraints[6].push(*redraw_i);
+                                inferred_constraints[player_loop].push(*reveal);
+                                inferred_counts[*redraw_i as usize] += 1;
+                                inferred_counts[*reveal as usize] += 1;
+                                let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, inferred_constraints, cards);
+                                inferred_counts[*redraw_i as usize] -= 1;
+                                inferred_counts[*reveal as usize] -= 1;
+                                return response
+                            } else {
+                                return None
+                            }
+                            // relinquish == reveal here
+                        }
+                    },
+                    None => {
+                        match relinquish {
+                            Some(relinquish_i) => {
+                                // Case 0: Redrew same card
+                                // 
+                            },
+                            None => {
 
+                            },
+                        }
+                    },
+                }
+            },
+            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {},
+            ActionInfo::Start
+            | ActionInfo::StartInferred => {},
+        }
         // 
         // Did not find a valid combination
-        None
+        Some(false)
     }
     /// Return true if hypothesised card permutations cannot be shown to be impossible
     pub fn is_valid_combination(&self, index_loop: usize ,index_of_interest: usize, public_constraints: &Vec<Vec<Card>>, inferred_constraints: &Vec<Vec<Card>>, cards: &Vec<Card>) -> Option<bool> {
         let invalid_state: bool = false;
         if index_loop == index_of_interest - 1 {
-            // Check actual constraints
+            // Check actual constraints at leaf node
         } else {
             if invalid_state {
                 return None;
