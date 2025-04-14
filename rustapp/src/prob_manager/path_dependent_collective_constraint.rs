@@ -1844,7 +1844,506 @@ impl PathDependentCollectiveConstraint {
     //     log::trace!("lookback_check_3_fwd_bwd_pass: {}", false);
     //     // false
     // }
+    /// Returns the a vector of CompressedGroupConstraints, each of which represents the location of a unique card
+    /// The combination returned is any combination with the minimum total unique cards possible
+    /// Assumes the latest move is RevealRedraw reveal, redraw = None, or Discard
+    pub fn backward_pass_minimum_cards_shown(&self, index: usize, card_of_interest: Card) -> Vec<CompressedGroupConstraint> {
+        let mut backward_pass_group = CompressedGroupConstraint::zero();
+        backward_pass_group.set_player_flag(self.history[self.history.len() - 1].player() as usize, true);
+        // backward_pass_group.add_alive_count(1);
+        backward_pass_group.add_total_count(1);
+        // Prob can optimize to use u8s
+        let mut backward_pass_groups: Vec<CompressedGroupConstraint> = Vec::with_capacity(3);
+        backward_pass_groups.push(backward_pass_group);
+        self.backward_pass_minimum_cards_shown_recurse(self.history.len() - 2, index, card_of_interest, backward_pass_groups.clone())
+    }
+    pub fn backward_pass_minimum_cards_shown_recurse(&self, index_loop: usize, index_of_interest: usize, card_of_interest: Card, backward_pass_groups: Vec<CompressedGroupConstraint>) -> Vec<CompressedGroupConstraint> {
+        if index_loop == index_of_interest {
+            return backward_pass_groups
+        }
+        let player_i = self.history[index_loop].player() as usize;
+         
 
+        match self.history[index_loop].action_info() {
+            ActionInfo::Discard { discard } => {
+                if *discard == card_of_interest {
+                    let mut recurse_groups = backward_pass_groups.clone();
+                    let mut new_groups = CompressedGroupConstraint::zero();
+                    new_groups.set_player_flag(player_i, true);
+                    new_groups.set_total_count(1);
+                    recurse_groups.push(new_groups);
+                    return self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups)
+                }
+            },
+            ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, relinquish } => {
+                let mut min_backward_pass_groups: Option<Vec<CompressedGroupConstraint>> = None;
+                let bool_some_group_pile_flag_is_true: bool = backward_pass_groups.iter().any(|g| g.get_player_flag(6));
+                'outer: for (index_group, backward_pass_group) in backward_pass_groups.iter().enumerate() {
+                    if *reveal_i == card_of_interest {
+                        // Reflecting that the player had this card before move i
+                        if *relinquish == Some(card_of_interest) {
+                            // No check as it went from player to pile
+                            // Not setting pile as we don't actually need to use it
+                            // backward_pass_group.set_player_flag(6, true);
+                            // backward_pass_group.add_alive_count(1);
+                            // backward_pass_group.add_total_count(1);
+                            // TESTING, was thinking i might need to consider how the pile moves too?
+                            // Also consider needing to subtract?
+                            if !bool_some_group_pile_flag_is_true {
+                                let mut recurse_groups = backward_pass_groups.clone();
+                                let mut new_groups = CompressedGroupConstraint::zero();
+                                new_groups.set_player_flag(player_i, true);
+                                new_groups.set_total_count(1);
+                                recurse_groups.push(new_groups);
+                                let found_group = self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                min_backward_pass_groups = Some(
+                                    match min_backward_pass_groups.take() {
+                                        Some(curr) if found_group.len() < curr.len() => found_group,
+                                        Some(curr) => curr,
+                                        None => found_group,
+                                    }
+                                );
+                            } else {
+                                if backward_pass_group.get_player_flag(6) {
+                                    // This is greedy, may consider backtracking for min
+                                    let mut recurse_groups = backward_pass_groups.clone();
+                                    recurse_groups[index_group].set_player_flag(6, false);
+                                    recurse_groups[index_group].set_player_flag(player_i, true);
+                                    let found_group = self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                    min_backward_pass_groups = Some(
+                                        match min_backward_pass_groups.take() {
+                                            Some(curr) if found_group.len() < curr.len() => found_group,
+                                            Some(curr) => curr,
+                                            None => found_group,
+                                        }
+                                    );
+                                }
+                                continue 'outer;
+                            }
+                        } else if relinquish.is_none() {
+                            if redraw_i.is_none() {
+                                if !bool_some_group_pile_flag_is_true {
+                                    let mut recurse_groups = backward_pass_groups.clone();
+                                    let mut new_groups = CompressedGroupConstraint::zero();
+                                    new_groups.set_player_flag(player_i, true);
+                                    new_groups.set_total_count(1);
+                                    recurse_groups.push(new_groups);
+                                    let found_group = self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                    min_backward_pass_groups = Some(
+                                        match min_backward_pass_groups.take() {
+                                            Some(curr) if found_group.len() < curr.len() => found_group,
+                                            Some(curr) => curr,
+                                            None => found_group,
+                                        }
+                                    );
+                                } else {
+                                    if backward_pass_group.get_player_flag(6) {
+                                        let mut recurse_groups = backward_pass_groups.clone();
+                                        recurse_groups[index_group].set_player_flag(6, false);
+                                        recurse_groups[index_group].set_player_flag(player_i, true);
+                                        let found_group = self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                        min_backward_pass_groups = Some(
+                                            match min_backward_pass_groups.take() {
+                                                Some(curr) if found_group.len() < curr.len() => found_group,
+                                                Some(curr) => curr,
+                                                None => found_group,
+                                            }
+                                        );
+                                    }
+                                    continue 'outer;
+                                }
+                            } else if *redraw_i == Some(card_of_interest) {
+                                // TODO: Actually order of discard then revealredraw matters!
+                                // So i guess I should track in single_card_flags too huh
+                                // P2 Discard DUK
+                                // P2 RR DUK
+                                // => 2 DUKS
+                                // P2 RR DUK
+                                // P2 Discard DUK
+                                // => 1 DUK
+                                let mut recurse_groups = backward_pass_groups.clone();
+                                let mut new_groups = CompressedGroupConstraint::zero();
+                                new_groups.set_player_flag(player_i, true);
+                                new_groups.set_total_count(1);
+                                recurse_groups.push(new_groups);
+                                return self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups)
+                            } else {
+                                if !bool_some_group_pile_flag_is_true {
+                                    let mut recurse_groups = backward_pass_groups.clone();
+                                    let mut new_groups = CompressedGroupConstraint::zero();
+                                    new_groups.set_player_flag(player_i, true);
+                                    new_groups.set_total_count(1);
+                                    recurse_groups.push(new_groups);
+                                    let found_group = self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                    min_backward_pass_groups = Some(
+                                        match min_backward_pass_groups.take() {
+                                            Some(curr) if found_group.len() < curr.len() => found_group,
+                                            Some(curr) => curr,
+                                            None => found_group,
+                                        }
+                                    );
+                                } else {
+                                    if backward_pass_group.get_player_flag(6) {
+                                        let mut recurse_groups = backward_pass_groups.clone();
+                                        recurse_groups[index_group].set_player_flag(6, false);
+                                        recurse_groups[index_group].set_player_flag(player_i, true);
+                                        let found_group = self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                        min_backward_pass_groups = Some(
+                                            match min_backward_pass_groups.take() {
+                                                Some(curr) if found_group.len() < curr.len() => found_group,
+                                                Some(curr) => curr,
+                                                None => found_group,
+                                            }
+                                        );
+                                    }
+                                    continue 'outer;
+                                }
+                            }
+                        }
+                    } else if *redraw_i == Some(card_of_interest) {
+                        // Reflecting that the pile had this card before move i
+                        let bool_some_group_player_i_flag_is_true = backward_pass_groups.iter().any(|g| g.get_player_flag(player_i));
+                        if !bool_some_group_player_i_flag_is_true {
+                            let mut recurse_groups = backward_pass_groups.clone();
+                            let mut new_groups = CompressedGroupConstraint::zero();
+                            new_groups.set_player_flag(6, true);
+                            new_groups.set_total_count(1);
+                            recurse_groups.push(new_groups);
+                            let found_group = self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                            min_backward_pass_groups = Some(
+                                match min_backward_pass_groups.take() {
+                                    Some(curr) if found_group.len() < curr.len() => found_group,
+                                    Some(curr) => curr,
+                                    None => found_group,
+                                }
+                            );
+                        } else {
+                            if backward_pass_group.get_player_flag(player_i) {
+                                let mut recurse_groups = backward_pass_groups.clone();
+                                recurse_groups[index_group].set_player_flag(6, true);
+                                recurse_groups[index_group].set_player_flag(player_i, false);
+                                let found_group = self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                min_backward_pass_groups = Some(
+                                    match min_backward_pass_groups.take() {
+                                        Some(curr) if found_group.len() < curr.len() => found_group,
+                                        Some(curr) => curr,
+                                        None => found_group,
+                                    }
+                                );
+                            }
+                            continue 'outer;
+                        }
+                    } else {
+                        // redraw.is_none() && *reveal_i != card_of_interest
+                        // if relinquish.is_none() {
+                        //     if backward_pass_group.get_player_flag(player_i) {
+                        //         backward_pass_group.set_player_flag(player_i, false);
+                        //         // backward_pass_group.sub_alive_count(1);
+                        //         backward_pass_group.sub_total_count(1);
+                        //     }
+                        // }
+                        // handleWhat if relinquish is known?
+
+                        // redraw is_some() -> no need for change
+                        // redraw is_none9) -> handled in illegal_players
+                        min_backward_pass_groups = Some(self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, backward_pass_groups.clone()));
+                    }
+                }
+                // TODO: THINK about unwrap
+                return min_backward_pass_groups.unwrap()
+            },
+            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                // TODO:
+            },
+            ActionInfo::Start
+            | ActionInfo::StartInferred => {},
+        }
+        // some kind of min function
+        self.backward_pass_minimum_cards_shown_recurse(index_loop - 1, index_of_interest, card_of_interest, backward_pass_groups)
+    }
+    /// Returns the a vector of CompressedGroupConstraints, each of which represents the location of a unique card
+    /// The combination returned is any combination with the minimum total unique cards possible
+    /// Assumes the latest move is RevealRedraw reveal = =card_of_interest, redraw = None, or Discard
+    pub fn backward_max_player_cards(&self, index: usize, card_of_interest: Card) -> u8 {
+        log::trace!("backward_max_player_cards handled: player: {}, action: {:?}", self.history[index].player(), self.history[index].action_info());
+        let mut backward_pass_group = CompressedGroupConstraint::zero();
+        backward_pass_group.set_player_flag(self.history[self.history.len() - 1].player() as usize, true);
+        // backward_pass_group.add_alive_count(1);
+        backward_pass_group.add_total_count(1);
+        // Prob can optimize to use u8s
+        let mut backward_pass_groups: Vec<CompressedGroupConstraint> = Vec::with_capacity(3);
+        backward_pass_groups.push(backward_pass_group);
+        log::trace!("backward_pass_groups after adding latest move: {:?}", backward_pass_groups);
+        let max_player_cards_combination = self.backward_max_player_cards_recurse(self.history.len() - 2, index, card_of_interest, backward_pass_groups.clone());
+        log::trace!("max_player_cards_combination returned: {:?}", max_player_cards_combination);
+        log::trace!("backward_max_player_cards player: {:?}, action: {:?}, max_count: {}", self.history[index].player(), self.history[index].action_info(), max_player_cards_combination.iter().filter(|group| group.get_player_flag(self.history[index].player() as usize)).count() as u8);
+        // 1 is added because we do not check the index_of_interest!
+        // and it adds another of that card for player of interest
+        max_player_cards_combination.iter().filter(|group| group.get_player_flag(self.history[index].player() as usize)).count() as u8
+    }
+    pub fn backward_max_player_cards_recurse(&self, index_loop: usize, index_of_interest: usize, card_of_interest: Card, backward_pass_groups: Vec<CompressedGroupConstraint>) -> Vec<CompressedGroupConstraint> {
+        if index_loop == index_of_interest - 1{
+            return backward_pass_groups
+        }
+        let player_i = self.history[index_loop].player() as usize;
+         
+
+        match self.history[index_loop].action_info() {
+            ActionInfo::Discard { discard } => {
+                if *discard == card_of_interest {
+                    let mut recurse_groups = backward_pass_groups.clone();
+                    let mut new_groups = CompressedGroupConstraint::zero();
+                    new_groups.set_player_flag(player_i, true);
+                    new_groups.set_total_count(1);
+                    recurse_groups.push(new_groups);
+                    log::trace!("backward_pass_groups is : {:?} after considering player {}, action {:?}", backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                    return self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups)
+                }
+            },
+            ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, relinquish } => {
+                let mut max_backward_pass_groups: Option<Vec<CompressedGroupConstraint>> = None;
+                let bool_some_group_pile_flag_is_true: bool = backward_pass_groups.iter().any(|g| g.get_player_flag(6));
+                'outer: for (index_group, backward_pass_group) in backward_pass_groups.iter().enumerate() {
+                    if *reveal_i == card_of_interest {
+                        // Reflecting that the player had this card before move i
+                        if *relinquish == Some(card_of_interest) {
+                            // No check as it went from player to pile
+                            // Not setting pile as we don't actually need to use it
+                            // backward_pass_group.set_player_flag(6, true);
+                            // backward_pass_group.add_alive_count(1);
+                            // backward_pass_group.add_total_count(1);
+                            // TESTING, was thinking i might need to consider how the pile moves too?
+                            // Also consider needing to subtract?
+                            if !bool_some_group_pile_flag_is_true {
+                                let mut recurse_groups = backward_pass_groups.clone();
+                                let mut new_groups = CompressedGroupConstraint::zero();
+                                new_groups.set_player_flag(player_i, true);
+                                new_groups.set_total_count(1);
+                                recurse_groups.push(new_groups);
+                                let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                max_backward_pass_groups = Some(
+                                    match max_backward_pass_groups.take() {
+                                        Some(curr) => {
+                                            if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                            < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                found_group
+                                            } else {
+                                                curr
+                                            }
+                                        },
+                                        None => found_group,
+                                    }
+                                );
+                                log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                            } else {
+                                if backward_pass_group.get_player_flag(6) {
+                                    // This is greedy, may consider backtracking for min
+                                    let mut recurse_groups = backward_pass_groups.clone();
+                                    recurse_groups[index_group].set_player_flag(6, false);
+                                    recurse_groups[index_group].set_player_flag(player_i, true);
+                                    let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                    max_backward_pass_groups = Some(
+                                        match max_backward_pass_groups.take() {
+                                            Some(curr) => {
+                                                if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                                < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                    found_group
+                                                } else {
+                                                    curr
+                                                }
+                                            },
+                                            None => found_group,
+                                        }
+                                    );
+                                    log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                                }
+                                continue 'outer;
+                            }
+                        } else if relinquish.is_none() {
+                            if redraw_i.is_none() {
+                                if !bool_some_group_pile_flag_is_true {
+                                    let mut recurse_groups = backward_pass_groups.clone();
+                                    let mut new_groups = CompressedGroupConstraint::zero();
+                                    new_groups.set_player_flag(player_i, true);
+                                    new_groups.set_total_count(1);
+                                    recurse_groups.push(new_groups);
+                                    let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                    max_backward_pass_groups = Some(
+                                        match max_backward_pass_groups.take() {
+                                            Some(curr) => {
+                                                if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                                < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                    found_group
+                                                } else {
+                                                    curr
+                                                }
+                                            },
+                                            None => found_group,
+                                        }
+                                    );
+                                    log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                                } else {
+                                    if backward_pass_group.get_player_flag(6) {
+                                        let mut recurse_groups = backward_pass_groups.clone();
+                                        recurse_groups[index_group].set_player_flag(6, false);
+                                        recurse_groups[index_group].set_player_flag(player_i, true);
+                                        let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                        max_backward_pass_groups = Some(
+                                            match max_backward_pass_groups.take() {
+                                                Some(curr) => {
+                                                    if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                                    < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                        found_group
+                                                    } else {
+                                                        curr
+                                                    }
+                                                },
+                                                None => found_group,
+                                            }
+                                        );
+                                        log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                                    }
+                                    continue 'outer;
+                                }
+                            } else if *redraw_i == Some(card_of_interest) {
+                                // TODO: Actually order of discard then revealredraw matters!
+                                // So i guess I should track in single_card_flags too huh
+                                // P2 Discard DUK
+                                // P2 RR DUK
+                                // => 2 DUKS
+                                // P2 RR DUK
+                                // P2 Discard DUK
+                                // => 1 DUK
+                                let mut recurse_groups = backward_pass_groups.clone();
+                                let mut new_groups = CompressedGroupConstraint::zero();
+                                new_groups.set_player_flag(player_i, true);
+                                new_groups.set_total_count(1);
+                                recurse_groups.push(new_groups);
+                                return self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups)
+                            } else {
+                                if !bool_some_group_pile_flag_is_true {
+                                    let mut recurse_groups = backward_pass_groups.clone();
+                                    let mut new_groups = CompressedGroupConstraint::zero();
+                                    new_groups.set_player_flag(player_i, true);
+                                    new_groups.set_total_count(1);
+                                    recurse_groups.push(new_groups);
+                                    let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                    max_backward_pass_groups = Some(
+                                        match max_backward_pass_groups.take() {
+                                            Some(curr) => {
+                                                if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                                < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                    found_group
+                                                } else {
+                                                    curr
+                                                }
+                                            },
+                                            None => found_group,
+                                        }
+                                    );
+                                    log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                                } else {
+                                    if backward_pass_group.get_player_flag(6) {
+                                        let mut recurse_groups = backward_pass_groups.clone();
+                                        recurse_groups[index_group].set_player_flag(6, false);
+                                        recurse_groups[index_group].set_player_flag(player_i, true);
+                                        let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                        max_backward_pass_groups = Some(
+                                            match max_backward_pass_groups.take() {
+                                                Some(curr) => {
+                                                    if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                                    < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                        found_group
+                                                    } else {
+                                                        curr
+                                                    }
+                                                },
+                                                None => found_group,
+                                            }
+                                        );
+                                        log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                                    }
+                                    continue 'outer;
+                                }
+                            }
+                        }
+                    } else if *redraw_i == Some(card_of_interest) {
+                        // Reflecting that the pile had this card before move i
+                        let bool_some_group_player_i_flag_is_true = backward_pass_groups.iter().any(|g| g.get_player_flag(player_i));
+                        if !bool_some_group_player_i_flag_is_true {
+                            let mut recurse_groups = backward_pass_groups.clone();
+                            let mut new_groups = CompressedGroupConstraint::zero();
+                            new_groups.set_player_flag(6, true);
+                            new_groups.set_total_count(1);
+                            recurse_groups.push(new_groups);
+                            let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                            max_backward_pass_groups = Some(
+                                match max_backward_pass_groups.take() {
+                                    Some(curr) => {
+                                        if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                        < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                            found_group
+                                        } else {
+                                            curr
+                                        }
+                                    },
+                                    None => found_group,
+                                }
+                            );
+                            log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                        } else {
+                            if backward_pass_group.get_player_flag(player_i) {
+                                let mut recurse_groups = backward_pass_groups.clone();
+                                recurse_groups[index_group].set_player_flag(6, true);
+                                recurse_groups[index_group].set_player_flag(player_i, false);
+                                let found_group = self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, recurse_groups);
+                                max_backward_pass_groups = Some(
+                                    match max_backward_pass_groups.take() {
+                                        Some(curr) => {
+                                            if curr.iter().filter(|group| group.get_player_flag(player_i)).count()
+                                            < found_group.iter().filter(|group| group.get_player_flag(player_i)).count() {
+                                                found_group
+                                            } else {
+                                                curr
+                                            }
+                                        },
+                                        None => found_group,
+                                    }
+                                );
+                                log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                            }
+                            continue 'outer;
+                        }
+                    } else {
+                        // redraw.is_none() && *reveal_i != card_of_interest
+                        // if relinquish.is_none() {
+                        //     if backward_pass_group.get_player_flag(player_i) {
+                        //         backward_pass_group.set_player_flag(player_i, false);
+                        //         // backward_pass_group.sub_alive_count(1);
+                        //         backward_pass_group.sub_total_count(1);
+                        //     }
+                        // }
+                        // handleWhat if relinquish is known?
+
+                        // redraw is_some() -> no need for change
+                        // redraw is_none9) -> handled in illegal_players
+                        max_backward_pass_groups = Some(self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, backward_pass_groups.clone()));
+                        log::trace!("max_backward_pass_groups is : {:?} after considering player {}, action {:?}", max_backward_pass_groups, self.history[index_loop].player(), self.history[index_loop].action_info());
+                    }
+                }
+                // TODO: THINK about unwrap
+                log::trace!("max_backward_pass_groups returned node : {:?}", max_backward_pass_groups);
+                return max_backward_pass_groups.unwrap()
+            },
+            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                // TODO:
+            },
+            ActionInfo::Start
+            | ActionInfo::StartInferred => {},
+        }
+        // some kind of min function
+        self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, backward_pass_groups)
+    }
     /// determines if a previous player 
     pub fn need_redraw_update(&self, index: usize, card_of_interest: Card, illegal_players: &[bool; 6]) -> bool {
         let action_player = self.history[index].player() as usize;
@@ -1866,16 +2365,24 @@ impl PathDependentCollectiveConstraint {
         // backward_pass_group only counts revealed/discarded cards in count_alive()
         // NOTE: forward_pass_group and backward_pass_group are used differently!
         //      they only use GroupConstraint as a convenient datastructure
+        // Count of backward_pass_group is meant to count unique cards
+        // flags are roughly meant to track where the cards can be
+        // backward_pass_group to count unique cards
         let mut backward_pass_group = CompressedGroupConstraint::zero();
         backward_pass_group.set_player_flag(self.history[self.history.len() - 1].player() as usize, true);
         // backward_pass_group.add_alive_count(1);
         backward_pass_group.add_total_count(1);
         let mut forward_pass_group = CompressedGroupConstraint::zero();
+        let mut players_had_revealed_or_discarded = [false; 6];
+        // Prob can optimize to use u8s
+        let mut backward_pass_groups: Vec<CompressedGroupConstraint> = Vec::with_capacity(3);
+        backward_pass_groups.push(backward_pass_group);
+        players_had_revealed_or_discarded[self.history[self.history.len() - 1].player() as usize] = true;
         // backward pass
         // TODO: fix total count exceeding error
         log::trace!("backwardpass start: {:?}", backward_pass_group);
         log::trace!("fwd_bwd_pass last move: {:?}", self.history[self.history.len() - 1]);
-        for i in (index+1..self.history.len()-1).rev() {
+        'outer: for i in (index+1..self.history.len()-1).rev() {
             let player_i = self.history[i].player() as usize;
             log::trace!("backward_pass checking i: {i} player_i: {player_i}, move: {:?}", self.history[i].action_info());
             match self.history[i].action_info() {
@@ -1885,12 +2392,20 @@ impl PathDependentCollectiveConstraint {
                         // backward_pass_group.add_alive_count(1);
                         backward_pass_group.add_total_count(1);
                     }
+                    if *discard_i == card_of_interest {
+                        players_had_revealed_or_discarded[player_i] = true;
+                        let mut new_groups = CompressedGroupConstraint::zero();
+                        new_groups.set_player_flag(player_i, true);
+                        new_groups.set_total_count(1);
+                        backward_pass_groups.push(new_groups);
+                    }
                 },
                 ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, relinquish } => {
                     // Maybe it exceeds maximum because I need to consider the pile for revealredraw redraw is known
                     if *reveal_i == card_of_interest {
                         // Reflecting that the player had this card before move i
                         if *relinquish == Some(card_of_interest) {
+                            players_had_revealed_or_discarded[player_i] = true;
                             // No check as it went from player to pile
                             // Not setting pile as we don't actually need to use it
                             // backward_pass_group.set_player_flag(6, true);
@@ -1903,13 +2418,38 @@ impl PathDependentCollectiveConstraint {
                                 // backward_pass_group.add_alive_count(1);
                                 backward_pass_group.add_total_count(1);
                             }
+                            for group in backward_pass_groups.iter_mut() {
+                                if group.get_player_flag(6) {
+                                    // This is greedy, may consider backtracking for min
+                                    group.set_player_flag(6, false);
+                                    group.set_player_flag(player_i, true);
+                                }
+                                continue 'outer;
+                            }
+                            let mut new_groups = CompressedGroupConstraint::zero();
+                            new_groups.set_player_flag(player_i, true);
+                            new_groups.set_total_count(1);
+                            backward_pass_groups.push(new_groups);
                         } else if relinquish.is_none() {
+                            players_had_revealed_or_discarded[player_i] = true;
                             if redraw_i.is_none() {
                                 if !backward_pass_group.get_player_flag(player_i) {
                                     backward_pass_group.set_player_flag(player_i, true);
                                     // backward_pass_group.add_alive_count(1);
                                     backward_pass_group.add_total_count(1);
                                 } 
+                                for group in backward_pass_groups.iter_mut() {
+                                    if group.get_player_flag(6) {
+                                        // This is greedy, may consider backtracking for min
+                                        group.set_player_flag(6, false);
+                                        group.set_player_flag(player_i, true);
+                                    }
+                                    continue 'outer;
+                                }
+                                let mut new_groups = CompressedGroupConstraint::zero();
+                                new_groups.set_player_flag(player_i, true);
+                                new_groups.set_total_count(1);
+                                backward_pass_groups.push(new_groups);
                             } else if *redraw_i == Some(card_of_interest) {
                                 // TODO: Actually order of discard then revealredraw matters!
                                 // So i guess I should track in single_card_flags too huh
@@ -1924,6 +2464,10 @@ impl PathDependentCollectiveConstraint {
                                     // backward_pass_group.add_alive_count(1);
                                     backward_pass_group.add_total_count(1);
                                 }
+                                let mut new_groups = CompressedGroupConstraint::zero();
+                                new_groups.set_player_flag(player_i, true);
+                                new_groups.set_total_count(1);
+                                backward_pass_groups.push(new_groups);
                             } else {
                                 // Not setting pile as we don't actually need to use it
                                 // backward_pass_group.set_player_flag(6, true);
@@ -1937,6 +2481,18 @@ impl PathDependentCollectiveConstraint {
                                 //     backward_pass_group.add_total_count(1);
                                 // }
                                 // backward_pass_group.add_total_count(1);
+                                for group in backward_pass_groups.iter_mut() {
+                                    if group.get_player_flag(6) {
+                                        // This is greedy, may consider backtracking for min
+                                        group.set_player_flag(6, false);
+                                        group.set_player_flag(player_i, true);
+                                    }
+                                    continue 'outer;
+                                }
+                                let mut new_groups = CompressedGroupConstraint::zero();
+                                new_groups.set_player_flag(player_i, true);
+                                new_groups.set_total_count(1);
+                                backward_pass_groups.push(new_groups);
                             }
                         }
                     } else if *redraw_i == Some(card_of_interest) {
@@ -1946,7 +2502,22 @@ impl PathDependentCollectiveConstraint {
                             // backward_pass_group.set_player_flag(6, true);
                             // backward_pass_group.add_alive_count(1);
                             backward_pass_group.add_total_count(1);
+                        } else {
+                            // backward_pass_group.set_player_flag(6, true);
+                            backward_pass_group.set_player_flag(player_i, false);
                         }
+                        for group in backward_pass_groups.iter_mut() {
+                            if group.get_player_flag(player_i) {
+                                // This is greedy, may consider backtracking for min
+                                group.set_player_flag(6, true);
+                                group.set_player_flag(player_i, false);
+                            }
+                            continue 'outer;
+                        }
+                        let mut new_groups = CompressedGroupConstraint::zero();
+                        new_groups.set_player_flag(6, true);
+                        new_groups.set_total_count(1);
+                        backward_pass_groups.push(new_groups);
                     } else {
                         // redraw.is_none() && *reveal_i != card_of_interest
                         // if relinquish.is_none() {
@@ -1957,7 +2528,84 @@ impl PathDependentCollectiveConstraint {
                         //     }
                         // }
                         // handleWhat if relinquish is known?
+
+                        // redraw is_some() -> no need for change
+                        // redraw is_none9) -> handled in illegal_players
                     }
+                    // if *reveal_i == card_of_interest {
+                    //     // Reflecting that the player had this card before move i
+                    //     if *relinquish == Some(card_of_interest) {
+                    //         // No check as it went from player to pile
+                    //         // Not setting pile as we don't actually need to use it
+                    //         // backward_pass_group.set_player_flag(6, true);
+                    //         // backward_pass_group.add_alive_count(1);
+                    //         // backward_pass_group.add_total_count(1);
+                    //         // TESTING, was thinking i might need to consider how the pile moves too?
+                    //         // Also consider needing to subtract?
+                    //         backward_pass_group.set_player_flag(player_i, true);
+                    //         if !backward_pass_group.get_player_flag(6) {
+                    //             backward_pass_group.set_player_flag(6, true);
+                    //             // backward_pass_group.add_alive_count(1);
+                    //             backward_pass_group.add_total_count(1);
+                    //         }
+                    //     } else if relinquish.is_none() {
+                    //         if redraw_i.is_none() {
+                    //             if !backward_pass_group.get_player_flag(player_i) {
+                    //                 backward_pass_group.set_player_flag(player_i, true);
+                    //                 // backward_pass_group.add_alive_count(1);
+                    //                 backward_pass_group.add_total_count(1);
+                    //             } 
+                    //         } else if *redraw_i == Some(card_of_interest) {
+                    //             // TODO: Actually order of discard then revealredraw matters!
+                    //             // So i guess I should track in single_card_flags too huh
+                    //             // P2 Discard DUK
+                    //             // P2 RR DUK
+                    //             // => 2 DUKS
+                    //             // P2 RR DUK
+                    //             // P2 Discard DUK
+                    //             // => 1 DUK
+                    //             if !backward_pass_group.get_player_flag(player_i) {
+                    //                 backward_pass_group.set_player_flag(player_i, true);
+                    //                 // backward_pass_group.add_alive_count(1);
+                    //                 backward_pass_group.add_total_count(1);
+                    //             }
+                    //         } else {
+                    //             // Not setting pile as we don't actually need to use it
+                    //             // backward_pass_group.set_player_flag(6, true);
+                    //             // backward_pass_group.add_alive_count(1);
+                    //             // TESTING
+                    //             // If u reveal the card that means pile had the card before that turn
+                    //             // How does it interact with a RR None group?
+                    //             // if !backward_pass_group.get_player_flag(6) {
+                    //             //     backward_pass_group.set_player_flag(6, true);
+                    //             //     // backward_pass_group.add_alive_count(1);
+                    //             //     backward_pass_group.add_total_count(1);
+                    //             // }
+                    //             // backward_pass_group.add_total_count(1);
+                    //         }
+                    //     }
+                    // } else if *redraw_i == Some(card_of_interest) {
+                    //     // Reflecting that the pile had this card before move i
+                    //     if !backward_pass_group.get_player_flag(player_i) { // This check is rightly player_i
+                    //         // Not setting pile as we don't actually need to use it
+                    //         // backward_pass_group.set_player_flag(6, true);
+                    //         // backward_pass_group.add_alive_count(1);
+                    //         backward_pass_group.add_total_count(1);
+                    //     } else {
+                    //         // backward_pass_group.set_player_flag(6, true);
+                    //         backward_pass_group.set_player_flag(player_i, false);
+                    //     }
+                    // } else {
+                    //     // redraw.is_none() && *reveal_i != card_of_interest
+                    //     // if relinquish.is_none() {
+                    //     //     if backward_pass_group.get_player_flag(player_i) {
+                    //     //         backward_pass_group.set_player_flag(player_i, false);
+                    //     //         // backward_pass_group.sub_alive_count(1);
+                    //     //         backward_pass_group.sub_total_count(1);
+                    //     //     }
+                    //     // }
+                    //     // handleWhat if relinquish is known?
+                    // }
                     // OLD
                     // if redraw_i.is_none() && self.history[i].player() == action_player as u8 {
                     // if redraw_i.is_none() {
@@ -1996,6 +2644,7 @@ impl PathDependentCollectiveConstraint {
                         // backward_pass_group.sub_alive_count(1);
                         backward_pass_group.sub_total_count(1);
                     }
+                    // TODO: Handle this with groups
                     // if self.history[i].player() == action_player as u8 {
                     //     // illegal
                     //     return false
@@ -2004,9 +2653,14 @@ impl PathDependentCollectiveConstraint {
                 ActionInfo::Start => {},
                 ActionInfo::StartInferred => {},
             }
-            log::trace!("backwardpass i: {:?}", backward_pass_group);
+            // log::trace!("backwardpass i: {:?}", backward_pass_group);
+            log::trace!("backwardpassgroups i: {:?}", backward_pass_groups);
         }
-        log::trace!("backward_pass_group: {:?}", backward_pass_group);
+        // hijacking to test backtracking
+        backward_pass_groups = self.backward_pass_minimum_cards_shown(index, card_of_interest);
+        let max_action_player_cards_of_interest = self.backward_max_player_cards(index, card_of_interest);
+        log::trace!("max_action_player_cards_of_interest: {:?}", max_action_player_cards_of_interest);
+        log::trace!("backward_pass_groups: {:?}", backward_pass_groups);
         // forward pass
         for i in 2..index {
             let player_i = self.history[i].player() as usize;
@@ -2016,6 +2670,9 @@ impl PathDependentCollectiveConstraint {
                 ActionInfo::Discard { discard } => {
                     if *discard == card_of_interest {
                         forward_pass_group.add_dead_count(1);
+                        if forward_pass_group.get_player_flag(player_i) {
+                            forward_pass_group.sub_alive_count(1);
+                        }
                     }
                 },
                 ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
@@ -2057,12 +2714,30 @@ impl PathDependentCollectiveConstraint {
                 },
             }
         }
+        let mut combined = forward_pass_group;
+        let mut total_count = combined.count_alive() + combined.count_dead();
+        // again this is greedy and you could probably find the biggest group or something
+        for group in backward_pass_groups.iter() {
+            if combined.part_list_is_mut_excl(*group) {
+                total_count += 1;
+                log::trace!("Compared combined: {:?} with group_i: {:?} and increased total_count to: {}", combined, group, total_count);
+                for i in 0..7 {
+                    // TODO: OPTIMIZE
+                    // Just make a bitwise OR
+                    if !combined.get_player_flag(i) {
+                        combined.set_player_flag(i, group.get_player_flag(i));
+                    }
+                }
+            }
+        }
+        log::trace!("forward_pass_group before check: {:?}", forward_pass_group);
         let bool_2_cards_outside_player = if let ActionInfo::RevealRedraw { reveal, redraw , .. }= self.history[index].action_info() {
             if *reveal == card_of_interest && redraw.is_none() {
-                if !backward_pass_group.get_player_flag(action_player) {
-                    log::trace!("lookback_check_3_fwd_bwd_pass early exit: {}", false);
-                    return false
-                }
+                // This is just !illegal_players
+                // if !backward_pass_group.get_player_flag(action_player) {
+                //     log::trace!("lookback_check_3_fwd_bwd_pass early exit: {}", false);
+                //     return false
+                // }
                 
                 log::trace!("forward_pass_group: {:?}", forward_pass_group);
                 if !forward_pass_group.get_player_flag(action_player) {
@@ -2070,8 +2745,22 @@ impl PathDependentCollectiveConstraint {
                         log::trace!("lookback_check_3_fwd_bwd_pass A : {}", true);
                         return true
                     }
-                    if forward_pass_group.count_dead() + backward_pass_group.get_total_count() == 3 {
-                        log::trace!("lookback_check_3_fwd_bwd_pass B : {}", true);
+                    // How is it that order matters for the above and this check?
+                    // it cant both be true tho?
+                    if max_action_player_cards_of_interest > 1 {
+                        // player could have had 2 alive cards
+                        log::trace!("lookback_check_3_fwd_bwd_pass B : {}, total_count: {}", false, total_count);
+                        return false
+                    }
+                    // Maybe do the ME union as per before?
+                    // if forward_pass_group.count_dead() + backward_pass_group.get_total_count() == 3 {
+                    //     log::trace!("lookback_check_3_fwd_bwd_pass B : {}", true);
+                    //     return true
+                    // }
+                    log::trace!("lookback_check_3_fwd_bwd_pass total_count: {}", total_count);
+                    // I think might need to do another DP for maximum cards for player
+                    if total_count == 3 {
+                        log::trace!("lookback_check_3_fwd_bwd_pass B : {}, total_count: {}", true, total_count);
                         return true
                     }
                 }
@@ -2081,18 +2770,28 @@ impl PathDependentCollectiveConstraint {
             false
         };
         log::trace!("lookback_check_3_fwd_bwd_pass: {}", false);
-        
-        
+        if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = self.history[index].action_info() {
+
+            log::trace!("need_redraw_update: redraw_i.is_none() {}", redraw_i.is_none());
+            log::trace!("need_redraw_update: illegal_players {:?}", illegal_players);
+            log::trace!("need_redraw_update: !illegal_players[action_player] {}", !illegal_players[action_player]);
+            log::trace!("need_redraw_update: players_had_revealed_or_discarded {:?}", players_had_revealed_or_discarded);
+            log::trace!("need_redraw_update: players_had_revealed_or_discarded[action_player] {}", players_had_revealed_or_discarded[action_player]);
+            log::trace!("need_redraw_update: self.history[index - 1].public_constraints()[action_player] {:?}", self.history[index - 1].public_constraints()[action_player]);
+            log::trace!("need_redraw_update: self.history[index - 1].public_constraints()[action_player].len() == 1 {}", self.history[index - 1].public_constraints()[action_player].len() == 1);
+
+        }
         
         if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = self.history[index].action_info() {
-            !illegal_players[action_player] // skip if player RR after too (dk which revealredraw the player redrew)
-            && redraw_i.is_none()
-            && backward_pass_group.get_player_flag(action_player)
+            redraw_i.is_none() 
+            && !illegal_players[action_player] // skip if player RR after too (dk which revealredraw the player redrew)
+            && players_had_revealed_or_discarded[action_player] // checks if player did reveal/redraw that card before
             && (
                 // if you had 1 live, you must have withdrawn the card you Reveal/Discard later on
-                self.history[index].public_constraints()[action_player].len() == 1
+                self.history[index - 1].impossible_constraints()[action_player][card_of_interest as usize]
+                || self.history[index - 1].public_constraints()[action_player].len() == 1
+                || self.history[self.history.len() - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == card_of_interest).count() as u8).sum::<u8>() == 3
                 // I like this
-                || self.history[index - 1].impossible_constraints()[action_player][card_of_interest as usize]
                 || (
                     *reveal_i == card_of_interest &&
                     // had to have withdrawn if other 2 cards are outside player
@@ -2101,6 +2800,7 @@ impl PathDependentCollectiveConstraint {
                     == 2
                 )
                 || bool_2_cards_outside_player
+                || false // *reveal != card_of_interest && 3 cards outside player
             )
         } else {
             false
