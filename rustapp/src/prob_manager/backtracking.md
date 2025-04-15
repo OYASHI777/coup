@@ -61,20 +61,198 @@ public_constraints represent known dead cards, inferred_constraints represent ca
 The algorithm generally consists of 2 parts. They are loosely named the "forward-pass" and the "backward-pass".
 
 The goal of the forward-pass is to update the current understanding of the game's state based on the latest move possible. This is achieved by updating the state of the game.
+The first goal of the backward-pass is to generally determine if a particular permutation of cards is possible to be achieved.
+The second goal of the backward-pass is to determine if at some past state, a particular permutation of cards was possible to be achieved.
+
+A particular permutation of cards can be as simple as player 1 having cards [A, C] or player 1 and 2 having [A, C] and [B].
+
+The second goal is useful in the forward-pass as a new action may reveal information about past actions, depending on whether a past state for a particular player was impossible. For example,
+
+Player 1 Reveals Card C Redraws None
+Player 2 Discards Card C
+Player 1 Discards Card C
+
+If at the time of the Reveal, Player 1 could not have had the state [C, C], then they must have redrawn Card C to be able to discard it later, they could not have had that card otherwise.
+
 
 ### 3.1 Forward-pass
 ### 3.1 Backward-pass
-Outline the algorithm steps using pseudocode.
+Backward-pass makes use of backtracking.
 
-```plaintext
-Algorithm: FiniteDifferenceSolver
-Input: Initial condition u0, time step Δt, spatial step Δx, total time T
-Output: Approximated solution u at time T
+It starts at the latest move played, and traverses possible path by moving back up the history of actions.
 
-1. Initialize u = u0.
-2. For time t = 0 to T with step Δt:
-    a. Compute spatial derivatives using finite differences.
-    b. Update u based on the equation:
-       u_new = u + Δt * (D * Laplacian(u) + f(u, x, t))
-    c. Set u = u_new.
-3. Return u.
+This is to search through possible "trajectories" in which it might have been possible to arrive at the proposed current particular permutation of cards.
+
+Let's say we are interested in the permutation of cards,
+
+[[] [] [A, C] [] [] [] []]
+
+TODO!
+
+#### 3.1.2 Backward-pass Cases
+We use the following notation here to represent the state tracked as we move through the tree in reverse.
+This represents a change to our stored (temporary) state as we go from time T+1 to time T.
+|  Time   |  P1    |
+Move   T  :  []    <- Public  
+Move   T  :  [C0]  <- Inferred
+
+Move T + 1:  [C0]  <- Public
+Move T + 1:  []    <- Inferred
+
+C0 referring to the first possible Card of the 3 total. This is just for visual documentation.
+##### Discards
+This is the simplest case. It concerns only the player involved in the discard.
+Assume: if a player discards, the public constraint should be updated after. Therefore, when we begin our search, we have the latest public constraints, and therefore when we traverse backwards in time, and some player discards it, it will be in public constraints at T + 1.
+
+Discard C
+Case A
+Move   T  :  []
+Move   T  :  [C0]
+
+Move T + 1:  [C0]
+Move T + 1:  []
+
+Case B
+Move   T  :  [A0]
+Move   T  :  [C0]
+
+Move T + 1:  [C0, A0]
+Move T + 1:  []
+
+Case C
+Move   T  :  [C1]
+Move   T  :  [C0]
+
+Move T + 1:  [C0, C1]
+Move T + 1:  []
+##### RevealRedraw
+This is more complex. It concerns only the player revealing the card, and the pile as the player redraws a random card from the pile after placing their revealed card into the pile.
+
+RevealRedraw Reveal C Redraw None 
+Case A
+Move   T  :  []     []
+Move   T  :  [C0]   []
+
+Move T + 1:  []     []
+Move T + 1:  []     []
+
+C0 Revealed
+
+Case B
+Move   T  :  []     []
+Move   T  :  [C0]   []
+
+Move T + 1:  []      []
+Move T + 1:  [C0]    []
+
+C0 Revealed
+
+Case C
+Move   T  :  []      []
+Move   T  :  [C0]    [C1]
+
+Move T + 1:  []      []
+Move T + 1:  [C1]    [(C0)]
+
+C0 Revealed C1 Redrawn
+
+Case D
+Move   T  :  []      []
+Move   T  :  [C0, A0]    []
+
+Move T + 1:  []      []
+Move T + 1:  [A0, (C0)]    []
+
+C0 Revealed and C0 redrawn
+
+Case D
+Move   T  :  []      []
+Move   T  :  [C0, A0]    [C1]
+
+Move T + 1:  []      []
+Move T + 1:  [A0, (C1)]    [(C0)]
+
+C0 Revealed and C1 redrawn
+
+Case E
+Move   T  :  []      []
+Move   T  :  [C0]    [A0]
+
+Move T + 1:  []      []
+Move T + 1:  [A0]    [(C0)]
+
+C0 Revealed and A0 redrawn
+
+Case E
+Move   T  :  []      []
+Move   T  :  [C0, C1]    []
+
+Move T + 1:  []      []
+Move T + 1:  [C0, C1]    []
+
+C0 in hand C1 revealed C1 redrawn
+
+Case E
+Move   T  :  []      []
+Move   T  :  [C0, C1]    [C2]
+
+Move T + 1:  []      []
+Move T + 1:  [C0, C2]    [(C1)]
+
+C0 in hand C1 revealed C2 redrawn
+
+Case F
+Move   T  :  []      []
+Move   T  :  [C0, A0]    []
+
+Move T + 1:  []      []
+Move T + 1:  [C0, A0]    []
+
+A0 in hand C0 Revealed C0 redrawn
+
+Case F
+Move   T  :  []      []
+Move   T  :  [C0, A0]    [C1]
+
+Move T + 1:  []      []
+Move T + 1:  [C1, A0]    [(C0)]
+
+A0 in hand C0 Revealed and C1 redrawn
+
+Case G
+Move   T  :  []      []
+Move   T  :  [C0, C1]    [A0]
+
+Move T + 1:  []      []
+Move T + 1:  [C1, A0]    [(C0)]
+
+C0 Revealed and A0 redrawn
+
+Case E
+Move   T  :  []      []
+Move   T  :  [C0, C1]    [A0]
+
+Move T + 1:  []      []
+Move T + 1:  [C0, A0]    [(C1)]
+
+C0 in hand C1 revealed A0 redrawn
+
+
+Case E
+Move   T  :  []      []
+Move   T  :  [C0]    [A0]
+
+Move T + 1:  []      []
+Move T + 1:  [A0]    [C0]
+
+C0 Revealed and A0 redrawn
+
+Case Illegal
+Move   T  :  []      []
+Move   T  :  [C0, E0]    [A0]
+
+Move T + 1:  []      []
+Move T + 1:  [A0, B0]    [(C0)]
+
+C0 Revealed and A0 redrawn
+E0 needs to continue from T to T + 1. This is not a viable move, as player would have 3 cards in T + 1.
