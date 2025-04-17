@@ -256,3 +256,5 @@ Move T + 1:  [A0, B0]    [(C0)]
 
 C0 Revealed and A0 redrawn
 E0 needs to continue from T to T + 1. This is not a viable move, as player would have 3 cards in T + 1.
+
+Can actually just move A0 and C0 so it becomes [C0, B0] [A0] and if it inferred in T not in this, its illegal
