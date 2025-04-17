@@ -84,11 +84,32 @@ pub fn temp() {
     test_inferred_constaints.push(inferred_constraints);
     let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Duke]];
     test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![Card::Ambassador, Card::Captain]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Ambassador, Card::Captain]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![Card::Captain, Card::Captain]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Captain, Card::Captain]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Duke, Card:: Ambassador]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Duke, Card:: Ambassador, Card::Ambassador]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![Card:: Ambassador, Card::Ambassador]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Captain, Card::Duke], vec![], vec![], vec![], vec![], vec![], vec![Card::Contessa, Card::Assassin, Card::Contessa]];
+    test_inferred_constaints.push(inferred_constraints);
     for item in test_inferred_constaints.iter() {
         let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
         log::info!("src: {:?}", cc);
         log::info!("dest: {:?}", item);
     }
+    // for item in test_inferred_constaints.iter() {
+    //     let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw(Card::Ambassador, Card::Captain, 0, item);
+    //     log::info!("src: {:?}", cc);
+    //     log::info!("dest: {:?}", item);
+    // }
 }
 pub fn test() {
     {
