@@ -2640,6 +2640,9 @@ impl PathDependentCollectiveConstraint {
             log::trace!("early return");
             return Vec::with_capacity(0);
         }
+        // This needs to have player indexes before pile indexes
+        // we check what player redrew first, which moves item from player to pile
+        // then we check what could have moved from pile to player
         let source_cards: Vec<(usize, Card)> = inferred_constraints[player_loop]
             .iter()
             .copied()
