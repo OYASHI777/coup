@@ -94,8 +94,13 @@ pub fn temp() {
             }
         }
     }
+    // for item in test_inferred_constraints.iter() {
+    //     let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
+    //     log::info!("src: {:?}", cc);
+    //     log::info!("dest: {:?}", item);
+    // }
     for item in test_inferred_constraints.iter() {
-        let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
+        let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
         log::info!("src: {:?}", cc);
         log::info!("dest: {:?}", item);
     }

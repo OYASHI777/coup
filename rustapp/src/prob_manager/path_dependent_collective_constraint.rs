@@ -2640,6 +2640,7 @@ impl PathDependentCollectiveConstraint {
             log::trace!("early return");
             return Vec::with_capacity(0);
         }
+        // TODO: OPTIMIZE Probably don't need this source thing
         // This needs to have player indexes before pile indexes
         // we check what player redrew first, which moves item from player to pile
         // then we check what could have moved from pile to player
@@ -2659,6 +2660,78 @@ impl PathDependentCollectiveConstraint {
         Self::build_variants_reveal_redraw_none_opt(reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
         return variants
     }
+    // TODO: modify inferred_constraints and recurse when no longer testing this
+    pub fn return_variants_reveal_redraw_none_opt(reveal: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
+        if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5 
+        && !inferred_constraints[player_loop].contains(&reveal)
+        && !inferred_constraints[6].contains(&reveal) {
+            // This state cannot be arrive after the reveal_redraw
+            log::trace!("early return");
+            return Vec::with_capacity(0);
+        }
+        let mut player_hand = inferred_constraints[player_loop].clone();
+        let mut pile_hand = inferred_constraints[6].clone();
+        for (i, card_player) in inferred_constraints[player_loop].iter().enumerate() {
+            // Card Source was not from Pile
+            let mut bool_move_from_pile_to_player = false;
+            if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+                pile_hand.swap_remove(pos);
+                bool_move_from_pile_to_player = true;
+            }
+            player_hand.push(reveal);
+            let mut temp = inferred_constraints.clone();
+            temp[player_loop] = player_hand.clone();
+            temp[6] = pile_hand.clone();
+
+            if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
+                player_hand.swap_remove(pos);
+            }
+            if bool_move_from_pile_to_player {
+                pile_hand.push(reveal);
+            }
+            // Probably need push only if certain conditions met
+            if temp[player_loop].len() < 3  
+            && temp[6].len() < 4 
+            && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                // TODO: Recurse here in other version
+                variants.push(temp);
+            }
+
+            // Card Source was from Pile
+            bool_move_from_pile_to_player = false;
+            player_hand.swap_remove(i);
+            pile_hand.push(*card_player);
+            if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+                pile_hand.swap_remove(pos);
+                bool_move_from_pile_to_player = true;
+            }
+            player_hand.push(reveal);
+            let mut temp = inferred_constraints.clone();
+            temp[player_loop] = player_hand.clone();
+            temp[6] = pile_hand.clone();
+
+            // Probably need push only if certain conditions met
+            if temp[player_loop].len() < 3  
+            && temp[6].len() < 4 
+            && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                // TODO: Recurse here in other version
+                variants.push(temp);
+            }
+
+            if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
+                player_hand.swap_remove(pos);
+            }
+            if bool_move_from_pile_to_player {
+                pile_hand.push(reveal);
+            }
+            if let Some(pos) = pile_hand.iter().rposition(|c| c == card_player) {
+                pile_hand.swap_remove(pos);
+            }
+            player_hand.push(*card_player);
+        }
+        return variants
+    }
     /// Builds possible previous inferred_constraint states
     /// All cards have a source
     /// card == reveal in player hand can come from
@@ -2667,6 +2740,7 @@ impl PathDependentCollectiveConstraint {
     /// - pile after revealing then redrawing different
     /// - player after revealing then redrawing different
     /// 
+    /// Pretty overkill way to solve this, but I think will be useful reference for AMB
     fn build_variants_reveal_redraw_none(
         reveal: Card,
         cards: &[(usize, Card)],
