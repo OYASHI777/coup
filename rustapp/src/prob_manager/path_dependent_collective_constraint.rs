@@ -2858,6 +2858,7 @@ impl PathDependentCollectiveConstraint {
         }
     }
     // TODO: not use this function
+    // literally its fully known what other combination could there be bro
     pub fn return_variants_reveal_redraw(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
         let mut horribly_inefficient_clone = inferred_constraints.clone();
         if let Some(pos) = horribly_inefficient_clone[player_loop].iter().position(|c| *c == redraw) {
@@ -2869,92 +2870,6 @@ impl PathDependentCollectiveConstraint {
         } 
         horribly_inefficient_clone[player_loop].push(reveal);
         vec![horribly_inefficient_clone]
-        // let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
-        // if inferred_constraints[player_loop].len() == 2
-        // && !inferred_constraints[player_loop].contains(&redraw)
-        // || inferred_constraints[6].len() == 3
-        // && !inferred_constraints[6].contains(&reveal) {
-        //     // This state cannot be arrive after the reveal_redraw
-        //     return Vec::with_capacity(0);
-        // }
-        // let source_cards: Vec<(usize, Card)> = inferred_constraints[player_loop]
-        //     .iter()
-        //     .copied()
-        //     .map(|c| (player_loop, c))
-        //     .chain(
-        //         inferred_constraints[6]
-        //             .iter()
-        //             .copied()
-        //             .map(|c| (6, c)),
-        //     )
-        //     .collect();
-        // Self::build_variants_reveal_redraw(reveal, redraw, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
-        // return variants
-    }
-    /// Builds possible previous inferred_constraint states
-    fn build_variants_reveal_redraw(
-        reveal: Card,
-        redraw: Card,
-        cards: &[(usize, Card)],
-        idx: usize,
-        player_loop: usize,
-        pile_index: usize,
-        player_to_pile_count: u8, // dst -> src
-        pile_to_player_count: u8, // dst -> src 
-        current: &Vec<Vec<Card>>,
-        variants: &mut Vec<Vec<Vec<Card>>>,
-    ) {
-        // P0 RR AMB CAP
-        // Would be impossible here as there is no room for CAP in player in dest,
-        // src: [[[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain]]]
-        // dest: [[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain]]
-        if idx == cards.len() {
-            // TODO: OPTIMIZE the push
-            let mut source_constraints = current.clone();
-            if !source_constraints[player_loop].contains(&reveal) {
-                source_constraints[player_loop].push(reveal);
-            }
-            if !source_constraints[pile_index].contains(&redraw) {
-                source_constraints[pile_index].push(redraw);
-            }
-            if source_constraints[player_loop].len() < 3 
-            && source_constraints[pile_index].len() < 4 
-            && source_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4
-            && source_constraints.iter().map(|v| v.iter().filter(|c| **c == redraw).count() as u8).sum::<u8>() < 4
-            {
-                variants.push(source_constraints);
-            }
-            return;
-        }
-    
-        // Destructure this card's source and value
-        let (dst, card) = cards[idx];
-    
-        // OPTION A: leave it in the same container
-        Self::build_variants_reveal_redraw(reveal, redraw, cards, idx + 1, player_loop, pile_index, player_to_pile_count, pile_to_player_count, current, variants);
-        let is_player_card = dst == player_loop;
-        let could_have_swapped = if is_player_card {
-            player_to_pile_count < 1 
-            && card == redraw
-        } else {
-            pile_to_player_count < 1 
-            && card == reveal 
-        };
-        // OPTION B: move it to the other container
-        if could_have_swapped {
-            let (src, new_player_to_pile_count, new_pile_to_player_count) = if is_player_card {
-                (pile_index, player_to_pile_count + 1, pile_to_player_count)
-            } else {
-                (player_loop, player_to_pile_count, pile_to_player_count + 1)
-            };
-            
-            let mut new_constraints = current.clone();
-            if let Some(pos) = new_constraints[dst].iter().position(|&c| c == card) {
-                new_constraints[dst].swap_remove(pos);
-                new_constraints[src].push(card);
-                Self::build_variants_reveal_redraw(reveal, redraw, cards, idx + 1, player_loop, pile_index, new_player_to_pile_count, new_pile_to_player_count, &new_constraints, variants);
-            }
-        }
     }
     pub fn return_variants_reveal_relinquish(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
         if inferred_constraints[6].len() == 3
@@ -2990,6 +2905,10 @@ impl PathDependentCollectiveConstraint {
         current: &Vec<Vec<Card>>,
         variants: &mut Vec<Vec<Vec<Card>>>,
     ) {
+        // Ok im thinking we gotta do the relinquish part for sure
+        // Then for cards in player hand, just see if source is hand or pile
+        // there simple
+
         // P0 RR AMB CAP
         // Would be impossible here as there is no room for CAP in player in dest,
         // src: [[[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain]]]
