@@ -3014,10 +3014,12 @@ impl PathDependentCollectiveConstraint {
             return variants;
             // TODO: remove if recursing
         }
-        for (i, card_player) in inferred_constraints[player_loop].iter().enumerate() {
+        for (_, card_player) in inferred_constraints[player_loop].iter().enumerate() {
             // Card Source was from Pile
             let mut bool_move_from_pile_to_player = false;
-            player_hand.swap_remove(i);
+            if let Some(pos) = player_hand.iter().position(|c| *c == *card_player) {
+                player_hand.swap_remove(pos);
+            }
             pile_hand.push(*card_player);
             if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
                 pile_hand.swap_remove(pos);
