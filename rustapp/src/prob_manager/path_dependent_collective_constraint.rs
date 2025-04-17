@@ -2814,6 +2814,10 @@ impl PathDependentCollectiveConstraint {
             return;
         }
 
+        // CASE: player Card did not come from pile after reveal
+        // CASE: pile Card did not come from player after reveal
+        // ADDITIONALLY: if player reveal and redrew the same card, it is considered seperate cards
+        Self::build_variants_reveal_redraw_none_opt(reveal, cards, idx + 1, player_loop, pile_index, player_to_pile_count, pile_to_player_count, current, variants);
         // Destructure this card's source and value
         let (dst, card) = cards[idx];
         // OPTIMIZE: probably could just run this as the ONLY case for reveal redraw as the other case will be a more specific case of this
@@ -2824,18 +2828,14 @@ impl PathDependentCollectiveConstraint {
         if dst == player_loop && card == reveal {
             // No need to add reveal anymore
             Self::build_variants_reveal_redraw_none_opt(reveal, cards, cards.len(), player_loop, pile_index, 1, 1, current, variants);
+            return
         } 
-        // src same as dest and RR card is diff
 
-        // CASE: player Card did not come from pile after reveal
-        // CASE: pile Card did not come from player after reveal
-        // ADDITIONALLY: if player reveal and redrew the same card, it is considered seperate cards
-        Self::build_variants_reveal_redraw_none_opt(reveal, cards, idx + 1, player_loop, pile_index, player_to_pile_count, pile_to_player_count, current, variants);
         let is_player_card = dst == player_loop;
         let could_have_swapped = if is_player_card {
             player_to_pile_count < 1 
             // Testing OPTIMIZE: exclude all other reveal redraw same cards
-            && card != reveal
+            // && card != reveal
         } else {
             pile_to_player_count < 1 && card == reveal
         };
@@ -2857,28 +2857,39 @@ impl PathDependentCollectiveConstraint {
             }
         }
     }
+    // TODO: not use this function
     pub fn return_variants_reveal_redraw(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
-        let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
-        if inferred_constraints[player_loop].len() == 2
-        && !inferred_constraints[player_loop].contains(&redraw)
-        || inferred_constraints[6].len() == 3
-        && !inferred_constraints[6].contains(&reveal) {
-            // This state cannot be arrive after the reveal_redraw
-            return Vec::with_capacity(0);
-        }
-        let source_cards: Vec<(usize, Card)> = inferred_constraints[player_loop]
-            .iter()
-            .copied()
-            .map(|c| (player_loop, c))
-            .chain(
-                inferred_constraints[6]
-                    .iter()
-                    .copied()
-                    .map(|c| (6, c)),
-            )
-            .collect();
-        Self::build_variants_reveal_redraw(reveal, redraw, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
-        return variants
+        let mut horribly_inefficient_clone = inferred_constraints.clone();
+        if let Some(pos) = horribly_inefficient_clone[player_loop].iter().position(|c| *c == redraw) {
+            horribly_inefficient_clone[player_loop].swap_remove(pos);
+        } 
+        horribly_inefficient_clone[6].push(redraw);
+        if let Some(pos) = horribly_inefficient_clone[6].iter().position(|c| *c == reveal) {
+            horribly_inefficient_clone[6].swap_remove(pos);
+        } 
+        horribly_inefficient_clone[player_loop].push(reveal);
+        vec![horribly_inefficient_clone]
+        // let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
+        // if inferred_constraints[player_loop].len() == 2
+        // && !inferred_constraints[player_loop].contains(&redraw)
+        // || inferred_constraints[6].len() == 3
+        // && !inferred_constraints[6].contains(&reveal) {
+        //     // This state cannot be arrive after the reveal_redraw
+        //     return Vec::with_capacity(0);
+        // }
+        // let source_cards: Vec<(usize, Card)> = inferred_constraints[player_loop]
+        //     .iter()
+        //     .copied()
+        //     .map(|c| (player_loop, c))
+        //     .chain(
+        //         inferred_constraints[6]
+        //             .iter()
+        //             .copied()
+        //             .map(|c| (6, c)),
+        //     )
+        //     .collect();
+        // Self::build_variants_reveal_redraw(reveal, redraw, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
+        // return variants
     }
     /// Builds possible previous inferred_constraint states
     fn build_variants_reveal_redraw(
