@@ -2762,6 +2762,11 @@ impl PathDependentCollectiveConstraint {
     /// - pile after revealing then redrawing different
     /// - player after revealing then redrawing different
     /// 
+    /// Not trying that many cases here as some of them just lead to more specific sets that will already be covered
+    /// e.g. 
+    /// src: [[Ambassador], [], [], [], [], [], [Assassin, Ambassador]], [Ambassador, Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
+    /// dest: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
+    /// the second is a more specific case of the first item in src
     fn build_variants_reveal_redraw_none_opt(
         reveal: Card,
         cards: &[(usize, Card)],
@@ -2798,8 +2803,6 @@ impl PathDependentCollectiveConstraint {
             // Not exactly right as player_to_pile could be a non ambassador
             // Add if player_to_pile is 0
             if !source_constraints[player_loop].contains(&reveal)
-            // && !(player_to_pile_count == 0 && pile_to_player_count == 0 && source_constraints[player_loop].contains(&reveal)) 
-            // && (player_to_pile_count == 1 && !source_constraints[player_loop].contains(&reveal)) 
             { // TESTING OPTIMIZE
                 source_constraints[player_loop].push(reveal);
             }
