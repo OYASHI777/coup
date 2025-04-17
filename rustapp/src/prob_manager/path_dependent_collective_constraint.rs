@@ -2710,15 +2710,18 @@ impl PathDependentCollectiveConstraint {
         // Destructure this card's source and value
         let (dst, card) = cards[idx];
     
-        // dest Card originally left player hand and returned to player and is the same unique card 
+        // CASE: Card originally left player hand and returned to player and is the same unique card 
+        // T                :  [C0]    []
+        // T after reveal   :  []    [C0]
+        // T + 1            :  [C0]    []
         if dst == player_loop && card == reveal {
             // No need to add reveal anymore
             Self::build_variants_reveal_redraw_none(reveal, cards, cards.len(), player_loop, pile_index, 1, 1, current, variants);
         } 
         // src same as dest and RR card is diff
 
-
-        // OPTION A: leave it in the same container
+        // CASE: player Card did not come from pile after reveal
+        // CASE: pile Card did not come from player after reveal
         Self::build_variants_reveal_redraw_none(reveal, cards, idx + 1, player_loop, pile_index, player_to_pile_count, pile_to_player_count, current, variants);
         let is_player_card = dst == player_loop;
         let could_have_swapped = if is_player_card {
@@ -2726,7 +2729,8 @@ impl PathDependentCollectiveConstraint {
         } else {
             pile_to_player_count < 1 && card == reveal
         };
-        // OPTION B: move it to the other container
+        // CASE: player Card came from pile after reveal
+        // CASE: pile Card came from player after reveal
         if could_have_swapped {
             let (src, new_player_to_pile_count, new_pile_to_player_count) = if is_player_card {
                 (pile_index, player_to_pile_count + 1, pile_to_player_count)
