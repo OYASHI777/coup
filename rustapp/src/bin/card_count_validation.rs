@@ -95,7 +95,7 @@ pub fn temp() {
         }
     }
     for item in test_inferred_constraints.iter() {
-        let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
+        let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
         log::info!("src rr none: {:?}", reveal);
         let redraw = PathDependentCollectiveConstraint::return_variants_reveal_redraw(Card::Ambassador, Card::Assassin, 0, item);
         log::info!("src rr draw: {:?}", redraw);

@@ -2598,7 +2598,6 @@ impl PathDependentCollectiveConstraint {
         && !inferred_constraints[player_loop].contains(&reveal)
         && !inferred_constraints[6].contains(&reveal) {
             // This state cannot be arrive after the reveal_redraw
-            log::trace!("early return");
             return Vec::with_capacity(0);
         }
         // TODO: OPTIMIZE Probably don't need this source thing
@@ -2628,7 +2627,6 @@ impl PathDependentCollectiveConstraint {
         && !inferred_constraints[player_loop].contains(&reveal)
         && !inferred_constraints[6].contains(&reveal) {
             // This state cannot be arrive after the reveal_redraw
-            log::trace!("early return");
             return Vec::with_capacity(0);
         }
         let mut player_hand = inferred_constraints[player_loop].clone();
@@ -2651,7 +2649,7 @@ impl PathDependentCollectiveConstraint {
             // TODO: remove if recursing
         }
         // Doesnt handle empty case
-        for (i, card_player) in inferred_constraints[player_loop].iter().enumerate() {
+        for (_, card_player) in inferred_constraints[player_loop].iter().enumerate() {
             // Card Source was not from Pile
             let mut bool_move_from_pile_to_player = false;
             if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
@@ -2676,10 +2674,28 @@ impl PathDependentCollectiveConstraint {
                 // TODO: Recurse here in other version
                 variants.push(temp);
             }
-
+            // TEMP
+            // player_hand.sort();
+            // pile_hand.sort();
+            // let mut checker = inferred_constraints.clone();
+            // checker[player_loop].sort();
+            // checker[6].sort();
+            // if player_hand != checker[player_loop] {
+            //     log::warn!("failed 1 to pop player hand properly");
+            //     log::warn!("player_hand now: {:?}", player_hand);
+            // }
+            // if pile_hand != checker[6] {
+            //     log::warn!("failed 1 to pop pile hand properly");
+            //     log::warn!("pile_hand now: {:?}", pile_hand);
+            // }
             // Card Source was from Pile
+            player_hand = inferred_constraints[player_loop].clone();
+            pile_hand = inferred_constraints[6].clone();
             bool_move_from_pile_to_player = false;
-            player_hand.swap_remove(i);
+            if let Some(pos) = player_hand.iter().position(|c| *c == *card_player) {
+                player_hand.swap_remove(pos);
+            }
+            log::trace!("player_hand after removal of card_player");
             pile_hand.push(*card_player);
             if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
                 pile_hand.swap_remove(pos);
@@ -2708,6 +2724,18 @@ impl PathDependentCollectiveConstraint {
                 pile_hand.swap_remove(pos);
             }
             player_hand.push(*card_player);
+            // TEMP
+            // player_hand.sort();
+            // pile_hand.sort();
+            // let mut checker = inferred_constraints.clone();
+            // checker[player_loop].sort();
+            // checker[6].sort();
+            // if player_hand != checker[player_loop] {
+            //     log::warn!("failed 2 to pop player hand properly");
+            // }
+            // if pile_hand != checker[6] {
+            //     log::warn!("failed 2 to pop pile hand properly");
+            // }
         }
         return variants
     }
@@ -2965,7 +2993,6 @@ impl PathDependentCollectiveConstraint {
         if inferred_constraints[6].len() == 3
         && !inferred_constraints[6].contains(&reveal) {
             // This state cannot be arrive after the reveal_redraw
-            log::trace!("early return");
             return Vec::with_capacity(0);
         }
         let mut player_hand = inferred_constraints[player_loop].clone();
