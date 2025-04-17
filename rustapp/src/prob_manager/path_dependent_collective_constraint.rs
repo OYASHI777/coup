@@ -2859,17 +2859,15 @@ impl PathDependentCollectiveConstraint {
     }
     // TODO: not use this function
     // literally its fully known what other combination could there be bro
-    pub fn return_variants_reveal_redraw(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
-        let mut horribly_inefficient_clone = inferred_constraints.clone();
-        if let Some(pos) = horribly_inefficient_clone[player_loop].iter().position(|c| *c == redraw) {
-            horribly_inefficient_clone[player_loop].swap_remove(pos);
+    pub fn modify_variants_reveal_redraw(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &mut Vec<Vec<Card>>) {
+        if let Some(pos) = inferred_constraints[player_loop].iter().position(|c| *c == redraw) {
+            inferred_constraints[player_loop].swap_remove(pos);
         } 
-        horribly_inefficient_clone[6].push(redraw);
-        if let Some(pos) = horribly_inefficient_clone[6].iter().position(|c| *c == reveal) {
-            horribly_inefficient_clone[6].swap_remove(pos);
+        inferred_constraints[6].push(redraw);
+        if let Some(pos) = inferred_constraints[6].iter().position(|c| *c == reveal) {
+            inferred_constraints[6].swap_remove(pos);
         } 
-        horribly_inefficient_clone[player_loop].push(reveal);
-        vec![horribly_inefficient_clone]
+        inferred_constraints[player_loop].push(reveal);
     }
     pub fn return_variants_reveal_relinquish(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
         if inferred_constraints[6].len() == 3
