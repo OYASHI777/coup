@@ -2589,57 +2589,34 @@ impl PathDependentCollectiveConstraint {
                                 // relinquish_i == *reveal always
                                 // Case 0: player redrew card != reveal
                                 // Case 1: player redrew card == reveal (reveal from pile)
-
                                 
                             },
                             None => {
                                 // Case 0: player redrew card != reveal
                                 // Case 1: player redrew card == reveal (same as original)
                                 // Case 2: player redrew card == reveal (reveal from pile)
-                                // let mut switched_from_player_to_pile: u8 = 0; 
-                                // let mut switched_from_pile_to_player: u8 = 0; 
-                                // let possible_sources: [usize; 2] = [player_loop, 6];
-                                // let possible_inferred_constraints: Vec<Vec<Vec<Card>>> = Vec::new(); // TODO: OPTIMIZE
-                                // for source in possible_sources.iter() {
-                                //     for destination in possible_sources.iter() {
-                                //         let mut destination_swap_counter: u8 = 0;
-                                //         for card_dst in inferred_constraints[*destination].iter() {
-                                //             // Try a source
-                                //             let mut new_inferred_constraints = inferred_constraints.clone();
-
-                                //             if source != destination && destination_swap_counter < 1{
-                                //                 if let Some(pos) = new_inferred_constraints[*destination].iter().position(|p| *p == *card_dst) {
-                                //                     destination_swap_counter += 1;
-                                //                     new_inferred_constraints[*destination].swap_remove(pos);
-                                //                     new_inferred_constraints[*source].push(*card_dst);
-                                //                 }
-                                //             }
-                                //             possible_inferred_constraints.push(new_inferred_constraints);
-                                //         }   
-                                //     }
-                                // }
-                                let pile_index = 6;
                                 // Gets a Vec of index, Card for both player and pile
                                 let mut source_cards: Vec<(usize, Card)> = inferred_constraints[player_loop]
                                     .iter()
                                     .copied()
                                     .map(|c| (player_loop, c))
                                     .chain(
-                                        inferred_constraints[pile_index]
+                                        inferred_constraints[6]
                                             .iter()
                                             .copied()
-                                            .map(|c| (pile_index, c)),
+                                            .map(|c| (6, c)),
                                     )
                                     .collect();
-
-                                // for inferred_i in possible_inferred_constraints.iter() {
-                                //     let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, &mut new_inferred_i, cards);
-                                //     if let Some(inner) = response {
-                                //         if inner {
-                                //             return Some(true);
-                                //         }
-                                //     }
-                                // }
+                                let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
+                                Self::build_variants_reveal_redraw_none(*reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
+                                for inferred_i in variants.iter() {
+                                    let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, &mut inferred_i, cards);
+                                    if let Some(inner) = response {
+                                        if inner {
+                                            return Some(true);
+                                        }
+                                    }
+                                }
                             },
                         }
                     },
@@ -2700,6 +2677,8 @@ impl PathDependentCollectiveConstraint {
         let invalid_state: bool = false;
         if index_loop == index_of_interest - 1 {
             // Check actual constraints at leaf node
+            // All public_constraints inside actual
+            // All 
         } else {
             if invalid_state {
                 return None;
