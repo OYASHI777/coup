@@ -95,6 +95,8 @@ pub fn temp() {
         }
     }
     for item in test_inferred_constraints.iter() {
+        let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
+        log::info!("src rr unop: {:?}", reveal);
         let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
         log::info!("src rr none: {:?}", reveal);
         let redraw = PathDependentCollectiveConstraint::return_variants_reveal_redraw(Card::Ambassador, Card::Assassin, 0, item);
@@ -113,6 +115,12 @@ pub fn temp() {
         log::info!("dest: {:?}", item);
 
     }
+    // dest: [[Ambassador], [], [], [], [], [], [Ambassador, Ambassador, Captain]]
+    // dest: [[Ambassador], [], [], [], [], [], [Assassin]]
+    // src rr none: [[[Assassin, Ambassador], [], [], [], [], [], [Assassin]], [[Assassin, Ambassador], [], [], [], [], [], [Assassin, Assassin]]]
+    // src rr draw: [[[Ambassador, Ambassador], [], [], [], [], [], [Assassin, Assassin]]]
+    // src rr rel: [[[Assassin, Ambassador], [], [], [], [], [], [Assassin]], [[Assassin, Ambassador], [], [], [], [], [], [Assassin, Assassin]]]
+    // dest: [[Ambassador, Assassin], [], [], [], [], [], [Assassin]]
     // for item in test_inferred_constraints.iter() {
     //     let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
     //     log::info!("src: {:?}", cc);

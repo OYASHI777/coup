@@ -2652,27 +2652,29 @@ impl PathDependentCollectiveConstraint {
         for (_, card_player) in inferred_constraints[player_loop].iter().enumerate() {
             // Card Source was not from Pile
             let mut bool_move_from_pile_to_player = false;
-            if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
-                pile_hand.swap_remove(pos);
-                bool_move_from_pile_to_player = true;
-            }
-            player_hand.push(reveal);
-            let mut temp = inferred_constraints.clone();
-            temp[player_loop] = player_hand.clone();
-            temp[6] = pile_hand.clone();
-
-            if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
-                player_hand.swap_remove(pos);
-            }
-            if bool_move_from_pile_to_player {
-                pile_hand.push(reveal);
-            }
-            // Probably need push only if certain conditions met
-            if temp[player_loop].len() < 3  
-            && temp[6].len() < 4 
-            && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
-                // TODO: Recurse here in other version
-                variants.push(temp);
+            if *card_player != reveal || inferred_constraints[6].contains(&reveal) {
+                if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+                    pile_hand.swap_remove(pos);
+                    bool_move_from_pile_to_player = true;
+                }
+                player_hand.push(reveal);
+                let mut temp = inferred_constraints.clone();
+                temp[player_loop] = player_hand.clone();
+                temp[6] = pile_hand.clone();
+    
+                if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
+                    player_hand.swap_remove(pos);
+                }
+                if bool_move_from_pile_to_player {
+                    pile_hand.push(reveal);
+                }
+                // Probably need push only if certain conditions met
+                if temp[player_loop].len() < 3  
+                && temp[6].len() < 4 
+                && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                    // TODO: Recurse here in other version
+                    variants.push(temp);
+                }
             }
             // TEMP
             // player_hand.sort();
