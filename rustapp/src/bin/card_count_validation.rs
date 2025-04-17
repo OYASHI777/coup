@@ -56,9 +56,40 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    test();
+    // test();
+    temp();
 }
+use rustapp::prob_manager::path_dependent_collective_constraint::{self, PathDependentCollectiveConstraint};
+pub fn temp() {
+    logger(LevelFilter::Trace);
+    let mut test_inferred_constaints: Vec<Vec<Vec<Card>>> = Vec::with_capacity(15);
 
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![], vec![], vec![], vec![], vec![], vec![], vec![]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![Card::Ambassador]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Ambassador]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![Card::Captain]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Captain]];
+    test_inferred_constaints.push(inferred_constraints);
+    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Duke]];
+    test_inferred_constaints.push(inferred_constraints);
+    for item in test_inferred_constaints.iter() {
+        let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
+        log::info!("src: {:?}", cc);
+        log::info!("dest: {:?}", item);
+    }
+}
 pub fn test() {
     {
         // TODO: !!! You added both the start inference and the pile inference, test them seperately

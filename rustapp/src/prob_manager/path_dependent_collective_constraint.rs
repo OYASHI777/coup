@@ -2516,16 +2516,17 @@ impl PathDependentCollectiveConstraint {
         // Will temporarily not use memo and generate all group_constraints from start
         // TODO: OPTIMIZE store the group_constraints in history
         //      - or store all impossible_combinations in history to make checking invalid states faster and less memory usage too
-        if self.is_valid_combination(index_loop, index_of_interest, inferred_counts, inferred_constraints, cards).is_none() {
-            // early exit before terminal node
-            return None
-        }
+        return None; // TODO: REMOVE
+        // if self.is_valid_combination(index_loop, index_of_interest, inferred_counts, inferred_constraints, cards).is_none() {
+        //     // early exit before terminal node
+        //     return None
+        // }
         let player_loop = self.history[index_loop].player() as usize;
         match self.history[index_loop].action_info() {
             ActionInfo::Discard { discard } => {
                 inferred_constraints[player_loop].push(*discard);
                 // recurse
-                return self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, public_constraints, inferred_constraints, cards);
+                return self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, inferred_constraints, cards);
             },
             ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
                 // Check if will burst before pushing
@@ -2630,6 +2631,22 @@ impl PathDependentCollectiveConstraint {
         // Did not find a valid combination
         Some(false)
     }
+    pub fn return_variants_reveal_redraw_none(reveal: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+        let mut source_cards: Vec<(usize, Card)> = inferred_constraints[player_loop]
+            .iter()
+            .copied()
+            .map(|c| (player_loop, c))
+            .chain(
+                inferred_constraints[6]
+                    .iter()
+                    .copied()
+                    .map(|c| (6, c)),
+            )
+            .collect();
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
+        Self::build_variants_reveal_redraw_none(reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
+        return variants
+    }
     /// Builds possible previous inferred_constraint states
     fn build_variants_reveal_redraw_none(
         reveal: Card,
@@ -2644,7 +2661,9 @@ impl PathDependentCollectiveConstraint {
     ) {
         if idx == cards.len() {
             let mut source_constraints = current.clone();
-            source_constraints[player_loop].push(reveal);
+            if !source_constraints[player_loop].contains(&reveal) {
+                source_constraints[player_loop].push(reveal);
+            }
             variants.push(source_constraints);
             return;
         }
@@ -2655,7 +2674,11 @@ impl PathDependentCollectiveConstraint {
         // OPTION A: leave it in the same container
         Self::build_variants_reveal_redraw_none(reveal, cards, idx + 1, player_loop, pile_index, player_to_pile_count, pile_to_player_count, current, variants);
         let is_player_card = dst == player_loop;
-        let could_have_swapped = if is_player_card {player_to_pile_count < 1} else {pile_to_player_count < 1};
+        let could_have_swapped = if is_player_card {
+            player_to_pile_count < 1
+        } else {
+            pile_to_player_count < 1 && card == reveal
+        };
         // OPTION B: move it to the other container
         if could_have_swapped {
             let (src, new_player_to_pile_count, new_pile_to_player_count) = if is_player_card {
@@ -2663,13 +2686,13 @@ impl PathDependentCollectiveConstraint {
             } else {
                 (player_loop, player_to_pile_count, pile_to_player_count + 1)
             };
-    
+            
             let mut new_constraints = current.clone();
-            if let Some(pos) = new_constraints[src].iter().position(|&c| c == card) {
+            if let Some(pos) = new_constraints[dst].iter().position(|&c| c == card) {
                 new_constraints[dst].swap_remove(pos);
                 new_constraints[src].push(card);
+                Self::build_variants_reveal_redraw_none(reveal, cards, idx + 1, player_loop, pile_index, new_player_to_pile_count, new_pile_to_player_count, &new_constraints, variants);
             }
-            Self::build_variants_reveal_redraw_none(reveal, cards, idx + 1, player_loop, pile_index, new_player_to_pile_count, new_pile_to_player_count, &new_constraints, variants);
         }
     }
     /// Return true if hypothesised card permutations cannot be shown to be impossible
