@@ -94,16 +94,30 @@ pub fn temp() {
             }
         }
     }
+    for item in test_inferred_constraints.iter() {
+        let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
+        log::info!("src rr none: {:?}", reveal);
+        let redraw = PathDependentCollectiveConstraint::return_variants_reveal_redraw(Card::Ambassador, Card::Assassin, 0, item);
+        log::info!("src rr draw: {:?}", redraw);
+        let relin = PathDependentCollectiveConstraint::return_variants_reveal_relinquish_opt(Card::Ambassador, 0, item);
+        log::info!("src rr rel: {:?}", relin);
+        if reveal.len() < relin.len() {
+            log::warn!("reveal failed constraint check");
+        }
+        if reveal.len() < redraw.len() {
+            log::warn!("reveal redraw failed constraint check");
+        }
+        if relin.len() < redraw.len() {
+            log::warn!("redraw relin failed constraint check");
+        }
+        log::info!("dest: {:?}", item);
+
+    }
     // for item in test_inferred_constraints.iter() {
-    //     let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
+    //     let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
     //     log::info!("src: {:?}", cc);
     //     log::info!("dest: {:?}", item);
     // }
-    for item in test_inferred_constraints.iter() {
-        let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
-        log::info!("src: {:?}", cc);
-        log::info!("dest: {:?}", item);
-    }
     // for item in test_inferred_constaints.iter() {
     //     let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw(Card::Ambassador, Card::Captain, 0, item);
     //     log::info!("src: {:?}", cc);

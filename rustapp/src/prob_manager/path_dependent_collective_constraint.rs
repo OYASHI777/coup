@@ -2504,7 +2504,7 @@ impl PathDependentCollectiveConstraint {
         }
 
         // Do an unwrap_or false
-        !self.possible_to_have_cards_recurse(self.history.len() - 2, index, &mut inferred_counts, &mut inferred_constraints, cards).unwrap_or(false)
+        !self.possible_to_have_cards_recurse(self.history.len() - 2, index, &mut public_constraints, &mut inferred_constraints, cards).unwrap_or(false)
     }
     /// returns false if possible
     /// TODO: Consider passing in array to count inferred_so_far
@@ -2512,7 +2512,7 @@ impl PathDependentCollectiveConstraint {
     /// Tracks possible paths known cards could have come from in the past
     /// If a state is found to satisfy cards at the index_of_interest return Some(true)
     /// If no state is every found return Some(false) or None
-    pub fn possible_to_have_cards_recurse(&self, index_loop: usize, index_of_interest: usize, inferred_counts: &mut [u8; 5], inferred_constraints: &mut Vec<Vec<Card>>, cards: &Vec<Card>) -> Option<bool> {
+    pub fn possible_to_have_cards_recurse(&self, index_loop: usize, index_of_interest: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, cards: &Vec<Card>) -> Option<bool> {
         // Will temporarily not use memo and generate all group_constraints from start
         // TODO: OPTIMIZE store the group_constraints in history
         //      - or store all impossible_combinations in history to make checking invalid states faster and less memory usage too
@@ -2524,64 +2524,25 @@ impl PathDependentCollectiveConstraint {
         let player_loop = self.history[index_loop].player() as usize;
         match self.history[index_loop].action_info() {
             ActionInfo::Discard { discard } => {
-                inferred_constraints[player_loop].push(*discard);
+                if let Some(pos) = inferred_constraints[player_loop].iter().position(|c| *c == *discard) {
+                    inferred_constraints.swap_remove(pos);
+                }
+                public_constraints[player_loop].push(*discard);
                 // recurse
-                return self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, inferred_constraints, cards);
+                return self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, public_constraints, inferred_constraints, cards);
             },
             ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
                 // Check if will burst before pushing
                 match redraw {
                     Some(redraw_i) => {
-                        if *reveal == *redraw_i {
-                            // CASE 0: Redrew same card
-                            //      If had the card after this move either:
-                            //          - had card already before move
-                            //          - gained card from the redraw
-                                // reveal came from players' hand
-                            inferred_constraints[player_loop].push(*reveal);
-                            inferred_counts[*reveal as usize] += 1;
-                            let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, inferred_constraints, cards);
-                            inferred_counts[*reveal as usize] -= 1;
-                            inferred_constraints[player_loop].pop();
-                            // THIS IS CORRECT
-                            // inferred_constraints[player_loop] contains redraw
-                            // Case 0: card == redraw in inferred_constraint (player_loop) was redraw from pile?
-                            // Case 1: card == redraw in inferred_constraint (player_loop) was in hand originally?
-                            // inferred_constraints[6] contains reveal
-                            // Case 2: card == reveal in inferred_constraint (pile) was relinquished from player?
-                            // Case 3: card == reveal in inferred_constraint (pile) was in pile originally?
-                            if inferred_constraints[player_loop].contains(redraw_i) {
-                                if inferred_constraints[6].contains(reveal) {
-                                    // Case 0 && Case 2
-                                    // Case 0 && Case 3
-                                    // Case 1 && Case 2
-                                    // Case 1 && Case 3
-                                } else {
-                                    // No need to find options available inside to consider to swap?
-                                    // as reveal and redraw are known in this case
-                                    // Case 0 ()
-                                    // Case 1 ()
-                                }
-                            } else {
-                                if inferred_constraints[6].contains(reveal) {
-
-                                } else {
-
-                                }
-
-                            }
-                            // Unsure if this is a realistic thing to explore yet
-                            // if let Some(relinquish_i) = relinquish {
-                            //     // CASE 1: Redrew different card from pile -> 1 card in player before and 1 card in pile before
-                            //     //      - Add another to pile
-                            //     //      - recurse
-                            //     inferred_constraints[player_loop].push(*redraw_i);
-                            //     inferred_constraints[6].push(*relinquish_i);
-                            //     return recurse(self, index_loop - 1, index_of_interest, public_constraints, inferred_constraints, cards);
-                            // }
-                        } else {
-                            // Case 0: pile had *redraw_i before this state and player had *reveal
-                        }
+                        if let Some(pos) = inferred_constraints[player_loop].iter().position(|c| *c == *redraw_i) {
+                            inferred_constraints[player_loop].swap_remove(pos);
+                        } 
+                        inferred_constraints[6].push(*redraw_i);
+                        if let Some(pos) = inferred_constraints[6].iter().position(|c| *c == *reveal) {
+                            inferred_constraints[6].swap_remove(pos);
+                        } 
+                        inferred_constraints[player_loop].push(*reveal);
                     },
                     None => {
                         match relinquish {
@@ -2611,7 +2572,7 @@ impl PathDependentCollectiveConstraint {
                                 let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
                                 Self::build_variants_reveal_redraw_none(*reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
                                 for inferred_i in variants.iter() {
-                                    let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, inferred_counts, &mut inferred_i, cards);
+                                    let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, public_constraints, &mut inferred_i, cards);
                                     if let Some(inner) = response {
                                         if inner {
                                             return Some(true);
@@ -2672,6 +2633,24 @@ impl PathDependentCollectiveConstraint {
         }
         let mut player_hand = inferred_constraints[player_loop].clone();
         let mut pile_hand = inferred_constraints[6].clone();
+        if player_hand.is_empty() {
+            // let mut bool_move_from_pile_to_player = false;
+            if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+                pile_hand.swap_remove(pos);
+            }
+            player_hand.push(reveal);
+            let mut temp = inferred_constraints.clone();
+            temp[player_loop] = player_hand.clone();
+            temp[6] = pile_hand.clone();
+            if temp[player_loop].len() < 3
+            && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                // TODO: Recurse here in other version
+                variants.push(temp);
+            }
+            return variants;
+            // TODO: remove if recursing
+        }
+        // Doesnt handle empty case
         for (i, card_player) in inferred_constraints[player_loop].iter().enumerate() {
             // Card Source was not from Pile
             let mut bool_move_from_pile_to_player = false;
@@ -2942,6 +2921,23 @@ impl PathDependentCollectiveConstraint {
             inferred_constraints[6].swap_remove(pos);
         } 
         inferred_constraints[player_loop].push(reveal);
+        // ish not exact...
+    }
+    pub fn return_variants_reveal_redraw(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::new();
+        let mut temp = inferred_constraints.clone();
+        if let Some(pos) = temp[player_loop].iter().position(|c| *c == redraw) {
+            temp[player_loop].swap_remove(pos);
+        } 
+        temp[6].push(redraw);
+        if let Some(pos) = temp[6].iter().position(|c| *c == reveal) {
+            temp[6].swap_remove(pos);
+        } 
+        temp[player_loop].push(reveal);
+        if temp[6].len() < 4 {
+            variants.push(temp);
+        }
+        return variants
     }
     pub fn return_variants_reveal_relinquish(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
         if inferred_constraints[6].len() == 3
@@ -2963,6 +2959,63 @@ impl PathDependentCollectiveConstraint {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
         Self::build_variants_reveal_relinquish(reveal, redraw, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
         return variants
+    }
+    pub fn return_variants_reveal_relinquish_opt(reveal: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
+        if inferred_constraints[6].len() == 3
+        && !inferred_constraints[6].contains(&reveal) {
+            // This state cannot be arrive after the reveal_redraw
+            log::trace!("early return");
+            return Vec::with_capacity(0);
+        }
+        let mut player_hand = inferred_constraints[player_loop].clone();
+        let mut pile_hand = inferred_constraints[6].clone();
+        if player_hand.is_empty() {
+            // let mut bool_move_from_pile_to_player = false;
+            if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+                pile_hand.swap_remove(pos);
+            }
+            player_hand.push(reveal);
+            let mut temp = inferred_constraints.clone();
+            temp[player_loop] = player_hand.clone();
+            temp[6] = pile_hand.clone();
+            if temp[player_loop].len() < 3
+            && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                // TODO: Recurse here in other version
+                variants.push(temp);
+            }
+            return variants;
+            // TODO: remove if recursing
+        }
+        for (i, card_player) in inferred_constraints[player_loop].iter().enumerate() {
+            // Card Source was from Pile
+            let mut bool_move_from_pile_to_player = false;
+            player_hand.swap_remove(i);
+            pile_hand.push(*card_player);
+            if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+                pile_hand.swap_remove(pos);
+                bool_move_from_pile_to_player = true;
+            }
+            player_hand.push(reveal);
+            let mut temp = inferred_constraints.clone();
+            temp[player_loop] = player_hand.clone();
+            temp[6] = pile_hand.clone();
+
+            // TODO: Recurse here in other version
+            variants.push(temp);
+
+            if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
+                player_hand.swap_remove(pos);
+            }
+            if bool_move_from_pile_to_player {
+                pile_hand.push(reveal);
+            }
+            if let Some(pos) = pile_hand.iter().rposition(|c| c == card_player) {
+                pile_hand.swap_remove(pos);
+            }
+            player_hand.push(*card_player);
+        }
+        variants
     }
     /// Builds possible previous inferred_constraint states
     fn build_variants_reveal_relinquish(
