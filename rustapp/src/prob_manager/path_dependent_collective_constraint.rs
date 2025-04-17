@@ -2667,12 +2667,18 @@ impl PathDependentCollectiveConstraint {
         variants: &mut Vec<Vec<Vec<Card>>>,
     ) {
         // P0 RR AMB None
+        // src: [[Ambassador], [], [], [], [], [], [Assassin, Assassin, Assassin]]
+        // dest: [[Ambassador, Assassin], [], [], [], [], [], [Assassin, Assassin]]
+        // src should have 2 Ambassador as 1 stayed and one was revealed
+        // if you redrew a card, and the pile is 3 cards after that means the other card had to have been relinquished...
+        // P0 RR AMB None
         // Would be impossible here as there is no room for AMB in player or pile in dest,
         // dest: [[Captain, Duke], [], [], [], [], [], [Captain, Captain, Contessa]]
         if idx == cards.len() {
             // TODO: OPTIMIZE the push
             let mut source_constraints = current.clone();
-            if !source_constraints[player_loop].contains(&reveal) {
+            // Player redrew same card
+            if pile_to_player_count < 1 || !source_constraints[player_loop].contains(&reveal) {
                 source_constraints[player_loop].push(reveal);
             }
             if source_constraints[player_loop].len() < 3  

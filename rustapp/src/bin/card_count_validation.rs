@@ -9,9 +9,11 @@ use rustapp::prob_manager::collective_constraint::{CompressedCollectiveConstrain
 use rustapp::prob_manager::brute_prob::BruteCardCountManager;
 use rustapp::prob_manager::bit_prob::BitCardCountManager;
 use rustapp::prob_manager::path_dependent_prob::PathDependentCardCountManager;
+use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
 use std::path::Path;
+use itertools::Itertools;
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -61,46 +63,37 @@ fn main() {
 }
 use rustapp::prob_manager::path_dependent_collective_constraint::{self, PathDependentCollectiveConstraint};
 pub fn temp() {
+    fn gen_variants(
+        card_types: &[Card],
+        max_cards: usize,
+    ) -> Vec<Vec<Card>> {
+        let mut variants = Vec::new();
+        // for each possible hand size 0..=max_cards
+        for size in 0..=max_cards {
+            // Generate all multisets of exactly `size` cards
+            for combo in card_types.iter().combinations_with_replacement(size) {
+                // sort and collect into Vec<Card>
+                let mut hand = combo.into_iter().cloned().collect::<Vec<_>>();
+                // ensure deterministic ordering
+                hand.sort_by_key(|c| *c as u8);
+                variants.push(hand);
+            }
+        }
+        variants
+    }
     logger(LevelFilter::Trace);
-    let mut test_inferred_constaints: Vec<Vec<Vec<Card>>> = Vec::with_capacity(15);
-
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![], vec![], vec![], vec![], vec![], vec![], vec![]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![Card::Ambassador]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Ambassador]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![Card::Captain]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Captain]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Duke]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![Card::Ambassador, Card::Captain]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Ambassador, Card::Captain]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![Card::Captain, Card::Captain]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Captain, Card::Captain]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Duke, Card:: Ambassador]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador, Card::Captain], vec![], vec![], vec![], vec![], vec![], vec![Card::Duke, Card:: Ambassador, Card::Ambassador]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Ambassador], vec![], vec![], vec![], vec![], vec![], vec![Card:: Ambassador, Card::Ambassador]];
-    test_inferred_constaints.push(inferred_constraints);
-    let inferred_constraints: Vec<Vec<Card>> = vec![vec![Card::Captain, Card::Duke], vec![], vec![], vec![], vec![], vec![], vec![Card::Contessa, Card::Assassin, Card::Contessa]];
-    test_inferred_constaints.push(inferred_constraints);
-    for item in test_inferred_constaints.iter() {
+    let mut test_inferred_constraints: HashSet<Vec<Vec<Card>>> = HashSet::new();
+    for player_hand in gen_variants(&vec![Card::Ambassador, Card::Assassin], 2) {
+        for pile_hand in gen_variants(&vec![Card::Ambassador, Card::Assassin, Card::Captain], 3) {
+            for card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
+                if player_hand.iter().filter(|c| **c == card).count() + pile_hand.iter().filter(|c| **c == card).count() > 3 {
+                    continue;
+                }
+                test_inferred_constraints.insert(vec![player_hand.clone(), vec![], vec![], vec![], vec![], vec![], pile_hand.clone()]);
+            }
+        }
+    }
+    for item in test_inferred_constraints.iter() {
         let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
         log::info!("src: {:?}", cc);
         log::info!("dest: {:?}", item);
