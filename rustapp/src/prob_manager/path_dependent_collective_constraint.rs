@@ -2637,6 +2637,7 @@ impl PathDependentCollectiveConstraint {
         && !inferred_constraints[player_loop].contains(&reveal)
         && !inferred_constraints[6].contains(&reveal) {
             // This state cannot be arrive after the reveal_redraw
+            log::trace!("early return");
             return Vec::with_capacity(0);
         }
         let source_cards: Vec<(usize, Card)> = inferred_constraints[player_loop]
@@ -2655,6 +2656,13 @@ impl PathDependentCollectiveConstraint {
         return variants
     }
     /// Builds possible previous inferred_constraint states
+    /// All cards have a source
+    /// card == reveal in player hand can come from
+    /// - player without moving
+    /// - player after revealing then redrawing the same
+    /// - pile after revealing then redrawing different
+    /// - player after revealing then redrawing different
+    /// 
     fn build_variants_reveal_redraw_none(
         reveal: Card,
         cards: &[(usize, Card)],
@@ -2666,6 +2674,9 @@ impl PathDependentCollectiveConstraint {
         current: &Vec<Vec<Card>>,
         variants: &mut Vec<Vec<Vec<Card>>>,
     ) {
+        // build an intermediate state
+        // src: []
+        // dest: [[Ambassador, Ambassador], [], [], [], [], [], [Assassin, Captain, Captain]]
         // P0 RR AMB None
         // src: [[Ambassador], [], [], [], [], [], [Assassin, Assassin, Assassin]]
         // dest: [[Ambassador, Assassin], [], [], [], [], [], [Assassin, Assassin]]
@@ -2674,11 +2685,15 @@ impl PathDependentCollectiveConstraint {
         // P0 RR AMB None
         // Would be impossible here as there is no room for AMB in player or pile in dest,
         // dest: [[Captain, Duke], [], [], [], [], [], [Captain, Captain, Contessa]]
+        // src: [[[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain, Ambassador]], [[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain, Ambassador]]]
+        // dest: [[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain]]
         if idx == cards.len() {
             // TODO: OPTIMIZE the push
             let mut source_constraints = current.clone();
             // Player redrew same card
-            if pile_to_player_count < 1 || !source_constraints[player_loop].contains(&reveal) {
+            // Not exactly right as player_to_pile could be a non ambassador
+            // Add if player_to_pile is 0
+            if pile_to_player_count != 1 || !source_constraints[player_loop].contains(&reveal) {
                 source_constraints[player_loop].push(reveal);
             }
             if source_constraints[player_loop].len() < 3  
@@ -2692,6 +2707,14 @@ impl PathDependentCollectiveConstraint {
         // Destructure this card's source and value
         let (dst, card) = cards[idx];
     
+        // dest Card originally left player hand and returned to player and is the same unique card 
+        if dst == player_loop && card == reveal {
+            // No need to add reveal anymore
+            Self::build_variants_reveal_redraw_none(reveal, cards, cards.len(), player_loop, pile_index, 1, 1, current, variants);
+        } 
+        // src same as dest and RR card is diff
+
+
         // OPTION A: leave it in the same container
         Self::build_variants_reveal_redraw_none(reveal, cards, idx + 1, player_loop, pile_index, player_to_pile_count, pile_to_player_count, current, variants);
         let is_player_card = dst == player_loop;
@@ -2715,6 +2738,7 @@ impl PathDependentCollectiveConstraint {
                 Self::build_variants_reveal_redraw_none(reveal, cards, idx + 1, player_loop, pile_index, new_player_to_pile_count, new_pile_to_player_count, &new_constraints, variants);
             }
         }
+        // OPTION: if card is reveal can RR same card, and skip to the end
     }
     pub fn return_variants_reveal_redraw(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
