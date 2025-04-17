@@ -2655,7 +2655,8 @@ impl PathDependentCollectiveConstraint {
             )
             .collect();
         // TODO: Consider moving this out of this function
-        Self::build_variants_reveal_redraw_none(reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
+        // Self::build_variants_reveal_redraw_none(reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
+        Self::build_variants_reveal_redraw_none_opt(reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
         return variants
     }
     /// Builds possible previous inferred_constraint states
@@ -2678,6 +2679,11 @@ impl PathDependentCollectiveConstraint {
         variants: &mut Vec<Vec<Vec<Card>>>,
     ) {
         // build an intermediate state
+        // src: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin, Ambassador]], 
+        // dest: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
+        // This is ok, but Im thinking u technically don't need this cos it will be searched by
+        // TODO: OPTIMIZE and remove subsets
+        // [[Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
         // src: []
         // dest: [[Ambassador, Ambassador], [], [], [], [], [], [Assassin, Captain, Captain]]
         // P0 RR AMB None
@@ -2709,7 +2715,7 @@ impl PathDependentCollectiveConstraint {
 
         // Destructure this card's source and value
         let (dst, card) = cards[idx];
-    
+        // OPTIMIZE: probably could just run this as the ONLY case for reveal redraw as the other case will be a more specific case of this
         // CASE: Card originally left player hand and returned to player and is the same unique card 
         // T                :  [C0]    []
         // T after reveal   :  []    [C0]
@@ -2722,6 +2728,7 @@ impl PathDependentCollectiveConstraint {
 
         // CASE: player Card did not come from pile after reveal
         // CASE: pile Card did not come from player after reveal
+        // ADDITIONALLY: if player reveal and redrew the same card, it is considered seperate cards
         Self::build_variants_reveal_redraw_none(reveal, cards, idx + 1, player_loop, pile_index, player_to_pile_count, pile_to_player_count, current, variants);
         let is_player_card = dst == player_loop;
         let could_have_swapped = if is_player_card {
@@ -2731,6 +2738,7 @@ impl PathDependentCollectiveConstraint {
         };
         // CASE: player Card came from pile after reveal
         // CASE: pile Card came from player after reveal
+        // ADDITIONALLY: if player reveal and redrew the same card, it is considered seperate cards
         if could_have_swapped {
             let (src, new_player_to_pile_count, new_pile_to_player_count) = if is_player_card {
                 (pile_index, player_to_pile_count + 1, pile_to_player_count)
@@ -2745,7 +2753,106 @@ impl PathDependentCollectiveConstraint {
                 Self::build_variants_reveal_redraw_none(reveal, cards, idx + 1, player_loop, pile_index, new_player_to_pile_count, new_pile_to_player_count, &new_constraints, variants);
             }
         }
-        // OPTION: if card is reveal can RR same card, and skip to the end
+    }
+    /// Builds possible previous inferred_constraint states
+    /// All cards have a source
+    /// card == reveal in player hand can come from
+    /// - player without moving
+    /// - player after revealing then redrawing the same
+    /// - pile after revealing then redrawing different
+    /// - player after revealing then redrawing different
+    /// 
+    fn build_variants_reveal_redraw_none_opt(
+        reveal: Card,
+        cards: &[(usize, Card)],
+        idx: usize,
+        player_loop: usize,
+        pile_index: usize,
+        player_to_pile_count: u8, // dst -> src
+        pile_to_player_count: u8, // dst -> src 
+        current: &Vec<Vec<Card>>,
+        variants: &mut Vec<Vec<Vec<Card>>>,
+    ) {
+        // build an intermediate state
+        // src: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin, Ambassador]], 
+        // dest: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
+        // This is ok, but Im thinking u technically don't need this cos it will be searched by
+        // TODO: OPTIMIZE and remove subsets
+        // [[Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
+        // src: []
+        // dest: [[Ambassador, Ambassador], [], [], [], [], [], [Assassin, Captain, Captain]]
+        // P0 RR AMB None
+        // src: [[Ambassador], [], [], [], [], [], [Assassin, Assassin, Assassin]]
+        // dest: [[Ambassador, Assassin], [], [], [], [], [], [Assassin, Assassin]]
+        // src should have 2 Ambassador as 1 stayed and one was revealed
+        // if you redrew a card, and the pile is 3 cards after that means the other card had to have been relinquished...
+        // P0 RR AMB None
+        // Would be impossible here as there is no room for AMB in player or pile in dest,
+        // dest: [[Captain, Duke], [], [], [], [], [], [Captain, Captain, Contessa]]
+        // src: [[[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain, Ambassador]], [[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain, Ambassador]]]
+        // dest: [[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain]]
+        if idx == cards.len() {
+            // TODO: OPTIMIZE the push
+            let mut source_constraints = current.clone();
+            // Player redrew same card
+            // Not exactly right as player_to_pile could be a non ambassador
+            // Add if player_to_pile is 0
+            if !source_constraints[player_loop].contains(&reveal)
+            // && !(player_to_pile_count == 0 && pile_to_player_count == 0 && source_constraints[player_loop].contains(&reveal)) 
+            // && (player_to_pile_count == 1 && !source_constraints[player_loop].contains(&reveal)) 
+            { // TESTING OPTIMIZE
+                source_constraints[player_loop].push(reveal);
+            }
+            if source_constraints[player_loop].len() < 3  
+            && source_constraints[pile_index].len() < 4 
+            && source_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                variants.push(source_constraints);
+            }
+            return;
+        }
+
+        // Destructure this card's source and value
+        let (dst, card) = cards[idx];
+        // OPTIMIZE: probably could just run this as the ONLY case for reveal redraw as the other case will be a more specific case of this
+        // CASE: Card originally left player hand and returned to player and is the same unique card 
+        // T                :  [C0]    []
+        // T after reveal   :  []    [C0]
+        // T + 1            :  [C0]    []
+        if dst == player_loop && card == reveal {
+            // No need to add reveal anymore
+            Self::build_variants_reveal_redraw_none_opt(reveal, cards, cards.len(), player_loop, pile_index, 1, 1, current, variants);
+        } 
+        // src same as dest and RR card is diff
+
+        // CASE: player Card did not come from pile after reveal
+        // CASE: pile Card did not come from player after reveal
+        // ADDITIONALLY: if player reveal and redrew the same card, it is considered seperate cards
+        Self::build_variants_reveal_redraw_none_opt(reveal, cards, idx + 1, player_loop, pile_index, player_to_pile_count, pile_to_player_count, current, variants);
+        let is_player_card = dst == player_loop;
+        let could_have_swapped = if is_player_card {
+            player_to_pile_count < 1 
+            // Testing OPTIMIZE: exclude all other reveal redraw same cards
+            && card != reveal
+        } else {
+            pile_to_player_count < 1 && card == reveal
+        };
+        // CASE: player Card came from pile after reveal
+        // CASE: pile Card came from player after reveal
+        // ADDITIONALLY: if player reveal and redrew the same card, it is considered seperate cards
+        if could_have_swapped {
+            let (src, new_player_to_pile_count, new_pile_to_player_count) = if is_player_card {
+                (pile_index, player_to_pile_count + 1, pile_to_player_count)
+            } else {
+                (player_loop, player_to_pile_count, pile_to_player_count + 1)
+            };
+            
+            let mut new_constraints = current.clone();
+            if let Some(pos) = new_constraints[dst].iter().position(|&c| c == card) {
+                new_constraints[dst].swap_remove(pos);
+                new_constraints[src].push(card);
+                Self::build_variants_reveal_redraw_none_opt(reveal, cards, idx + 1, player_loop, pile_index, new_player_to_pile_count, new_pile_to_player_count, &new_constraints, variants);
+            }
+        }
     }
     pub fn return_variants_reveal_redraw(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);

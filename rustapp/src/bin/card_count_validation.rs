@@ -62,6 +62,7 @@ fn main() {
     temp();
 }
 use rustapp::prob_manager::path_dependent_collective_constraint::{self, PathDependentCollectiveConstraint};
+// TODO: Move to collective_constraint when finalized
 pub fn temp() {
     fn gen_variants(
         card_types: &[Card],
@@ -84,10 +85,10 @@ pub fn temp() {
     logger(LevelFilter::Trace);
     let mut test_inferred_constraints: HashSet<Vec<Vec<Card>>> = HashSet::new();
     for player_hand in gen_variants(&vec![Card::Ambassador, Card::Assassin], 2) {
-        for pile_hand in gen_variants(&vec![Card::Ambassador, Card::Assassin, Card::Captain], 3) {
+        'outer: for pile_hand in gen_variants(&vec![Card::Ambassador, Card::Assassin, Card::Captain], 3) {
             for card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
                 if player_hand.iter().filter(|c| **c == card).count() + pile_hand.iter().filter(|c| **c == card).count() > 3 {
-                    continue;
+                    continue 'outer;
                 }
                 test_inferred_constraints.insert(vec![player_hand.clone(), vec![], vec![], vec![], vec![], vec![], pile_hand.clone()]);
             }
