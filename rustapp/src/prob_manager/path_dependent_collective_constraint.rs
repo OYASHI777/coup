@@ -2695,7 +2695,6 @@ impl PathDependentCollectiveConstraint {
             if let Some(pos) = player_hand.iter().position(|c| *c == *card_player) {
                 player_hand.swap_remove(pos);
             }
-            log::trace!("player_hand after removal of card_player");
             pile_hand.push(*card_player);
             if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
                 pile_hand.swap_remove(pos);
@@ -2736,6 +2735,9 @@ impl PathDependentCollectiveConstraint {
             // if pile_hand != checker[6] {
             //     log::warn!("failed 2 to pop pile hand properly");
             // }
+            if inferred_constraints[player_loop].len() == 2 && inferred_constraints[player_loop][0] == inferred_constraints[player_loop][1]{
+                break;
+            }
         }
         return variants
     }
@@ -2962,7 +2964,7 @@ impl PathDependentCollectiveConstraint {
             temp[6].swap_remove(pos);
         } 
         temp[player_loop].push(reveal);
-        if temp[6].len() < 4 {
+        if temp[6].len() < 4 && temp[player_loop].len() < 3 {
             variants.push(temp);
         }
         return variants
@@ -3043,6 +3045,9 @@ impl PathDependentCollectiveConstraint {
                 pile_hand.swap_remove(pos);
             }
             player_hand.push(*card_player);
+            if inferred_constraints[player_loop].len() == 2 && inferred_constraints[player_loop][0] == inferred_constraints[player_loop][1]{
+                break;
+            }
         }
         variants
     }
