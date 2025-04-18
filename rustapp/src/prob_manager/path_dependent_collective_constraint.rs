@@ -597,8 +597,8 @@ impl PathDependentCollectiveConstraint {
                                 match action_name { // This is just a get around of the partial borrowing rules...
                                     ActionInfoName::RevealRedraw => {
                                         log::trace!("lookback_initial RevealRedraw checking past RevealRedraw");
-                                        log::trace!("lookback_initial original player: {} RevealRedraw: {:?}", player_index, action_info);
-                                        log::trace!("lookback_initial checked player: {} RevealRedraw: {:?}", action_data.player(), action_data.action_info());
+                                        log::trace!("lookback_initial original player: {} index: {} RevealRedraw: {:?}", player_index, self.history.len(), action_info);
+                                        log::trace!("lookback_initial checked player: {} index: {} RevealRedraw: {:?}", action_data.player(), i, action_data.action_info());
 
                                         let need_redraw_update = self.need_redraw_update_2(i, reveal_considered, &illegal_to_change);
                                         if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
@@ -860,8 +860,8 @@ impl PathDependentCollectiveConstraint {
                                     // TODO: Consider that we could pass a RR, the see a discard, thus adding back into discard_players
                                     // This leads us to look at multiple RevealRedraws after the first one
                                     log::trace!("lookback_initial Discard checking past RevealRedraw");
-                                    log::trace!("lookback_initial original player: {}, Discard: {:?}", player_index, action_info);
-                                    log::trace!("lookback_initial checked player: {}, RevealRedraw: {:?}", action_player, action_data.action_info());
+                                    log::trace!("lookback_initial original player: {}, index: {}, Discard: {:?}", player_index, self.history.len(), action_info);
+                                    log::trace!("lookback_initial checked player: {}, index: {i}, RevealRedraw: {:?}", action_player, action_data.action_info());
                                     // TODO: Ok we need to expand this
                                     
                                     let need_redraw_update = self.need_redraw_update_2(i, discard_considered, &illegal_players);
@@ -3245,6 +3245,18 @@ impl PathDependentCollectiveConstraint {
                 self.history[index - 1].impossible_constraints()[action_player][card_of_interest as usize]
                 || self.history[index - 1].public_constraints()[action_player].len() == 1
                 || self.history[self.history.len() - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == card_of_interest).count() as u8).sum::<u8>() == 3
+                || (
+                    // Testing player revealed last card and and same as dead card
+                    // maybe action_player needs to be latest player
+                    {
+                        log::trace!("self.history[self.history.len() - 1].public_constraints():{:?}", self.history[self.history.len() - 2].public_constraints());
+                        log::trace!("self.history[self.history.len() - 1].public_constraints()[action_player].len() == 1 = :{}", self.history[self.history.len() - 1].public_constraints()[action_player].len() == 1);
+                        log::trace!("&& self.history[self.history.len() - 1].public_constraints()[action_player][0] == card_of_interest = :{}", self.history[self.history.len() - 1].public_constraints()[action_player].len() == 1 && self.history[self.history.len() - 1].public_constraints()[action_player][0] == card_of_interest);
+                        action_player == self.history[self.history.len() - 1].player() as usize
+                        && self.history[self.history.len() - 2].public_constraints()[action_player].len() == 1
+                        && self.history[self.history.len() - 2].public_constraints()[action_player][0] == card_of_interest
+                    }
+                )
                 // I like this
                 || (
                     *reveal_i == card_of_interest &&
