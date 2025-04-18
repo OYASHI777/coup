@@ -366,7 +366,7 @@ pub fn test() {
         replay_game_constraint_pd(redundancy_replay_0, false, false);
         println!("Testing: {}", stringify!(backward_compat_0));
         replay_game_constraint_pd(backward_compat_0, false, false);
-        println!("ALL PASSED");
+        println!("ALL PASSED"); 
     }
 }
 
