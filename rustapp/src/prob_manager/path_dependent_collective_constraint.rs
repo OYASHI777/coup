@@ -596,159 +596,10 @@ impl PathDependentCollectiveConstraint {
                                 // RR or AMB with 1 life
                                 match action_name { // This is just a get around of the partial borrowing rules...
                                     ActionInfoName::RevealRedraw => {
-                                        // Testing add after
-                                        // if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                        //     if *reveal_i == reveal_considered && *redraw_i != Some(*reveal_i) {
-                                        //         reveal_players.push(action_player);
-                                        //     }
-                                        // }
                                         log::trace!("lookback_initial RevealRedraw checking past RevealRedraw");
                                         log::trace!("lookback_initial original player: {} RevealRedraw: {:?}", player_index, action_info);
                                         log::trace!("lookback_initial checked player: {} RevealRedraw: {:?}", action_data.player(), action_data.action_info());
-                                        // let need_redraw_update = if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                        //     redraw_i.is_none()
-                                        //     // This is after the discard
-                                        //     // This is just before the RevealRedraw
-                                        //     // CASE when all cards are known and not reveal_considered
-                                        //     && (
-                                        //         (
-                                        //             self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2
-                                        //             && !self.history[i - 1].player_has_inferred_constraint(action_player, reveal_considered) // REQUIRED FOR MARKER A
-                                        //         )
-                                        //         || (
-                                        //             // [CASE] All player cards are the same card
-                                        //             // Then the person previously definitely redrew that
-                                        //             // This should be after card revealed
-                                        //             self.inferred_constraints[action_player as usize].len() + self.public_constraints[action_player as usize].len() == 2
-                                        //             && self.inferred_constraints[action_player as usize].iter().all(|&c| c == reveal_considered) 
-                                        //             && self.public_constraints[action_player as usize].iter().all(|&c| c == reveal_considered)
-                                        //         )
-                                        //         || (
-                                        //             // MARKER A
-                                        //             // before the RevealRedraw
-                                        //             // All discard_considered known and outside of player
-                                        //             // Either 2 cards known and last in pile (therefore they could even redraw)
-                                        //             // Or 3 cards known and 1 is in pile (therefore they can redraw)
-                                        //             //  - This ASSUMES that the latest_move played is legal (which it should be)
-                                        //             //
-                                        //             (
-                                        //                 // TODO：[OPTIMIZE]
-                                        //                 // CASE 2 cards outside of player, player has 2 lives, and player reveals reveal_considered
-                                        //                 //  - 2 players != action_player have card and != pile
-                                        //                 //      - if player reveal == reveal_considered => must have withdrawn
-                                        //                 self.history[i - 1].known_card_count(reveal_considered) == 2 
-                                        //                 && !self.history[i - 1].inferred_constraints()[action_player as usize].contains(&reveal_considered)
-                                        //                 && *reveal_i == reveal_considered
-                                        //             ) 
-                                        //             || (
-                                        //                 // Case where player cannot possibly have the card if not for the redraw
-                                        //                 //  => all 3 cards are outside of the player
-                                        //                 // TODO: [OPTIMIZE] you probably can use impossible constraints to figure this out
-                                        //                 // CASE where 2 are known and we know theres one group with 1 alive 
-                                        //                 // That excludes the current player
-                                        //                 // maybe more specifically some are known dead, some are known alive
-                                        //                 // and there is one group with 1 alive which includes pile and
-                                        //                 // excludes players whom have known alive
-                                        //                 // TODO: Document lookback_check
-                                        //                 // *reveal_i != reveal_considered
-                                        //                 // && self.history[i - 1].known_card_count(reveal_considered) == 2 
-                                        //                 // && !self.history[i - 1].inferred_constraints()[6].contains(&reveal_considered) 
-                                        //                 // && self.lookback_check(i - 1, action_player, reveal_considered).is_some()
-                                        //                 self.lookback_check_2(i, action_player as usize, reveal_considered)
-                                        //             )
-                                        //             // || (
-                                        //             //     bool_all_other_cards_dead
-                                        //             //     && *reveal_i == reveal_considered
-                                        //             // )
-                                        //             || (
-                                        //                 // We actually only need to check *reveal == reveal_considered && last 2 cards outside of player at that time
-                                        //                 // => 2 not player_index revealed for first time before and player has not revealed redraw none before this
-                                        //                 // => 2 outside player_index discarded after
-                                        //                 // // maybe I can measure maximum/minimum possible outside player?
-                                        //                 *reveal_i == reveal_considered
-                                        //                 && {
-                                        //                     // Getting total unique first time reveal_redraw before player, excluding player
-                                        //                     let mut historical_first_time_reveal_count = 0;
-                                        //                     let mut redraw_stack_pop_count = 0;
-                                        //                     // Size expected to be small
-                                        //                     let mut visited_players = [false; 6];
-                                        //                     let mut visited_players_opp = [false; 6];
-                                        //                     // visited_players[player_index as usize] = true;
-                                        //                     for sig_act in self.history[2..i].iter() {
-                                        //                         if !visited_players[sig_act.player() as usize] {
-                                        //                             if let ActionInfo::RevealRedraw { reveal, redraw, .. } = sig_act.action_info() {
-                                        //                                 if *reveal == reveal_considered {
-                                        //                                     visited_players[sig_act.player() as usize] = true;
-                                        //                                     historical_first_time_reveal_count += 1;
-                                        //                                 } else if redraw.is_none() {
-                                        //                                     // visited_players_opp[sig_act.player() as usize] = true;
-                                        //                                     // erasure of progress because of AMB or redraw
-                                        //                                     visited_players = [false; 6];
-                                        //                                 } else if *redraw == Some(reveal_considered) {
-                                        //                                     redraw_stack_pop_count += 1;
-                                        //                                 }
-                                        //                             }
-                                        //                         }
-                                        //                     }
 
-
-                                        //                     // log::trace!("reveal_players {:?}, discard_players: {:?}", temp, card_assured_players);
-                                        //                     // log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - card_assured_players.len());
-                                        //                     // temp.iter().filter(|p| **p != player_index).count() >= 3 - card_assured_players.len()
-                                        //                     // 1 is added as first reveal is an assured card
-                                        //                     // let total_assured_cards = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>() + 1;
-                                        //                     // log::trace!("temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards = :{}", temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards);
-                                        //                     // TODO: Choose one of the below! ALso do we include historical_first_time_reveal_count?
-                                        //                     // reveal_players.iter().enumerate().filter(|(i, v)| *i != player_index as usize && **v).count()
-                                        //                     // reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| *i != player_index as usize && (**v0 || **v1)).count()
-                                        //                     // reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| **v0 || **v1).count()
-                                        //                     reveal_players.iter().zip(visited_players.iter()).zip(visited_players_opp.iter()).enumerate().filter(|(i, ((v0, v1), v2))| (**v0 || **v1) && !**v2).count()
-                                        //                     + card_assured_players.len()  // valid dead from latest move to current iter + dead before
-                                        //                     + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
-                                        //                     // + historical_first_time_reveal_count
-                                        //                     >= 3 + redraw_stack_pop_count
-                                        //                     // let total_assured_cards = card_assured_players.len();
-                                        //                     // log::trace!("total_assured_cards: {}", total_assured_cards);
-                                        //                     // log::trace!("temp: {:?}", temp);
-                                        //                     // temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards
-                                        //                     // temp.len() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
-                                        //                 }
-                                        //                 || {
-                                        //                     *reveal_i == reveal_considered &&
-                                        //                     // had to have withdrawn if other 2 cards are outside player
-                                        //                     self.history[i - 1].public_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
-                                        //                     + self.history[i - 1].inferred_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
-                                        //                     == 2
-                                        //                 }
-                                        //             )
-                                        //             // && (
-                                        //             //     || self.lookback_check(i - 1, action_player, reveal_considered).is_some()
-                                        //             //     // Temp test change location
-                                        //             // )
-                                        //             // === OLD ===
-                                        //             // self.history[i - 1].known_card_count(reveal_considered) == 2 
-                                        //             // && !self.history[i - 1].inferred_constraints()[6].contains(&reveal_considered)
-                                        //             // // This doesnt actually make sense as *reveal_i == reveal_considered won't ever be true
-                                        //             // // && !self.history[i - 1].inferred_constraints()[action_player as usize].contains(&reveal_considered)
-                                        //             // && (
-                                        //             //     // Consider seperating this and the above case
-                                        //             //     *reveal_i == reveal_considered
-                                        //             //     || self.lookback_check(i - 1, action_player, reveal_considered).is_some()
-                                        //             //     // Temp test change location
-                                        //             // )
-                                        //             // === OLD ===
-                                        //             || self.history[i - 1].known_card_count(reveal_considered) == 3
-                                        //             && !self.history[i - 1].player_has_inferred_constraint(action_player, reveal_considered)
-                                        //             // CASE 3 cards outside of player and (implied that player obviously won't reveal reveal_considered)
-                                        //             // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
-                                        //         )
-                                        //         // I think this below can be checked much earlier
-                                        //         // This shit breaks for some reason
-                                        //         || self.history[i - 1].public_constraints()[action_player as usize].len() == 1
-                                        //     )
-                                        // } else {
-                                        //     false
-                                        // };
                                         let need_redraw_update = self.need_redraw_update_2(i, reveal_considered, &illegal_to_change);
                                         if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
                                             if *reveal_i == reveal_considered && 
@@ -766,37 +617,7 @@ impl PathDependentCollectiveConstraint {
                                                 log::trace!("card_assured_players: {:?}",card_assured_players);
                                             }
                                         }
-                                        // if let ActionInfo::RevealRedraw { redraw: redraw_i, .. } = action_data.action_info() {
-                                        //     log::trace!("redraw_i.is_none() = : {}", redraw_i.is_none());
-                                        //     log::trace!("&&");
-                                        //     log::trace!("self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2 = {}", self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2);
-                                        //     log::trace!("&&");
-                                        //     log::trace!("!action_data.player_has_inferred_constraint(action_player, reveal_considered) = {}", !self.inferred_constraints[action_player as usize].contains(&reveal_considered));
-                                        //     log::trace!("||");
-                                        //     log::trace!("(");
-                                        //     log::trace!("self.public_constraints[action_player as usize].len() + self.inferred_constraints[action_player as usize].len() == 2 = {}", self.public_constraints[action_player as usize].len() + self.inferred_constraints[action_player as usize].len() == 2);
-                                        //     log::trace!("&&");
-                                        //     log::trace!("self.player_constraints_all_full(action_player, reveal_considered)) = {}", self.inferred_constraints[action_player as usize].iter().all(|&c| c == reveal_considered) &&
-                                        //     self.public_constraints[action_player as usize].iter().all(|&c| c == reveal_considered));
-                                        //     log::trace!(")");
-                                        //     log::trace!("||");
-                                        //     log::trace!("(");
-                                        //     log::trace!("self.history[i - 1].known_card_count(reveal_considered) == 2 = {}", self.history[i - 1].known_card_count(reveal_considered) == 2);
-                                        //     log::trace!("&&");
-                                        //     log::trace!("   (");
-                                        //     log::trace!("*reveal_i == reveal_considered = ?? reveal_i: {:?}, reveal_considered: {:?}", action_data.action_info(), reveal_considered);
-                                        //     log::trace!("||");
-                                        //     log::trace!("   (");
-                                        //     log::trace!("self.lookback_check_2({i}, {action_player}, reveal_considered) = {}", self.lookback_check_2(i, action_player as usize, reveal_considered));
-                                        //     log::trace!("   )");
-                                        //     log::trace!("||");
-                                        //     log::trace!("   (");
-                                        //     log::trace!("bool_all_other_cards_dead: {}", bool_all_other_cards_dead);
-                                        //     log::trace!("   )");
-                                        //     log::trace!("||");
-                                        //     log::trace!("self.history[i - 1].known_card_count(reveal_considered) == 3 = {}", self.history[i - 1].known_card_count(reveal_considered) == 3);
-                                        //     log::trace!(")");
-                                        // }
+
                                         log::trace!("need_redraw_update evaluated to {need_redraw_update}");
                                         if need_redraw_update {
                                             log::trace!("lookback_initial original RevealRedraw: {:?}", action_info);
@@ -811,13 +632,7 @@ impl PathDependentCollectiveConstraint {
                                                 bool_changes = true;
                                                 bool_skip_start_update = true;
                                                 break 'iter_loop;
-                                                //  ==== OLD ===
-                                                // self.regenerate_path();
-                                                // log::trace!("End Regenerate Path lookback_initial A");
-                                                // self.printlog();
-                                                // panic!();
-                                                // TODO: [CASE] Knowing the redraw means we need to update the pile earlier!
-                                                // return true;
+
                                             }
                                         } else {
                                             // OLD
@@ -863,94 +678,6 @@ impl PathDependentCollectiveConstraint {
                                         // Hi sir its cos u dont update here lol
                                         log::trace!("saw action_player: {action_player} revealredraw: {:?} in iter", action_data);
 
-                                        // let need_redraw_update = if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                        //     // bool_all_other_cards_dead
-                                        //     // && reveal_players.contains(&action_player) // Do I need this?
-                                        //     // || discard_players.contains(&action_player)
-                                        //     // && redraw_i.is_none()
-                                        //     // In this case the original reveal_considered is added to discard
-                                        //     // TODO: Consider naming it inferred card?
-                                        //     // reveal_players.contains(&action_player)
-                                        //     reveal_players[action_player as usize]
-                                        //     && redraw_i.is_none()
-                                        //     && (
-                                        //         (
-                                        //             // self.history[i - 1].public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() > 1
-                                        //             // && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered)
-                                        //             false
-                                        //         ) // required for MARKER A)
-                                        //         // || (
-                                        //         //     self.history[i - 1].public_constraints()[action_player as usize].len() == 1
-                                        //         // )
-                                        //         || (
-                                        //             // I like this
-                                        //             self.history[i - 1].impossible_constraints()[action_player as usize][reveal_considered as usize]
-                                        //         )
-                                        //         || (
-                                        //             // CASE all cards are dead and known based on latest move
-                                        //             // This player had discarded the card
-                                        //             // So if they had revealed it in the past, they had to have redrawn it
-                                        //             // else they could not have discarded it
-                                        //             // Here we assume bool_all_cards_dead == true
-                                        //             *reveal_i == reveal_considered
-                                        //             && {
-                                        //                 let mut historical_first_time_reveal_count = 0;
-                                        //                 let mut redraw_stack_pop_count = 0; 
-                                        //                     // Size expected to be small
-                                        //                 let mut visited_players = [false; 6];
-                                        //                 let mut visited_players_opp = [false; 6];
-                                        //                 // visited_players[player_index as usize] = true;
-                                        //                 for sig_act in self.history[2..i].iter() {
-                                        //                     if !visited_players[sig_act.player() as usize] {
-                                        //                         if let ActionInfo::RevealRedraw { reveal, redraw, .. } = sig_act.action_info() {
-                                        //                             if *reveal == reveal_considered {
-                                        //                                 visited_players[sig_act.player() as usize] = true;
-                                        //                                 historical_first_time_reveal_count += 1;
-                                        //                             } else if redraw.is_none() {
-                                        //                                 // visited_players_opp[sig_act.player() as usize] = true;
-                                        //                                 // erasure of progress because of AMB or redraw
-                                        //                                 visited_players = [false; 6];
-                                        //                             } else if *redraw == Some(reveal_considered) {
-                                        //                                 redraw_stack_pop_count += 1;
-                                        //                             }
-                                        //                         }
-                                        //                     }
-                                        //                 }
-                                        //                 log::trace!("*reveal_i: {:?} == reveal_considered: {:?} = : {}", *reveal_i, reveal_considered, *reveal_i == reveal_considered);
-                                        //                 log::trace!("player_index {:?}", player_index);
-                                        //                 log::trace!("reveal_players {:?}, discard_players: {:?}", reveal_players, card_assured_players);
-                                        //                 // log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", temp.iter().filter(|p| **p != player_index).count() >= 3 - card_assured_players.len());
-                                        //                 // log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", temp.len() >= 3 - card_assured_players.len());
-                                        //                 // Not excluding the RR here as the initial one was a RR
-                                        //                 // NOTE: discard_pl
-                                        //                 // Adding 1 as the reveal_considered is counted toward total_assured_cards
-                                        //                 // let total_assured_cards = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>() + 1;
-                                        //                 // reveal_players.iter().enumerate().filter(|(i, v)| *i != player_index as usize && **v).count()
-                                        //                 // reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| *i != player_index as usize && (**v0 || **v1)).count()
-                                        //                 // reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| **v0 || **v1).count()
-                                        //                 reveal_players.iter().zip(visited_players.iter()).zip(visited_players_opp.iter()).enumerate().filter(|(i, ((v0, v1), v2))| (**v0 || **v1) && !**v2).count()
-                                        //                 + card_assured_players.len()  // valid dead from latest move to current iter + dead before
-                                        //                 + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
-                                        //                 // + historical_first_time_reveal_count
-                                        //                 >= 3 + redraw_stack_pop_count
-                                        //                 // let total_assured_cards = card_assured_players.len();
-                                        //                 // temp.iter().filter(|p| **p != player_index).count() >= 3 - total_assured_cards
-                                        //                 // temp.len() >= 3 - card_assured_players.len()
-                                        //                 // temp.len() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
-                                        //             } 
-                                        //             || {
-                                        //                 *reveal_i == reveal_considered &&
-                                        //                 // had to have withdrawn if other 2 cards are outside player
-                                        //                 self.history[i - 1].public_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
-                                        //                 + self.history[i - 1].inferred_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>()
-                                        //                 == 2
-                                        //             }
-                                        //             // false
-                                        //         )
-                                        //     )
-                                        // } else {
-                                        //     false
-                                        // };
                                         // This needs to be added after the check, if not the reveal will count to its own redraw count
                                         let need_redraw_update = self.need_redraw_update_2(i, reveal_considered, &illegal_to_change);
                                         if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
@@ -976,29 +703,7 @@ impl PathDependentCollectiveConstraint {
                                             if let ActionInfo::RevealRedraw { reveal, redraw, .. } = self.history[i].action_info_mut() {
                                                 log::trace!("RR != lookback_initial setting redraw to: {:?}", reveal_considered);
                                                 *redraw = Some(reveal_considered);
-                                                // discard_players.retain(|p| *p != action_player);
-                                                // TODO: In this case, we may not want to regenerate immediately
-                                                // OPTIONS:
-                                                //      - Regenerate now
-                                                //      - Regenerate and allow another lookback during regeneration
-                                                //      - Handle all lookbacks now, then regenerate
-                                                // CASE:
-                                                //              P1 Discard Duke
-                                                //              P2 RR Reveal Duke
-                                                //              P3 RR Reveal Duke
-                                                //              P2 Discard Duke
-                                                //              P3 Discard Duke
-                                                //      When P3 Discard Duke, we know that both P2 and P3 redrew Dukes, but never before that
-                                                //      So we would need to update both, and early exit may not be ideal
-                                                // if Some(*reveal) != *redraw {
-                                                //     self.lookback_1_continual(i);
-                                                // }
-                                                // self.regenerate_path();
-                                                // log::trace!("End Regenerate Path lookback_initial C");
-                                                // self.printlog();
-                                                // panic!();
-                                                // TODO: [CASE] Knowing the redraw means we need to update the pile earlier!
-                                                // return true;
+ 
                                                 bool_changes = true;
                                                 // break 'iter_loop;
                                                 // This is copied from discard
@@ -1034,13 +739,7 @@ impl PathDependentCollectiveConstraint {
                             log::trace!("lookback_initial start after: {:?}", self.history.first().unwrap().meta_data());
                             bool_changes = true;
                         }
-                            // TODO: Have to change calculation for game start for this to work
-                            // TODO: Include impossible at game start too!
-                            // self.regenerate_path();
-                            // log::trace!("End Regenerate Path lookback_initial B");
-                            // self.printlog();
-                            // return true;
-                        // }
+
                     }
                 }
             },
@@ -1075,180 +774,7 @@ impl PathDependentCollectiveConstraint {
                         let action_name = action_data.name();
                         match action_name { // This is just a get around of the partial borrowing rules...
                             ActionInfoName::RevealRedraw => {
-                                // Temp for testing [REFACTOR]
-                                // if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                //     if *reveal_i == discard_considered 
-                                //     && *redraw_i != Some(*reveal_i) 
-                                //     && !discard_players.contains(&action_player){
-                                //         reveal_players.push(action_player);
-                                //     }
-                                // }
-                                // log::trace!("lookback_initial Discard checking past RevealRedraw");
-                                // log::trace!("lookback_initial original player: {}, Discard: {:?}", player_index, action_info);
-                                // log::trace!("lookback_initial checked player: {}, RevealRedraw: {:?}", action_data.player(), action_data.action_info());
-                                // let need_redraw_update = if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                //     !illegal_players.contains(&action_player)
-                                //     && redraw_i.is_none()
-                                //     // This is after the discard
-                                //     // This is just before the RevealRedraw
-                                //     // CASE In previous RevealRedraw, 
-                                //     // Player hand fully known
-                                //     // Player did not have discard_considered
-                                //     // Then the person previously definitely redrew that
-                                //     && (
-                                //         (
-                                //             self.history[i - 1].public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2
-                                //             && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered) // required for MARKER A
-                                //         )
-                                //         || (
-                                //             // [CASE] All player cards are the same card
-                                //             // Then the person previously definitely redrew that
-                                //             self.inferred_constraints[action_player as usize].len() + self.public_constraints[action_player as usize].len() == 2
-                                //             && self.inferred_constraints[action_player as usize].iter().all(|&c| c == discard_considered) 
-                                //             && self.public_constraints[action_player as usize].iter().all(|&c| c == discard_considered)
-                                //         )
-                                //         || (
-                                //             // MARKER A
-                                //             // before the RevealRedraw
-                                //             // All discard_considered known and outside of player
-                                //             // Either 2 cards known and last in pile (therefore they could even redraw)
-                                //             // Or 3 cards known and 1 is in pile (therefore they can redraw)
-                                //             //  - This ASSUMES that the latest_move played is legal (which it should be)
-                                //             // self.history[i - 1].known_card_count(discard_considered) >= 2
-                                //             // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
-                                //             // TODO: [OPTIMIZE] don't call known_card_count twice, use a match statement
-                                //             // !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered) // [OPTIMIZE] Repeated above
-                                //             // ^ Imported from above (full_test_replay_11 fails with this)
-                                //             (
-                                //                 // TODO：[OPTIMIZE]
-                                //                 self.history[i - 1].known_card_count(discard_considered) == 2 
-                                //                 && !self.history[i - 1].inferred_constraints()[action_player as usize].contains(&discard_considered)
-                                //                 && *reveal_i == discard_considered
-                                //             ) 
-                                //             || (
-                                //                 self.lookback_check_2(i, action_player as usize, discard_considered)
-                                //             )
-                                //             || (
-                                //                 // TEST
-                                //                 // CASE
-                                //                 // All cards dead and player had to have redrawn the same card revealed
-                                //                 // As pile does not have the card to discard
-                                //                 // Comparable case for RevealRedraw might be if 2 cards are dead + 1 revealed?
-                                //                 // Unsure if all known is usable?
-                                //                 (
-                                //                     bool_all_cards_dead
-                                //                     && *reveal_i == discard_considered
-                                //                 )
-                                //                 // Won't always have this as this requires a forward pass of recalculations to know this
-                                //                 // After a new card has been added
-                                //                 // && self.history[i-1].impossible_constraints()[6][*reveal_i as usize]
-                                //                 // && self.history[i-1].inferred_constraints()[action_player as usize].iter().filter(|c| **c == discard_considered).count() < 2
-                                //                 || (
-                                //                     // TEMP TEST HACKY UNSURE how this interacts with Ambassador
-                                //                     // I wonder if there is a case where P1 RR 4 times in  a row
-                                //                     // and somehow this updates wrongly
-                                //                     // NOTE: This somehow fixes alot of shit omg
-                                //                     // NOTE: If overinference happens it is recommended to check if it does so with this commented out
-                                //                     *reveal_i == discard_considered
-                                //                     // && reveal_players.len() >= 3 - discard_players.len()
-                                //                     // && reveal_players.iter().chain(discard_players.iter()).collect::<AHashSet<_>>().len() >= 3
-                                //                     // && reveal_players.iter().collect::<AHashSet<_>>().len() >= 3 - discard_players.len()
-                                //                     // Try 3:
-                                //                     // After the player reveals
-                                //                     // 2 other players discard / reveal (without AMB)
-                                //                     // I guess can .retain() if player AMB
-                                //                     // Then player discards again / reveals
-                                //                     // && reveal_players.iter().filter(|p| **p != player_index).collect::<AHashSet<_>>().len() >= 3 - discard_players.len()
-                                //                     && {
-                                //                         // TODO: Change this is a really dumb implementation
-                                //                         let mut historical_first_time_reveal_count = 0;
-                                //                         let mut redraw_stack_pop_count = 0;
-                                //                         // Size expected to be small
-                                //                         let mut visited_players = [false; 6];
-                                //                         let mut visited_players_opp = [false; 6];
-                                //                         // visited_players[player_index as usize] = true;
-                                //                         for sig_act in self.history[2..i].iter() {
-                                //                             if !visited_players[sig_act.player() as usize] {
-                                //                                 if let ActionInfo::RevealRedraw { reveal, redraw, .. } = sig_act.action_info() {
-                                //                                     if *reveal == discard_considered {
-                                //                                         visited_players[sig_act.player() as usize] = true;
-                                //                                         historical_first_time_reveal_count += 1;
-                                //                                     } else if redraw.is_none() {
-                                //                                         // visited_players_opp[sig_act.player() as usize] = true;
-                                //                                         // erasure of progress because of AMB or redraw
-                                //                                         visited_players = [false; 6];
-                                //                                     } else if *redraw == Some(discard_considered) {
-                                //                                         redraw_stack_pop_count += 1;
-                                //                                     }
-                                //                                 }
-                                //                             }
-                                //                         }
-                                //                         // TODO: [OPTIMIZE] I do belief u can use latest public_constraints
-                                //                         log::trace!("reveal_players {:?}, discard_players: {:?}", reveal_players, discard_players);
-                                //                         log::trace!("visited_players: {:?}", visited_players);
-                                //                         log::trace!("self.history[i - 1].public_constraints(): {:?}", self.history[i - 1].public_constraints());
-                                //                         log::trace!("reveal + visited_players: {}", reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| **v0 || **v1).count());
-                                //                         log::trace!("discard_players.len(): {}", discard_players.len());
-                                //                         log::trace!("discard_players.len(): {}", discard_players.len());
-                                //                         log::trace!("dead before: {}", self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>());
-                                //                         // log::trace!("reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len() = {}", reveal_players.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len());
-                                //                         // reveal_players.iter().enumerate().filter(|(i, v)| *i != player_index as usize && **v).count()
-                                //                         // reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| *i != player_index as usize && (**v0 || **v1)).count()
-                                //                         // reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| **v0 || **v1).count()
-                                //                         reveal_players.iter().zip(visited_players.iter()).zip(visited_players_opp.iter()).enumerate().filter(|(i, ((v0, v1), v2))| (**v0 || **v1) && !**v2).count()
-                                //                         + discard_players.len()  // valid dead from latest move to current iter + dead before
-                                //                         + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
-                                //                         // + historical_first_time_reveal_count
-                                //                         >= 3 + redraw_stack_pop_count
-                                //                         // temp.iter().filter(|p| **p != player_index).count() >= 3 - discard_players.len()
-                                //                         // temp.iter().filter(|p| **p != player_index).count() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
-                                //                         // Checking for first time reveal_redraws too (+ extra inferred)!
-                                //                         // Problem with this is that it can also include the current reveal_redraw in iter_loop => add 1 to deal with that
-                                //                         // Its also not so simple
-                                //                         // self.history[1].inferred_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
-                                //                         // + self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>() >= 3
-                                //                     }
-                                //                     || {
-                                //                         *reveal_i == discard_considered && 
-                                //                         self.history[i - 1].public_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
-                                //                         + self.history[i - 1].inferred_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
-                                //                         == 2
-                                //                     }
-                                //                     // false
-                                //                 )
-                                //             )
-                                //             // === OLD ===
-                                //             // self.history[i - 1].known_card_count(discard_considered) == 2 
-                                //             // // Might be hacky, Idea Is that there are 2 non-pile players we know that have the card
-                                //             // // And because of a previous RevealRedraw the last card is between pile and another player
-                                //             // && !self.history[i - 1].inferred_constraints()[6].contains(&discard_considered) 
-                                //             //     // This below breaks shit
-                                //             // // && !self.history[i - 1].inferred_constraints()[action_player as usize].contains(&discard_considered)
-                                                
-                                //             // && (
-                                //             //     // 2 cards outside of player, and player reveals discard_considered
-                                //             //     *reveal_i == discard_considered
-                                //             //     // 2 cards outside of player, and player redraws discard_considered
-                                //             //     // i.e someone revealredraw or ambassador an item into it
-                                //             //     // I'm wondering if the lookback_check revealredraw player should also be excluded
-                                //             //     // Just like pile above
-                                //             //     || self.lookback_check(i - 1, action_player, discard_considered).is_some()
-                                //             //     // Temp test change location
-                                //             //     // || !self.history[i - 1].inferred_constraints()[action_player as usize].contains(&discard_considered)
-                                //             // )
-                                //             // === OLD ===
-                                //             || self.history[i - 1].known_card_count(discard_considered) == 3
-                                //             && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered)
-                                //             // 3 cards outside of player and (implied that player obviously won't reveal discard_considered)
-                                //             // && !self.history[i - 1].player_has_inferred_constraint(action_player, *reveal_i)
-                                //         )
-                                //         // I guess player could have 1 life and so would have to redraw that card
-                                //         // TODO: [OPTIMIZE] the arrangement of these
-                                //         || self.history[i - 1].public_constraints()[action_player as usize].len() == 1
-                                //     )
-                                // } else {
-                                //     false
-                                // };
+
                                 let need_redraw_update = self.need_redraw_update_2(i, discard_considered, &illegal_players);
                                 // TESTING matching above not letting reveal count to its own redraw
                                 if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
@@ -1263,44 +789,7 @@ impl PathDependentCollectiveConstraint {
                                         discard_players.retain(|p| *p != action_player);
                                     }
                                 }
-                                // if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                //     log::trace!("reveal_i: {:?}, *reveal_i: {:?}, redraw_i: {:?}", reveal_i, *reveal_i, redraw_i);
-                                //     log::trace!("action_data.action_info(), {:?}", action_data.action_info());
-                                //     log::trace!("redraw_i.is_none() = : {}", redraw_i.is_none());
-                                //     log::trace!("&&");
-                                //     log::trace!("self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2 = {}", self.history[i - 1].meta_data().public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() == 2);
-                                //     log::trace!("!self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered): {:?}", !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered));
-                                //     log::trace!("i: {} self.history: {:?}",i , self.history);
-                                //     log::trace!("&&");
-                                //     log::trace!("!action_data.player_has_inferred_constraint(action_player, discard_considered) = {}", !self.inferred_constraints[action_player as usize].contains(&discard_considered));
-                                //     log::trace!("||");
-                                //     log::trace!("(");
-                                //     log::trace!("self.public_constraints[action_player as usize].len() + self.inferred_constraints[action_player as usize].len() == 2 = {}", self.public_constraints[action_player as usize].len() + self.inferred_constraints[action_player as usize].len() == 2);
-                                //     log::trace!("&&");
-                                //     log::trace!("self.player_constraints_all_full(action_player, discard_considered)) = {}", self.inferred_constraints[action_player as usize].iter().all(|&c| c == discard_considered) &&
-                                //     self.public_constraints[action_player as usize].iter().all(|&c| c == discard_considered));
-                                //     log::trace!(")");
-                                //     log::trace!("||");
-                                //     log::trace!("(");
-                                //     log::trace!("self.history[i - 1].known_card_count(discard_considered) == 2 = {}", self.history[i - 1].known_card_count(discard_considered) == 2);
-                                //     log::trace!("self.history[i - 1] = {:?}", self.history[i - 1]);
-                                //     log::trace!("&&");
-                                //     log::trace!("   (");
-                                //     log::trace!("*reveal_i == discard_considered = ?? reveal_i: {:?}, discard_considered: {:?}", *reveal_i, discard_considered);
-                                //     log::trace!("||");
-                                //     log::trace!("self.lookback_check_2({i}, {action_player}, discard_considered) = {}", self.lookback_check_2(i, action_player as usize, discard_considered));
-                                //     log::trace!("   )");
-                                //     log::trace!("||");
-                                //     log::trace!("   (");
-                                //     log::trace!("bool_all_cards_dead = {}", bool_all_cards_dead);
-                                //     log::trace!("*reveal_i == discard_considered = {}", *reveal_i == discard_considered);
-                                //     log::trace!("reveal_players.len() >= 3 - discard_players.len() = {}", reveal_players.len() >= 3 - discard_players.len());
-                                //     log::trace!("reveal_players {:?} discard_players {:?}", reveal_players, discard_players);
-                                //     log::trace!("   )");
-                                //     log::trace!("||");
-                                //     log::trace!("self.history[i - 1].known_card_count(discard_considered) == 3 = {}", self.history[i - 1].known_card_count(discard_considered) == 3);
-                                //     log::trace!(")");
-                                // }
+ 
                                 log::trace!("lookback_initial original Discard: {:?}", action_info);
                                 log::trace!("lookback_initial considering: player: {} {:?}", action_data.player(), action_data.action_info());
                                 
@@ -1354,15 +843,6 @@ impl PathDependentCollectiveConstraint {
                         }
                     } else {
                         // TEMP TEST [REFACTOR]
-                        // if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                        //     if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) 
-                        //     && !discard_players.contains(&action_player){
-                        //         reveal_players.push(action_player);
-                        //     }
-                        //     if redraw_i.is_none() {
-                        //         illegal_players.push(action_player);
-                        //     }
-                        // }
                         // Collecting same card discards found along the way
                         if let ActionInfo::Discard { discard } = action_data.action_info() {
                             if *discard == discard_considered {
@@ -1383,105 +863,7 @@ impl PathDependentCollectiveConstraint {
                                     log::trace!("lookback_initial original player: {}, Discard: {:?}", player_index, action_info);
                                     log::trace!("lookback_initial checked player: {}, RevealRedraw: {:?}", action_player, action_data.action_info());
                                     // TODO: Ok we need to expand this
-                                    // Player may have had 2 lives at that point in time, so we don't really know
-                                    // let need_redraw_update = if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                    //     !illegal_players.contains(&action_player) // skip if player RR after too (dk which revealredraw the player redrew)
-                                    //     && discard_players.contains(&action_player)
-                                    //     && redraw_i.is_none()
-                                    //     && (
-                                    //         (
-                                    //             // self.history[i - 1].public_constraints()[action_player as usize].len() + self.history[i - 1].meta_data().inferred_constraints()[action_player as usize].len() > 1
-                                    //             // && !self.history[i - 1].player_has_inferred_constraint(action_player, discard_considered)
-                                    //             false
-                                    //         ) // required for MARKER A)
-                                    //         // || (
-                                    //         //     self.history[i - 1].public_constraints()[action_player as usize].len() == 1
-                                    //         // )
-                                    //         || (
-                                    //             // I like this
-                                    //             self.history[i - 1].impossible_constraints()[action_player as usize][discard_considered as usize]
-                                    //         )
-                                    //         || (
-                                    //             // CASE all cards are dead and known based on latest move
-                                    //             // This player had discarded the card
-                                    //             // So if they had revealed it in the past, they had to have redrawn it
-                                    //             // else they could not have discarded it
-                                    //             // because it was impossible for them to have that card the turn before
-                                    //             // Here we assume bool_all_cards_dead == true
-                                    //             *reveal_i == discard_considered
-                                    //             // && bool_all_cards_dead
-                                    //             && {
-                                    //                 // TODO: REFACTOR
-                                    //                 // But also consider may not needing to run this every iteration
-                                    //                 let mut historical_first_time_reveal_count = 0;
-                                    //                 let mut redraw_stack_pop_count = 0;
-                                    //                 // Size expected to be small
-                                    //                 let mut visited_players = [false; 6];
-                                    //                 let mut visited_players_opp = [false; 6];
-                                    //                 // visited_players[player_index as usize] = true;
-                                    //                 for sig_act in self.history[2..i].iter() {
-                                    //                     if !visited_players[sig_act.player() as usize] {
-                                    //                         if let ActionInfo::RevealRedraw { reveal, redraw, .. } = sig_act.action_info() {
-                                    //                             if *reveal == discard_considered {
-                                    //                                 visited_players[sig_act.player() as usize] = true;
-                                    //                                 historical_first_time_reveal_count += 1;
-                                    //                             } else if redraw.is_none() {
-                                    //                                 // visited_players_opp[sig_act.player() as usize] = true;
-                                    //                                 // erasure of progress because of AMB or redraw
-                                    //                                 // hmm could there be some stack action here?
-                                    //                                 // maybe it kinda nullifies itself? oh tthats just visited_players lol
-                                    //                                 visited_players = [false; 6];
-                                    //                             } else if *redraw == Some(discard_considered) {
-                                    //                                 redraw_stack_pop_count += 1;
-                                    //                             }
-                                    //                         }
-                                    //                     }
-                                    //                 }
-                                    //                 // let mut temp = reveal_players.clone();
-                                    //                 // temp.sort_unstable();
-                                    //                 // temp.dedup();
-                                    //                 // log::trace!("reveal_players {:?}, discard_players: {:?}", temp, discard_players);
-                                    //                 // TODO: REFACTOR
-                                    //                 log::trace!("reveal_players {:?}, discard_players: {:?}", reveal_players, discard_players);
-                                    //                 log::trace!("visited_players {:?}", visited_players);
-                                    //                 log::trace!("reveal + visited_players: {}", reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| **v0 || **v1).count());
-                                    //                 log::trace!("discard_players.len(): {}", discard_players.len());
-                                    //                 log::trace!("dead before: {}", self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>());
-                                    //                 // reveal_players.iter().enumerate().filter(|(i, v)| *i != player_index as usize && **v).count()
-                                    //                 // reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| *i != player_index as usize && (**v0 || **v1)).count()
-                                    //                 // reveal_players.iter().zip(visited_players.iter()).enumerate().filter(|(i, (v0, v1))| **v0 || **v1).count()
-                                    //                 reveal_players.iter().zip(visited_players.iter()).zip(visited_players_opp.iter()).enumerate().filter(|(i, ((v0, v1), v2))| (**v0 || **v1) && !**v2).count()
-                                    //                 + discard_players.len()  // valid dead from latest move to current iter + dead before
-                                    //                 + self.history[i - 1].public_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
-                                    //                 // + historical_first_time_reveal_count
-                                    //                 >= 3 + redraw_stack_pop_count
-                                    //                 // temp.iter().filter(|p| **p != player_index).count() >= 3 - self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
-                                    //                 // Checking for first time reveal_redraws too (+ extra inferred)!
-                                    //                 // Problem with this is that it can also include the current reveal_redraw in iter_loop => add 1 to deal with that
-                                    //                 // Not so simple
-                                    //                 // self.history[1].inferred_constraints().iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
-                                    //                 // + self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>() >= 3
-                                                    
-                                    //             }
-                                    //             || {
-                                    //                 *reveal_i == discard_considered &&
-                                    //                 // had to have withdrawn if other 2 cards are outside player
-                                    //                 self.history[i - 1].public_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
-                                    //                 + self.history[i - 1].inferred_constraints().iter().enumerate().filter(|(p, _)| *p != action_player as usize).map(|(_, v)| v.iter().filter(|c| **c == discard_considered).count()).sum::<usize>()
-                                    //                 == 2
-                                    //             }
-                                    //         )
-                                    //     )
-                                    // } else {
-                                    //     false
-                                    // };
-                                    // // Adding after to prevent reveal counting to its own redraw
-                                    // // TEMP TEST [REFACTOR]
-                                    // // if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                    // //     if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) {
-                                    // //         reveal_players.push(action_player);
-                                    // //     }
-                                    // // }
+                                    
                                     let need_redraw_update = self.need_redraw_update_2(i, discard_considered, &illegal_players);
                                     if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
                                         if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) 
