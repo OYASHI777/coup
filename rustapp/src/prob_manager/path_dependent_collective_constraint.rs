@@ -2648,8 +2648,11 @@ impl PathDependentCollectiveConstraint {
             return variants;
             // TODO: remove if recursing
         }
+        let mut iter_cards = inferred_constraints[player_loop].clone();
+        iter_cards.sort_unstable();
+        iter_cards.dedup();
         // Doesnt handle empty case
-        for (_, card_player) in inferred_constraints[player_loop].iter().enumerate() {
+        for (_, card_player) in iter_cards.iter().enumerate() {
             // Card Source was not from Pile
             let mut bool_move_from_pile_to_player = false;
             if *card_player != reveal || inferred_constraints[6].contains(&reveal) {
@@ -2737,9 +2740,9 @@ impl PathDependentCollectiveConstraint {
             // if pile_hand != checker[6] {
             //     log::warn!("failed 2 to pop pile hand properly");
             // }
-            if inferred_constraints[player_loop].len() == 2 && inferred_constraints[player_loop][0] == inferred_constraints[player_loop][1]{
-                break;
-            }
+            // if inferred_constraints[player_loop].len() == 2 && inferred_constraints[player_loop][0] == inferred_constraints[player_loop][1]{
+            //     break;
+            // }
         }
         return variants
     }
