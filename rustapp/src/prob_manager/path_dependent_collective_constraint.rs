@@ -2512,15 +2512,17 @@ impl PathDependentCollectiveConstraint {
     /// Tracks possible paths known cards could have come from in the past
     /// If a state is found to satisfy cards at the index_of_interest return Some(true)
     /// If no state is every found return Some(false) or None
-    pub fn possible_to_have_cards_recurse(&self, index_loop: usize, index_of_interest: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, cards: &Vec<Card>) -> Option<bool> {
+    pub fn possible_to_have_cards_recurse(&self, index_loop: usize, index_of_interest: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, cards: &Vec<Card>) -> bool {
         // Will temporarily not use memo and generate all group_constraints from start
         // TODO: OPTIMIZE store the group_constraints in history
         //      - or store all impossible_combinations in history to make checking invalid states faster and less memory usage too
-        return None; // TODO: REMOVE
-        // if self.is_valid_combination(index_loop, index_of_interest, inferred_counts, inferred_constraints, cards).is_none() {
-        //     // early exit before terminal node
-        //     return None
-        // }
+        if !self.is_valid_combination(index_loop, index_of_interest, public_constraints, inferred_constraints, cards) {
+            // early exit before terminal node
+            return false
+        }
+        if index_loop == index_of_interest - 1 {
+            // TODO: Terminal node
+        }
         let player_loop = self.history[index_loop].player() as usize;
         match self.history[index_loop].action_info() {
             ActionInfo::Discard { discard } => {
@@ -2579,7 +2581,7 @@ impl PathDependentCollectiveConstraint {
                                     // This state cannot be arrive after the reveal_redraw
                                     return None;
                                 }
-                                let mut response = None;
+                                let mut response = false;
                                 if inferred_constraints[player_loop].is_empty() {
                                     // let mut bool_move_from_pile_to_player = false;
                                     let mut removed_reveal = false;
@@ -2632,10 +2634,8 @@ impl PathDependentCollectiveConstraint {
                                     if removed_card_player {
                                         inferred_constraints[player_loop].push(*card_player);
                                     }
-                                    if let Some(res) = response {
-                                        if res {
-                                            return Some(true);
-                                        }
+                                    if response {
+                                       return response;
                                     }
                                 }
                                 return response;
@@ -2656,14 +2656,12 @@ impl PathDependentCollectiveConstraint {
                                             .map(|c| (6, c)),
                                     )
                                     .collect();
-                                let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
-                                Self::build_variants_reveal_redraw_none(*reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
+                                let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(2);
+                                Self::build_variants_reveal_redraw_none_opt(*reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
                                 for inferred_i in variants.iter() {
                                     let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, public_constraints, &mut inferred_i, cards);
-                                    if let Some(inner) = response {
-                                        if inner {
-                                            return Some(true);
-                                        }
+                                    if response {
+                                        return response;
                                     }
                                 }
                             },
@@ -2675,9 +2673,8 @@ impl PathDependentCollectiveConstraint {
             ActionInfo::Start
             | ActionInfo::StartInferred => {},
         }
-        // 
         // Did not find a valid combination
-        Some(false)
+        false
     }
     pub fn return_variants_reveal_redraw_none(reveal: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
@@ -3205,7 +3202,7 @@ impl PathDependentCollectiveConstraint {
         }
     }
     /// Return true if hypothesised card permutations cannot be shown to be impossible
-    pub fn is_valid_combination(&self, index_loop: usize ,index_of_interest: usize, public_constraints: &Vec<Vec<Card>>, inferred_constraints: &Vec<Vec<Card>>, cards: &Vec<Card>) -> Option<bool> {
+    pub fn is_valid_combination(&self, index_loop: usize ,index_of_interest: usize, public_constraints: &Vec<Vec<Card>>, inferred_constraints: &Vec<Vec<Card>>, cards: &Vec<Card>) -> bool {
         let invalid_state: bool = false;
         if index_loop == index_of_interest - 1 {
             // Check actual constraints at leaf node
@@ -3213,10 +3210,10 @@ impl PathDependentCollectiveConstraint {
             // All 
         } else {
             if invalid_state {
-                return None;
+                return false;
             }
         }
-        Some(true)
+        true
     }
     /// determines if a previous player 
     pub fn need_redraw_update(&self, index: usize, card_of_interest: Card, illegal_players: &[bool; 6]) -> bool {
