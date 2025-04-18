@@ -58,8 +58,8 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    // test();
-    temp();
+    test();
+    // temp();
 }
 use rustapp::prob_manager::path_dependent_collective_constraint::{self, PathDependentCollectiveConstraint};
 // TODO: Move to collective_constraint when finalized
@@ -247,7 +247,7 @@ pub fn test() {
         // println!("Testing: {}", stringify!(overinferred_11)); 
         // replay_game_constraint_pd(overinferred_11, false, false);
         println!("Testing: {}", stringify!(overinferred_7));
-        replay_game_constraint_pd(overinferred_7, false, true);
+        replay_game_constraint_pd(overinferred_7, false, false);
         // println!("Testing: {}", stringify!(reveal_redraw_replay_8));
         // replay_game_constraint_pd(reveal_redraw_replay_8, false, false);
         println!("Testing: {}", stringify!(overinferred_6));
