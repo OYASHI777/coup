@@ -3179,6 +3179,8 @@ impl PathDependentCollectiveConstraint {
     }
     /// determines if a previous player 
     pub fn need_redraw_update_2(&self, index: usize, card_of_interest: Card, illegal_players: &[bool; 6]) -> bool {
+        log::trace!("need_redraw_update_2 considered: {index}, card_of_interest: {:?}, illegal_players: {:?}", card_of_interest, illegal_players);
+        log::trace!("need_redraw_update_2 considered: {index}, player: {:?} move {:?}", self.history[index].player(), self.history[index].action_info());
         let mut players_had_revealed_or_discarded = [false; 6];
         // Prob can optimize to use u8s
         for i in (index+1..self.history.len()).rev() {
@@ -3208,10 +3210,11 @@ impl PathDependentCollectiveConstraint {
         log::trace!("!illegal_players[action_player as usize]: {:?}", !illegal_players[action_player as usize]);
         log::trace!("players_had_revealed_or_discarded: {:?}", players_had_revealed_or_discarded);
         log::trace!("redraw_i.is_none(): {:?}", self.history[index].action_info());
+        // TODO: OPTIMIZE obviously don't put this here
         let bool_2_cards_outside_player = if let ActionInfo::RevealRedraw { reveal, redraw , .. }= self.history[index].action_info() {
             if *reveal == card_of_interest && redraw.is_none() {
                 let mut cards: [u8; 5] = [0; 5];
-                cards[*reveal as usize] = 2;
+                cards[card_of_interest as usize] = 2;
                 self.impossible_to_have_cards(index, action_player, &cards)
             } else {
                 false
@@ -3249,6 +3252,20 @@ impl PathDependentCollectiveConstraint {
                     self.history[index - 1].public_constraints().iter().enumerate().filter(|(p, _)| *p != action_player).map(|(_, v)| v.iter().filter(|c| **c == card_of_interest).count()).sum::<usize>()
                     + self.history[index - 1].inferred_constraints().iter().enumerate().filter(|(p, _)| *p != action_player).map(|(_, v)| v.iter().filter(|c| **c == card_of_interest).count()).sum::<usize>()
                     == 2
+                )
+                || (
+                    // Player cannot have card
+                    *reveal_i != card_of_interest 
+                    && redraw_i.is_none()
+                    && {
+                        let mut cards: [u8; 5] = [0; 5];
+                        cards[card_of_interest as usize] = 1;
+                        let output = self.impossible_to_have_cards(index, action_player, &cards);
+                        log::trace!("need_redraw_update_2 considered: {index}, card_of_interest: {:?}, illegal_players: {:?}", card_of_interest, illegal_players);
+                        log::trace!("need_redraw_update_2 considered: {index}, player: {:?} move {:?}", self.history[index].player(), self.history[index].action_info());
+                        log::trace!("need_redraw_update_2 player cannot have card evaluated to : {}", output);
+                        output
+                    }
                 )
                 || bool_2_cards_outside_player
                 || false // *reveal != card_of_interest && 3 cards outside player
