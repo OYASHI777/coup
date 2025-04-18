@@ -3278,6 +3278,7 @@ impl PathDependentCollectiveConstraint {
         for card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa].iter() {
             if public_constraints.iter().map(|v| v.iter().filter(|c| **c == *card).count() as u8).sum::<u8>() 
             + inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *card).count() as u8).sum::<u8>() > 3 {
+                log::trace!("is_valid_combination constraints has too many {:?}", card);
                 return false
             }
         }
@@ -3287,11 +3288,14 @@ impl PathDependentCollectiveConstraint {
                 2 => {
                     for card in action_info.public_constraints()[player].iter() {
                         if !public_constraints[player].contains(card) {
+                            log::trace!("is_valid_combination public_constraint for player: {player}, does not contain: {:?}", card);
                             return false
                         }
                     }
                     for card in action_info.inferred_constraints()[player].iter() {
                         if !inferred_constraints[player].contains(card) {
+                            log::trace!("is_valid_combination inferred_constraint for player: {player}, does not contain: {:?}", card);
+                            log::trace!("is_valid_combination original inferred_constraint for player: {player}, : {:?}", action_info.inferred_constraints()[player]);
                             return false
                         }
                     }
@@ -3302,17 +3306,26 @@ impl PathDependentCollectiveConstraint {
                         for card in public_constraints[player].iter() {
                             // public constraints in general should be fine
                             if !action_info.public_constraints()[player].contains(card) {
+                                log::trace!("is_valid_combination public_constraint for player: {player}, does not contain: {:?}", card);
                                 return false
                             }
                         }
                         for card in inferred_constraints[player].iter() {
                             if !action_info.inferred_constraints()[player].contains(card) {
+                                log::trace!("is_valid_combination original inferred_constraint for player: {player}, does not contain: {:?}", card);
+                                log::trace!("is_valid_combination original inferred_constraint for player: {player}, : {:?}", action_info.inferred_constraints()[player]);
                                 return false
                             }
                         }
                     } 
                 },
                 0 => {},
+                3 => {
+                    // TODO: OPTIMIZE can just bring this out of the loop lol
+                    if player != 6 {
+                        return false
+                    }
+                }
                 _ => {
                     return false
                 },
