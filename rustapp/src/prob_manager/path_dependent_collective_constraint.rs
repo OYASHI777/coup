@@ -608,7 +608,7 @@ impl PathDependentCollectiveConstraint {
                                                 // reveal_players.push(action_player);
                                                 reveal_players[action_player as usize] = true;
                                             }
-                                            if redraw_i.is_none() && i != index && !need_redraw_update {
+                                            if redraw_i.is_none() && i != index && !(need_redraw_update && *reveal_i == reveal_considered) {
                                                 // Exclude the revealredraw that was just played as its effectively considered a 
                                                 // inferred_constraint
                                                 illegal_to_change[action_player as usize] = true;
@@ -686,7 +686,7 @@ impl PathDependentCollectiveConstraint {
                                                 // reveal_players.push(action_player);
                                                 reveal_players[action_player as usize] = true;
                                             }
-                                            if redraw_i.is_none() && i != index && !need_redraw_update {
+                                            if redraw_i.is_none() && i != index && !(need_redraw_update && *reveal_i == reveal_considered) {
                                                 // Exclude the revealredraw that was just played as its effectively considered a 
                                                 // inferred_constraint
                                                 // Do not update any other of the same player after the closest RR has been considered
@@ -784,7 +784,7 @@ impl PathDependentCollectiveConstraint {
                                         // reveal_players.push(action_player);
                                         reveal_players[action_player as usize] = true;
                                     }
-                                    if redraw_i.is_none() && !need_redraw_update {
+                                    if redraw_i.is_none() && !(need_redraw_update && *reveal_i == discard_considered) {
                                         illegal_players[action_player as usize] = true;
                                         discard_players.retain(|p| *p != action_player);
                                     }
@@ -871,7 +871,7 @@ impl PathDependentCollectiveConstraint {
                                             // reveal_players.push(action_player);
                                             reveal_players[action_player as usize] = true;
                                         }
-                                        if redraw_i.is_none() && !need_redraw_update {
+                                        if redraw_i.is_none() && !(need_redraw_update && *reveal_i == discard_considered) {
                                             illegal_players[action_player as usize] = true;
                                             discard_players.retain(|p| *p != action_player);
                                         }
