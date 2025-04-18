@@ -568,7 +568,6 @@ impl PathDependentCollectiveConstraint {
         match action_info {
             ActionInfo::RevealRedraw{reveal: reveal_considered, redraw: redraw_considered, ..} => {
                 log::trace!("lookback_initial considering: RevealRedraw: player {player_index}, reveal: {:?}, redraw: {:?}", reveal_considered, redraw_considered);
-                let bool_all_other_cards_dead = self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal_considered).count()).sum::<usize>() == 2;
                 match redraw_considered {
                     Some(redraw_card) => {
                         // TODO: [CASE] kinda same as discard
@@ -631,7 +630,9 @@ impl PathDependentCollectiveConstraint {
                                                 }
                                                 bool_changes = true;
                                                 bool_skip_start_update = true;
-                                                break 'iter_loop;
+                                                // break 'iter_loop;
+                                                // Test
+                                                illegal_to_change[action_player as usize] = false;
 
                                             }
                                         } else {
@@ -712,6 +713,8 @@ impl PathDependentCollectiveConstraint {
                                                 // Like if we pass a reveal == redraw must we kick them?
                                                 // What does this do
                                                 // if redraw.is_none() {
+                                                // Test
+                                                illegal_to_change[action_player as usize] = false;
                                                 card_assured_players.retain(|p| *p != action_player);
                                                 // }
                                             }
@@ -809,7 +812,10 @@ impl PathDependentCollectiveConstraint {
                                         // return true;
                                         bool_changes = true;
                                         bool_skip_start_update = true;
-                                        break 'iter_loop;
+                                        // break 'iter_loop;
+
+                                        // Test
+                                        illegal_to_change[action_player as usize] = false;
                                     }
                                 } else {
                                     // return false;
@@ -914,6 +920,9 @@ impl PathDependentCollectiveConstraint {
                                             // Like if we pass a reveal == redraw must we kick them?
                                             // What does this do
                                             discard_players.retain(|p| *p != action_player);
+
+                                            // Test
+                                            illegal_to_change[action_player as usize] = false;
                                         }
                                     } else {
                                         // return false;
