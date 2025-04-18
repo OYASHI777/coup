@@ -207,9 +207,6 @@ pub fn test() {
         // bool_all_dead in discard?
         // This might fail when AMB is reintroduced
         // Hacky cases for Redraw inference
-        // === I think the brute force is wrong? ===
-        // println!("Testing: {}", stringify!(impossible_5));
-        // replay_game_constraint_pd(impossible_5, false, true);
         // ========================================
         // === Non PD inference
         // I have no idea whats wrong here lol, maybe same as subtract overflow
@@ -235,27 +232,27 @@ pub fn test() {
         // P2 D D
         // P1 D D
         // P3 D D
-        // println!("Testing: {}", stringify!(impossible_5));
-        // replay_game_constraint_pd(impossible_5, false, false);
+        println!("Testing: {}", stringify!(impossible_5));
+        replay_game_constraint_pd(impossible_5, false, false);
         // TODO: TEST THIS => Single Group constraint of all known at start forward pass?
-        // println!("Testing: {}", stringify!(overinferred_12)); // stored but untested
-        // replay_game_constraint_pd(overinferred_12, false, false);
+        println!("Testing: {}", stringify!(overinferred_12)); // stored but untested
+        replay_game_constraint_pd(overinferred_12, false, false);
         // overinferred_11 This tells us the merging did not work out very well
         // maybe merge also discard into reveal?
         // actually the front count doesnt really make sense
         // esp if someone amb
-        // println!("Testing: {}", stringify!(overinferred_11)); 
-        // replay_game_constraint_pd(overinferred_11, false, false);
+        println!("Testing: {}", stringify!(overinferred_11)); 
+        replay_game_constraint_pd(overinferred_11, false, false);
         println!("Testing: {}", stringify!(overinferred_7));
         replay_game_constraint_pd(overinferred_7, false, false);
-        // println!("Testing: {}", stringify!(reveal_redraw_replay_8));
-        // replay_game_constraint_pd(reveal_redraw_replay_8, false, false);
+        println!("Testing: {}", stringify!(reveal_redraw_replay_8));
+        replay_game_constraint_pd(reveal_redraw_replay_8, false, false);
         println!("Testing: {}", stringify!(overinferred_6));
         replay_game_constraint_pd(overinferred_6, false, false);
-        // println!("Testing: {}", stringify!(overinferred_5));
-        // replay_game_constraint_pd(overinferred_5, false, false);
-        // println!("Testing: {}", stringify!(impossible_2));
-        // replay_game_constraint_pd(impossible_2, false, false);
+        println!("Testing: {}", stringify!(overinferred_5));
+        replay_game_constraint_pd(overinferred_5, false, false);
+        println!("Testing: {}", stringify!(impossible_2));
+        replay_game_constraint_pd(impossible_2, false, false);
         // === PD RevealRedraw cases
         // ===================================
         // Future features / weird bugs
