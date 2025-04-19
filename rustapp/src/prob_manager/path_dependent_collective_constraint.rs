@@ -2149,39 +2149,91 @@ impl PathDependentCollectiveConstraint {
                                 iter_cards.sort_unstable();
                                 iter_cards.dedup();
                                 for (i, card_player) in iter_cards.iter().enumerate() {
-                                    log::trace!("possible_to_have_cards_recurse trying card {i} : {:?} to have been redrawn from pile, iter_cards: {:?}", card_player, iter_cards);
+                                    // Card Source was not from Pile
+                                    if inferred_constraints[player_loop].len() < 2 {
+                                        let mut bool_move_from_pile_to_player = false;
+                                        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
+                                            inferred_constraints[6].swap_remove(pos);
+                                            bool_move_from_pile_to_player = true;
+                                        }
+                                        inferred_constraints[player_loop].push(*reveal);
+                                        
+                                        if inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
+                                            response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
+                                        }
+                                        
+                                        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
+                                            inferred_constraints[player_loop].swap_remove(pos);
+                                        }
+                                        if bool_move_from_pile_to_player {
+                                            inferred_constraints[6].push(*reveal);
+                                        }
+                                    }
                                     // Card Source was from Pile
-                                    let mut removed_reveal = false;
-                                    let mut removed_card_player = false;
-                                    if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_player) {
-                                        inferred_constraints[player_loop].swap_remove(pos);
-                                        removed_card_player = true;
-                                    }
-                                    inferred_constraints[6].push(*card_player);
-                                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
-                                        inferred_constraints[6].swap_remove(pos);
-                                        removed_reveal = true;
-                                    }
-                                    inferred_constraints[player_loop].push(*reveal);
-                        
-                                    response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
-                        
-                                    if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
-                                        inferred_constraints[player_loop].swap_remove(pos);
-                                    }
-                                    if removed_reveal {
-                                        inferred_constraints[6].push(*reveal);
-                                    }
-                                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| c == card_player) {
-                                        inferred_constraints[6].swap_remove(pos);
-                                    }
-                                    if removed_card_player {
-                                        inferred_constraints[player_loop].push(*card_player);
-                                    }
-                                    if response {
-                                       return response;
+                                    if *card_player != *reveal {
+                                        let mut bool_move_from_pile_to_player = false;
+                                        let mut bool_move_from_player_to_pile = false;
+                                        if let Some(pos) = inferred_constraints[player_loop].iter().position(|c| *c == *card_player) {
+                                            inferred_constraints[player_loop].swap_remove(pos);
+                                            bool_move_from_player_to_pile = true;
+                                        }
+                                        inferred_constraints[6].push(*card_player);
+                                        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
+                                            inferred_constraints[6].swap_remove(pos);
+                                            bool_move_from_pile_to_player = true;
+                                        }
+                                        inferred_constraints[player_loop].push(*reveal);
+                                        // TODO: Recurse here in other version
+                                        response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
+
+                                        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
+                                            inferred_constraints[player_loop].swap_remove(pos);
+                                        }
+                                        if bool_move_from_pile_to_player {
+                                            inferred_constraints[6].push(*reveal);
+                                        }
+                                        if bool_move_from_player_to_pile {
+                                            inferred_constraints[player_loop].push(*card_player);
+                                        }
+                                        if response {
+                                            return true;
+                                        }
                                     }
                                 }
+                                // for (i, card_player) in iter_cards.iter().enumerate() {
+                                //     log::trace!("possible_to_have_cards_recurse trying card {i} : {:?} to have been redrawn from pile, iter_cards: {:?}", card_player, iter_cards);
+                                //     // Card Source was from Pile
+                                //     let mut removed_reveal = false;
+                                //     let mut removed_card_player = false;
+                                //     if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_player) {
+                                //         inferred_constraints[player_loop].swap_remove(pos);
+                                //         removed_card_player = true;
+                                //     }
+                                //     inferred_constraints[6].push(*card_player);
+                                //     if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
+                                //         inferred_constraints[6].swap_remove(pos);
+                                //         removed_reveal = true;
+                                //     }
+                                //     inferred_constraints[player_loop].push(*reveal);
+                        
+                                //     response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
+                        
+                                //     if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
+                                //         inferred_constraints[player_loop].swap_remove(pos);
+                                //     }
+                                //     if removed_reveal {
+                                //         inferred_constraints[6].push(*reveal);
+                                //     }
+                                //     if let Some(pos) = inferred_constraints[6].iter().rposition(|c| c == card_player) {
+                                //         inferred_constraints[6].swap_remove(pos);
+                                //     }
+                                //     if removed_card_player {
+                                //         inferred_constraints[player_loop].push(*card_player);
+                                //     }
+                                //     if response {
+                                //        return response;
+                                //     }
+                                // }
                             },
                             None => {
                                 // Case 0: player redrew card != reveal
