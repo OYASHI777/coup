@@ -2078,7 +2078,7 @@ impl PathDependentCollectiveConstraint {
                 inferred_constraints[player_loop].push(*discard);
                 // recurse
                 response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
-                if let Some(pos) = public_constraints[player_loop].iter().rposition(|c| *c == *discard) {
+                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *discard) {
                     inferred_constraints[player_loop].swap_remove(pos);
                 }
                 if removed_discard {
