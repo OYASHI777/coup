@@ -230,8 +230,7 @@ pub fn test() {
         // esp if someone amb
         // failed after relinquish => the relinquish does not produce the correct groups...
         println!("Testing: {}", stringify!(overinferred_11)); 
-        replay_game_constraint_pd(overinferred_11, false, true);
-        panic!();
+        replay_game_constraint_pd(overinferred_11, false, false);
         // ===================== 
         println!("Testing: {}", stringify!(overinferred_14)); 
         replay_game_constraint_pd(overinferred_14, false, false);
