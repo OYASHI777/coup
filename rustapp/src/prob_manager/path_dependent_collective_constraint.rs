@@ -2160,6 +2160,9 @@ impl PathDependentCollectiveConstraint {
                                         
                                         if inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
                                             response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
+                                            if response {
+                                                return true;
+                                            }
                                         }
                                         
                                         if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
