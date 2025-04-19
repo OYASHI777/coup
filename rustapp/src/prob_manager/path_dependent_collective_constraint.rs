@@ -3894,6 +3894,7 @@ impl PathDependentCollectiveConstraint {
                     group_constraints[i].add_dead_count(1);
                     group_constraints[i].sub_alive_count(1);
                 } else {
+                    log::trace!("add_dead_player_constraint Removing group: {:?}", group_constraints[i]);
                     group_constraints.swap_remove(i);
                     continue;
                 }
@@ -4167,6 +4168,7 @@ impl PathDependentCollectiveConstraint {
                 let groups = &mut group_constraints[card as usize];
                 let mut i: usize = 0;
                 while i < groups.len() {
+                    log::trace!("dead_card_prune A considering group: {:?}", groups[i]);
                     let group = &mut groups[i];
                     if group.get_player_flag(player_id) {
                         group.set_player_flag(player_id, false);
@@ -4198,6 +4200,7 @@ impl PathDependentCollectiveConstraint {
                     let groups = &mut group_constraints[card_num];
                     let mut i: usize = 0;
                     while i < groups.len() {
+                        log::trace!("dead_card_prune B considering group: {:?}", groups[i]);
                         let group = &mut groups[i];
                         if group.get_player_flag(player_id) {
                             group.set_player_flag(player_id, false);
@@ -4231,6 +4234,7 @@ impl PathDependentCollectiveConstraint {
                     let groups = &mut group_constraints[card as usize];
                     let mut i: usize = 0;
                     while i < groups.len() {
+                        log::trace!("dead_card_prune C considering group: {:?}", groups[i]);
                         let group = &mut groups[i];
                         if group.get_player_flag(player_id) {
                             group.set_player_flag(player_id, false);
@@ -4260,6 +4264,7 @@ impl PathDependentCollectiveConstraint {
                         let groups = &mut group_constraints[card_num];
                         let mut i: usize = 0;
                         while i < groups.len() {
+                            log::trace!("dead_card_prune D considering group: {:?}", groups[i]);
                             let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
                                 group.set_player_flag(player_id, false);
@@ -4288,6 +4293,7 @@ impl PathDependentCollectiveConstraint {
                     let groups = &mut group_constraints[card as usize];
                     let mut i: usize = 0;
                     while i < groups.len() {
+                        log::trace!("dead_card_prune E considering group: {:?}", groups[i]);
                         let group = &mut groups[i];
                         if group.get_player_flag(player_id) {
                             // Set false cos u have 1 life after anyways, so nothing really affected for path dependent approach
@@ -4331,7 +4337,7 @@ impl PathDependentCollectiveConstraint {
             let player_id = single_flag_group.get_set_players().iter().position(|b| *b).unwrap();
             let card: Card = single_flag_group.card();
             log::trace!("add_inferred_card_bulk: adding group: {}", single_flag_group);
-            bool_changes = self.add_inferred_card(player_id, card, single_flag_group.count_alive(), &mut card_changes).0 || bool_changes;
+            bool_changes = self.add_inferred_card(player_id, card, single_flag_group.count_alive(), &mut card_changes) || bool_changes;
             // batch prune
             // This is formatted like this because of some &mutable and immutable borrow issue with the compiler..
             let self_groups = [&mut self.group_constraints_amb, 
@@ -4369,7 +4375,7 @@ impl PathDependentCollectiveConstraint {
     /// [2] => changes to be used for batch prune | Store? (player_id, bool_counts => false: 1, true: 2)
     /// TODO [OPTIMIZE] where even are we using the second return?
     /// TODO: Create a standalone without changes vec
-    pub fn add_inferred_card(&mut self, player_id: usize, card: Card, alive_count: u8, card_changes: &mut Vec<Vec<usize>>) -> (bool, Vec<CompressedGroupConstraint>) {
+    pub fn add_inferred_card(&mut self, player_id: usize, card: Card, alive_count: u8, card_changes: &mut Vec<Vec<usize>>) -> bool {
         // TODO: [IMPLEMENT] Need to add the case for single_card_flag on card != card_num ZZ2A as per add_dead_cards
         log::info!("In add_inferred_card");
         let mut bool_changes = false;
@@ -4493,6 +4499,7 @@ impl PathDependentCollectiveConstraint {
                         let groups = &mut group_constraints[card as usize];
                         let mut i: usize = 0;
                         while i < groups.len() {
+                            log::trace!("add_inferred_card A considering group: {:?}", groups[i]);
                             let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
                                 group.set_player_flag(player_id, false);
@@ -4522,6 +4529,7 @@ impl PathDependentCollectiveConstraint {
                         let groups = &mut group_constraints[card_num];
                         let mut i: usize = 0;
                         while i < groups.len() {
+                            log::trace!("add_inferred_card B considering group: {:?}", groups[i]);
                             let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
                                 group.set_player_flag(player_id, false);
@@ -4557,6 +4565,7 @@ impl PathDependentCollectiveConstraint {
                         let groups = &mut group_constraints[card as usize];
                         let mut i: usize = 0;
                         while i < groups.len() {
+                            log::trace!("add_inferred_card C considering group: {:?}", groups[i]);
                             let group = &mut groups[i];
                             if group.get_player_flag(player_id)  && group.count_alive() == 1{
                                 groups.swap_remove(i);
@@ -4574,6 +4583,7 @@ impl PathDependentCollectiveConstraint {
                         let groups = &mut group_constraints[card as usize];
                         let mut i: usize = 0;
                         while i < groups.len() {
+                            log::trace!("add_inferred_card D considering group: {:?}", groups[i]);
                             let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
                                 group.set_player_flag(player_id, false);
@@ -4600,6 +4610,7 @@ impl PathDependentCollectiveConstraint {
                         let groups = &mut group_constraints[card_num];
                         let mut i: usize = 0;
                         while i < groups.len() {
+                            log::trace!("add_inferred_card E considering group: {:?}", groups[i]);
                             let group = &mut groups[i];
                             if group.get_player_flag(player_id) {
                                 group.set_player_flag(player_id, false);
@@ -4626,6 +4637,7 @@ impl PathDependentCollectiveConstraint {
                         let groups = &mut group_constraints[card as usize];
                         let mut i: usize = 0;
                         while i < groups.len() {
+                            log::trace!("add_inferred_card F considering group: {:?}", groups[i]);
                             let group = &mut groups[i];
                             if group.get_player_flag(player_id) && group.count_alive() <= inferred_card_counts[card as usize] {
                                 groups.swap_remove(i);
@@ -4638,6 +4650,7 @@ impl PathDependentCollectiveConstraint {
                         let groups = &mut group_constraints[card_num];
                         let mut i: usize = 0;
                         while i < groups.len() {
+                            log::trace!("add_inferred_card G considering group: {:?}", groups[i]);
                             let group = &mut groups[i];
                             if group.get_player_flag(player_id) && group.count_alive() <= inferred_card_counts[card_num as usize] {
                                 groups.swap_remove(i);
@@ -4656,7 +4669,10 @@ impl PathDependentCollectiveConstraint {
         //     Vec::with_capacity(0)
         // };
         // TODO: Inferred card needs to prune too!
-        (bool_changes, new_inferred)
+        // Adding the cards found
+        self.add_inferred_card_bulk(new_inferred);
+        // (bool_changes, new_inferred)
+        bool_changes
     }
     pub fn add_inferred_card_unchecked(&mut self, player_id: usize, card: Card, alive_count: u8, card_changes: &mut Vec<Vec<usize>>) -> (bool, Vec<CompressedGroupConstraint>) {
         // TODO: [IMPLEMENT] Need to add the case for single_card_flag on card != card_num ZZ2A as per add_dead_cards
@@ -5588,9 +5604,11 @@ impl PathDependentCollectiveConstraint {
         log::trace!("reveal_redraw_diff player_id: {}, reveal: {:?}, redraw: {:?}", player_id, reveal, redraw);
         self.printlog();
         if !self.inferred_constraints[player_id].contains(&reveal) {
+            log::trace!("reveal_redraw_diff add_inferred_card player_id: {}, card: {:?}", player_id, reveal);
             self.add_inferred_card(player_id, reveal, 1, &mut vec![Vec::with_capacity(0); 6]);
         }
         if !self.inferred_constraints[6].contains(&redraw) {
+            log::trace!("reveal_redraw_diff add_inferred_card player_id: {}, card: {:?}", 6, redraw);
             self.add_inferred_card(6, redraw, 1, &mut vec![Vec::with_capacity(0); 6]);
         }
         log::trace!("reveal_redraw_diff after adding inferred cards");
