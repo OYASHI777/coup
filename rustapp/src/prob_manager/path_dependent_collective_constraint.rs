@@ -2195,6 +2195,9 @@ impl PathDependentCollectiveConstraint {
                                         if bool_move_from_pile_to_player {
                                             inferred_constraints[6].push(*reveal);
                                         }
+                                        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_player) {
+                                            inferred_constraints[6].swap_remove(pos);
+                                        }
                                         if bool_move_from_player_to_pile {
                                             inferred_constraints[player_loop].push(*card_player);
                                         }
