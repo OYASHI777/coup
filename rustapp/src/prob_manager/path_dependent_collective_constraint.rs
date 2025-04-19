@@ -2654,37 +2654,36 @@ impl PathDependentCollectiveConstraint {
         iter_cards.dedup();
         for (_, card_player) in iter_cards.iter().enumerate() {
             // Card Source was not from Pile
-            let mut bool_move_from_pile_to_player = false;
-            if *card_player != reveal {
-            // if *card_player != reveal || inferred_constraints[6].contains(&reveal) {
+            if player_hand.len() < 2 {
+                let mut bool_move_from_pile_to_player = false;
                 if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
                     pile_hand.swap_remove(pos);
                     bool_move_from_pile_to_player = true;
                 }
                 player_hand.push(reveal);
+                
                 let mut temp = inferred_constraints.clone();
                 temp[player_loop] = player_hand.clone();
                 temp[6] = pile_hand.clone();
-    
+                
+                // TODO: Recurse here in other version
+                variants.push(temp);
+                
                 if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
                     player_hand.swap_remove(pos);
                 }
                 if bool_move_from_pile_to_player {
                     pile_hand.push(reveal);
                 }
-                // Probably need push only if certain conditions met
-                if temp[player_loop].len() < 3  
-                && temp[6].len() < 4 
-                && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
-                    // TODO: Recurse here in other version
-                    variants.push(temp);
-                }
             }
+            
             // Card Source was from Pile
             if *card_player != reveal {
                 let mut bool_move_from_pile_to_player = false;
+                let mut bool_move_from_player_to_pile = false;
                 if let Some(pos) = player_hand.iter().position(|c| *c == *card_player) {
                     player_hand.swap_remove(pos);
+                    bool_move_from_player_to_pile = true;
                 }
                 pile_hand.push(*card_player);
                 if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
@@ -2695,24 +2694,52 @@ impl PathDependentCollectiveConstraint {
                 let mut temp = inferred_constraints.clone();
                 temp[player_loop] = player_hand.clone();
                 temp[6] = pile_hand.clone();
-    
                 // TODO: Recurse here in other version
                 variants.push(temp);
-    
+
                 if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
                     player_hand.swap_remove(pos);
                 }
                 if bool_move_from_pile_to_player {
                     pile_hand.push(reveal);
                 }
-                if let Some(pos) = pile_hand.iter().rposition(|c| c == card_player) {
-                    pile_hand.swap_remove(pos);
-                }
-                player_hand.push(*card_player);
-                if inferred_constraints[player_loop].len() == 2 && inferred_constraints[player_loop][0] == inferred_constraints[player_loop][1]{
-                    break;
+                if bool_move_from_player_to_pile {
+                    player_hand.push(*card_player);
                 }
             }
+            // Card Source was from Pile
+            // if *card_player != reveal {
+            //     let mut bool_move_from_pile_to_player = false;
+            //     if let Some(pos) = player_hand.iter().position(|c| *c == *card_player) {
+            //         player_hand.swap_remove(pos);
+            //     }
+            //     pile_hand.push(*card_player);
+            //     if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+            //         pile_hand.swap_remove(pos);
+            //         bool_move_from_pile_to_player = true;
+            //     }
+            //     player_hand.push(reveal);
+            //     let mut temp = inferred_constraints.clone();
+            //     temp[player_loop] = player_hand.clone();
+            //     temp[6] = pile_hand.clone();
+    
+            //     // TODO: Recurse here in other version
+            //     variants.push(temp);
+    
+            //     if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
+            //         player_hand.swap_remove(pos);
+            //     }
+            //     if bool_move_from_pile_to_player {
+            //         pile_hand.push(reveal);
+            //     }
+            //     if let Some(pos) = pile_hand.iter().rposition(|c| c == card_player) {
+            //         pile_hand.swap_remove(pos);
+            //     }
+            //     player_hand.push(*card_player);
+            //     if inferred_constraints[player_loop].len() == 2 && inferred_constraints[player_loop][0] == inferred_constraints[player_loop][1]{
+            //         break;
+            //     }
+            // }
         }
         variants
     }

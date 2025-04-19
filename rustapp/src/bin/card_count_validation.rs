@@ -115,6 +115,7 @@ pub fn temp() {
         log::info!("dest: {:?}", item);
 
     }
+    // dest: [[Ambassador], [], [], [], [], [], [Ambassador, Ambassador, Assassin]]
     // dest: [[Assassin], [], [], [], [], [], [Assassin, Captain]]
     // dest: [[Ambassador], [], [], [], [], [], [Ambassador, Ambassador, Captain]]
     // dest: [[Ambassador], [], [], [], [], [], [Assassin]]
