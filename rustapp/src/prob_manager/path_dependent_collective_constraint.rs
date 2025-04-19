@@ -2693,53 +2693,58 @@ impl PathDependentCollectiveConstraint {
             }
         }
         let action_info = &self.history[index_loop];
-        for player in 0..7 as usize {
+        let action_public_constraint = action_info.public_constraints();
+        let action_inferred_constraint = action_info.inferred_constraints();
+        for player in 0..6 as usize {
             match public_constraints[player].len() + inferred_constraints[player].len() {
                 2 => {
-                    for card in action_info.public_constraints()[player].iter() {
+                    for card in action_public_constraint[player].iter() {
                         if !public_constraints[player].contains(card) {
                             log::trace!("is_valid_combination public_constraint for player: {player}, does not contain: {:?}", card);
                             return false
                         }
                     }
-                    for card in action_info.inferred_constraints()[player].iter() {
+                    for card in action_inferred_constraint[player].iter() {
                         if !inferred_constraints[player].contains(card) {
                             log::trace!("is_valid_combination inferred_constraint for player: {player}, does not contain: {:?}", card);
-                            log::trace!("is_valid_combination original inferred_constraint for player: {player}, : {:?}", action_info.inferred_constraints()[player]);
+                            log::trace!("is_valid_combination original inferred_constraint for player: {player}, : {:?}", action_inferred_constraint[player]);
                             return false
                         }
                     }
                 },
                 1 => {
-                    if action_info.public_constraints()[player].len() + action_info.inferred_constraints()[player].len() == 2 {
+                    if action_public_constraint[player].len() + action_inferred_constraint[player].len() == 2 {
                         // TODO: OPTIMIZE test removing death check
                         for card in public_constraints[player].iter() {
                             // public constraints in general should be fine
-                            if !action_info.public_constraints()[player].contains(card) {
+                            if !action_public_constraint[player].contains(card) {
                                 log::trace!("is_valid_combination public_constraint for player: {player}, does not contain: {:?}", card);
                                 return false
                             }
                         }
                         for card in inferred_constraints[player].iter() {
-                            if !action_info.inferred_constraints()[player].contains(card) {
+                            if !action_inferred_constraint[player].contains(card) {
                                 log::trace!("is_valid_combination original inferred_constraint for player: {player}, does not contain: {:?}", card);
-                                log::trace!("is_valid_combination original inferred_constraint for player: {player}, : {:?}", action_info.inferred_constraints()[player]);
+                                log::trace!("is_valid_combination original inferred_constraint for player: {player}, : {:?}", action_inferred_constraint[player]);
                                 return false
                             }
                         }
                     } 
                 },
                 0 => {},
-                3 => {
-                    // TODO: OPTIMIZE can just bring this out of the loop lol
-                    if player != 6 {
-                        return false
-                    }
-                }
                 _ => {
                     return false
                 },
             }
+        }
+        if inferred_constraints[6].len() + action_inferred_constraint[6].len() > 3 {
+            let mut count_total: u8 = 0;
+            let mut action_inferred_counts: [u8; 5] = [0; 5];
+            let mut inferred_counts: [u8; 5] = [0; 5];
+            action_inferred_constraint[6].iter().for_each(|c| action_inferred_counts[*c as usize] += 1);
+            inferred_constraints[6].iter().for_each(|c| inferred_counts[*c as usize] += 1);
+            action_inferred_counts.iter().zip(inferred_counts.iter()).for_each(|(a, i)| if *i > * a {count_total += *i.max(a);} );
+            return count_total <= 3
         }
         true
     }
