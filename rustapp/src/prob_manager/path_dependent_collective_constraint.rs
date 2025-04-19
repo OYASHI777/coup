@@ -597,7 +597,7 @@ impl PathDependentCollectiveConstraint {
                                 match action_name { // This is just a get around of the partial borrowing rules...
                                     ActionInfoName::RevealRedraw => {
                                         log::trace!("lookback_initial RevealRedraw checking past RevealRedraw");
-                                        log::trace!("lookback_initial original player: {} index: {} RevealRedraw: {:?}", player_index, self.history.len(), action_info);
+                                        log::trace!("lookback_initial original player: {} index: {} RevealRedraw: {:?}", self.history.len() - 1, self.history.len(), action_info);
                                         log::trace!("lookback_initial checked player: {} index: {} RevealRedraw: {:?}", action_data.player(), i, action_data.action_info());
 
                                         let need_redraw_update = self.need_redraw_update_2(i, reveal_considered, &illegal_to_change);
@@ -616,12 +616,19 @@ impl PathDependentCollectiveConstraint {
                                                 log::trace!("card_assured_players removed: retained not player: {action_player}");
                                                 log::trace!("card_assured_players: {:?}",card_assured_players);
                                             }
+                                            // Testing
+                                            if *redraw_i == Some(reveal_considered) && !reveal_players[action_player as usize] {
+                                                illegal_to_change[action_player as usize] = true;
+                                                card_assured_players.retain(|p| *p != action_player);
+                                                log::trace!("card_assured_players removed: retained not player: {action_player}");
+                                                log::trace!("card_assured_players: {:?}",card_assured_players);
+                                            }
                                         }
 
                                         log::trace!("need_redraw_update evaluated to {need_redraw_update}");
                                         if need_redraw_update {
-                                            log::trace!("lookback_initial original RevealRedraw: {:?}", action_info);
-                                            log::trace!("lookback_initial considering: player: {} {:?}", action_data.player(), action_data.action_info());
+                                            log::trace!("lookback_initial original index: {} RevealRedraw: {:?}", self.history.len() - 1, action_info);
+                                            log::trace!("lookback_initial considering: index: {} player: {} {:?}", i, action_data.player(), action_data.action_info());
                                             if let ActionInfo::RevealRedraw { reveal, redraw, .. } = self.history[i].action_info_mut() {
                                                 log::trace!("lookback_initial setting redraw to: {:?}", reveal_considered);
                                                 *redraw = Some(reveal_considered);
@@ -695,11 +702,18 @@ impl PathDependentCollectiveConstraint {
                                                 log::trace!("card_assured_players removed: retained not player: {action_player}");
                                                 log::trace!("card_assured_players: {:?}",card_assured_players);
                                             }
+                                            // Testing
+                                            if *redraw_i == Some(reveal_considered) && !reveal_players[action_player as usize] {
+                                                illegal_to_change[action_player as usize] = true;
+                                                card_assured_players.retain(|p| *p != action_player);
+                                                log::trace!("card_assured_players removed: retained not player: {action_player}");
+                                                log::trace!("card_assured_players: {:?}",card_assured_players);
+                                            }
                                         }
                                         log::trace!("before need_redraw_update: {need_redraw_update}");
                                         if need_redraw_update {
-                                            log::trace!("lookback_initial original RevealRedraw: {:?}", action_info);
-                                            log::trace!("lookback_initial considering: player: {} {:?}", action_data.player(), action_data.action_info());
+                                            log::trace!("lookback_initial original index: {} RevealRedraw: {:?}", self.history.len() - 1, action_info);
+                                            log::trace!("lookback_initial considering: index: {} player: {} {:?}", i, action_data.player(), action_data.action_info());
                                             if let ActionInfo::RevealRedraw { reveal, redraw, .. } = self.history[i].action_info_mut() {
                                                 log::trace!("RR != lookback_initial setting redraw to: {:?}", reveal_considered);
                                                 *redraw = Some(reveal_considered);
@@ -788,10 +802,17 @@ impl PathDependentCollectiveConstraint {
                                         illegal_players[action_player as usize] = true;
                                         discard_players.retain(|p| *p != action_player);
                                     }
+                                    // Testing
+                                    if *redraw_i == Some(discard_considered) && !reveal_players[action_player as usize] {
+                                        illegal_players[action_player as usize] = true;
+                                        discard_players.retain(|p| *p != action_player);
+                                        log::trace!("card_assured_players removed: retained not player: {action_player}");
+                                        log::trace!("card_assured_players: {:?}",discard_players);
+                                    }
                                 }
  
-                                log::trace!("lookback_initial original Discard: {:?}", action_info);
-                                log::trace!("lookback_initial considering: player: {} {:?}", action_data.player(), action_data.action_info());
+                                log::trace!("lookback_initial original index: {} Discard: {:?}", self.history.len() - 1, action_info);
+                                log::trace!("lookback_initial considering: index: {} player: {} {:?}", i, action_data.player(), action_data.action_info());
                                 
                                 log::trace!("need_redraw_update evaluated to {need_redraw_update}");
                                 if need_redraw_update {
@@ -860,7 +881,7 @@ impl PathDependentCollectiveConstraint {
                                     // TODO: Consider that we could pass a RR, the see a discard, thus adding back into discard_players
                                     // This leads us to look at multiple RevealRedraws after the first one
                                     log::trace!("lookback_initial Discard checking past RevealRedraw");
-                                    log::trace!("lookback_initial original player: {}, index: {}, Discard: {:?}", player_index, self.history.len(), action_info);
+                                    log::trace!("lookback_initial original player: {}, index: {}, Discard: {:?}", self.history.len() - 1, self.history.len(), action_info);
                                     log::trace!("lookback_initial checked player: {}, index: {i}, RevealRedraw: {:?}", action_player, action_data.action_info());
                                     // TODO: Ok we need to expand this
                                     
@@ -875,10 +896,17 @@ impl PathDependentCollectiveConstraint {
                                             illegal_players[action_player as usize] = true;
                                             discard_players.retain(|p| *p != action_player);
                                         }
+                                        // Testing
+                                        if *redraw_i == Some(discard_considered) && !reveal_players[action_player as usize] {
+                                            illegal_players[action_player as usize] = true;
+                                            discard_players.retain(|p| *p != action_player);
+                                            log::trace!("card_assured_players removed: retained not player: {action_player}");
+                                            log::trace!("card_assured_players: {:?}",discard_players);
+                                        }
                                     }
                                     if need_redraw_update {
-                                        log::trace!("lookback_initial original Discard: {:?}", action_info);
-                                        log::trace!("lookback_initial considering: player: {} {:?}", action_data.player(), action_data.action_info());
+                                        log::trace!("lookback_initial original index: {} Discard: {:?}", self.history.len() - 1, action_info);
+                                        log::trace!("lookback_initial considering: index: {} player: {} {:?}", i, action_data.player(), action_data.action_info());
                                         if let ActionInfo::RevealRedraw { reveal, redraw, .. } = self.history[i].action_info_mut() {
                                             log::trace!("lookback_initial setting redraw to: {:?}", discard_considered);
                                             *redraw = Some(discard_considered);
