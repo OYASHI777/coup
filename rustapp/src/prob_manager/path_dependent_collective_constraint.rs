@@ -644,8 +644,23 @@ impl PathDependentCollectiveConstraint {
                                         } else {
                                             // OLD
                                             // return false;
-                                            if let ActionInfo::RevealRedraw { redraw, .. } = self.history[i].action_info() {
+                                            let mut need_relinquish_update = false;
+                                            if let ActionInfo::RevealRedraw { redraw, ..} = self.history[i].action_info() {
                                                 if redraw.is_none() {
+                                                    if self.need_relinquish_update(i, reveal_considered) {
+                                                        need_relinquish_update = true;
+                                                    }
+                                                }
+                                            }
+                                            log::trace!("need_relinquish_update evaluated to {need_relinquish_update}");
+                                            log::trace!("lookback_initial original index: {} RevealRedraw: {:?}", self.history.len() - 1, action_info);
+                                            log::trace!("lookback_initial considering: index: {} player: {} {:?}", i, action_data.player(), action_data.action_info());
+                                            if let ActionInfo::RevealRedraw { reveal, redraw, relinquish} = self.history[i].action_info_mut() {
+                                                if redraw.is_none() {
+                                                    if need_relinquish_update {
+                                                        *relinquish = Some(*reveal);
+                                                        bool_changes = true;
+                                                    }
                                                     // Avoid updating start when loop ends
                                                     bool_skip_start_update = true;
                                                     break 'iter_loop;
@@ -836,8 +851,20 @@ impl PathDependentCollectiveConstraint {
                                     // return false;
                                     // Case Same player but redraw is None
                                     // TODO: [REFACTOR] This shit is becoming pretty mangled
-                                    if let ActionInfo::RevealRedraw { redraw, .. } = self.history[i].action_info() {
+                                    let mut need_relinquish_update = false;
+                                    if let ActionInfo::RevealRedraw { redraw, ..} = self.history[i].action_info() {
                                         if redraw.is_none() {
+                                            if self.need_relinquish_update(i, discard_considered) {
+                                                need_relinquish_update = true;
+                                            }
+                                        }
+                                    }
+                                    if let ActionInfo::RevealRedraw { reveal, redraw, relinquish } = self.history[i].action_info_mut() {
+                                        if redraw.is_none() {
+                                            if need_relinquish_update {
+                                                *relinquish = Some(*reveal);
+                                                bool_changes = true;
+                                            }
                                             // Avoid updating start when loop ends
                                             bool_skip_start_update = true;
                                             break 'iter_loop;
@@ -1888,7 +1915,7 @@ impl PathDependentCollectiveConstraint {
         // some kind of min function
         self.backward_max_player_cards_recurse(index_loop - 1, index_of_interest, card_of_interest, backward_pass_groups)
     }
-    /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards
+    /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards at start of turn
     /// Assuming we won't be using this for ambassador?
     pub fn impossible_to_have_cards(&self, index: usize, player_of_interest: usize, cards: &[u8; 5]) -> bool {
         log::trace!("impossible_to_have_cards index: {}, player_of_interest: {}, cards: {:?}", index, player_of_interest, cards);
@@ -1926,7 +1953,7 @@ impl PathDependentCollectiveConstraint {
         // Will temporarily not use memo and generate all group_constraints from start
         // TODO: OPTIMIZE store the group_constraints in history
         //      - or store all impossible_combinations in history to make checking invalid states faster and less memory usage too
-        log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest}");
+        log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
         if !self.is_valid_combination(index_loop, index_of_interest, public_constraints, inferred_constraints) {
             // early exit before terminal node
@@ -1949,7 +1976,43 @@ impl PathDependentCollectiveConstraint {
                 }
             }
             log::trace!("possible_to_have_cards_recurse at index_of_interest - 1, player_of_interest: {player_of_interest} added :{:?} to inferred_constraints to become: {:?}", cards, inferred_constraints);
-            // let fulfilled: bool = self.is_valid_combination(index_loop, index_of_interest, public_constraints, &mut test_copy, cards);
+            // Checking if valid as its possible to have inferred_constraint burst its limits only to get cards removed in code later, when handling the move
+            let fulfilled: bool = self.is_valid_combination(index_loop, index_of_interest, public_constraints, inferred_constraints);
+            // let mut total_count : u8 = 0;
+            // current_card_counts.iter().zip(cards.iter()).for_each(|(cur, req)| total_count += *cur.max(req));
+            // let fulfilled = if player_of_interest == 6 {
+            //     total_count <= 3
+            // } else {
+            //     total_count + public_constraints[player_of_interest].len() as u8 <= 2
+            // };
+            if !fulfilled {
+                return false;
+            }
+            // let fulfilled: bool = if player_of_interest == 6 {
+
+            // } else {
+            //     match cards.len() {
+            //         2 => {
+            //             match public_constraints[player_of_interest].len() {
+            //                 2 => {
+            //                     false
+            //                 },
+            //                 1 => {
+            //                     false
+            //                 }
+            //                 0 => {
+            //                     match inferred_constraint
+            //                 }
+            //             } 
+            //         },
+            //         1 => {
+
+            //         },
+            //         0 => {
+            //             true
+            //         }
+            //     }
+            // };
             // let fulfilled: bool = match cards.len() {
             //     2 => {
             //         if self.history[index_loop].public_constraints()[player_of_interest].len() > 0 {
@@ -1994,6 +2057,9 @@ impl PathDependentCollectiveConstraint {
             //         false
             //     }
             // };
+            // if !fulfilled {
+            //     return false;
+            // }
             // if fulfilled {
             //     return self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
             // } else {
@@ -2059,6 +2125,7 @@ impl PathDependentCollectiveConstraint {
                                     return false;
                                 }
                                 if inferred_constraints[player_loop].is_empty() {
+                                    log::trace!("inferred_constraints[player_loop].is_empty(): {:?}", inferred_constraints[player_loop]);
                                     // let mut bool_move_from_pile_to_player = false;
                                     let mut removed_reveal = false;
                                     if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
@@ -2081,7 +2148,8 @@ impl PathDependentCollectiveConstraint {
                                 let mut iter_cards = inferred_constraints[player_loop].clone();
                                 iter_cards.sort_unstable();
                                 iter_cards.dedup();
-                                for (_, card_player) in iter_cards.iter().enumerate() {
+                                for (i, card_player) in iter_cards.iter().enumerate() {
+                                    log::trace!("possible_to_have_cards_recurse trying card {i} : {:?} to have been redrawn from pile, iter_cards: {:?}", card_player, iter_cards);
                                     // Card Source was from Pile
                                     let mut removed_reveal = false;
                                     let mut removed_card_player = false;
@@ -2148,6 +2216,7 @@ impl PathDependentCollectiveConstraint {
             ActionInfo::Start
             | ActionInfo::StartInferred => {
                 // Managed to reach base
+                log::trace!("possible_to_have_cards_recurse found true at index: {}", index_loop);
                 response = true;
             },
         }
@@ -2580,37 +2649,69 @@ impl PathDependentCollectiveConstraint {
             return variants;
             // TODO: remove if recursing
         }
-        for (_, card_player) in inferred_constraints[player_loop].iter().enumerate() {
-            // Card Source was from Pile
+        let mut iter_cards = inferred_constraints[player_loop].clone();
+        iter_cards.sort_unstable();
+        iter_cards.dedup();
+        for (_, card_player) in iter_cards.iter().enumerate() {
+            // Card Source was not from Pile
             let mut bool_move_from_pile_to_player = false;
-            if let Some(pos) = player_hand.iter().position(|c| *c == *card_player) {
-                player_hand.swap_remove(pos);
+            if *card_player != reveal {
+            // if *card_player != reveal || inferred_constraints[6].contains(&reveal) {
+                if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+                    pile_hand.swap_remove(pos);
+                    bool_move_from_pile_to_player = true;
+                }
+                player_hand.push(reveal);
+                let mut temp = inferred_constraints.clone();
+                temp[player_loop] = player_hand.clone();
+                temp[6] = pile_hand.clone();
+    
+                if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
+                    player_hand.swap_remove(pos);
+                }
+                if bool_move_from_pile_to_player {
+                    pile_hand.push(reveal);
+                }
+                // Probably need push only if certain conditions met
+                if temp[player_loop].len() < 3  
+                && temp[6].len() < 4 
+                && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                    // TODO: Recurse here in other version
+                    variants.push(temp);
+                }
             }
-            pile_hand.push(*card_player);
-            if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
-                pile_hand.swap_remove(pos);
-                bool_move_from_pile_to_player = true;
-            }
-            player_hand.push(reveal);
-            let mut temp = inferred_constraints.clone();
-            temp[player_loop] = player_hand.clone();
-            temp[6] = pile_hand.clone();
-
-            // TODO: Recurse here in other version
-            variants.push(temp);
-
-            if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
-                player_hand.swap_remove(pos);
-            }
-            if bool_move_from_pile_to_player {
-                pile_hand.push(reveal);
-            }
-            if let Some(pos) = pile_hand.iter().rposition(|c| c == card_player) {
-                pile_hand.swap_remove(pos);
-            }
-            player_hand.push(*card_player);
-            if inferred_constraints[player_loop].len() == 2 && inferred_constraints[player_loop][0] == inferred_constraints[player_loop][1]{
-                break;
+            // Card Source was from Pile
+            if *card_player != reveal {
+                let mut bool_move_from_pile_to_player = false;
+                if let Some(pos) = player_hand.iter().position(|c| *c == *card_player) {
+                    player_hand.swap_remove(pos);
+                }
+                pile_hand.push(*card_player);
+                if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+                    pile_hand.swap_remove(pos);
+                    bool_move_from_pile_to_player = true;
+                }
+                player_hand.push(reveal);
+                let mut temp = inferred_constraints.clone();
+                temp[player_loop] = player_hand.clone();
+                temp[6] = pile_hand.clone();
+    
+                // TODO: Recurse here in other version
+                variants.push(temp);
+    
+                if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
+                    player_hand.swap_remove(pos);
+                }
+                if bool_move_from_pile_to_player {
+                    pile_hand.push(reveal);
+                }
+                if let Some(pos) = pile_hand.iter().rposition(|c| c == card_player) {
+                    pile_hand.swap_remove(pos);
+                }
+                player_hand.push(*card_player);
+                if inferred_constraints[player_loop].len() == 2 && inferred_constraints[player_loop][0] == inferred_constraints[player_loop][1]{
+                    break;
+                }
             }
         }
         variants
@@ -2681,6 +2782,7 @@ impl PathDependentCollectiveConstraint {
     }
     /// Return true if hypothesised card permutations cannot be shown to be impossible
     pub fn is_valid_combination(&self, index_loop: usize ,index_of_interest: usize, public_constraints: &Vec<Vec<Card>>, inferred_constraints: &Vec<Vec<Card>>) -> bool {
+
         // Check actual constraints at leaf node
         // All public_constraints inside actual
         // All 
@@ -2692,18 +2794,40 @@ impl PathDependentCollectiveConstraint {
                 return false
             }
         }
+        // TESTING
+        for player in 0..7 {
+            let mut current_card_counts: [u8; 5] = [0; 5];
+            inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
+            
+            let mut required_card_counts: [u8; 5] = [0; 5];
+            self.history[index_loop].inferred_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
+            self.history[index_loop].public_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
+
+            let mut total_count : u8 = 0;
+            current_card_counts.iter().zip(required_card_counts.iter()).for_each(|(cur, req)| total_count += *cur.max(req));
+            let fulfilled = if player == 6 {
+                total_count <= 3
+            } else {
+                total_count <= 2
+            };
+            if !fulfilled {
+                return false
+            }
+        }
+        return true;
+        // TEST END
         let action_info = &self.history[index_loop];
         let action_public_constraint = action_info.public_constraints();
         let action_inferred_constraint = action_info.inferred_constraints();
         for player in 0..6 as usize {
             match public_constraints[player].len() + inferred_constraints[player].len() {
                 2 => {
-                    for card in action_public_constraint[player].iter() {
-                        if !public_constraints[player].contains(card) {
-                            log::trace!("is_valid_combination public_constraint for player: {player}, does not contain: {:?}", card);
-                            return false
-                        }
-                    }
+                    // for card in action_public_constraint[player].iter() {
+                    //     if !public_constraints[player].contains(card) {
+                    //         log::trace!("is_valid_combination public_constraint for player: {player}, does not contain: {:?}", card);
+                    //         return false
+                    //     }
+                    // }
                     for card in action_inferred_constraint[player].iter() {
                         if !inferred_constraints[player].contains(card) {
                             log::trace!("is_valid_combination inferred_constraint for player: {player}, does not contain: {:?}", card);
@@ -2715,13 +2839,13 @@ impl PathDependentCollectiveConstraint {
                 1 => {
                     if action_public_constraint[player].len() + action_inferred_constraint[player].len() == 2 {
                         // TODO: OPTIMIZE test removing death check
-                        for card in public_constraints[player].iter() {
-                            // public constraints in general should be fine
-                            if !action_public_constraint[player].contains(card) {
-                                log::trace!("is_valid_combination public_constraint for player: {player}, does not contain: {:?}", card);
-                                return false
-                            }
-                        }
+                        // for card in public_constraints[player].iter() {
+                        //     // public constraints in general should be fine
+                        //     if !action_public_constraint[player].contains(card) {
+                        //         log::trace!("is_valid_combination public_constraint for player: {player}, does not contain: {:?}", card);
+                        //         return false
+                        //     }
+                        // }
                         for card in inferred_constraints[player].iter() {
                             if !action_inferred_constraint[player].contains(card) {
                                 log::trace!("is_valid_combination original inferred_constraint for player: {player}, does not contain: {:?}", card);
@@ -3214,6 +3338,7 @@ impl PathDependentCollectiveConstraint {
     pub fn need_redraw_update_2(&self, index: usize, card_of_interest: Card, illegal_players: &[bool; 6]) -> bool {
         log::trace!("need_redraw_update_2 considered: {index}, card_of_interest: {:?}, illegal_players: {:?}", card_of_interest, illegal_players);
         log::trace!("need_redraw_update_2 considered: {index}, player: {:?} move {:?}", self.history[index].player(), self.history[index].action_info());
+        // TODO: OPTIMIZE
         let mut players_had_revealed_or_discarded = [false; 6];
         // Prob can optimize to use u8s
         for i in (index+1..self.history.len()).rev() {
@@ -3318,6 +3443,29 @@ impl PathDependentCollectiveConstraint {
         } else {
             false
         }
+    }
+    /// Returns true if relinquish needs to be updated
+    /// Assumes index is not last index
+    pub fn need_relinquish_update(&self, index: usize, card_of_interest: Card) -> bool {
+        let action_player = self.history[index].player() as usize;
+        let latest_player = self.history[self.history.len() - 1].player() as usize;
+        if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = self.history[index].action_info() {
+            if *reveal_i != card_of_interest 
+            && redraw_i.is_none() 
+            && action_player == latest_player
+            {
+                log::trace!("need_relinquish_update *reveal_i != card_of_interest: {}", *reveal_i != card_of_interest);
+                log::trace!("need_relinquish_update redraw_i.is_none(): {}", redraw_i.is_none());
+                log::trace!("need_relinquish_update action_player == latest_player: {}", action_player == latest_player);
+                let mut cards: [u8; 5] = [0; 5];
+                cards[*reveal_i as usize] = 1;
+                // Cannot have card after
+                let output = self.impossible_to_have_cards(index + 1, action_player, &cards);
+                log::trace!("need_relinquish_update self.impossible_to_have_cards: {}", output);
+                return output
+            }
+        }
+        false
     }
     /// lookback for when we discover a previous item and want to continue for that
     /// This happens e.g. when you discard => infer the redraw of a previous RevealRedraw
@@ -5659,16 +5807,36 @@ impl PathDependentCollectiveConstraint {
         }
         log::trace!("reveal_redraw_relinquish after removing inferred cards");
         self.printlog();
+        let mut card_counts: [u8; 5] = [0; 5];
+        self.inferred_constraints[6].iter().for_each(|c| card_counts[*c as usize] += 1);
+        card_counts[relinquish as usize ] += 1;
         // Swapping Cards - adjusting group_constraints
         // How to mix?
         self.relinquish_mix(player_id, 6,relinquish);
-        log::trace!("reveal_redraw_diff after swap_mix");
+        log::trace!("reveal_redraw_relinquish after swap_mix");
         self.printlog();
+        
+        card_counts
+        .iter()
+        .enumerate()
+        .filter(|(_, count)| **count > 0)
+        .for_each(|(card_num, count)| {
+            let mut group = CompressedGroupConstraint::zero();
+            group.set_card(Card::try_from(card_num as u8).unwrap());
+            group.set_alive_count(*count);
+            group.set_total_count(*count);
+            group.set_player_flag(player_id, true);
+            group.set_single_card_flag(player_id, true);
+            group.set_player_flag(6, true);
+            self.group_constraints_mut()[card_num].push(group);
+        });
+        self.inferred_constraints[6].clear();
+        
         // Double inferred - do not check for containment as this comes from pile not own hand
         self.add_inferred_card_unchecked(6, relinquish, 1, &mut vec![Vec::with_capacity(0); 6]);
         // TODO: Determine if we actually need this
         //  How does this interact with add_inferred and swap_mix?
-        log::trace!("reveal_redraw_diff after swap add_inferred_cards");
+        log::trace!("reveal_redraw_relinquish after swap add_inferred_cards");
         self.printlog();
         self.group_redundant_prune();
     }
@@ -5970,23 +6138,77 @@ impl PathDependentCollectiveConstraint {
                 group.add_alive_count(player_b_inferred_card_count);
                 group.add_total_count(player_b_dead_card_count + player_b_inferred_card_count);
         });
+        log::trace!("relinquish_mix after setting player_a: {player_a} true, player_b: {player_b} false");
+        log::trace!("relinquish_mix group_constraints[relinquish_card_num]: {:?}", group_constraints[relinquish_card_num]);
+        group_constraints[relinquish_card_num]
+        .iter_mut()
+        .filter(
+            |group| !group.get_player_flag(player_a) && group.get_player_flag(player_b)
+        )
+        .for_each(
+            |group| {
+                let player_a_dead_card_count = player_a_dead_card_counts[relinquish_card_num];
+                // Adding 1 as the relinquish_card was removed so won't appear in inferred_card_counts
+                let player_a_inferred_card_count = player_a_inferred_card_counts[relinquish_card_num] + 1;
+                group.set_player_flag(player_a, true);
+                group.set_single_card_flag(player_a, true);
+                group.add_dead_count(player_a_dead_card_count);
+                group.add_alive_count(player_a_inferred_card_count);
+                group.add_total_count(player_a_dead_card_count + player_a_inferred_card_count);
+        });
+        log::trace!("relinquish_mix after setting player_a: {player_a} false, player_b: {player_b} true");
+        log::trace!("relinquish_mix group_constraints[relinquish_card_num]: {:?}", group_constraints[relinquish_card_num]);
         for card_num in 0..5 {
             group_constraints[card_num]
             .iter_mut()
             .filter(
-                |group| group.get_player_flag(player_b) && !group.get_player_flag(player_a)
+                |group| group.get_player_flag(player_b) && !group.get_player_flag(player_a) 
+                && card_num != relinquish_card_num
             )
             .for_each(
                 |group| {
                     let player_a_dead_card_count = player_a_dead_card_counts[card_num];
                     let player_a_inferred_card_count = player_a_inferred_card_counts[card_num];
                     group.set_player_flag(player_a, true);
+                    group.set_single_card_flag(player_a, true);
                     group.add_dead_count(player_a_dead_card_count);
                     group.add_alive_count(player_a_inferred_card_count);
                     group.add_total_count(player_a_dead_card_count + player_a_inferred_card_count);
                 }
             )
         }
+        // let group_constraints = self.group_constraints_mut();
+        // group_constraints[relinquish_card_num]
+        // .iter_mut()
+        // .filter(
+        //     |group| group.get_player_flag(player_a) && !group.get_player_flag(player_b)
+        // )
+        // .for_each(
+        //     |group| {
+        //         let player_b_dead_card_count = player_b_dead_card_counts[relinquish_card_num];
+        //         let player_b_inferred_card_count = player_b_inferred_card_counts[relinquish_card_num];
+        //         group.set_player_flag(player_b, true);
+        //         group.add_dead_count(player_b_dead_card_count);
+        //         group.add_alive_count(player_b_inferred_card_count);
+        //         group.add_total_count(player_b_dead_card_count + player_b_inferred_card_count);
+        // });
+        // for card_num in 0..5 {
+        //     group_constraints[card_num]
+        //     .iter_mut()
+        //     .filter(
+        //         |group| group.get_player_flag(player_b) && !group.get_player_flag(player_a)
+        //     )
+        //     .for_each(
+        //         |group| {
+        //             let player_a_dead_card_count = player_a_dead_card_counts[card_num];
+        //             let player_a_inferred_card_count = player_a_inferred_card_counts[card_num];
+        //             group.set_player_flag(player_a, true);
+        //             group.add_dead_count(player_a_dead_card_count);
+        //             group.add_alive_count(player_a_inferred_card_count);
+        //             group.add_total_count(player_a_dead_card_count + player_a_inferred_card_count);
+        //         }
+        //     )
+        // }
     }
     /// Function to call for move Ambassador, without considering private information seen by the player who used Ambassador
     pub fn ambassador_public(&mut self, player_id: usize) {

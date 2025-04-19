@@ -58,8 +58,8 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    test();
-    // temp();
+    // test();
+    temp();
 }
 use rustapp::prob_manager::path_dependent_collective_constraint::{self, PathDependentCollectiveConstraint};
 // TODO: Move to collective_constraint when finalized
@@ -115,6 +115,7 @@ pub fn temp() {
         log::info!("dest: {:?}", item);
 
     }
+    // dest: [[Assassin], [], [], [], [], [], [Assassin, Captain]]
     // dest: [[Ambassador], [], [], [], [], [], [Ambassador, Ambassador, Captain]]
     // dest: [[Ambassador], [], [], [], [], [], [Assassin]]
     // src rr none: [[[Assassin, Ambassador], [], [], [], [], [], [Assassin]], [[Assassin, Ambassador], [], [], [], [], [], [Assassin, Assassin]]]
@@ -220,8 +221,16 @@ pub fn test() {
         // replay_game_constraint_pd(reveal_redraw_replay_12, false, true);
         // ===================== 
         // Relinquish case!!
-        println!("Testing: {}", stringify!(reveal_redraw_replay_13)); 
-        replay_game_constraint_pd(reveal_redraw_replay_13, false, true);
+        // println!("Testing: {}", stringify!(reveal_redraw_replay_13)); 
+        // replay_game_constraint_pd(reveal_redraw_replay_13, false, false);
+        // overinferred_11 This tells us the merging did not work out very well
+        // maybe merge also discard into reveal?
+        // actually the front count doesnt really make sense
+        // esp if someone amb
+        // failed after relinquish => the relinquish does not produce the correct groups...
+        println!("Testing: {}", stringify!(overinferred_11)); 
+        replay_game_constraint_pd(overinferred_11, false, true);
+        panic!();
         // ===================== 
         println!("Testing: {}", stringify!(overinferred_14)); 
         replay_game_constraint_pd(overinferred_14, false, false);
@@ -281,12 +290,7 @@ pub fn test() {
         // TODO: TEST THIS => Single Group constraint of all known at start forward pass?
         println!("Testing: {}", stringify!(overinferred_12)); // stored but untested
         replay_game_constraint_pd(overinferred_12, false, false);
-        // overinferred_11 This tells us the merging did not work out very well
-        // maybe merge also discard into reveal?
-        // actually the front count doesnt really make sense
-        // esp if someone amb
-        println!("Testing: {}", stringify!(overinferred_11)); 
-        replay_game_constraint_pd(overinferred_11, false, false);
+
         println!("Testing: {}", stringify!(overinferred_7));
         replay_game_constraint_pd(overinferred_7, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_8));
