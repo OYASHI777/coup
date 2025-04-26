@@ -3480,6 +3480,7 @@ impl PathDependentCollectiveConstraint {
         
         if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = self.history[index].action_info() {
             redraw_i.is_none() 
+            // Testing the removal of
             && !illegal_players[action_player] // skip if player RR after too (dk which revealredraw the player redrew)
             && players_had_revealed_or_discarded[action_player] // checks if player did reveal/redraw that card before
             && (
