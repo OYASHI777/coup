@@ -4,6 +4,11 @@ use ahash::AHashSet;
 use crossbeam::channel::after;
 use std::{marker::Copy, path::Path};
 
+// This implementation leaves only issues with:
+//  - max_negation inference
+//  - holdable space type of inference
+//  - RevealRedraw did not redraw XYZ cards type inference
+// Development has been stopped to work on a more promising approach
 #[derive(Clone, Debug)]
 pub enum ActionInfo {
     Start,
