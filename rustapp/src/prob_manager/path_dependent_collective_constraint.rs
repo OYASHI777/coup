@@ -5939,8 +5939,17 @@ impl PathDependentCollectiveConstraint {
             group.set_single_card_flag(player_id, true);
             group.set_player_flag(6, true);
             self.group_constraints_mut()[card_num].push(group);
+            // Removal of 1 card max as only 1 card can leave the pile through reveal redraw
+            // Except the relinquished card
+            if card_num != relinquish as usize {
+                if let Some(pos) = self.inferred_constraints[6].iter().position(|c| *c as usize == card_num) {
+                    self.inferred_constraints[6].swap_remove(pos);
+                }
+            }
         });
-        self.inferred_constraints[6].clear();
+        // No mate you don't clear it, only 1 card moves out
+        // self.inferred_constraints[6].clear();
+
         
         // Double inferred - do not check for containment as this comes from pile not own hand
         self.add_inferred_card_unchecked(6, relinquish, 1, &mut vec![Vec::with_capacity(0); 6]);
