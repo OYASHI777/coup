@@ -671,7 +671,7 @@ impl PathDependentCollectiveConstraint {
                                                 }
                                                 // Avoid updating start when loop ends
                                                 bool_skip_start_update = true;
-                                                break 'iter_loop;
+                                                // break 'iter_loop;
                                             }
                                         }
                                     },
@@ -880,7 +880,7 @@ impl PathDependentCollectiveConstraint {
                                         }
                                         // Avoid updating start when loop ends
                                         bool_skip_start_update = true;
-                                        break 'iter_loop;
+                                        // break 'iter_loop;
                                     }
                                 }
                             },
