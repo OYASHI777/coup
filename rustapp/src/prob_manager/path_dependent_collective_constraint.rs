@@ -658,24 +658,20 @@ impl PathDependentCollectiveConstraint {
                                             let mut need_relinquish_update = false;
                                             if let ActionInfo::RevealRedraw { redraw, ..} = self.history[i].action_info() {
                                                 if redraw.is_none() {
-                                                    if self.need_relinquish_update(i, reveal_considered) {
-                                                        need_relinquish_update = true;
-                                                    }
+                                                    need_relinquish_update = self.need_relinquish_update(i, reveal_considered);
                                                 }
                                             }
                                             log::trace!("need_relinquish_update evaluated to {need_relinquish_update}");
                                             log::trace!("lookback_initial original index: {} RevealRedraw: {:?}", self.history.len() - 1, action_info);
                                             log::trace!("lookback_initial considering: index: {} player: {} {:?}", i, action_data.player(), action_data.action_info());
                                             if let ActionInfo::RevealRedraw { reveal, redraw, relinquish} = self.history[i].action_info_mut() {
-                                                if redraw.is_none() {
-                                                    if need_relinquish_update {
-                                                        *relinquish = Some(*reveal);
-                                                        bool_changes = true;
-                                                    }
-                                                    // Avoid updating start when loop ends
-                                                    bool_skip_start_update = true;
-                                                    break 'iter_loop;
+                                                if need_relinquish_update {
+                                                    *relinquish = Some(*reveal);
+                                                    bool_changes = true;
                                                 }
+                                                // Avoid updating start when loop ends
+                                                bool_skip_start_update = true;
+                                                break 'iter_loop;
                                             }
                                         }
                                     },
@@ -874,21 +870,17 @@ impl PathDependentCollectiveConstraint {
                                     let mut need_relinquish_update = false;
                                     if let ActionInfo::RevealRedraw { redraw, ..} = self.history[i].action_info() {
                                         if redraw.is_none() {
-                                            if self.need_relinquish_update(i, discard_considered) {
-                                                need_relinquish_update = true;
-                                            }
+                                            need_relinquish_update = self.need_relinquish_update(i, discard_considered);
                                         }
                                     }
                                     if let ActionInfo::RevealRedraw { reveal, redraw, relinquish } = self.history[i].action_info_mut() {
-                                        if redraw.is_none() {
-                                            if need_relinquish_update {
-                                                *relinquish = Some(*reveal);
-                                                bool_changes = true;
-                                            }
-                                            // Avoid updating start when loop ends
-                                            bool_skip_start_update = true;
-                                            break 'iter_loop;
+                                        if need_relinquish_update {
+                                            *relinquish = Some(*reveal);
+                                            bool_changes = true;
                                         }
+                                        // Avoid updating start when loop ends
+                                        bool_skip_start_update = true;
+                                        break 'iter_loop;
                                     }
                                 }
                             },
@@ -913,18 +905,19 @@ impl PathDependentCollectiveConstraint {
                     } else {
                         // TEMP TEST [REFACTOR]
                         // Collecting same card discards found along the way
-                        if let ActionInfo::Discard { discard } = action_data.action_info() {
-                            if *discard == discard_considered {
-                                log::trace!("Pushing action_player: {action_player} into discard_considered");
-                                discard_players.push(action_player);
-                                card_assured_players_flags[action_player as usize] = true;
-                            }
-                        }
+                        
                         // TODO: THEORY CHECK [OPTIMIZE] Do we really need this bool_all_cards_dead? can mirror above?
                         // if bool_all_cards_dead {
                             let action_name = action_data.name();
                             match action_name {
                                 ActionInfoName::Discard => {
+                                    if let ActionInfo::Discard { discard } = action_data.action_info() {
+                                        if *discard == discard_considered {
+                                            log::trace!("Pushing action_player: {action_player} into discard_considered");
+                                            discard_players.push(action_player);
+                                            card_assured_players_flags[action_player as usize] = true;
+                                        }
+                                    }
                                 },
                                 ActionInfoName::RevealRedraw => {
                                     // TODO: Consider that we could pass a RR, the see a discard, thus adding back into discard_players
