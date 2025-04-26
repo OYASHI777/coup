@@ -604,12 +604,6 @@ impl PathDependentCollectiveConstraint {
 
                                         let need_redraw_update = self.need_redraw_update_2(i, reveal_considered, &illegal_to_change);
                                         if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                            // if *reveal_i == reveal_considered && 
-                                            // *redraw_i != Some(*reveal_i) 
-                                            // && !card_assured_players.contains(&action_player) {
-                                            //     // reveal_players.push(action_player);
-                                            //     reveal_players[action_player as usize] = true;
-                                            // }
                                             if redraw_i.is_none() && i != index && *reveal_i != reveal_considered && 
                                             (card_assured_players_flags[action_player as usize] || reveal_players[action_player as usize]){
                                                 // Exclude the revealredraw that was just played as its effectively considered a 
@@ -635,12 +629,6 @@ impl PathDependentCollectiveConstraint {
                                                 // reveal_players.push(action_player);
                                                 reveal_players[action_player as usize] = true;
                                             }
-                                            // if *redraw_i == Some(reveal_considered) && !reveal_players[action_player as usize] {
-                                            //     illegal_to_change[action_player as usize] = true;
-                                            //     card_assured_players.retain(|p| *p != action_player);
-                                            //     log::trace!("card_assured_players removed: retained not player: {action_player}");
-                                            //     log::trace!("card_assured_players: {:?}",card_assured_players);
-                                            // }
                                         }
 
                                         log::trace!("need_redraw_update evaluated to {need_redraw_update}");
@@ -724,11 +712,6 @@ impl PathDependentCollectiveConstraint {
                                         let need_redraw_update = self.need_redraw_update_2(i, reveal_considered, &illegal_to_change);
                                         if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
 
-                                            // if *reveal_i == reveal_considered && *redraw_i != Some(*reveal_i) 
-                                            // && !card_assured_players.contains(&action_player) {
-                                            //     // reveal_players.push(action_player);
-                                            //     reveal_players[action_player as usize] = true;
-                                            // }
                                             if redraw_i.is_none() && i != index && *reveal_i != reveal_considered && 
                                             (card_assured_players_flags[action_player as usize] || reveal_players[action_player as usize]){
                                                 // Exclude the revealredraw that was just played as its effectively considered a 
@@ -740,7 +723,6 @@ impl PathDependentCollectiveConstraint {
                                                 log::trace!("card_assured_players removed: retained not player: {action_player}");
                                                 log::trace!("card_assured_players: {:?}",card_assured_players);
                                             }
-                                            // Testing
                                             if *redraw_i == Some(reveal_considered) &&
                                             (card_assured_players_flags[action_player as usize] || reveal_players[action_player as usize]){
                                                 illegal_to_change[action_player as usize] = true;
@@ -749,12 +731,6 @@ impl PathDependentCollectiveConstraint {
                                                 log::trace!("card_assured_players removed: retained not player: {action_player}");
                                                 log::trace!("card_assured_players: {:?}",card_assured_players);
                                             }
-                                            // if *redraw_i == Some(reveal_considered) && !reveal_players[action_player as usize] {
-                                            //     illegal_to_change[action_player as usize] = true;
-                                            //     card_assured_players.retain(|p| *p != action_player);
-                                            //     log::trace!("card_assured_players removed: retained not player: {action_player}");
-                                            //     log::trace!("card_assured_players: {:?}",card_assured_players);
-                                            // }
                                             if *reveal_i == reveal_considered && *redraw_i != Some(*reveal_i) 
                                             && !card_assured_players_flags[action_player as usize] {
                                                 // reveal_players.push(action_player);
@@ -843,19 +819,12 @@ impl PathDependentCollectiveConstraint {
                                 let need_redraw_update = self.need_redraw_update_2(i, discard_considered, &illegal_players);
                                 // TESTING matching above not letting reveal count to its own redraw
                                 if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                    // if *reveal_i == discard_considered 
-                                    // && *redraw_i != Some(*reveal_i) 
-                                    // && !discard_players.contains(&action_player){
-                                    //     // reveal_players.push(action_player);
-                                    //     reveal_players[action_player as usize] = true;
-                                    // }
                                     if redraw_i.is_none() && *reveal_i != discard_considered &&
                                     (card_assured_players_flags[action_player as usize] || reveal_players[action_player as usize]){
                                         illegal_players[action_player as usize] = true;
                                         discard_players.retain(|p| *p != action_player);
                                         card_assured_players_flags[action_player as usize] = false;
                                     }
-                                    // Testing
                                     if *redraw_i == Some(discard_considered) &&
                                     (card_assured_players_flags[action_player as usize] || reveal_players[action_player as usize]){
                                         illegal_players[action_player as usize] = true;
@@ -864,12 +833,6 @@ impl PathDependentCollectiveConstraint {
                                         log::trace!("card_assured_players removed: retained not player: {action_player}");
                                         log::trace!("card_assured_players: {:?}",discard_players);
                                     }
-                                    // if *redraw_i == Some(discard_considered) && !reveal_players[action_player as usize] {
-                                    //     illegal_players[action_player as usize] = true;
-                                    //     discard_players.retain(|p| *p != action_player);
-                                    //     log::trace!("card_assured_players removed: retained not player: {action_player}");
-                                    //     log::trace!("card_assured_players: {:?}",discard_players);
-                                    // }
                                     if *reveal_i == discard_considered 
                                     && *redraw_i != Some(*reveal_i) 
                                     && !card_assured_players_flags[action_player as usize]{
@@ -968,11 +931,6 @@ impl PathDependentCollectiveConstraint {
                                     
                                     let need_redraw_update = self.need_redraw_update_2(i, discard_considered, &illegal_players);
                                     if let ActionInfo::RevealRedraw { reveal: reveal_i, redraw: redraw_i, .. } = action_data.action_info() {
-                                        // if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) 
-                                        // && !discard_players.contains(&action_player){
-                                        //     // reveal_players.push(action_player);
-                                        //     reveal_players[action_player as usize] = true;
-                                        // }
                                         if redraw_i.is_none() && *reveal_i != discard_considered && 
                                         (card_assured_players_flags[action_player as usize] || reveal_players[action_player as usize]){
                                             illegal_players[action_player as usize] = true;
@@ -988,12 +946,6 @@ impl PathDependentCollectiveConstraint {
                                             log::trace!("card_assured_players removed: retained not player: {action_player}");
                                             log::trace!("card_assured_players: {:?}",discard_players);
                                         }
-                                        // if *redraw_i == Some(discard_considered) && !reveal_players[action_player as usize] {
-                                        //     illegal_players[action_player as usize] = true;
-                                        //     discard_players.retain(|p| *p != action_player);
-                                        //     log::trace!("card_assured_players removed: retained not player: {action_player}");
-                                        //     log::trace!("card_assured_players: {:?}",discard_players);
-                                        // }
                                         if *reveal_i == discard_considered && *redraw_i != Some(*reveal_i) 
                                         && !card_assured_players_flags[action_player as usize]{
                                             // reveal_players.push(action_player);
