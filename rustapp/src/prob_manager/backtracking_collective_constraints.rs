@@ -738,10 +738,10 @@ impl BackTrackCollectiveConstraint {
     /// Function to call when both the card revealed and redrawn are known and not the same
     pub fn reveal_redraw_diff(&mut self, player_id: usize, reveal: Card, redraw: Card) {
         if let Some(pos) = self.inferred_constraints[player_id].iter().position(|c| *c == reveal) {
-            self.inferred_constraints[player_id].remove(pos);
+            self.inferred_constraints[player_id].swap_remove(pos);
         }
         if let Some(pos) = self.inferred_constraints[6].iter().position(|c| *c == redraw) {
-            self.inferred_constraints[6].remove(pos);
+            self.inferred_constraints[6].swap_remove(pos);
         }
         self.inferred_constraints[player_id].push(redraw);
         self.inferred_constraints[6].push(reveal);
@@ -752,13 +752,13 @@ impl BackTrackCollectiveConstraint {
     /// Assumes what is revealed is relinquish and passed to the pile
     pub fn reveal_redraw_relinquish(&mut self, player_id: usize, relinquish: Card) {
         if let Some(pos) = self.inferred_constraints[player_id].iter().position(|c| *c == relinquish) {
-            self.inferred_constraints[player_id].remove(pos);
+            self.inferred_constraints[player_id].swap_remove(pos);
         }
         self.inferred_constraints[6].push(relinquish);
     }
     /// Function to call for move Ambassador, without considering private information seen by the player who used Ambassador
     pub fn ambassador_public(&mut self, player_id: usize) {
-        
+
     }
     /// Function to call for move Ambassador, when considering private information seen by the player who used Ambassador
     pub fn ambassador_private(&mut self, player_id: usize) {
