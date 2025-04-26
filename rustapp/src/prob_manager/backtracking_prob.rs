@@ -5,28 +5,28 @@
 // Tried instead to save into hashmap and store in bson
 
 use crate::history_public::{Card, AOName, ActionObservation};
-use super::path_dependent_collective_constraint::{ActionInfo, PathDependentCollectiveConstraint};
+use super::backtracking_collective_constraints::{ActionInfo, BackTrackCollectiveConstraint};
 // TODO: Store also a version of constraint_history but split by players
 // So it is easier to know the first time a player does something
 // May be useful later
-pub struct PathDependentCardCountManager {
+pub struct BackTrackCardCountManager {
     // a vec of constraints to push and pop
     // dead cards to push or pop
     // Will not locally store game history, jsut the constraint history
-    constraint_history: Vec<PathDependentCollectiveConstraint>, // I think None is stored if there are no changes
+    constraint_history: Vec<BackTrackCollectiveConstraint>, // I think None is stored if there are no changes
     constraint_history_move_no: Vec<usize>, // TODO: determine if more optimal to put in constraint_history
     move_no: usize,
     // The shared LRU cache is maintained here and passed to each constraint.
     // cache: Rc<RefCell<LruCache<ConstraintKey, ActionMetaData>>>,
 }
-impl PathDependentCardCountManager {
+impl BackTrackCardCountManager {
     /// Constructor
     pub fn new() -> Self {
         let mut constraint_history = Vec::with_capacity(120);
-        constraint_history.push(PathDependentCollectiveConstraint::game_start());
+        constraint_history.push(BackTrackCollectiveConstraint::game_start());
         let mut constraint_history_move_no = Vec::with_capacity(120);
         constraint_history_move_no.push(0);
-        PathDependentCardCountManager{
+        Self {
             constraint_history,
             constraint_history_move_no,
             move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
@@ -35,7 +35,7 @@ impl PathDependentCardCountManager {
     /// Returns everything to original state
     pub fn reset(&mut self) {
         self.constraint_history.clear();
-        self.constraint_history.push(PathDependentCollectiveConstraint::game_start());
+        self.constraint_history.push(BackTrackCollectiveConstraint::game_start());
         self.constraint_history_move_no.clear();
         self.constraint_history_move_no.push(0);
         self.move_no = 1;
@@ -52,11 +52,11 @@ impl PathDependentCardCountManager {
         }
     }
     /// Gets the Latest Constraint
-    pub fn latest_constraint(&self) -> &PathDependentCollectiveConstraint {
+    pub fn latest_constraint(&self) -> &BackTrackCollectiveConstraint {
         // Should never pop() to 0
         self.constraint_history.last().unwrap()
     }
-    pub fn latest_constraint_mut(&mut self) -> &mut PathDependentCollectiveConstraint {
+    pub fn latest_constraint_mut(&mut self) -> &mut BackTrackCollectiveConstraint {
         // Should never pop() to 0
         self.constraint_history.last_mut().unwrap()
     }
