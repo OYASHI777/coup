@@ -137,11 +137,4 @@ impl BackTrackCardCountManager {
             }
         }
     }
-    // ==== DELETE ALL BELOW BEFORE STABLE ===
-    pub fn debug_panicker(&self) {
-        self.latest_constraint().debug_panicker();
-    }
-    pub fn check_three(&self) {
-        self.latest_constraint().check_three();
-    }
 }

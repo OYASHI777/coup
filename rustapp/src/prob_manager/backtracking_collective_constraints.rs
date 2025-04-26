@@ -331,17 +331,6 @@ impl BacktrackMetaData {
     }
 }   
 
-// impl Into<BacktrackMetaData> for BackTrackCollectiveConstraint {
-//     fn into(self) -> BacktrackMetaData {
-//         BacktrackMetaData {
-//             public_constraints: self.public_constraints,
-//             inferred_constraints: self.inferred_constraints,
-//             impossible_constraints: self.impossible_constraints,
-//         }
-//     }
-// }
-
-
 // 1: Add recursion on finding inferred constraint
 //      - Can possibly store a boolean that determines if any empty redraw is before a number, so no need to lookback for that
 // 2: Optimize to consider where we might not need to recurse (non recursive method can get 1/250 games wrong)
@@ -433,7 +422,7 @@ impl BackTrackCollectiveConstraint {
                 return
             },
             ActionInfo::Discard{ discard} => {
-                self.death(history_index, player_id as usize, discard);
+                self.death(player_id as usize, discard);
             },
             ActionInfo::RevealRedraw{ reveal, redraw, relinquish  } => {
                 // TODO: reveal_relinquish?
@@ -476,6 +465,7 @@ impl BackTrackCollectiveConstraint {
                 self.ambassador_public(player_id);
             },
         }
+        // TODO: generate impossible_constraints can differ by move.
         log::trace!("calculate_stored_move generate_impossible_constraints history_index: {history_index}");
         self.generate_impossible_constraints();
         self.history[history_index].meta_data = self.to_meta_data();
@@ -506,11 +496,7 @@ impl BackTrackCollectiveConstraint {
             ActionInfo::RevealRedraw{ reveal, redraw, .. } => {
                 // TODO: handle the known card case obviously lol
                 match redraw {
-                    None => {
-                        // TODO: [OPTIMIZE] If lookback_1 checks based on reveal
-                        //  Then whenever u regenerate, you don't really have to lookback as there is nothing new to check
-                        self.reveal_redraw_initial(player_id, reveal);
-                    },
+                    None => {},
                     Some(drawn) => {
                         if drawn == reveal {
                             // TODO: Probably check if inferred_card already there
@@ -623,24 +609,6 @@ impl BackTrackCollectiveConstraint {
         }
         counts
     }
-    /// Returns true if redundant on basis of inferred and public info
-    /// 
-    /// NOTE:
-    /// EXAMPLE:
-    /// - part list includes every alive players
-    pub fn is_known_information(&self, group: &CompressedGroupConstraint) -> bool {
-        let participation_list: [bool; 7] = group.get_list();
-        for player_id in 0..6 as usize {
-            if !participation_list[player_id] && self.player_is_alive(player_id) {
-                // if not in group and player is alive
-                return false
-            }
-        }
-        // Returns true if all players outside group are dead
-        // i.e. all players alive are inside the group 
-        // Group must include pile or it is false
-        participation_list[6]
-    }
     /// Logs the state
     pub fn printlog(&self) {
         log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));
@@ -731,84 +699,80 @@ impl BackTrackCollectiveConstraint {
         // [COMBINE SJ] rewrite
         self.inferred_constraints[player_id].contains(&card)
     }
-    pub fn death(&mut self, history_index: usize, player_id: usize, card: Card) {
-        todo!()
-    }
     /// Used for when move is added to history and not for recalculation
     pub fn death_initial(&mut self, player_id: usize, card: Card) {
-        todo!()
+        self.add_dead_card(player_id, card);
+        // Check before recursing
+        self.lookback_initial();
     }
-
+    /// Used for recalculation
+    pub fn death(&mut self, player_id: usize, card: Card) {
+        self.add_dead_card(player_id, card);
+    }
     pub fn add_dead_card(&mut self, player_id: usize, card: Card) {
-        todo!()
-    }
-    pub fn add_dead_card_initial(&mut self, player_id: usize, card: Card) {
-        todo!()
-    }
-    
-    pub fn reveal(&mut self, history_index: usize, player_id: usize, card: Card) {
-        todo!()
-    }
-    pub fn reveal_initial(&mut self, player_id: usize, card: Card) {
-        todo!()
-    }
-    
+        self.public_constraints[player_id].push(card);
+        
+        // If the dead card was already inferred, remove it
+        if let Some(pos) = self.inferred_constraints[player_id].iter().position(|&c| c == card) {
+            self.inferred_constraints[player_id].swap_remove(pos);
+        }
+    }   
     /// Function to call for move RevealRedraw
     pub fn reveal_redraw(&mut self, history_index: usize, player_id: usize, card: Card) {
-        todo!()
+        // TODO: Custom impossible swaps and generation
     }
     /// Used for when move is added to history and not for recalculation
     pub fn reveal_redraw_initial(&mut self, player_id: usize, card: Card) {
-        todo!()
+        // Consider moving the impossible states around?
+        self.lookback_initial();
+        // TODO: Custom impossible swaps and generation
     }
     /// Function to call when the card revealed and the redrawn card is the same card
     pub fn reveal_redraw_same(&mut self, player_id: usize, card: Card) {
-        todo!()
+        if !self.inferred_constraints[player_id].contains(&card) {
+            log::trace!("reveal_redraw_same player_id: {}, card: {:?}", player_id, card);
+            self.inferred_constraints[player_id].push(card);
+        }
+        // TODO: Custom impossible swaps and generation
     }
     /// Function to call when both the card revealed and redrawn are known and not the same
     pub fn reveal_redraw_diff(&mut self, player_id: usize, reveal: Card, redraw: Card) {
-        todo!()
+        if let Some(pos) = self.inferred_constraints[player_id].iter().position(|c| *c == reveal) {
+            self.inferred_constraints[player_id].remove(pos);
+        }
+        if let Some(pos) = self.inferred_constraints[6].iter().position(|c| *c == redraw) {
+            self.inferred_constraints[6].remove(pos);
+        }
+        self.inferred_constraints[player_id].push(redraw);
+        self.inferred_constraints[6].push(reveal);
+        // TODO: Custom impossible swaps and generation
     }
     /// Function to call when both the card revealed is left in the pile
     /// Assumes redraw is None
     /// Assumes what is revealed is relinquish and passed to the pile
     pub fn reveal_redraw_relinquish(&mut self, player_id: usize, relinquish: Card) {
-        todo!()
-    }
-    pub fn swap_mix(&mut self, player_a: usize, card_a: Card, player_b: usize, card_b: Card) {
-        todo!()
-    }
-    pub fn swap_add_inferred_cards_unchecked(&mut self, player_a: usize, card_a: Card, player_b: usize, card_b: Card) {
-        todo!()
-    }
-    pub fn relinquish_mix(&mut self, player_a: usize, player_b: usize, relinquish_card: Card) {
-        todo!()
+        if let Some(pos) = self.inferred_constraints[player_id].iter().position(|c| *c == relinquish) {
+            self.inferred_constraints[player_id].remove(pos);
+        }
+        self.inferred_constraints[6].push(relinquish);
     }
     /// Function to call for move Ambassador, without considering private information seen by the player who used Ambassador
     pub fn ambassador_public(&mut self, player_id: usize) {
-        todo!()
+        
     }
     /// Function to call for move Ambassador, when considering private information seen by the player who used Ambassador
     pub fn ambassador_private(&mut self, player_id: usize) {
+        todo!()
+    }
+    pub fn lookback_initial(&mut self) -> bool {
         todo!()
     }
     /// Assumes a maximally informative group is present
     fn generate_impossible_constraints(&mut self) {
         todo!()
     }
-
+    /// Returns an array of [player][card] that returns true if a player cannot have a particular card alive
     pub fn generate_one_card_impossibilities_player_card_indexing(&self) -> [[bool; 5]; 7] {
-        todo!()
+        self.impossible_constraints.clone()
     }
-    /// This is currently broken
-    pub fn generate_one_card_impossibilities_card_player_indexing(&mut self) -> [[bool; 7]; 5] {
-        unimplemented!("Yet to integrate with self.impossible_constraints");
-        todo!()
-    }
-    pub fn debug_panicker(&self) {
-        todo!()
-    }
-    pub fn check_three(&self) {
-        todo!()
-    } 
 }
