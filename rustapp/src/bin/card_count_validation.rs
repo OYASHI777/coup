@@ -29,7 +29,7 @@ fn main() {
     let min_dead_check: usize = 8;
     let num_threads = 12;
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_pd(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
@@ -47,7 +47,7 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    // test();
+    test();
     // temp();
 }
 use rustapp::prob_manager::path_dependent_collective_constraint::{self, PathDependentCollectiveConstraint};
@@ -216,7 +216,7 @@ pub fn test() {
         let overinferred_18 = vec![Steal { player_id: 0, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, true], opposing_player_id: 0, final_actioner: 5 }, Discard { player_id: 0, card: [Duke, Duke], no_cards: 1 }, Tax { player_id: 1 }, CollectiveChallenge { participants: [true, false, true, true, false, false], opposing_player_id: 1, final_actioner: 0 }, RevealRedraw { player_id: 1, card: Duke }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 3, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, true], opposing_player_id: 2, final_actioner: 5 }, Discard { player_id: 2, card: [Ambassador, Ambassador], no_cards: 1 }, Tax { player_id: 3 }, CollectiveChallenge { participants: [false, false, true, false, false, false], opposing_player_id: 3, final_actioner: 2 }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, Tax { player_id: 4 }, CollectiveChallenge { participants: [false, true, true, true, false, false], opposing_player_id: 4, final_actioner: 1 }, RevealRedraw { player_id: 4, card: Duke }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 5, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [false, true, false, false, true, false], opposing_player_id: 5, final_actioner: 1 }, Discard { player_id: 5, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, false, true], opposing_player_id: 1, final_actioner: 2 }, RevealRedraw { player_id: 1, card: Captain }, Discard { player_id: 2, card: [Captain, Captain], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, false, false, false, true], opposing_player_id: 3, final_actioner: 5 }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, ForeignAid { player_id: 4 }, CollectiveBlock { participants: [false, true, false, false, false, true], opposing_player_id: 4, final_actioner: 1 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 1, final_actioner: 4 }, RevealRedraw { player_id: 1, card: Duke }, Discard { player_id: 4, card: [Duke, Duke], no_cards: 1 }];
         // second relinquish
         // println!("Testing: {}", stringify!(relinquish_0)); 
-        // replay_game_constraint_pd(relinquish_0, false, true);
+        // replay_game_constraint_pd(relinquish_0, false, false);
         // Stack Custom illegal
         println!("Testing: {}", stringify!(reveal_redraw_replay_19)); 
         replay_game_constraint_pd(reveal_redraw_replay_19, false, false);
