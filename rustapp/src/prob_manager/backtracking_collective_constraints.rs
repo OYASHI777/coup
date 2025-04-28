@@ -1314,7 +1314,7 @@ impl BackTrackCollectiveConstraint {
             }
         }
         // Do an unwrap_or false
-        !self.possible_to_have_cards_recurse(index_lookback, 999999999999, player_of_interest, &mut public_constraints, &mut inferred_constraints, cards)
+        !self.possible_to_have_cards_recurse(index_lookback, 999999999999, player_of_interest, &mut public_constraints, &mut inferred_constraints, &[0; 5])
         // !self.possible_to_have_cards_recurse(index_lookback - 1, index, player_of_interest, &mut public_constraints, &mut inferred_constraints, cards)
     }
     /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards at start of turn
