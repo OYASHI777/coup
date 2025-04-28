@@ -1286,30 +1286,35 @@ impl BackTrackCollectiveConstraint {
     }
     /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards at start of turn
     /// Assuming we won't be using this for ambassador?
-    pub fn impossible_to_have_cards_general(&self, index_lookback: usize, index: usize, player_of_interest: usize, cards: &[u8; 5]) -> bool {
-        log::trace!("impossible_to_have_cards index: {}, player_of_interest: {}, cards: {:?}", index, player_of_interest, cards);
+    pub fn impossible_to_have_cards_general(&self, index_lookback: usize, player_of_interest: usize, cards: &[u8; 5]) -> bool {
+        log::trace!("impossible_to_have_cards player_of_interest: {}, cards: {:?}", player_of_interest, cards);
         debug_assert!(player_of_interest != 6 && cards.iter().sum::<u8>() <= 2 || player_of_interest == 6 && cards.iter().sum::<u8>() <= 3, "cards too long!");
         let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(4), ];
         let mut inferred_constraints: Vec<Vec<Card>> = public_constraints.clone();
         let latest_move = self.history.last().unwrap(); 
-        match latest_move.action_info() {
-            ActionInfo::Discard { discard } => {
-                inferred_constraints[latest_move.player() as usize].push(*discard);
-            },
-            ActionInfo::RevealRedraw { reveal, redraw, .. } => {
-                inferred_constraints[latest_move.player() as usize].push(*reveal);
-                redraw.map(|pile_original_card| inferred_constraints[6].push(pile_original_card));
-            },
-            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
-                inferred_constraints[latest_move.player() as usize].extend(relinquish.iter().copied());
-                inferred_constraints[6].extend(draw.iter().copied());
-            },
-            ActionInfo::Start
-            | ActionInfo::StartInferred => {},
+        // match latest_move.action_info() {
+        //     ActionInfo::Discard { discard } => {
+        //         inferred_constraints[latest_move.player() as usize].push(*discard);
+        //     },
+        //     ActionInfo::RevealRedraw { reveal, redraw, .. } => {
+        //         inferred_constraints[latest_move.player() as usize].push(*reveal);
+        //         redraw.map(|pile_original_card| inferred_constraints[6].push(pile_original_card));
+        //     },
+        //     ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+        //         inferred_constraints[latest_move.player() as usize].extend(relinquish.iter().copied());
+        //         inferred_constraints[6].extend(draw.iter().copied());
+        //     },
+        //     ActionInfo::Start
+        //     | ActionInfo::StartInferred => {},
+        // }
+        for (card_num, card_count) in cards.iter().enumerate() {
+            for _ in 0..*card_count {
+                inferred_constraints[player_of_interest].push(Card::try_from(card_num as u8).unwrap());
+            }
         }
-
         // Do an unwrap_or false
-        !self.possible_to_have_cards_recurse(index_lookback - 1, index, player_of_interest, &mut public_constraints, &mut inferred_constraints, cards)
+        !self.possible_to_have_cards_recurse(index_lookback, 999999999999, player_of_interest, &mut public_constraints, &mut inferred_constraints, cards)
+        // !self.possible_to_have_cards_recurse(index_lookback - 1, index, player_of_interest, &mut public_constraints, &mut inferred_constraints, cards)
     }
     /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards at start of turn
     /// Assuming we won't be using this for ambassador?
@@ -1853,7 +1858,7 @@ impl BackTrackCollectiveConstraint {
             }
             for card in 0..5 {
                 cards[card] = 1;
-                self.impossible_constraints[player_of_interest][card] = self.impossible_to_have_cards_general(history_index, history_index, player_of_interest, &cards);
+                self.impossible_constraints[player_of_interest][card] = self.impossible_to_have_cards_general(history_index, player_of_interest, &cards);
                 cards[card] = 0;
             }
         }
@@ -1866,7 +1871,7 @@ impl BackTrackCollectiveConstraint {
                 for card_b in card_a..5 {
                     cards[card_a] += 1;
                     cards[card_b] += 1;
-                    let output = self.impossible_to_have_cards_general(history_index, history_index, player_of_interest, &cards);
+                    let output = self.impossible_to_have_cards_general(history_index, player_of_interest, &cards);
                     self.impossible_constraints_2[player_of_interest][card_a][card_b] = output;
                     self.impossible_constraints_2[player_of_interest][card_b][card_a] = output;
                     cards[card_a] -= 1;
@@ -1879,7 +1884,8 @@ impl BackTrackCollectiveConstraint {
                 for card_c in card_b..5 {
                     cards[card_a] += 1;
                     cards[card_b] += 1;
-                    let output = self.impossible_to_have_cards_general(history_index, history_index, 6, &cards);
+                    cards[card_c] += 1;
+                    let output = self.impossible_to_have_cards_general(history_index, 6, &cards);
                     self.impossible_constraints_3[card_a][card_b][card_c] = output;
                     self.impossible_constraints_3[card_a][card_c][card_b] = output;
                     self.impossible_constraints_3[card_b][card_a][card_c] = output;
@@ -1888,6 +1894,7 @@ impl BackTrackCollectiveConstraint {
                     self.impossible_constraints_3[card_c][card_b][card_a] = output;
                     cards[card_a] -= 1;
                     cards[card_b] -= 1;
+                    cards[card_c] -= 1;
                 }
             }
         }
