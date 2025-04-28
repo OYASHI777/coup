@@ -1965,25 +1965,10 @@ impl BackTrackCollectiveConstraint {
                         continue;
                     }
                     let mut next = [0u8; 5];
-                    match (card_num_a == card_num_b, card_num_b == card_num_c) {
-                        (true, true) => {
-                            next[card_num_a] = must_have_card[card_num_a].min(3);
-                        },
-                        (true, false) => {
-                            next[card_num_a] = must_have_card[card_num_a].min(2);
-                            next[card_num_c] = must_have_card[card_num_c].min(1);
-                        }
-                        (false, true) => {
-                            next[card_num_a] = must_have_card[card_num_a].min(1);
-                            next[card_num_b] = must_have_card[card_num_b].min(2);
-                        }
-                        (false, false) => {
-                            next[card_num_a] = must_have_card[card_num_a].min(1);
-                            next[card_num_b] = must_have_card[card_num_b].min(1);
-                            next[card_num_c] = must_have_card[card_num_c].min(1);
-                        }
-                    }
-                    must_have_card = next;
+                    next[card_num_a] += 1;
+                    next[card_num_b] += 1;
+                    next[card_num_c] += 1;
+                    must_have_card.iter_mut().zip(next.iter()).for_each(|(m, n)| *m = (*m).min(*n));
                     if must_have_card == [0; 5] {
                         return
                         // break 'outer;

@@ -23,7 +23,7 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 pub const LOG_FILE_NAME: &str = "just_test_replay_00000000.log";
 // TODO: Add a test function to compare path_dependent_group_constraint with new approach and if different run inference for the brute force approach
 fn main() {
-    let game_no = 10000;
+    let game_no = 10000000;
     let log_bool = true;
     let bool_know_priv_info = false;
     let print_frequency: usize = 100;
@@ -663,8 +663,8 @@ pub fn game_rnd_constraint_bt_mt(num_threads: usize, game_no: usize, bool_know_p
     ));
     
     let (tx, rx) = mpsc::channel();
-    let games_per_thread = game_no / 4;
-    let extra_games = game_no % 4;
+    let games_per_thread = game_no / num_threads;
+    let extra_games = game_no % num_threads;
     let mut handles = Vec::new();
 
     for i in 0..num_threads {
