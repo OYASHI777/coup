@@ -578,9 +578,10 @@ impl BackTrackCollectiveConstraint {
     }
     pub fn sorted_inferred_constraints(&self) -> Vec<Vec<Card>> {
         let mut output = self.inferred_constraints.clone();
-        for card_vec in output.iter_mut() {
-            card_vec.sort_unstable()
-        }
+        output.iter_mut().for_each(|v| v.sort_unstable());
+        // for card_vec in output.iter_mut() {
+        //     card_vec.sort_unstable()
+        // }
         output
     }
     #[inline]
@@ -1923,17 +1924,10 @@ impl BackTrackCollectiveConstraint {
                         if self.impossible_constraints_2[player][card_num_a][card_num_b] {
                             continue;
                         }
-                        if card_num_a == card_num_b {
-                            let new_num: u8 = must_have_card[card_num_a].min(2);
-                            must_have_card = [0; 5];
-                            must_have_card[card_num_a] = new_num;
-                        } else {
-                            let new_num_a: u8 = must_have_card[card_num_a].min(1);
-                            let new_num_b: u8 = must_have_card[card_num_b].min(1);
-                            must_have_card = [0; 5];
-                            must_have_card[card_num_a] = new_num_a;
-                            must_have_card[card_num_b] = new_num_b;
-                        }
+                        let mut next = [0u8; 5];
+                        next[card_num_a] += 1;
+                        next[card_num_b] += 1;
+                        must_have_card.iter_mut().zip(next.iter()).for_each(|(m, n)| *m = (*m).min(*n));
                         if must_have_card == [0; 5] {
                             break 'outer;
                         }
@@ -1945,7 +1939,6 @@ impl BackTrackCollectiveConstraint {
                     }
                 } 
             } else if self.public_constraints[player].len() == 1 {
-                // TODO: OPTIMIZE
                 if self.impossible_constraints[player].iter().map(|b| !*b as u8).sum::<u8>() == 1 {
                     if let Some(card_num) = self.impossible_constraints[player].iter().position(|b| !*b) {
                         self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
