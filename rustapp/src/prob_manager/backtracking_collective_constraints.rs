@@ -375,6 +375,9 @@ impl BackTrackCollectiveConstraint {
     fn regenerate_game_start(&mut self) {
         self.public_constraints.iter_mut().for_each(|v| v.clear());
         self.inferred_constraints = self.history.first().unwrap().inferred_constraints().clone();
+        self.impossible_constraints = [[false; 5]; 7];
+        self.impossible_constraints_2 = [[[false; 5]; 5]; 7]; 
+        self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
         // TODO: Make this nicer
         // !! Not gonna reset move_no
         // Not adding inferred information as sometimes a discard could try to insert
@@ -397,7 +400,7 @@ impl BackTrackCollectiveConstraint {
     /// Can recursively call itself
     fn regenerate_path(&mut self) {
         log::info!("Regenerating Path");
-        // self.regenerate_game_start();
+        self.regenerate_game_start();
         // TODO: Implement skipping starting empty ambassadors
         let mut skip_starting_empty_ambassador: bool = true;
         for index in 1..self.history.len() {
@@ -467,7 +470,7 @@ impl BackTrackCollectiveConstraint {
         }
         // TODO: generate impossible_constraints can differ by move.
         log::trace!("calculate_stored_move generate_impossible_constraints history_index: {history_index}");
-        self.generate_impossible_constraints();
+        self.generate_impossible_constraints(history_index);
         self.history[history_index].meta_data = self.to_meta_data();
         log::info!("recalculated_stored_move end: player: {player_id} {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
@@ -496,7 +499,9 @@ impl BackTrackCollectiveConstraint {
             ActionInfo::RevealRedraw{ reveal, redraw, .. } => {
                 // TODO: handle the known card case obviously lol
                 match redraw {
-                    None => {},
+                    None => {
+                        self.reveal_redraw_initial(player_id, reveal);
+                    },
                     Some(drawn) => {
                         if drawn == reveal {
                             // TODO: Probably check if inferred_card already there
@@ -518,7 +523,7 @@ impl BackTrackCollectiveConstraint {
                 self.ambassador_public(player_id);
             },
         }
-        self.generate_impossible_constraints();
+        self.generate_impossible_constraints(self.history.len() - 1);
         self.history[history_index].meta_data = self.to_meta_data();
         log::info!("recalculated_stored_move_initial: {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
@@ -1012,8 +1017,138 @@ impl BackTrackCollectiveConstraint {
         }
         bool_changes
     }
-    pub fn lookback_1_continual(&mut self, index: usize) {
-        todo!()
+    /// lookback for when we discover a previous item and want to continue for that
+    /// This happens e.g. when you discard => infer the redraw of a previous RevealRedraw
+    /// and you need to update those before the redraw
+    ///     - Start => when we know their starting inferred_constraint
+    ///     - RevealRedraw => when we know what the left in the pile
+    /// so you call this for the previous RevealRedraw
+    /// Assumes some inferred information has already been learnt before this.
+    /// => Assumes that regenerate will be called outside of this regardless
+    pub fn lookback_1_continual(&mut self, index: usize) -> bool {
+        // index is the index for history
+        log::trace!("In lookback_1_continual index: {index}");
+        log::trace!("index: {:?}", self.history[index].action_info());
+        self.printlog();
+        log::trace!("Start: {:?}", self.history[0].meta_data());
+        let action_info = self.history[index].action_info().clone();
+        match action_info {
+            ActionInfo::RevealRedraw{reveal: reveal_considered, redraw: redraw_considered, ..} => {
+                // TODO: [OPTIMIZE] Consider just 1 check instead of this merge
+                match redraw_considered {
+                    Some(redraw_card) => {
+                        // === CASE UPDATE START ===
+                        // reveal_considered != redraw_considered
+                        //  - Redraw card implies that the pile had the card before it was given to the player
+                        //  - Update the starting node if we can tell the pile had the card at start
+                        //      - Don't need to update the inferred of a none starting node as
+                        //        we do not need any intermediate accuracy, and we know that it will be reflected
+                        //        properly in the latest inferred constraints anyways
+                        //  - Conditions where pile card was in starting node
+                        //      - All Previous RevealRedraw, reveal != redraw_considered
+                        //          - reveal == redraw_considered => would mean the maybe the player put it in
+                        //      - All Previous RevealRedraw redraw card does not matter
+                        //          - reveal == redraw => redraw_considered would still be in pile
+                        //          - reveal != redraw => card was redrawn to player, but redraw_considered would still be in pile
+                        //      - No Previous Ambassador where no cards known
+                        //          - unable to infer further as reveal_considered could have been transferred from player to pile
+                        //      - More Ambassador
+                        //          - [TODO] unhandled
+                        // reveal_considered == redraw_considered
+                        //  - Redraw card may come from pile or may have been same card player put in
+                        for i in (2..index).rev() {
+                            match self.history[i].name() {
+                                ActionInfoName::RevealRedraw => {
+                                    if let ActionInfo::RevealRedraw { reveal, redraw, relinquish } = self.history[i].action_info() {
+                                        // CASE player put the considered card into the pile
+                                        // If all cards for redraw are known
+                                        // If current player has RevealRedrawn before they must have withdrawn the Discarded card
+                                        // 
+                                        // CASE Player RevealRedraw same card
+                                        // - did not change the pile state => no early exit
+                                        if Some(*reveal) == *redraw {
+                                            continue;
+                                        } else if Some(*reveal) == redraw_considered {
+                                            // Testing this
+                                            // CASE when a player RevealRedraw the card and it was not redrawn
+                                            // Could be in pile or player
+                                            // TODO: Maybe need to handle relinquish case
+                                            return false;
+                                        }
+                                    }
+                                    let bool_change_relinquish = self.history[i - 1].known_card_count(redraw_card) == 2 
+                                    && !self.history[i - 1].inferred_constraints()[self.history[i].player() as usize].contains(&redraw_card);
+                                    log::trace!("lookback_1_continual bool_change_relinquish: {bool_change_relinquish}");
+                                    log::trace!("self.history[i - 1].inferred_constraints: {:?}", self.history[i - 1].inferred_constraints());
+                                    log::trace!("self.history[i - 1].known_card_count(redraw_card) == 2: {:?}", self.history[i - 1].known_card_count(redraw_card) == 2);
+                                    log::trace!("!self.history[i - 1].inferred_constraints()[self.history[i].player() as usize].contains(&redraw_card): {:?}", !self.history[i - 1].inferred_constraints()[self.history[i].player() as usize].contains(&redraw_card));
+                                    if bool_change_relinquish {
+                                        log::trace!("lookback_1_continual original RevealRedraw: {:?}", action_info);
+                                        log::trace!("lookback_1_continual considering: player: {} {:?}", self.history[i].player(), self.history[i].action_info());
+                                        if let ActionInfo::RevealRedraw { reveal, relinquish, .. } = self.history[i].action_info_mut() {
+                                            // CASE Player RevealRedraw revealed the card of interest and did not redraw it back
+                                            // - pile got the redraw_card here => early exit
+                                            if *reveal == redraw_card {
+                                                // CASE player put the considered card into the pile
+                                                // All card locations for redraw_card are known just after previous reveal
+                                                // If current player has RevealRedrawn has redrawn redraw_card
+                                                // Then last RevealRedraw must have left it inside
+                                                // I need to know that player has the third card just after reveal, and before redraw
+                                                if let Some(relinquish_card) = relinquish {
+                                                    log::trace!("lookback1_continual set relinquish_card to: {:?}", *reveal);
+                                                    *relinquish_card = *reveal;
+                                                    self.regenerate_path();
+                                                    log::trace!("End Regenerate Path lookback_continual");
+                                                    self.printlog();
+                                                    return true
+                                                }
+                                            }
+                                            return false
+                                        }
+                                    }
+                                },
+                                ActionInfoName::ExchangeDrawChoice => {
+                                    if let ActionInfo::ExchangeDrawChoice { draw, relinquish } = self.history[i].action_info() {
+                                        if !draw.is_empty() || !relinquish.is_empty() {
+                                            // TODO: [CASE] Technically there could be cases to handle where cards are known
+                                            // For now we stop at any Ambassador
+                                            return false
+                                        }
+                                    }
+                                },
+                                ActionInfoName::Start
+                                |ActionInfoName::StartInferred => {
+                                    debug_assert!(false, "Should not have Start when index is not 0");
+                                },
+                                ActionInfoName::Discard => {},
+                            }
+                        }
+                        // Add to start
+                        log::trace!("lookback1_continual adding to Start player_id: 6, card: {:?}", redraw_card);
+                        debug_assert!(self.history[0].name() == ActionInfoName::Start, "wrong Significant Action at index 0!");
+                        // TODO: HMMMMMMMM, i feel like there may be cases where it could have 2?
+                        if !self.history[0].inferred_constraints()[6].contains(&redraw_card) {
+                            self.history[0].add_inferred_constraints(6, redraw_card);
+                        }
+                        return true;
+                    },
+                    None => {
+                        debug_assert!(false, "You should not be calling this on a RevealRedraw without a redraw card known");
+                    }
+                }
+            },
+            ActionInfo::Discard{discard: discard_considered} => {
+                debug_assert!(false, "You should not be calling this on a discard card");
+            },
+            ActionInfo::Start
+            | ActionInfo::StartInferred => {
+                panic!("You should not be calling this on Start");
+            }
+            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                // unimplemented!();
+            }
+        }
+        false
     }
     pub fn need_redraw_update_2(&self, index: usize, card_of_interest: Card, illegal_players: &[bool; 6]) -> bool {
         log::trace!("need_redraw_update_2 considered: {index}, card_of_interest: {:?}, illegal_players: {:?}", card_of_interest, illegal_players);
@@ -1147,6 +1282,33 @@ impl BackTrackCollectiveConstraint {
             }
         }
         false
+    }
+    /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards at start of turn
+    /// Assuming we won't be using this for ambassador?
+    pub fn impossible_to_have_cards_general(&self, index_lookback: usize, index: usize, player_of_interest: usize, cards: &[u8; 5]) -> bool {
+        log::trace!("impossible_to_have_cards index: {}, player_of_interest: {}, cards: {:?}", index, player_of_interest, cards);
+        debug_assert!(player_of_interest != 6 && cards.iter().sum::<u8>() <= 2 || player_of_interest == 6 && cards.iter().sum::<u8>() <= 3, "cards too long!");
+        let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(4), ];
+        let mut inferred_constraints: Vec<Vec<Card>> = public_constraints.clone();
+        let latest_move = self.history.last().unwrap(); 
+        match latest_move.action_info() {
+            ActionInfo::Discard { discard } => {
+                inferred_constraints[latest_move.player() as usize].push(*discard);
+            },
+            ActionInfo::RevealRedraw { reveal, redraw, .. } => {
+                inferred_constraints[latest_move.player() as usize].push(*reveal);
+                redraw.map(|pile_original_card| inferred_constraints[6].push(pile_original_card));
+            },
+            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                inferred_constraints[latest_move.player() as usize].extend(relinquish.iter().copied());
+                inferred_constraints[6].extend(draw.iter().copied());
+            },
+            ActionInfo::Start
+            | ActionInfo::StartInferred => {},
+        }
+
+        // Do an unwrap_or false
+        !self.possible_to_have_cards_recurse(index_lookback - 1, index, player_of_interest, &mut public_constraints, &mut inferred_constraints, cards)
     }
     /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards at start of turn
     /// Assuming we won't be using this for ambassador?
@@ -1676,9 +1838,16 @@ impl BackTrackCollectiveConstraint {
         }
         true
     }
-    /// Assumes a maximally informative group is present
-    fn generate_impossible_constraints(&mut self) {
-        todo!()
+    /// Brute force generates everything
+    fn generate_impossible_constraints(&mut self, history_index: usize) {
+        let mut cards: [u8; 5] = [0; 5];
+        for player_of_interest in 0..6 {
+            for card in 0..5 {
+                cards[card] = 1;
+                self.impossible_constraints[player_of_interest][card] = self.impossible_to_have_cards_general(history_index, history_index, player_of_interest, &cards);
+                cards[card] = 0;
+            }
+        }
     }
     /// Returns an array of [player][card] that returns true if a player cannot have a particular card alive
     pub fn generate_one_card_impossibilities_player_card_indexing(&self) -> [[bool; 5]; 7] {

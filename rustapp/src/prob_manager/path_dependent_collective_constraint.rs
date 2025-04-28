@@ -5974,7 +5974,7 @@ impl PathDependentCollectiveConstraint {
         // self.group_redundant_prune();
         // Add the stuff here
     }
-        /// Used for when move is added to history and not for recalculation
+    /// Used for when move is added to history and not for recalculation
     pub fn reveal_redraw_initial(&mut self, player_id: usize, card: Card) {
         // Abit dumb to seperate it like this, but if not it gets abit messy and I have more branchs :/
         
