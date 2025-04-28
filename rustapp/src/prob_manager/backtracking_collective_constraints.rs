@@ -1985,7 +1985,8 @@ impl BackTrackCollectiveConstraint {
                     }
                     must_have_card = next;
                     if must_have_card == [0; 5] {
-                        break 'outer;
+                        return
+                        // break 'outer;
                     }
                 }
             }
