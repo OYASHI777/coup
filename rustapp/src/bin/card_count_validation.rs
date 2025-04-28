@@ -218,62 +218,62 @@ pub fn test() {
         let overinferred_18 = vec![Steal { player_id: 0, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, true], opposing_player_id: 0, final_actioner: 5 }, Discard { player_id: 0, card: [Duke, Duke], no_cards: 1 }, Tax { player_id: 1 }, CollectiveChallenge { participants: [true, false, true, true, false, false], opposing_player_id: 1, final_actioner: 0 }, RevealRedraw { player_id: 1, card: Duke }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 3, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, true], opposing_player_id: 2, final_actioner: 5 }, Discard { player_id: 2, card: [Ambassador, Ambassador], no_cards: 1 }, Tax { player_id: 3 }, CollectiveChallenge { participants: [false, false, true, false, false, false], opposing_player_id: 3, final_actioner: 2 }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, Tax { player_id: 4 }, CollectiveChallenge { participants: [false, true, true, true, false, false], opposing_player_id: 4, final_actioner: 1 }, RevealRedraw { player_id: 4, card: Duke }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 5, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [false, true, false, false, true, false], opposing_player_id: 5, final_actioner: 1 }, Discard { player_id: 5, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, false, true], opposing_player_id: 1, final_actioner: 2 }, RevealRedraw { player_id: 1, card: Captain }, Discard { player_id: 2, card: [Captain, Captain], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, false, false, false, true], opposing_player_id: 3, final_actioner: 5 }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, ForeignAid { player_id: 4 }, CollectiveBlock { participants: [false, true, false, false, false, true], opposing_player_id: 4, final_actioner: 1 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 1, final_actioner: 4 }, RevealRedraw { player_id: 1, card: Duke }, Discard { player_id: 4, card: [Duke, Duke], no_cards: 1 }];
         // second relinquish
         // println!("Testing: {}", stringify!(relinquish_0)); 
-        // replay_game_constraint_pd(relinquish_0, false, false);
+        // replay_game_constraint_bt(relinquish_0, false, false);
         // Stack Custom illegal
         println!("Testing: {}", stringify!(reveal_redraw_replay_19)); 
-        replay_game_constraint_pd(reveal_redraw_replay_19, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_19, false, false);
         // Some max negation
         // println!("Testing: {}", stringify!(reveal_redraw_replay_18)); 
-        // replay_game_constraint_pd(reveal_redraw_replay_18, false, false);
+        // replay_game_constraint_bt(reveal_redraw_replay_18, false, false);
         // ====================
         println!("Testing: {}", stringify!(reveal_redraw_replay_16)); 
-        replay_game_constraint_pd(reveal_redraw_replay_16, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_16, false, false);
         // Possible to solve with backtracking and not fix with group_constraints
         // println!("Testing: {}", stringify!(reveal_redraw_replay_15)); 
-        // replay_game_constraint_pd(reveal_redraw_replay_15, false, false);
+        // replay_game_constraint_bt(reveal_redraw_replay_15, false, false);
         // ===================== 
         // Second Inference 
         println!("Testing: {}", stringify!(overinferred_18)); 
-        replay_game_constraint_pd(overinferred_18, false, false);
+        replay_game_constraint_bt(overinferred_18, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_14)); 
-        replay_game_constraint_pd(reveal_redraw_replay_14, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_14, false, false);
         // How to deal with second inference
         println!("Testing: {}", stringify!(bad_push_1));
-        replay_game_constraint_pd(bad_push_1, false, false);
+        replay_game_constraint_bt(bad_push_1, false, false);
         // ===================== 
         // Crazy impossible
         // println!("Testing: {}", stringify!(impossible_6));
-        // replay_game_constraint_pd(impossible_6, false, false);
+        // replay_game_constraint_bt(impossible_6, false, false);
         // println!("Testing: {}", stringify!(reveal_redraw_replay_12)); 
-        // replay_game_constraint_pd(reveal_redraw_replay_12, false, true);
+        // replay_game_constraint_bt(reveal_redraw_replay_12, false, true);
         // ===================== 
         // Relinquish case!!
         println!("Testing: {}", stringify!(reveal_redraw_replay_13)); 
-        replay_game_constraint_pd(reveal_redraw_replay_13, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_13, false, false);
         // overinferred_11 This tells us the merging did not work out very well
         // maybe merge also discard into reveal?
         // actually the front count doesnt really make sense
         // esp if someone amb
         // failed after relinquish => the relinquish does not produce the correct groups...
         println!("Testing: {}", stringify!(overinferred_11)); 
-        replay_game_constraint_pd(overinferred_11, false, false);
+        replay_game_constraint_bt(overinferred_11, false, false);
         // ===================== 
         println!("Testing: {}", stringify!(reveal_redraw_replay_10));
-        replay_game_constraint_pd(reveal_redraw_replay_10, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_10, false, false);
         println!("Testing: {}", stringify!(overinferred_16)); 
-        replay_game_constraint_pd(overinferred_16, false, false);
+        replay_game_constraint_bt(overinferred_16, false, false);
         println!("Testing: {}", stringify!(overinferred_17)); 
-        replay_game_constraint_pd(overinferred_17, false, false);
+        replay_game_constraint_bt(overinferred_17, false, false);
         println!("Testing: {}", stringify!(overinferred_14)); 
-        replay_game_constraint_pd(overinferred_14, false, false);
+        replay_game_constraint_bt(overinferred_14, false, false);
         println!("Testing: {}", stringify!(impossible_7)); // Helpful for relinquish
-        replay_game_constraint_pd(impossible_7, false, false);
+        replay_game_constraint_bt(impossible_7, false, false);
         println!("Testing: {}", stringify!(bad_push_3));
-        replay_game_constraint_pd(bad_push_3, false, false);
+        replay_game_constraint_bt(bad_push_3, false, false);
         println!("Testing: {}", stringify!(bad_push_2));
-        replay_game_constraint_pd(bad_push_2, false, false);
+        replay_game_constraint_bt(bad_push_2, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_11));
-        replay_game_constraint_pd(reveal_redraw_replay_11, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_11, false, false);
 
 
         // IMPT!! Check 4 things & align the RR and Discard, Kinda like RR more
@@ -287,10 +287,10 @@ pub fn test() {
         // === Non PD inference
         // I have no idea whats wrong here lol, maybe same as subtract overflow
         // println!("Testing: {}", stringify!(overinferred_8));
-        // replay_game_constraint_pd(overinferred_8, false, true);
+        // replay_game_constraint_bt(overinferred_8, false, true);
         // Set inference
         // println!("Testing: {}", stringify!(reveal_redraw_replay_9));
-        // replay_game_constraint_pd(reveal_redraw_replay_9, false, false);
+        // replay_game_constraint_bt(reveal_redraw_replay_9, false, false);
         // === Non PD inference
         // === PD RevealRedraw cases
         // Hmm what about revealredraws that happen before?
@@ -308,142 +308,142 @@ pub fn test() {
         // P1 D D
         // P3 D D
         println!("Testing: {}", stringify!(overinferred_13));
-        replay_game_constraint_pd(overinferred_13, false, false);
+        replay_game_constraint_bt(overinferred_13, false, false);
         println!("Testing: {}", stringify!(overinferred_9));
-        replay_game_constraint_pd(overinferred_9, false, false);
+        replay_game_constraint_bt(overinferred_9, false, false);
         println!("Testing: {}", stringify!(overinferred_10));
-        replay_game_constraint_pd(overinferred_10, false, false);
+        replay_game_constraint_bt(overinferred_10, false, false);
         println!("Testing: {}", stringify!(impossible_5));
-        replay_game_constraint_pd(impossible_5, false, false);
+        replay_game_constraint_bt(impossible_5, false, false);
         // TODO: TEST THIS => Single Group constraint of all known at start forward pass?
         println!("Testing: {}", stringify!(overinferred_12)); // stored but untested
-        replay_game_constraint_pd(overinferred_12, false, false);
+        replay_game_constraint_bt(overinferred_12, false, false);
 
         println!("Testing: {}", stringify!(overinferred_7));
-        replay_game_constraint_pd(overinferred_7, false, false);
+        replay_game_constraint_bt(overinferred_7, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_8));
-        replay_game_constraint_pd(reveal_redraw_replay_8, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_8, false, false);
         println!("Testing: {}", stringify!(overinferred_6));
-        replay_game_constraint_pd(overinferred_6, false, false);
+        replay_game_constraint_bt(overinferred_6, false, false);
         println!("Testing: {}", stringify!(overinferred_5));
-        replay_game_constraint_pd(overinferred_5, false, false);
+        replay_game_constraint_bt(overinferred_5, false, false);
         println!("Testing: {}", stringify!(impossible_2));
-        replay_game_constraint_pd(impossible_2, false, false);
+        replay_game_constraint_bt(impossible_2, false, false);
         // === PD RevealRedraw cases
         // ===================================
         // Future features / weird bugs
         // Can't find root of this bug
         // println!("Testing: {}", stringify!(subtract_overflow_1));
-        // replay_game_constraint_pd(subtract_overflow_1, false, true);
+        // replay_game_constraint_bt(subtract_overflow_1, false, true);
         // Recursion
         // println!("Testing: {}", stringify!(impossible_3));
-        // replay_game_constraint_pd(impossible_3, false, false);
+        // replay_game_constraint_bt(impossible_3, false, false);
         // Set inference
         // println!("Testing: {}", stringify!(reveal_redraw_replay_6));
-        // replay_game_constraint_pd(reveal_redraw_replay_6, false, false);
+        // replay_game_constraint_bt(reveal_redraw_replay_6, false, false);
         // println!("Testing: {}", stringify!(reveal_redraw_replay_17)); 
-        // replay_game_constraint_pd(reveal_redraw_replay_17, false, false);
+        // replay_game_constraint_bt(reveal_redraw_replay_17, false, false);
         // ===================================
         
         // Broke this
         println!("Testing: {}", stringify!(full_test_overflow_0));
-        replay_game_constraint_pd(full_test_overflow_0, false, false);
+        replay_game_constraint_bt(full_test_overflow_0, false, false);
         println!("Testing: {}", stringify!(overinferred_0));
-        replay_game_constraint_pd(overinferred_0, false, false);
+        replay_game_constraint_bt(overinferred_0, false, false);
         println!("Testing: {}", stringify!(overinferred_1));
-        replay_game_constraint_pd(overinferred_1, false, false);
+        replay_game_constraint_bt(overinferred_1, false, false);
         println!("Testing: {}", stringify!(overinferred_2));
-        replay_game_constraint_pd(overinferred_2, false, false);
+        replay_game_constraint_bt(overinferred_2, false, false);
         println!("Testing: {}", stringify!(overinferred_3));
-        replay_game_constraint_pd(overinferred_3, false, false);
+        replay_game_constraint_bt(overinferred_3, false, false);
         println!("Testing: {}", stringify!(overinferred_4));
-        replay_game_constraint_pd(overinferred_4, false, false);
+        replay_game_constraint_bt(overinferred_4, false, false);
         println!("Testing: {}", stringify!(subtract_overflow_0));
-        replay_game_constraint_pd(subtract_overflow_0, false, false);
+        replay_game_constraint_bt(subtract_overflow_0, false, false);
         println!("Testing: {}", stringify!(bad_push));
-        replay_game_constraint_pd(bad_push_0, false, false);
+        replay_game_constraint_bt(bad_push_0, false, false);
         println!("Testing: {}", stringify!(impossible_0));
-        replay_game_constraint_pd(impossible_0, false, false);
+        replay_game_constraint_bt(impossible_0, false, false);
         println!("Testing: {}", stringify!(impossible_1));
-        replay_game_constraint_pd(impossible_1, false, false);
+        replay_game_constraint_bt(impossible_1, false, false);
         println!("Testing: {}", stringify!(impossible_4));
-        replay_game_constraint_pd(impossible_4, false, false);
+        replay_game_constraint_bt(impossible_4, false, false);
         println!("Testing: {}", stringify!(full_test_replay_1));
-        replay_game_constraint_pd(full_test_replay_1, false, false);
+        replay_game_constraint_bt(full_test_replay_1, false, false);
         
         println!("Testing: {}", stringify!(full_test_overflow_1));
-        replay_game_constraint_pd(full_test_overflow_1, false, false);
+        replay_game_constraint_bt(full_test_overflow_1, false, false);
         println!("Testing: {}", stringify!(full_test_overflow_2));
-        replay_game_constraint_pd(full_test_overflow_2, false, false);
+        replay_game_constraint_bt(full_test_overflow_2, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_issue_0));
-        replay_game_constraint_pd(reveal_redraw_issue_0, false, false);
+        replay_game_constraint_bt(reveal_redraw_issue_0, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_0));
-        replay_game_constraint_pd(reveal_redraw_replay_0, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_0, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_1));
-        replay_game_constraint_pd(reveal_redraw_replay_1, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_1, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_2));
-        replay_game_constraint_pd(reveal_redraw_replay_2, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_2, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_3));
-        replay_game_constraint_pd(reveal_redraw_replay_3, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_3, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_4));
-        replay_game_constraint_pd(reveal_redraw_replay_4, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_4, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_5));
-        replay_game_constraint_pd(reveal_redraw_replay_5, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_5, false, false);
         println!("Testing: {}", stringify!(reveal_redraw_replay_7));
-        replay_game_constraint_pd(reveal_redraw_replay_7, false, false);
+        replay_game_constraint_bt(reveal_redraw_replay_7, false, false);
         
         println!("Testing: {}", stringify!(full_test_replay_0));
-        replay_game_constraint_pd(full_test_replay_0, false, false);
+        replay_game_constraint_bt(full_test_replay_0, false, false);
         println!("Testing: {}", stringify!(full_test_replay_1_modified));
-        replay_game_constraint_pd(full_test_replay_1_modified, false, false);
+        replay_game_constraint_bt(full_test_replay_1_modified, false, false);
         println!("Testing: {}", stringify!(full_test_replay_2));
-        replay_game_constraint_pd(full_test_replay_2, false, false);
+        replay_game_constraint_bt(full_test_replay_2, false, false);
         println!("Testing: {}", stringify!(full_test_replay_3));
-        replay_game_constraint_pd(full_test_replay_3, false, false);
+        replay_game_constraint_bt(full_test_replay_3, false, false);
         println!("Testing: {}", stringify!(full_test_replay_4));
-        replay_game_constraint_pd(full_test_replay_4, false, false);
+        replay_game_constraint_bt(full_test_replay_4, false, false);
         println!("Testing: {}", stringify!(full_test_replay_5));
-        replay_game_constraint_pd(full_test_replay_5, false, false);
+        replay_game_constraint_bt(full_test_replay_5, false, false);
         println!("Testing: {}", stringify!(full_test_replay_6));
-        replay_game_constraint_pd(full_test_replay_6, false, false);
+        replay_game_constraint_bt(full_test_replay_6, false, false);
         println!("Testing: {}", stringify!(full_test_replay_7));
-        replay_game_constraint_pd(full_test_replay_7, false, false);
+        replay_game_constraint_bt(full_test_replay_7, false, false);
         println!("Testing: {}", stringify!(full_test_replay_8));
-        replay_game_constraint_pd(full_test_replay_8, false, false);
+        replay_game_constraint_bt(full_test_replay_8, false, false);
         println!("Testing: {}", stringify!(full_test_replay_9));
-        replay_game_constraint_pd(full_test_replay_9, false, false);
+        replay_game_constraint_bt(full_test_replay_9, false, false);
         println!("Testing: {}", stringify!(full_test_replay_10));
-        replay_game_constraint_pd(full_test_replay_10, false, false);
+        replay_game_constraint_bt(full_test_replay_10, false, false);
         println!("Testing: {}", stringify!(full_test_replay_11));
-        replay_game_constraint_pd(full_test_replay_11, false, false);
+        replay_game_constraint_bt(full_test_replay_11, false, false);
         println!("Testing: {}", stringify!(full_test_replay_12));
-        replay_game_constraint_pd(full_test_replay_12, false, false);
+        replay_game_constraint_bt(full_test_replay_12, false, false);
         println!("Testing: {}", stringify!(full_test_replay_13));
-        replay_game_constraint_pd(full_test_replay_13, false, false);
+        replay_game_constraint_bt(full_test_replay_13, false, false);
         println!("Testing: {}", stringify!(full_test_replay_14));
-        replay_game_constraint_pd(full_test_replay_14, false, false);
+        replay_game_constraint_bt(full_test_replay_14, false, false);
         println!("Testing: {}", stringify!(full_test_replay_15));
-        replay_game_constraint_pd(full_test_replay_15, false, false);
+        replay_game_constraint_bt(full_test_replay_15, false, false);
         println!("Testing: {}", stringify!(full_test_replay_16));
-        replay_game_constraint_pd(full_test_replay_16, false, false);
+        replay_game_constraint_bt(full_test_replay_16, false, false);
         // === fails for impossible to have a particular card
         // Because of ambassador we store this first for later
         // println!("Testing: {}", stringify!(whole_replay_0));
-        // replay_game_constraint_pd(whole_replay_0, false, false);
+        // replay_game_constraint_bt(whole_replay_0, false, false);
         // println!("Testing: {}", stringify!(whole_replay_1));
-        // replay_game_constraint_pd(whole_replay_1, false, true);
+        // replay_game_constraint_bt(whole_replay_1, false, true);
         // println!("Testing: {}", stringify!(whole_replay_2));
-        // replay_game_constraint_pd(whole_replay_2, false, false);
+        // replay_game_constraint_bt(whole_replay_2, false, false);
         // println!("Testing: {}", stringify!(whole_replay_3));
-        // replay_game_constraint_pd(whole_replay_3, false, false);
+        // replay_game_constraint_bt(whole_replay_3, false, false);
         // println!("Testing: {}", stringify!(whole_replay_4));
-        // replay_game_constraint_pd(whole_replay_4, false, false);
+        // replay_game_constraint_bt(whole_replay_4, false, false);
         // =================================================
         
         println!("Testing: {}", stringify!(redundancy_replay_0));
-        replay_game_constraint_pd(redundancy_replay_0, false, false);
+        replay_game_constraint_bt(redundancy_replay_0, false, false);
         println!("Testing: {}", stringify!(backward_compat_0));
-        replay_game_constraint_pd(backward_compat_0, false, false);
+        replay_game_constraint_bt(backward_compat_0, false, false);
         println!("ALL PASSED"); 
     }
 }
@@ -673,7 +673,7 @@ pub fn game_rnd_constraint_bt_mt(num_threads: usize, game_no: usize, bool_know_p
         let thread_bool_know_priv_info = bool_know_priv_info;
         let thread_min_dead_check = min_dead_check;
         let handle = thread::spawn(move || {
-            game_rnd_constraint_pd_st(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
+            game_rnd_constraint_bt_st(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
         });
         handles.push(handle);
     }
@@ -1961,6 +1961,168 @@ pub fn replay_game_constraint_pd(replay: Vec<ActionObservation>, bool_know_priv_
             return;
         }
         bit_prob.debug_panicker();
+        step += 1;
+        if step > 1000 {
+            break;
+        }
+        log::info!("");
+    }
+    if step > max_steps {
+        max_steps = step;
+    }
+    hh.print_replay_history_braindead();
+    hh.log_state();
+    // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+    // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+    log::info!("");
+    log::info!("Most Steps: {}", max_steps);
+    println!("=> no issues");
+    // println!("Most Steps: {}", max_steps);
+    // println!("Public Constraints Correct: {}/{}", public_constraints_correct, total_tries);
+    // println!("Inferred Constraints Correct: {}/{}", public_constraints_correct, total_tries);
+    // println!("Impossible Cases Correct: {}/{}", public_constraints_correct, total_tries);
+    // println!("Total Tries: {}", total_tries);
+}
+pub fn replay_game_constraint_bt(replay: Vec<ActionObservation>, bool_know_priv_info: bool, log_bool: bool){
+    if log_bool{
+        logger(LOG_LEVEL);
+    }
+    log::info!("REPLAY ID");
+    log::info!("vec!{:?};", replay);
+    let mut game: usize = 0;
+    let mut max_steps: usize = 0;
+    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
+    let mut bit_prob = BackTrackCardCountManager::new();
+    let mut public_constraints_correct: usize = 0;
+    let mut inferred_constraints_correct: usize = 0;
+    let mut impossible_constraints_correct: usize = 0;
+    let mut total_tries: usize = 0;
+    if log_bool {
+        clear_log().expect("failed to clear log");
+    }
+    log::info!("Game : {}", game);
+    let mut hh = History::new(0);
+    let mut step: usize = 0;
+    let mut new_moves: Vec<ActionObservation>;
+    log::trace!("Game Made:");
+    while !hh.game_won() {
+        
+        // log::info!("{}", format!("Step : {:?}",step));
+        hh.log_state();
+        log::info!("=== Prob ===");
+        prob.printlog();
+        log::info!("=== BitProb ===");
+        bit_prob.printlog();
+        // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+        // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+        new_moves = hh.generate_legal_moves();
+        log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+        log::info!("{}", format!("Legal Moves Retained: {:?}", new_moves));
+        if new_moves[0].name() != AOName::CollectiveChallenge {
+            // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+        } else {
+            // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
+            log::info!("{}", format!("Legal Moves: CollectiveChallenge"));
+        }
+        
+        if let Some(output_ref) = replay.get(step) {
+            let output = output_ref.clone();
+            log::info!("{}", format!("Choice: {:?}", output));
+            if output.name() == AOName::Discard{
+                let true_legality = if output.no_cards() == 1 {
+                    // let start_time = Instant::now();
+                    prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
+                } else {
+                    prob.player_can_have_cards(output.player_id(), output.cards())
+                };
+                if !true_legality{
+                    log::info!("Illegal Move, Ending Game");
+                    break    
+                } 
+            } else if output.name() == AOName::RevealRedraw {
+                let true_legality: bool = prob.player_can_have_card_alive(output.player_id(), output.card());
+                if !true_legality{
+                    log::info!("Illegal Move, Ending Game");
+                    break    
+                } 
+            } else if output.name() == AOName::ExchangeDraw {
+                let true_legality: bool = prob.player_can_have_cards(6, output.cards());
+                if !true_legality {
+                    log::info!("Illegal Move, Ending Game");
+                    break    
+                }
+            } 
+            hh.push_ao(output);
+            hh.print_replay_history_braindead();
+            prob.push_ao(&output, bool_know_priv_info);
+            bit_prob.push_ao_public(&output);
+            match output.name() {
+                AOName::RevealRedraw | 
+                AOName::Discard | AOName::ExchangeDraw | AOName::Exchange => {
+                    // prob.print_legal_states();
+                },
+                _ => {},
+            }
+            log::info!("Just before validation");
+            bit_prob.printlog();
+            let validated_public_constraints = prob.validated_public_constraints();
+            let validated_inferred_constraints = prob.validated_inferred_constraints();
+            let validated_impossible_constraints = prob.validated_impossible_constraints();
+            let test_public_constraints = bit_prob.latest_constraint().sorted_public_constraints();
+            let test_inferred_constraints = bit_prob.latest_constraint().sorted_inferred_constraints();
+            let test_impossible_constraints = bit_prob.latest_constraint_mut().generate_one_card_impossibilities_player_card_indexing();
+            log::info!("validated_public_constraints: {:?}", validated_public_constraints);
+            log::info!("test_public_constraints: {:?}", test_public_constraints);
+            let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
+            log::info!("public_constraints: {}", match pass_public_constraints {
+                true => "PASSED",
+                false => "FAILED",
+            });
+            log::info!("validated_inferred_constraints: {:?}", validated_inferred_constraints);
+            log::info!("test_inferred_constraints: {:?}", test_inferred_constraints);
+            let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
+            log::info!("inferred_constraints: {}", match pass_inferred_constraints {
+                true => "PASSED",
+                false => {
+                    "FAILED"
+                },
+            });
+            log::info!("validated_impossible_constraints: {:?}", validated_impossible_constraints);
+            log::info!("test_impossible_constraints: {:?}", test_impossible_constraints);
+            let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
+            log::info!("impossible_constraints: {}", match pass_impossible_constraints {
+                true => "PASSED",
+                false => "FAILED",
+            });
+            // let pass_brute_prob_validity = prob.validate();
+            // if !pass_brute_prob_validity {
+            //     log::info!("Brute Prob Public Constraint Validity: FAILED");
+            // } else {
+            //     log::info!("Brute Prob Public Constraint Validity: PASSED");
+            // }
+            if !pass_inferred_constraints {
+                prob.print_legal_states();
+                hh.print_replay_history_braindead();
+                panic!()
+            }
+            if !pass_impossible_constraints {
+                hh.print_replay_history_braindead();
+                panic!()
+            }
+            // if !pass_brute_prob_validity{
+            //     hh.print_replay_history_braindead();
+            //     panic!()
+            // }
+            // bit_prob.check_three();
+            public_constraints_correct += pass_public_constraints as usize;
+            inferred_constraints_correct += pass_inferred_constraints as usize;
+            impossible_constraints_correct += pass_impossible_constraints as usize;
+            total_tries += 1;
+        } else {
+            log::trace!("End of Replay!");
+            println!("=> no issues");
+            return;
+        }
         step += 1;
         if step > 1000 {
             break;

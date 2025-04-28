@@ -471,6 +471,7 @@ impl BackTrackCollectiveConstraint {
         // TODO: generate impossible_constraints can differ by move.
         log::trace!("calculate_stored_move generate_impossible_constraints history_index: {history_index}");
         self.generate_impossible_constraints(history_index);
+        self.generate_inferred_constraints();
         self.history[history_index].meta_data = self.to_meta_data();
         log::info!("recalculated_stored_move end: player: {player_id} {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
@@ -1840,12 +1841,95 @@ impl BackTrackCollectiveConstraint {
     }
     /// Brute force generates everything
     fn generate_impossible_constraints(&mut self, history_index: usize) {
+        // TODO: [OPTIMIZE] consider total dead cards inferred etc...
+        self.impossible_constraints = [[false; 5]; 7];
+        self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
         let mut cards: [u8; 5] = [0; 5];
-        for player_of_interest in 0..6 {
+        for player_of_interest in 0..7 {
+            if self.public_constraints[player_of_interest].len() == 2 {
+                self.impossible_constraints[player_of_interest] = [true; 5];
+                continue;
+            }
             for card in 0..5 {
                 cards[card] = 1;
                 self.impossible_constraints[player_of_interest][card] = self.impossible_to_have_cards_general(history_index, history_index, player_of_interest, &cards);
                 cards[card] = 0;
+            }
+        }
+        for player_of_interest in 0..7 {
+            if self.public_constraints[player_of_interest].len() > 0 {
+                self.impossible_constraints_2[player_of_interest] = [[true; 5]; 5];
+                continue;
+            }
+            for card_a in 0..5 {
+                for card_b in card_a..5 {
+                    cards[card_a] += 1;
+                    cards[card_b] += 1;
+                    let output = self.impossible_to_have_cards_general(history_index, history_index, player_of_interest, &cards);
+                    self.impossible_constraints_2[player_of_interest][card_a][card_b] = output;
+                    self.impossible_constraints_2[player_of_interest][card_b][card_a] = output;
+                    cards[card_a] -= 1;
+                    cards[card_b] -= 1;
+                }
+            }
+        }
+        for card_a in 0..5 {
+            for card_b in card_a..5 {
+                for card_c in card_b..5 {
+                    cards[card_a] += 1;
+                    cards[card_b] += 1;
+                    let output = self.impossible_to_have_cards_general(history_index, history_index, 6, &cards);
+                    self.impossible_constraints_3[card_a][card_b][card_c] = output;
+                    self.impossible_constraints_3[card_a][card_c][card_b] = output;
+                    self.impossible_constraints_3[card_b][card_a][card_c] = output;
+                    self.impossible_constraints_3[card_b][card_c][card_a] = output;
+                    self.impossible_constraints_3[card_c][card_a][card_b] = output;
+                    self.impossible_constraints_3[card_c][card_b][card_a] = output;
+                    cards[card_a] -= 1;
+                    cards[card_b] -= 1;
+                }
+            }
+        }
+    }
+    /// Generates based on impossible_constraints
+    fn generate_inferred_constraints(&mut self) {
+        self.inferred_constraints.iter_mut().for_each(|v| v.clear());
+        for player in 0..6 {
+            if self.public_constraints[player].len() == 0 {
+                // if self.impossible_constraints[player].iter().map(|b| !*b as u8).sum::<u8>() == 1 {
+                //     if let Some(card_num) = self.impossible_constraints[player].iter().position(|b| !*b) {
+                //         self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                //         self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                //         continue;
+                //     }
+                // }
+                // // if 1 card not impossible and all the rest impossible
+                // let mut possible_card = [true; 5];
+                // for card_num in 0..5 {
+                //     // [OPTIMIZE]
+                //     if !self.impossible_constraints_2[player][card_num].contains(&false) {
+                //         possible_card[card_num] = false;
+                //     }
+                // }
+                // let possible_cards: Vec<u8> = possible_card.iter().enumerate().filter(|(_,b)| **b).map(|(card_num, _)| card_num as u8).collect();
+                // if possible_cards.len() == 2 {
+                //     for card_num in possible_cards.iter() {
+                //         self.inferred_constraints[player].push(Card::try_from(*card_num).unwrap());
+                //     }
+                //     continue;
+                // } else if possible_cards.len() == 1 {
+                //     self.inferred_constraints[player].push(Card::try_from(possible_cards[0]).unwrap());
+                //     self.inferred_constraints[player].push(Card::try_from(possible_cards[0]).unwrap());
+                //     continue;
+                // }
+            } else if self.public_constraints[player].len() == 1 {
+                // if self.impossible_constraints[player].iter().map(|b| !*b as u8).sum::<u8>() == 1 {
+                //     if let Some(card_num) = self.impossible_constraints[player].iter().position(|b| !*b) {
+                //         self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                //         continue;
+                //     }
+                // }
             }
         }
     }
