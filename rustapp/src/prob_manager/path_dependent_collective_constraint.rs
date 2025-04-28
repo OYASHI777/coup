@@ -2255,7 +2255,6 @@ impl PathDependentCollectiveConstraint {
                                     .collect();
                                 let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(2);
                                 // Self::build_variants_reveal_redraw_none_opt(*reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
-                                // TESTING
                                 variants = Self::return_variants_reveal_redraw_none_opt(*reveal, player_loop, &inferred_constraints);
                                 for inferred_i in variants.iter_mut() {
                                     let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_i, cards);
