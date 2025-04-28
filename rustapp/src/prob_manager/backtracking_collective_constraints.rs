@@ -1782,6 +1782,16 @@ impl BackTrackCollectiveConstraint {
                 return false
             }
         }
+        // TODO: OPTIMIZE Do we really need this?
+        for player in 0..6 {
+            if public_constraints[player].len() + inferred_constraints[player].len() > 2 {
+                return false
+            }
+        }
+        if public_constraints[6].len() + inferred_constraints[6].len() > 3 {
+            return false
+        }
+        // =========================================
         for player in 0..7 {
             let mut current_card_counts: [u8; 5] = [0; 5];
             inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
