@@ -1872,6 +1872,7 @@ impl BackTrackCollectiveConstraint {
                     cards[card_a] += 1;
                     cards[card_b] += 1;
                     let output = self.impossible_to_have_cards_general(history_index, player_of_interest, &cards);
+                    // OPTIMIZE lmao...
                     self.impossible_constraints_2[player_of_interest][card_a][card_b] = output;
                     self.impossible_constraints_2[player_of_interest][card_b][card_a] = output;
                     cards[card_a] -= 1;
@@ -1886,6 +1887,7 @@ impl BackTrackCollectiveConstraint {
                     cards[card_b] += 1;
                     cards[card_c] += 1;
                     let output = self.impossible_to_have_cards_general(history_index, 6, &cards);
+                    // OPTIMIZE lmao...
                     self.impossible_constraints_3[card_a][card_b][card_c] = output;
                     self.impossible_constraints_3[card_a][card_c][card_b] = output;
                     self.impossible_constraints_3[card_b][card_a][card_c] = output;
@@ -1904,41 +1906,95 @@ impl BackTrackCollectiveConstraint {
         self.inferred_constraints.iter_mut().for_each(|v| v.clear());
         for player in 0..6 {
             if self.public_constraints[player].len() == 0 {
-                // if self.impossible_constraints[player].iter().map(|b| !*b as u8).sum::<u8>() == 1 {
-                //     if let Some(card_num) = self.impossible_constraints[player].iter().position(|b| !*b) {
-                //         self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
-                //         self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
-                //         continue;
-                //     }
-                // }
-                // // if 1 card not impossible and all the rest impossible
-                // let mut possible_card = [true; 5];
-                // for card_num in 0..5 {
-                //     // [OPTIMIZE]
-                //     if !self.impossible_constraints_2[player][card_num].contains(&false) {
-                //         possible_card[card_num] = false;
-                //     }
-                // }
-                // let possible_cards: Vec<u8> = possible_card.iter().enumerate().filter(|(_,b)| **b).map(|(card_num, _)| card_num as u8).collect();
-                // if possible_cards.len() == 2 {
-                //     for card_num in possible_cards.iter() {
-                //         self.inferred_constraints[player].push(Card::try_from(*card_num).unwrap());
-                //     }
-                //     continue;
-                // } else if possible_cards.len() == 1 {
-                //     self.inferred_constraints[player].push(Card::try_from(possible_cards[0]).unwrap());
-                //     self.inferred_constraints[player].push(Card::try_from(possible_cards[0]).unwrap());
-                //     continue;
-                // }
+                if self.impossible_constraints[player].iter().map(|b| !*b as u8).sum::<u8>() == 1 {
+                    if let Some(card_num) = self.impossible_constraints[player].iter().position(|b| !*b) {
+                        self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                        self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                        continue;
+                    }
+                }
+                // if 1 card not impossible and all the rest impossible
+                let mut must_have_card: [u8; 5] = [3; 5];
+                'outer: for card_num_a in 0..5 {
+                    for card_num_b in card_num_a..5 {
+                        // AA AB BB
+                        // means nothing, I need to check if all have A or all have B
+                        // need count lol
+                        if self.impossible_constraints_2[player][card_num_a][card_num_b] {
+                            continue;
+                        }
+                        if card_num_a == card_num_b {
+                            let new_num: u8 = must_have_card[card_num_a].min(2);
+                            must_have_card = [0; 5];
+                            must_have_card[card_num_a] = new_num;
+                        } else {
+                            let new_num_a: u8 = must_have_card[card_num_a].min(1);
+                            let new_num_b: u8 = must_have_card[card_num_b].min(1);
+                            must_have_card = [0; 5];
+                            must_have_card[card_num_a] = new_num_a;
+                            must_have_card[card_num_b] = new_num_b;
+                        }
+                        if must_have_card == [0; 5] {
+                            break 'outer;
+                        }
+                    }
+                }
+                for (card_num, card_count) in must_have_card.iter().enumerate() {
+                    for _ in 0..*card_count {
+                        self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                    }
+                } 
             } else if self.public_constraints[player].len() == 1 {
-                // if self.impossible_constraints[player].iter().map(|b| !*b as u8).sum::<u8>() == 1 {
-                //     if let Some(card_num) = self.impossible_constraints[player].iter().position(|b| !*b) {
-                //         self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
-                //         continue;
-                //     }
-                // }
+                // TODO: OPTIMIZE
+                if self.impossible_constraints[player].iter().map(|b| !*b as u8).sum::<u8>() == 1 {
+                    if let Some(card_num) = self.impossible_constraints[player].iter().position(|b| !*b) {
+                        self.inferred_constraints[player].push(Card::try_from(card_num as u8).unwrap());
+                        continue;
+                    }
+                }
             }
         }
+        let mut must_have_card: [u8; 5] = [3; 5];
+        'outer: for card_num_a in 0..5 {
+            for card_num_b in card_num_a..5 {
+                for card_num_c in card_num_b..5 {
+                    // AA AB BB
+                    // means nothing, I need to check if all have A or all have B
+                    // need count lol
+                    if self.impossible_constraints_3[card_num_a][card_num_b][card_num_c] {
+                        continue;
+                    }
+                    let mut next = [0u8; 5];
+                    match (card_num_a == card_num_b, card_num_b == card_num_c) {
+                        (true, true) => {
+                            next[card_num_a] = must_have_card[card_num_a].min(3);
+                        },
+                        (true, false) => {
+                            next[card_num_a] = must_have_card[card_num_a].min(2);
+                            next[card_num_c] = must_have_card[card_num_c].min(1);
+                        }
+                        (false, true) => {
+                            next[card_num_a] = must_have_card[card_num_a].min(1);
+                            next[card_num_b] = must_have_card[card_num_b].min(2);
+                        }
+                        (false, false) => {
+                            next[card_num_a] = must_have_card[card_num_a].min(1);
+                            next[card_num_b] = must_have_card[card_num_b].min(1);
+                            next[card_num_c] = must_have_card[card_num_c].min(1);
+                        }
+                    }
+                    must_have_card = next;
+                    if must_have_card == [0; 5] {
+                        break 'outer;
+                    }
+                }
+            }
+        }
+        for (card_num, card_count) in must_have_card.iter().enumerate() {
+            for _ in 0..*card_count {
+                self.inferred_constraints[6].push(Card::try_from(card_num as u8).unwrap());
+            }
+        } 
     }
     /// Returns an array of [player][card] that returns true if a player cannot have a particular card alive
     pub fn generate_one_card_impossibilities_player_card_indexing(&self) -> [[bool; 5]; 7] {
