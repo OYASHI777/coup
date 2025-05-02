@@ -531,6 +531,7 @@ impl BackTrackCollectiveConstraint {
             },
         }
         self.generate_impossible_constraints(self.history.len() - 1);
+        self.generate_inferred_constraints();
         self.history[history_index].meta_data = self.to_meta_data();
         log::info!("recalculated_stored_move_initial: {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
@@ -2133,6 +2134,8 @@ impl BackTrackCollectiveConstraint {
         }
         for (card_num, card_count) in must_have_card.iter().enumerate() {
             for _ in 0..*card_count {
+                log::trace!("generate_inferred_constraints must_have_card: {:?}", must_have_card);
+                log::trace!("generate_inferred_constraints pushing: {:?}", Card::try_from(card_num as u8).unwrap());
                 self.inferred_constraints[6].push(Card::try_from(card_num as u8).unwrap());
             }
         } 
