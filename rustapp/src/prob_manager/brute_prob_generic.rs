@@ -21,6 +21,8 @@ where
     public_constraints: Vec<Vec<Card>>,
     inferred_constraints: Vec<Vec<Card>>,
     impossible_constraints: [[bool; 5]; 7],
+    impossible_constraints_2: [[[bool; 5]; 5]; 7],
+    impossible_constraints_3: [[[bool; 5]; 5]; 5],
 }
 impl<T> BruteCardCountManagerGeneric<T> 
 where
@@ -35,12 +37,16 @@ where
         let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
         inferred_constraints.push(Vec::with_capacity(3));
         let impossible_constraints = [[false; 5]; 7];
+        let impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        let impossible_constraints_3 = [[[false; 5]; 5]; 5];
         Self {
             all_states,
             calculated_states,
             public_constraints,
             inferred_constraints,
             impossible_constraints,
+            impossible_constraints_2,
+            impossible_constraints_3,
         }
     }
     /// Resets
@@ -250,15 +256,6 @@ where
 
         result
     }
-    /// Returns a 7x5 boolean array `[ [bool; 5]; 7 ]`.
-    ///
-    /// - Outer index = player (0..6)
-    /// - Inner index = card as usize (0..4 or 0..5, depending on how you define Card).
-    ///
-    /// `result[player_id][card_index]` will be `true` if, **in every** state within
-    /// `self.calculated_states`, that `player_id` does **not** have that card.
-    ///
-    /// Returns an array that is true if a player does cannot have that card alive
     pub fn set_impossible_constraints(&mut self) {
         let mut result = [[false; 5]; 7];
 
@@ -295,6 +292,104 @@ where
 
         self.impossible_constraints = result;
     }
+    pub fn set_impossible_constraints_2(&mut self) {
+
+        // Early return if we have no states; then every card is impossible in all states
+        // or every card is possible—depending on your game logic. Usually, with zero states,
+        // "cannot have" is trivially true for all. But check game logic as needed.
+        if self.calculated_states.is_empty() {
+            self.impossible_constraints_2 = [[[true; 5]; 5]; 7];
+            return
+        } else {
+            self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        }
+
+        // For each player
+        for player_id in 0..7 {
+            // For each card variant (assuming your Card enum maps 1:1 to these indices)
+            // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
+            if self.public_constraints[player_id].len() > 0 {
+                self.impossible_constraints_2[player_id] = [[true; 5]; 5];
+                continue;
+            }
+            for card_idx_i in 0..5 as usize {
+                for card_idx_j in card_idx_i..5 as usize {
+                    // Convert card_idx -> Card -> char
+                    let mut card_counts: [u8; 5] = [0; 5];
+                    card_counts[card_idx_i] += 1;
+                    card_counts[card_idx_j] += 1;
+    
+                    // We want to know if there's ANY state in which the player's substring
+                    // includes `card_char`. If there is, then `cannot_have` is false.
+                    // If we can't find it in ANY state, `cannot_have` is true.
+                    let found_in_any_state = self.calculated_states.iter().any(|state| {
+                        let actual_count = state.player_card_counts(player_id);
+                        for card_num in 0..5 {
+                            if actual_count[card_num] < card_counts[card_num] {
+                                return false;
+                            }
+                        }
+                        true
+                    });
+    
+                    // If found_in_any_state == false, that means:
+                    // "There is NO state in which the player has this card alive"
+                    // So the player "cannot have" it => result = true
+                    self.impossible_constraints_2[player_id][card_idx_i][card_idx_j] = !found_in_any_state;
+                    self.impossible_constraints_2[player_id][card_idx_j][card_idx_i] = !found_in_any_state;
+                }
+            }
+        }
+    }
+    pub fn set_impossible_constraints_3(&mut self) {
+
+        // Early return if we have no states; then every card is impossible in all states
+        // or every card is possible—depending on your game logic. Usually, with zero states,
+        // "cannot have" is trivially true for all. But check game logic as needed.
+        if self.calculated_states.is_empty() {
+            self.impossible_constraints_3 = [[[true; 5]; 5]; 5];
+            return
+        } else {
+            self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
+        }
+
+        // For each player
+        for card_idx_i in 0..5 as usize {
+            for card_idx_j in card_idx_i..5 as usize {
+                for card_idx_k in card_idx_j..5 as usize {
+
+                    // Convert card_idx -> Card -> char
+                    let mut card_counts: [u8; 5] = [0; 5];
+                    card_counts[card_idx_i] += 1;
+                    card_counts[card_idx_j] += 1;
+                    card_counts[card_idx_k] += 1;
+    
+                    // We want to know if there's ANY state in which the player's substring
+                    // includes `card_char`. If there is, then `cannot_have` is false.
+                    // If we can't find it in ANY state, `cannot_have` is true.
+                    let found_in_any_state = self.calculated_states.iter().any(|state| {
+                        let actual_count = state.player_card_counts(6);
+                        for card_num in 0..5 {
+                            if actual_count[card_num] < card_counts[card_num] {
+                                return false;
+                            }
+                        }
+                        true
+                    });
+    
+                    // If found_in_any_state == false, that means:
+                    // "There is NO state in which the player has this card alive"
+                    // So the player "cannot have" it => result = true
+                    self.impossible_constraints_3[card_idx_i][card_idx_j][card_idx_k] = !found_in_any_state;
+                    self.impossible_constraints_3[card_idx_i][card_idx_k][card_idx_j] = !found_in_any_state;
+                    self.impossible_constraints_3[card_idx_j][card_idx_i][card_idx_k] = !found_in_any_state;
+                    self.impossible_constraints_3[card_idx_j][card_idx_k][card_idx_i] = !found_in_any_state;
+                    self.impossible_constraints_3[card_idx_k][card_idx_i][card_idx_j] = !found_in_any_state;
+                    self.impossible_constraints_3[card_idx_k][card_idx_j][card_idx_i] = !found_in_any_state;
+                }
+            }
+        }
+    }
     /// Returns a 7x5 boolean array `[ [bool; 5]; 7 ]`.
     ///
     /// - Outer index = player (0..6)
@@ -306,6 +401,30 @@ where
     /// Returns an array that is true if a player does cannot have that card alive
     pub fn validated_impossible_constraints(&self) -> [[bool; 5]; 7] {
         self.impossible_constraints.clone()
+    }
+    /// Returns a 7x5x5 boolean array `[[[bool; 5]; 5]; 7]`.
+    ///
+    /// - Outer index = player (0..6)
+    /// - Inner index = card as usize (0..4 or 0..5, depending on how you define Card).
+    ///
+    /// `result[player_id][card_index_i][card_index_j]` will be `true` if, **in every** state within
+    /// `self.calculated_states`, that `player_id` does **not** have those cards.
+    ///
+    /// Returns an array that is true if a player does cannot have that card alive
+    pub fn validated_impossible_constraints_2(&self) -> [[[bool; 5]; 5]; 7] {
+        self.impossible_constraints_2.clone()
+    }
+    /// Returns a 7x5x5 boolean array `[[[bool; 5]; 5]; 5]`.
+    ///
+    /// - Outer index = player (0..6)
+    /// - Inner index = card as usize (0..4 or 0..5, depending on how you define Card).
+    ///
+    /// `result[card_index_i][card_index_j][card_index_k]` will be `true` if, **in every** state within
+    /// `self.calculated_states`, that `player_id` does **not** have those cards.
+    ///
+    /// Returns an array that is true if a player does cannot have that card alive
+    pub fn validated_impossible_constraints_3(&self) -> [[[bool; 5]; 5]; 5] {
+        self.impossible_constraints_3.clone()
     }
     /// Returns a 7x5 boolean array `[ [bool; 5]; 7 ]`.
     ///

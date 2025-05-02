@@ -191,6 +191,12 @@ impl SignificantAction {
     pub fn impossible_constraints(&self) -> &[[bool; 5]; 7] {
         self.meta_data.impossible_constraints()
     }
+    pub fn impossible_constraints_2(&self) -> &[[[bool; 5]; 5]; 7] {
+        self.meta_data.impossible_constraints_2()
+    }
+    pub fn impossible_constraints_3(&self) -> &[[[bool; 5]; 5]; 5] {
+        self.meta_data.impossible_constraints_3()
+    }
     pub fn set_impossible_constraints(&mut self, impossible_constraints: &[[bool; 5]; 7]) {
         self.meta_data.set_impossible_constraints(impossible_constraints);
     }
@@ -293,16 +299,16 @@ impl BacktrackMetaData {
     pub fn impossible_constraints(&self) -> &[[bool; 5]; 7] {
         &self.impossible_constraints
     }   
-    /// Changes stored impossible_constraints
-    pub fn set_impossible_constraints(&mut self, impossible_constraints: &[[bool; 5]; 7]) {
-        self.impossible_constraints = impossible_constraints.clone();
-    }
     pub fn impossible_constraints_2(&self) -> &[[[bool; 5]; 5]; 7] {
         &self.impossible_constraints_2
     }   
     pub fn impossible_constraints_3(&self) -> &[[[bool; 5]; 5]; 5] {
         &self.impossible_constraints_3
     }   
+    /// Changes stored impossible_constraints
+    pub fn set_impossible_constraints(&mut self, impossible_constraints: &[[bool; 5]; 7]) {
+        self.impossible_constraints = impossible_constraints.clone();
+    }
     pub fn player_cards_known<T>(&self, player_id: T) -> usize 
     where
         T: Into<usize> + Copy,
@@ -1592,141 +1598,159 @@ impl BackTrackCollectiveConstraint {
                                 }
                             },
                             None => {
-                                if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5 
-                                && !inferred_constraints[player_loop].contains(&reveal)
-                                && !inferred_constraints[6].contains(&reveal) {
-                                    // This state cannot be arrive after the reveal_redraw
-                                    if index_loop == index_of_interest - 1 {
-                                        for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                            if *query_card_count > *current_card_count {
-                                                for _ in 0..(*query_card_count - *current_card_count) {
-                                                    if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                        inferred_constraints[player_of_interest].swap_remove(pos);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    return false;
-                                }
+                                // if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5 
+                                // && !inferred_constraints[player_loop].contains(&reveal)
+                                // && !inferred_constraints[6].contains(&reveal) {
+                                //     // This state cannot be arrive after the reveal_redraw
+                                //     if index_loop == index_of_interest - 1 {
+                                //         for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                //             if *query_card_count > *current_card_count {
+                                //                 for _ in 0..(*query_card_count - *current_card_count) {
+                                //                     if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                //                         inferred_constraints[player_of_interest].swap_remove(pos);
+                                //                     }
+                                //                 }
+                                //             }
+                                //         }
+                                //     }
+                                //     return false;
+                                // }
  
-                                if inferred_constraints[player_loop].is_empty() {
-                                    let mut bool_move_from_pile_to_player = false;
-                                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
-                                        inferred_constraints[6].swap_remove(pos);
-                                        bool_move_from_pile_to_player = true;
-                                    }
-                                    inferred_constraints[player_loop].push(*reveal);
+                                // if inferred_constraints[player_loop].is_empty() {
+                                //     let mut bool_move_from_pile_to_player = false;
+                                //     if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
+                                //         inferred_constraints[6].swap_remove(pos);
+                                //         bool_move_from_pile_to_player = true;
+                                //     }
+                                //     inferred_constraints[player_loop].push(*reveal);
 
-                                    if inferred_constraints[player_loop].len() < 3
-                                    && inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
-                                        // TODO: Recurse here in other version
-                                        response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
-                                    }
-                                    // return variants;
-                                    // TODO: remove if recursing
-                                    if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
-                                        inferred_constraints[player_loop].swap_remove(pos);
-                                    }
-                                    if bool_move_from_pile_to_player {
-                                        inferred_constraints[6].push(*reveal);
-                                    }
-                                    // Add query card thing
-                                    // if response {
-                                        if index_loop == index_of_interest - 1 {
-                                            for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                                if *query_card_count > *current_card_count {
-                                                    for _ in 0..(*query_card_count - *current_card_count) {
-                                                        if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                            inferred_constraints[player_of_interest].swap_remove(pos);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    // }
-                                    return response;
-                                }
-                                let mut iter_cards = inferred_constraints[player_loop].clone();
-                                iter_cards.sort_unstable();
-                                iter_cards.dedup();
-                                // Doesnt handle empty case
-                                for (_, card_player) in iter_cards.iter().enumerate() {
-                                    // Card Source was not from Pile
-                                    let mut bool_move_from_pile_to_player = false;
-                                    if *card_player != *reveal || inferred_constraints[6].contains(&reveal) {
-                                        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
-                                            inferred_constraints[6].swap_remove(pos);
-                                            bool_move_from_pile_to_player = true;
-                                        }
-                                        inferred_constraints[player_loop].push(*reveal);
+                                //     if inferred_constraints[player_loop].len() < 3
+                                //     && inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
+                                //         // TODO: Recurse here in other version
+                                //         response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
+                                //     }
+                                //     // return variants;
+                                //     // TODO: remove if recursing
+                                //     if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
+                                //         inferred_constraints[player_loop].swap_remove(pos);
+                                //     }
+                                //     if bool_move_from_pile_to_player {
+                                //         inferred_constraints[6].push(*reveal);
+                                //     }
+                                //     // Add query card thing
+                                //     // if response {
+                                //         if index_loop == index_of_interest - 1 {
+                                //             for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                //                 if *query_card_count > *current_card_count {
+                                //                     for _ in 0..(*query_card_count - *current_card_count) {
+                                //                         if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                //                             inferred_constraints[player_of_interest].swap_remove(pos);
+                                //                         }
+                                //                     }
+                                //                 }
+                                //             }
+                                //         }
+                                //     // }
+                                //     return response;
+                                // }
+                                // let mut iter_cards = inferred_constraints[player_loop].clone();
+                                // iter_cards.sort_unstable();
+                                // iter_cards.dedup();
+                                // // Doesnt handle empty case
+                                // for (_, card_player) in iter_cards.iter().enumerate() {
+                                //     // Card Source was not from Pile
+                                //     let mut bool_move_from_pile_to_player = false;
+                                //     if *card_player != *reveal || inferred_constraints[6].contains(&reveal) {
+                                //         if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
+                                //             inferred_constraints[6].swap_remove(pos);
+                                //             bool_move_from_pile_to_player = true;
+                                //         }
+                                //         inferred_constraints[player_loop].push(*reveal);
                             
-                                        // Probably need push only if certain conditions met
+                                //         // Probably need push only if certain conditions met
                                         
-                                        if inferred_constraints[player_loop].len() < 3  
-                                        && inferred_constraints[6].len() < 4 
-                                        && inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
-                                            // TODO: Recurse here in other version
-                                            // variants.push(temp);
-                                            response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
-                                        }
+                                //         if inferred_constraints[player_loop].len() < 3  
+                                //         && inferred_constraints[6].len() < 4 
+                                //         && inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
+                                //             // TODO: Recurse here in other version
+                                //             // variants.push(temp);
+                                //             response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
+                                //         }
 
-                                        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
-                                            inferred_constraints[player_loop].swap_remove(pos);
-                                        }
-                                        if bool_move_from_pile_to_player {
-                                            inferred_constraints[6].push(*reveal);
-                                        }
-                                        if response {
-                                            if index_loop == index_of_interest - 1 {
-                                                for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                                    if *query_card_count > *current_card_count {
-                                                        for _ in 0..(*query_card_count - *current_card_count) {
-                                                            if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                                inferred_constraints[player_of_interest].swap_remove(pos);
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            return true;
-                                        }
-                                    }
-                                    // Card Source was from Pile
-                                    let mut bool_move_from_pile_to_player_2 = false;
-                                    let mut bool_move_from_player_to_pile = false;
-                                    if let Some(pos) = inferred_constraints[player_loop].iter().position(|c| *c == *card_player) {
-                                        inferred_constraints[player_loop].swap_remove(pos);
-                                        bool_move_from_player_to_pile = true;
-                                    }
-                                    inferred_constraints[6].push(*card_player);
-                                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
-                                        inferred_constraints[6].swap_remove(pos);
-                                        bool_move_from_pile_to_player_2 = true;
-                                    }
-                                    inferred_constraints[player_loop].push(*reveal);
+                                //         if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
+                                //             inferred_constraints[player_loop].swap_remove(pos);
+                                //         }
+                                //         if bool_move_from_pile_to_player {
+                                //             inferred_constraints[6].push(*reveal);
+                                //         }
+                                //         if response {
+                                //             if index_loop == index_of_interest - 1 {
+                                //                 for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                //                     if *query_card_count > *current_card_count {
+                                //                         for _ in 0..(*query_card_count - *current_card_count) {
+                                //                             if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                //                                 inferred_constraints[player_of_interest].swap_remove(pos);
+                                //                             }
+                                //                         }
+                                //                     }
+                                //                 }
+                                //             }
+                                //             return true;
+                                //         }
+                                //     }
+                                //     // Card Source was from Pile
+                                //     let mut bool_move_from_pile_to_player_2 = false;
+                                //     let mut bool_move_from_player_to_pile = false;
+                                //     if let Some(pos) = inferred_constraints[player_loop].iter().position(|c| *c == *card_player) {
+                                //         inferred_constraints[player_loop].swap_remove(pos);
+                                //         bool_move_from_player_to_pile = true;
+                                //     }
+                                //     inferred_constraints[6].push(*card_player);
+                                //     if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
+                                //         inferred_constraints[6].swap_remove(pos);
+                                //         bool_move_from_pile_to_player_2 = true;
+                                //     }
+                                //     inferred_constraints[player_loop].push(*reveal);
 
-                                    // Probably need push only if certain conditions met
-                                    if inferred_constraints[player_loop].len() < 3  
-                                    && inferred_constraints[6].len() < 4 
-                                    && inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
-                                        // TODO: Recurse here in other version
-                                        // variants.push(temp);
-                                        response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
-                                    }
+                                //     // Probably need push only if certain conditions met
+                                //     if inferred_constraints[player_loop].len() < 3  
+                                //     && inferred_constraints[6].len() < 4 
+                                //     && inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
+                                //         // TODO: Recurse here in other version
+                                //         // variants.push(temp);
+                                //         response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards);
+                                //     }
 
-                                    if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
-                                        inferred_constraints[player_loop].swap_remove(pos);
-                                    }
-                                    if bool_move_from_pile_to_player_2 {
-                                        inferred_constraints[6].push(*reveal);
-                                    }
-                                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| c == card_player) {
-                                        inferred_constraints[6].swap_remove(pos);
-                                    }
-                                    if bool_move_from_player_to_pile {
-                                        inferred_constraints[player_loop].push(*card_player);
-                                    }
+                                //     if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
+                                //         inferred_constraints[player_loop].swap_remove(pos);
+                                //     }
+                                //     if bool_move_from_pile_to_player_2 {
+                                //         inferred_constraints[6].push(*reveal);
+                                //     }
+                                //     if let Some(pos) = inferred_constraints[6].iter().rposition(|c| c == card_player) {
+                                //         inferred_constraints[6].swap_remove(pos);
+                                //     }
+                                //     if bool_move_from_player_to_pile {
+                                //         inferred_constraints[player_loop].push(*card_player);
+                                //     }
+                                //     if response {
+                                //         if index_loop == index_of_interest - 1 {
+                                //             for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                //                 if *query_card_count > *current_card_count {
+                                //                     for _ in 0..(*query_card_count - *current_card_count) {
+                                //                         if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                //                             inferred_constraints[player_of_interest].swap_remove(pos);
+                                //                         }
+                                //                     }
+                                //                 }
+                                //             }
+                                //         }
+                                //         return true
+                                //     }
+                                // }
+                                let mut variants: Vec<Vec<Vec<Card>>> = Self::return_variants_reveal_redraw_none(*reveal, player_loop, &inferred_constraints);
+                                for inferred_i in variants.iter_mut() {
+                                    let response = self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_i, cards);
                                     if response {
                                         if index_loop == index_of_interest - 1 {
                                             for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
@@ -1739,7 +1763,7 @@ impl BackTrackCollectiveConstraint {
                                                 }
                                             }
                                         }
-                                        return true
+                                        return response;
                                     }
                                 }
                             },
@@ -1785,10 +1809,12 @@ impl BackTrackCollectiveConstraint {
         // TODO: OPTIMIZE Do we really need this?
         for player in 0..6 {
             if public_constraints[player].len() + inferred_constraints[player].len() > 2 {
+                log::trace!("is_valid_combination player {} has too many cards", player);
                 return false
             }
         }
         if public_constraints[6].len() + inferred_constraints[6].len() > 3 {
+            log::trace!("is_valid_combination pile has too many cards");
             return false
         }
         // =========================================
@@ -1808,6 +1834,7 @@ impl BackTrackCollectiveConstraint {
                 total_count <= 2
             };
             if !fulfilled {
+                log::trace!("is_valid_combination player {} failed to fulfil previous state!", player);
                 return false
             }
         }
@@ -1840,6 +1867,7 @@ impl BackTrackCollectiveConstraint {
                 },
                 0 => {},
                 _ => {
+                    log::trace!("is_valid_combination player {} has too many cards", player);
                     return false
                 },
             }
@@ -1854,6 +1882,130 @@ impl BackTrackCollectiveConstraint {
             return count_total <= 3
         }
         true
+    }
+    pub fn return_variants_reveal_redraw_none(reveal: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
+        if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5 
+        && !inferred_constraints[player_loop].contains(&reveal)
+        && !inferred_constraints[6].contains(&reveal) {
+            // This state cannot be arrive after the reveal_redraw
+            return Vec::with_capacity(0);
+        }
+        // TODO: OPTIMIZE Probably don't need this source thing
+        // This needs to have player indexes before pile indexes
+        // we check what player redrew first, which moves item from player to pile
+        // then we check what could have moved from pile to player
+        let source_cards: Vec<(usize, Card)> = inferred_constraints[player_loop]
+            .iter()
+            .copied()
+            .map(|c| (player_loop, c))
+            .chain(
+                inferred_constraints[6]
+                    .iter()
+                    .copied()
+                    .map(|c| (6, c)),
+            )
+            .collect();
+        // TODO: Consider moving this out of this function
+        Self::build_variants_reveal_redraw_none(reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
+        // Self::build_variants_reveal_redraw_none_opt(reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
+        return variants
+    }
+    /// Builds possible previous inferred_constraint states
+    /// All cards have a source
+    /// card == reveal in player hand can come from
+    /// - player without moving
+    /// - player after revealing then redrawing the same
+    /// - pile after revealing then redrawing different
+    /// - player after revealing then redrawing different
+    /// 
+    /// Pretty overkill way to solve this, but I think will be useful reference for AMB
+    fn build_variants_reveal_redraw_none(
+        reveal: Card,
+        cards: &[(usize, Card)],
+        idx: usize,
+        player_loop: usize,
+        pile_index: usize,
+        player_to_pile_count: u8, // dst -> src
+        pile_to_player_count: u8, // dst -> src 
+        current: &Vec<Vec<Card>>,
+        variants: &mut Vec<Vec<Vec<Card>>>,
+    ) {
+        // build an intermediate state
+        // src: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin, Ambassador]], 
+        // dest: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
+        // This is ok, but Im thinking u technically don't need this cos it will be searched by
+        // TODO: OPTIMIZE and remove subsets
+        // [[Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
+        // src: []
+        // dest: [[Ambassador, Ambassador], [], [], [], [], [], [Assassin, Captain, Captain]]
+        // P0 RR AMB None
+        // src: [[Ambassador], [], [], [], [], [], [Assassin, Assassin, Assassin]]
+        // dest: [[Ambassador, Assassin], [], [], [], [], [], [Assassin, Assassin]]
+        // src should have 2 Ambassador as 1 stayed and one was revealed
+        // if you redrew a card, and the pile is 3 cards after that means the other card had to have been relinquished...
+        // P0 RR AMB None
+        // Would be impossible here as there is no room for AMB in player or pile in dest,
+        // dest: [[Captain, Duke], [], [], [], [], [], [Captain, Captain, Contessa]]
+        // src: [[[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain, Ambassador]], [[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain, Ambassador]]]
+        // dest: [[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain]]
+        if idx == cards.len() {
+            // TODO: OPTIMIZE the push
+            let mut source_constraints = current.clone();
+            // Player redrew same card
+            // Not exactly right as player_to_pile could be a non ambassador
+            // Add if player_to_pile is 0
+            if pile_to_player_count != 1 || !source_constraints[player_loop].contains(&reveal) {
+                source_constraints[player_loop].push(reveal);
+            }
+            if source_constraints[player_loop].len() < 3  
+            && source_constraints[pile_index].len() < 4 
+            && source_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                variants.push(source_constraints);
+            }
+            return;
+        }
+
+        // Destructure this card's source and value
+        let (dst, card) = cards[idx];
+        // OPTIMIZE: probably could just run this as the ONLY case for reveal redraw as the other case will be a more specific case of this
+        // CASE: Card originally left player hand and returned to player and is the same unique card 
+        // T                :  [C0]    []
+        // T after reveal   :  []    [C0]
+        // T + 1            :  [C0]    []
+        if dst == player_loop && card == reveal {
+            // No need to add reveal anymore
+            Self::build_variants_reveal_redraw_none(reveal, cards, cards.len(), player_loop, pile_index, 1, 1, current, variants);
+        } 
+        // src same as dest and RR card is diff
+
+        // CASE: player Card did not come from pile after reveal
+        // CASE: pile Card did not come from player after reveal
+        // ADDITIONALLY: if player reveal and redrew the same card, it is considered seperate cards
+        Self::build_variants_reveal_redraw_none(reveal, cards, idx + 1, player_loop, pile_index, player_to_pile_count, pile_to_player_count, current, variants);
+        let is_player_card = dst == player_loop;
+        let could_have_swapped = if is_player_card {
+            player_to_pile_count < 1 
+        } else {
+            pile_to_player_count < 1 && card == reveal
+        };
+        // CASE: player Card came from pile after reveal
+        // CASE: pile Card came from player after reveal
+        // ADDITIONALLY: if player reveal and redrew the same card, it is considered seperate cards
+        if could_have_swapped {
+            let (src, new_player_to_pile_count, new_pile_to_player_count) = if is_player_card {
+                (pile_index, player_to_pile_count + 1, pile_to_player_count)
+            } else {
+                (player_loop, player_to_pile_count, pile_to_player_count + 1)
+            };
+            
+            let mut new_constraints = current.clone();
+            if let Some(pos) = new_constraints[dst].iter().position(|&c| c == card) {
+                new_constraints[dst].swap_remove(pos);
+                new_constraints[src].push(card);
+                Self::build_variants_reveal_redraw_none(reveal, cards, idx + 1, player_loop, pile_index, new_player_to_pile_count, new_pile_to_player_count, &new_constraints, variants);
+            }
+        }
     }
     /// Brute force generates everything
     fn generate_impossible_constraints(&mut self, history_index: usize) {
@@ -1988,5 +2140,12 @@ impl BackTrackCollectiveConstraint {
     /// Returns an array of [player][card] that returns true if a player cannot have a particular card alive
     pub fn generate_one_card_impossibilities_player_card_indexing(&self) -> [[bool; 5]; 7] {
         self.impossible_constraints.clone()
+    }
+    /// Returns an array of [player][card] that returns true if a player cannot have a particular card alive
+    pub fn generate_two_card_impossibilities_player_card_indexing(&self) -> [[[bool; 5]; 5]; 7] {
+        self.impossible_constraints_2.clone()
+    }
+    pub fn generate_three_card_impossibilities_player_card_indexing(&self) -> [[[bool; 5]; 5]; 5] {
+        self.impossible_constraints_3.clone()
     }
 }
