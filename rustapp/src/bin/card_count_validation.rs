@@ -14,6 +14,7 @@ use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
 use std::path::Path;
+use std::time::Instant;
 use itertools::Itertools;
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
@@ -32,7 +33,9 @@ fn main() {
     let min_dead_check: usize = 8;
     let num_threads = 12;
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    game_rnd_constraint_bt_bench(100);
+    // game_rnd_constraint_brute_bench(10);
     // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_pd(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
@@ -51,7 +54,7 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    bt_test();
+    // bt_test();
     // test();
     // temp();
 }
@@ -1212,6 +1215,141 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
     println!("Inferred Constraints Correct: {}/{}", public_constraints_correct, total_tries);
     println!("Impossible Cases Correct: {}/{}", public_constraints_correct, total_tries);
     println!("Total Tries: {}", total_tries);
+}
+pub fn game_rnd_constraint_bt_bench(game_no : usize) {
+    let mut game: usize = 0;
+    let mut bit_prob = BackTrackCardCountManager::new();
+    let mut actions_processed: u128 = 0;
+    let mut start_time = Instant::now();
+    while game < game_no {
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        // if game % (game_no / 10) == 0 {
+        log::trace!("Game Made:");
+        while !hh.game_won() {
+            
+            // log::info!("{}", format!("Step : {:?}",step));
+            hh.log_state();
+            bit_prob.printlog();
+            new_moves = hh.generate_legal_moves();
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
+            new_moves.retain(|m| m.name() != AOName::Exchange);
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                if output.name() == AOName::Discard{
+                    let true_legality = if output.no_cards() == 1 {
+                        // let start_time = Instant::now();
+                        !bit_prob.latest_constraint().impossible_constraints()[output.player_id()][output.cards()[0] as usize]
+                    } else {
+                        !bit_prob.latest_constraint().impossible_constraints_2()[output.player_id()][output.cards()[0] as usize][output.cards()[1] as usize]
+                    };
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::RevealRedraw {
+                    let true_legality: bool = !bit_prob.latest_constraint().impossible_constraints()[output.player_id()][output.card() as usize];
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::ExchangeDraw {
+                    let true_legality: bool = !bit_prob.latest_constraint().impossible_constraints_2()[output.player_id()][output.cards()[0] as usize][output.cards()[1] as usize];
+                    if !true_legality {
+                        break    
+                    }
+                } 
+                hh.push_ao(output);
+                bit_prob.push_ao_public(&output);
+                actions_processed += 1;
+
+            } else {
+                log::trace!("Pushed bad move somewhere earlier!");
+                break;
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            log::info!("");
+        }
+        bit_prob.reset();
+        game += 1;
+    }
+    let elapsed_time = start_time.elapsed();
+    let process_per_action_us = elapsed_time.as_micros() as f64 / actions_processed as f64;
+    println!("Games Ran: {}", game_no);
+    println!("Nodes Processed: {}", actions_processed);
+    println!("Estimated Time per nodes: {} micro seconds", process_per_action_us);
+}
+pub fn game_rnd_constraint_brute_bench(game_no : usize) {
+    let mut game: usize = 0;
+    let mut bit_prob = BruteCardCountManager::new();
+    let mut actions_processed: u128 = 0;
+    let mut start_time = Instant::now();
+    while game < game_no {
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        // if game % (game_no / 10) == 0 {
+        log::trace!("Game Made:");
+        while !hh.game_won() {
+            
+            // log::info!("{}", format!("Step : {:?}",step));
+            hh.log_state();
+            bit_prob.printlog();
+            new_moves = hh.generate_legal_moves();
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
+            new_moves.retain(|m| m.name() != AOName::Exchange);
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                if output.name() == AOName::Discard{
+                    let true_legality = if output.no_cards() == 1 {
+                        // let start_time = Instant::now();
+                        bit_prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
+                    } else {
+                        bit_prob.player_can_have_cards(output.player_id(), output.cards())
+                    };
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::RevealRedraw {
+                    let true_legality: bool = bit_prob.player_can_have_card_alive(output.player_id(), output.card());
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::ExchangeDraw {
+                    let true_legality: bool = bit_prob.player_can_have_cards(6, output.cards());
+                    if !true_legality {
+                        break    
+                    }
+                } 
+                let validated_public_constraints = bit_prob.validated_public_constraints();
+                let validated_inferred_constraints = bit_prob.validated_inferred_constraints();
+                let validated_impossible_constraints = bit_prob.validated_impossible_constraints();
+                hh.push_ao(output);
+                bit_prob.push_ao(&output, false);
+                actions_processed += 1;
+
+            } else {
+                log::trace!("Pushed bad move somewhere earlier!");
+                break;
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            log::info!("");
+        }
+        bit_prob.reset();
+        game += 1;
+    }
+    let elapsed_time = start_time.elapsed();
+    let process_per_action_us = elapsed_time.as_micros() as f64 / actions_processed as f64;
+    println!("Games Ran: {}", game_no);
+    println!("Nodes Processed: {}", actions_processed);
+    println!("Estimated Time per nodes: {} micro seconds", process_per_action_us);
 }
 pub fn game_rnd_constraint_pd(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool, min_dead_check: usize){
     if log_bool{

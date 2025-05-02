@@ -2180,6 +2180,12 @@ impl BackTrackCollectiveConstraint {
             }
         } 
     }
+    pub fn impossible_constraints(&self) -> &[[bool; 5]; 7] {
+        &self.impossible_constraints
+    }
+    pub fn impossible_constraints_2(&self) -> &[[[bool; 5]; 5]; 7] {
+        &self.impossible_constraints_2
+    }
     /// Returns an array of [player][card] that returns true if a player cannot have a particular card alive
     pub fn generate_one_card_impossibilities_player_card_indexing(&self) -> [[bool; 5]; 7] {
         self.impossible_constraints.clone()
