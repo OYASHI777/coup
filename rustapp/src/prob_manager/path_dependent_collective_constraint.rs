@@ -4,6 +4,24 @@ use ahash::AHashSet;
 use crossbeam::channel::after;
 use std::{marker::Copy, path::Path};
 
+
+const TWO_CARD_COMBINATIONS: [[u8; 5]; 15] = [
+    [2, 0, 0, 0, 0],
+    [1, 1, 0, 0, 0],
+    [1, 0, 1, 0, 0],
+    [1, 0, 0, 1, 0],
+    [1, 0, 0, 0, 1],
+    [0, 2, 0, 0, 0],
+    [0, 1, 1, 0, 0],
+    [0, 1, 0, 1, 0],
+    [0, 1, 0, 0, 1],
+    [0, 0, 2, 0, 0],
+    [0, 0, 1, 1, 0],
+    [0, 0, 1, 0, 1],
+    [0, 0, 0, 2, 0],
+    [0, 0, 0, 1, 1],
+    [0, 0, 0, 0, 2],
+];
 // This implementation leaves only issues with:
 //  - max_negation inference
 //  - holdable space type of inference
@@ -18,7 +36,7 @@ pub enum ActionInfo {
     // redraw: Card taken from pile
     // relinquish: Card left in pile
     RevealRedraw {reveal: Card, redraw: Option<Card>, relinquish: Option<Card>}, // Player | Reveal Card | Redraw Option<Card>
-    ExchangeDrawChoice {draw: Vec<Card>, relinquish: Vec<Card>}, // Player | Draw Vec<Card> | Return Vec<Card>
+    ExchangeDrawChoice {redraw: Vec<Card>, relinquish: Vec<Card>}, // Player | Draw Vec<Card> | Return Vec<Card>
 }
 
 impl ActionInfo {
@@ -36,8 +54,8 @@ impl ActionInfo {
             ActionInfo::RevealRedraw { reveal: revealed, .. } => {
                 ActionInfo::RevealRedraw { reveal: *revealed, redraw: None, relinquish: None }
             },
-            ActionInfo::ExchangeDrawChoice { draw, .. } => {
-                ActionInfo::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) }
+            ActionInfo::ExchangeDrawChoice { redraw, .. } => {
+                ActionInfo::ExchangeDrawChoice { redraw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) }
             },
         }
     }
@@ -56,8 +74,8 @@ impl ActionInfo {
             Self::RevealRedraw{ redraw, .. } => {
                 redraw.is_some()
             },
-            Self::ExchangeDrawChoice {draw, relinquish} => {
-                draw.len() == 2 && relinquish.len() == 2
+            Self::ExchangeDrawChoice {redraw, relinquish} => {
+                redraw.len() == 2 && relinquish.len() == 2
             }
         }
     }
@@ -76,8 +94,8 @@ impl ActionInfo {
             Self::RevealRedraw{ redraw, .. } => {
                 redraw.is_some()
             },
-            Self::ExchangeDrawChoice {draw, relinquish} => {
-                draw.len() > 0 || relinquish.len() > 0
+            Self::ExchangeDrawChoice {redraw, relinquish} => {
+                redraw.len() > 0 || relinquish.len() > 0
             }
         }
     }
@@ -96,8 +114,8 @@ impl ActionInfo {
             Self::RevealRedraw{ redraw, .. } => {
                 redraw.is_none()
             },
-            Self::ExchangeDrawChoice {draw, relinquish} => {
-                draw.len() == 0 && relinquish.len() == 0
+            Self::ExchangeDrawChoice {redraw, relinquish} => {
+                redraw.len() == 0 && relinquish.len() == 0
             }
         }
     }
@@ -1079,7 +1097,7 @@ impl PathDependentCollectiveConstraint {
                             return None;
                         }
                     },
-                    ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                    ActionInfo::ExchangeDrawChoice { redraw, relinquish } => {
                         // TODO: THEORY Handle relinquish cases
                         return None;
                     },
@@ -1509,7 +1527,7 @@ impl PathDependentCollectiveConstraint {
                 // TODO: THINK about unwrap
                 return min_backward_pass_groups.unwrap()
             },
-            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+            ActionInfo::ExchangeDrawChoice { redraw, relinquish } => {
                 // TODO:
             },
             ActionInfo::Start
@@ -1925,7 +1943,7 @@ impl PathDependentCollectiveConstraint {
                 log::trace!("max_backward_pass_groups returned node : {:?}", max_backward_pass_groups);
                 return max_backward_pass_groups
             },
-            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+            ActionInfo::ExchangeDrawChoice { redraw, relinquish } => {
                 // TODO:
             },
             ActionInfo::Start
@@ -1950,9 +1968,9 @@ impl PathDependentCollectiveConstraint {
                 inferred_constraints[latest_move.player() as usize].push(*reveal);
                 redraw.map(|pile_original_card| inferred_constraints[6].push(pile_original_card));
             },
-            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+            ActionInfo::ExchangeDrawChoice { redraw, relinquish } => {
                 inferred_constraints[latest_move.player() as usize].extend(relinquish.iter().copied());
-                inferred_constraints[6].extend(draw.iter().copied());
+                inferred_constraints[6].extend(redraw.iter().copied());
             },
             ActionInfo::Start
             | ActionInfo::StartInferred => {},
@@ -2442,7 +2460,7 @@ impl PathDependentCollectiveConstraint {
                     },
                 }
             },
-            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {},
+            ActionInfo::ExchangeDrawChoice { redraw, relinquish } => {},
             ActionInfo::Start
             | ActionInfo::StartInferred => {
                 // Managed to reach base
@@ -2614,6 +2632,330 @@ impl PathDependentCollectiveConstraint {
             // }
         }
         return variants
+    }
+    // TODO: modify inferred_constraints and recurse when no longer testing this
+    pub fn return_variants_exchange_opt(redraw: &Vec<Card>, relinquish: &Vec<Card>, player_lives: u8, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
+        let mut iter_cards_player = inferred_constraints[player_loop].clone();
+        iter_cards_player.sort_unstable();
+        iter_cards_player.dedup();
+        let mut iter_cards_pile = inferred_constraints[6].clone();
+        iter_cards_pile.sort_unstable();
+        iter_cards_pile.dedup();
+        let mut player_count = [0u8; 5];
+        let mut pile_count = [0u8; 5];
+        inferred_constraints[player_loop].iter().for_each(|c| player_count[*c as usize] += 1);
+        inferred_constraints[6].iter().for_each(|c| pile_count[*c as usize] += 1);
+        let mut redraw_count = [0u8; 5];
+        let mut relinquish_count = [0u8; 5];
+        redraw.iter().for_each(|c| redraw_count[*c as usize] += 1);
+        relinquish.iter().for_each(|c| relinquish_count[*c as usize] += 1);
+
+        if player_lives > 1 {
+            // Can maybe consider all possible unique moves characterized by player_to_pile and pile_to_player
+            // redraw_count and relinquish_count define the degree of freedom for both of those
+            // the possible choices that can be player_to_pile depend on whats in player_hand
+            // 2 AMB -> up to 2 AMB from player_to_pile
+            // 1 AMB -> 1 AMB from player_to_pile
+            // So I guess can loop through all possible version of player_to_pile and pile_to_player
+            // player_count
+            // 0 moves, 1 moves, 2 moves
+            // NOTE AMB player to pile and AMB pile to player cancel out so no intersection of player and pile ish
+            // 0 player_to_pile move, 0 pile_to_player move
+            variants.push(inferred_constraints.clone());
+            // 1 player_to_pile move, 0 pile_to_player move
+            if inferred_constraints[6].len() < 3 {
+                for card_player in iter_cards_player.iter() {
+                // move to pile
+                    let mut player_hand = inferred_constraints[player_loop].clone();
+                    let mut pile_hand = inferred_constraints[6].clone();
+                    if let Some(pos) = player_hand.iter().rposition(|c| *c == *card_player) {
+                        player_hand.swap_remove(pos);
+                        pile_hand.push(*card_player);
+                        let mut temp = inferred_constraints.clone();
+                        temp[player_loop] = player_hand.clone();
+                        temp[6] = pile_hand.clone();
+                        variants.push(temp);
+                    }
+                }
+            }
+            // 0 player_to_pile move, 1 pile_to_player move
+            if inferred_constraints[player_loop].len() < 2 {
+                for card_pile in iter_cards_pile.iter() {
+                // move to player
+                    let mut player_hand = inferred_constraints[player_loop].clone();
+                    let mut pile_hand = inferred_constraints[6].clone();
+                    if let Some(pos) = pile_hand.iter().rposition(|c| *c == *card_pile) {
+                        pile_hand.swap_remove(pos);
+                        player_hand.push(*card_pile);
+                        let mut temp = inferred_constraints.clone();
+                        temp[player_loop] = player_hand.clone();
+                        temp[6] = pile_hand.clone();
+                        variants.push(temp);
+                    }
+                }
+            }
+            // 1 player_to_pile move, 1 pile_to_player move
+            for card_player in iter_cards_player.iter() {
+                for card_pile in iter_cards_pile.iter() {
+                    if card_player == card_pile {
+                        continue;
+                    }
+                    let mut player_hand = inferred_constraints[player_loop].clone();
+                    let mut pile_hand = inferred_constraints[6].clone();
+                    if let Some(pos) = pile_hand.iter().rposition(|c| *c == *card_pile) {
+                        pile_hand.swap_remove(pos);
+                    }
+                    if let Some(pos) = player_hand.iter().rposition(|c| *c == *card_player) {
+                        player_hand.swap_remove(pos);
+                    }
+                    pile_hand.push(*card_player);
+                    player_hand.push(*card_pile);
+                    let mut temp = inferred_constraints.clone();
+                    temp[player_loop] = player_hand.clone();
+                    temp[6] = pile_hand.clone();
+                    variants.push(temp);
+                }
+            }
+            // 2 player_to_pile move, 1 pile_to_player move
+            if inferred_constraints[6].len() < 3 {
+                for card_pile in iter_cards_pile.iter() {
+                    for index_player_to_pile_0 in 0..iter_cards_player.len() {
+                        // TODO: Shift index_player_to_pile == case shift here
+                        if iter_cards_player[index_player_to_pile_0] == *card_pile {
+                            continue; // Avoid duplicates
+                        }
+                        for index_player_to_pile_1 in index_player_to_pile_0..iter_cards_player.len() {
+                            // Check DF
+                            if iter_cards_player[index_player_to_pile_1] == *card_pile {
+                                continue; // Avoid duplicates
+                            }
+                            if index_player_to_pile_0 == index_player_to_pile_1 && player_count[iter_cards_player[index_player_to_pile_0] as usize] < 2 {
+                                // TODO: OPTIMIZE Can shift this out of for loop actually
+                                continue // Ensure enough cards to move
+                            }
+                            let mut player_hand = inferred_constraints[player_loop].clone();
+                            let mut pile_hand = inferred_constraints[6].clone();
+                            if let Some(pos) = player_hand.iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
+                                player_hand.swap_remove(pos);
+                            }
+                            if let Some(pos) = player_hand.iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
+                                player_hand.swap_remove(pos);
+                            }
+                            if let Some(pos) = pile_hand.iter().rposition(|c| *c == *card_pile) {
+                                pile_hand.swap_remove(pos);
+                            }
+                            pile_hand.push(iter_cards_player[index_player_to_pile_0]);
+                            pile_hand.push(iter_cards_player[index_player_to_pile_1]);
+                            player_hand.push(*card_pile);
+                            let mut temp = inferred_constraints.clone();
+                            temp[player_loop] = player_hand.clone();
+                            temp[6] = pile_hand.clone();
+                            variants.push(temp);
+                        }
+                    }
+                }
+            }
+            // 1 player_to_pile move, 2 pile_to_player move
+            if inferred_constraints[player_loop].len() < 2 {
+                for card_player in iter_cards_player.iter() {
+                    for index_pile_to_player_0 in 0..iter_cards_pile.len() {
+                        if iter_cards_pile[index_pile_to_player_0] == *card_player {
+                            continue; // Avoid Duplicates
+                        }
+                        for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
+                            // Check DF
+                            if iter_cards_pile[index_pile_to_player_1] == *card_player {
+                                continue; // Avoid Duplicates
+                            }
+                            if index_pile_to_player_0 == index_pile_to_player_1 && pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2 {
+                                // TODO: OPTIMIZE Can shift this out of for loop actually
+                                continue // Ensure enough cards to move
+                            }
+                            let mut player_hand = inferred_constraints[player_loop].clone();
+                            let mut pile_hand = inferred_constraints[6].clone();
+                            if let Some(pos) = pile_hand.iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                                pile_hand.swap_remove(pos);
+                            }
+                            if let Some(pos) = pile_hand.iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                                pile_hand.swap_remove(pos);
+                            }
+                            if let Some(pos) = player_hand.iter().rposition(|c| *c == *card_player) {
+                                player_hand.swap_remove(pos);
+                            }
+                            pile_hand.push(iter_cards_pile[index_pile_to_player_0]);
+                            pile_hand.push(iter_cards_pile[index_pile_to_player_1]);
+                            player_hand.push(*card_player);
+                            let mut temp = inferred_constraints.clone();
+                            temp[player_loop] = player_hand.clone();
+                            temp[6] = pile_hand.clone();
+                            variants.push(temp);
+                        }
+                    }
+                }
+            }
+            // 2 player_to_pile move, 2 pile_to_player move
+            for card_player_to_pile_0 in 0..5 {
+                for card_player_to_pile_1 in card_player_to_pile_0..5 {
+                    // Check DF
+                    for card_pile_to_player_0 in 0..5 {
+                        for card_pile_to_player_1 in card_pile_to_player_0..5 {
+        
+                        }
+                    }
+                }
+            }
+
+            for player_card in iter_cards_player.iter() {
+                for pile_card in iter_cards_pile.iter() {
+                    let mut player_to_pile = [0u8; 5];
+                    let mut pile_to_player = [0u8; 5];
+                    let mut temp = inferred_constraints.clone();
+                    temp[player_loop] = player_hand.clone();
+                    temp[6] = pile_hand.clone();
+                    if temp[player_loop].len() < 3  
+                    && temp[6].len() < 4 
+                    // && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4
+                    {
+                        // TODO: Recurse here in other version
+                        variants.push(temp);
+                    }
+
+                }
+            }
+        } else {
+            for player_card in iter_cards_player.iter() {
+                for pile_card in iter_cards_pile.iter() {
+                    
+                    // if temp[player_loop].len() < 3  
+                    // && temp[6].len() < 4 
+                    // && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                    //     // TODO: Recurse here in other version
+                    //     variants.push(temp);
+                    // }
+                }
+            }
+        }
+        variants
+        // if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5 
+        // && !inferred_constraints[player_loop].contains(&reveal)
+        // && !inferred_constraints[6].contains(&reveal) {
+        //     // This state cannot be arrive after the reveal_redraw
+        //     return Vec::with_capacity(0);
+        // }
+        // let mut player_hand = inferred_constraints[player_loop].clone();
+        // let mut pile_hand = inferred_constraints[6].clone();
+        // if player_hand.is_empty() {
+        //     // let mut bool_move_from_pile_to_player = false;
+        //     if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+        //         pile_hand.swap_remove(pos);
+        //     }
+        //     player_hand.push(reveal);
+        //     let mut temp = inferred_constraints.clone();
+        //     temp[player_loop] = player_hand.clone();
+        //     temp[6] = pile_hand.clone();
+        //     if temp[player_loop].len() < 3
+        //     && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+        //         // TODO: Recurse here in other version
+        //         variants.push(temp);
+        //     }
+        //     return variants;
+        //     // TODO: remove if recursing
+        // }
+        // let mut iter_cards = inferred_constraints[player_loop].clone();
+        // iter_cards.sort_unstable();
+        // iter_cards.dedup();
+        // // Doesnt handle empty case
+        // for (_, card_player) in iter_cards.iter().enumerate() {
+        //     // Card Source was not from Pile
+        //     let mut bool_move_from_pile_to_player = false;
+        //     if *card_player != reveal || inferred_constraints[6].contains(&reveal) {
+        //         if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+        //             pile_hand.swap_remove(pos);
+        //             bool_move_from_pile_to_player = true;
+        //         }
+        //         player_hand.push(reveal);
+        //         let mut temp = inferred_constraints.clone();
+        //         temp[player_loop] = player_hand.clone();
+        //         temp[6] = pile_hand.clone();
+    
+        //         if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
+        //             player_hand.swap_remove(pos);
+        //         }
+        //         if bool_move_from_pile_to_player {
+        //             pile_hand.push(reveal);
+        //         }
+        //         // Probably need push only if certain conditions met
+        //         if temp[player_loop].len() < 3  
+        //         && temp[6].len() < 4 
+        //         && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+        //             // TODO: Recurse here in other version
+        //             variants.push(temp);
+        //         }
+        //     }
+        //     // TEMP
+        //     // player_hand.sort();
+        //     // pile_hand.sort();
+        //     // let mut checker = inferred_constraints.clone();
+        //     // checker[player_loop].sort();
+        //     // checker[6].sort();
+        //     // if player_hand != checker[player_loop] {
+        //     //     log::warn!("failed 1 to pop player hand properly");
+        //     //     log::warn!("player_hand now: {:?}", player_hand);
+        //     // }
+        //     // if pile_hand != checker[6] {
+        //     //     log::warn!("failed 1 to pop pile hand properly");
+        //     //     log::warn!("pile_hand now: {:?}", pile_hand);
+        //     // }
+        //     // Card Source was from Pile
+        //     player_hand = inferred_constraints[player_loop].clone();
+        //     pile_hand = inferred_constraints[6].clone();
+        //     bool_move_from_pile_to_player = false;
+        //     if let Some(pos) = player_hand.iter().position(|c| *c == *card_player) {
+        //         player_hand.swap_remove(pos);
+        //     }
+        //     pile_hand.push(*card_player);
+        //     if let Some(pos) = pile_hand.iter().rposition(|c| *c == reveal) {
+        //         pile_hand.swap_remove(pos);
+        //         bool_move_from_pile_to_player = true;
+        //     }
+        //     player_hand.push(reveal);
+        //     let mut temp = inferred_constraints.clone();
+        //     temp[player_loop] = player_hand.clone();
+        //     temp[6] = pile_hand.clone();
+
+        //     // Probably need push only if certain conditions met
+        //     if temp[player_loop].len() < 3  
+        //     && temp[6].len() < 4 
+        //     && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+        //         // TODO: Recurse here in other version
+        //         variants.push(temp);
+        //     }
+
+        //     if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
+        //         player_hand.swap_remove(pos);
+        //     }
+        //     if bool_move_from_pile_to_player {
+        //         pile_hand.push(reveal);
+        //     }
+        //     if let Some(pos) = pile_hand.iter().rposition(|c| c == card_player) {
+        //         pile_hand.swap_remove(pos);
+        //     }
+        //     player_hand.push(*card_player);
+        //     // TEMP
+        //     // player_hand.sort();
+        //     // pile_hand.sort();
+        //     // let mut checker = inferred_constraints.clone();
+        //     // checker[player_loop].sort();
+        //     // checker[6].sort();
+        //     // if player_hand != checker[player_loop] {
+        //     //     log::warn!("failed 2 to pop player hand properly");
+        //     // }
+        //     // if pile_hand != checker[6] {
+        //     //     log::warn!("failed 2 to pop pile hand properly");
+        //     // }
+        // }
+        // return variants
     }
     /// Builds possible previous inferred_constraint states
     /// All cards have a source
@@ -3434,7 +3776,7 @@ impl PathDependentCollectiveConstraint {
                     //     }
                     // } 
                 },
-                ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                ActionInfo::ExchangeDrawChoice { redraw, relinquish } => {
                     if backward_pass_group.get_player_flag(player_i) {
                         backward_pass_group.set_player_flag(player_i, false);
                         // backward_pass_group.sub_alive_count(1);
@@ -3502,7 +3844,7 @@ impl PathDependentCollectiveConstraint {
                         }
                     }
                 },
-                ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                ActionInfo::ExchangeDrawChoice { redraw, relinquish } => {
                     // TODO: Technically, have to consider what draw and relinquish could be
                     if forward_pass_group.get_player_flag(6) {
                         forward_pass_group.set_player_flag(player_i, true);
@@ -3625,7 +3967,7 @@ impl PathDependentCollectiveConstraint {
                         players_had_revealed_or_discarded[player_i] = true;
                     }
                 },
-                ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                ActionInfo::ExchangeDrawChoice { redraw, relinquish } => {
                 },
                 ActionInfo::Start => {},
                 ActionInfo::StartInferred => {},
@@ -3827,8 +4169,8 @@ impl PathDependentCollectiveConstraint {
                                     }
                                 },
                                 ActionInfoName::ExchangeDrawChoice => {
-                                    if let ActionInfo::ExchangeDrawChoice { draw, relinquish } = self.history[i].action_info() {
-                                        if !draw.is_empty() || !relinquish.is_empty() {
+                                    if let ActionInfo::ExchangeDrawChoice { redraw, relinquish } = self.history[i].action_info() {
+                                        if !redraw.is_empty() || !relinquish.is_empty() {
                                             // TODO: [CASE] Technically there could be cases to handle where cards are known
                                             // For now we stop at any Ambassador
                                             return false
@@ -3905,7 +4247,7 @@ impl PathDependentCollectiveConstraint {
             | ActionInfo::StartInferred => {
                 panic!("You should not be calling this on Start");
             }
-            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+            ActionInfo::ExchangeDrawChoice { redraw, relinquish } => {
                 // unimplemented!();
             }
         }
@@ -4013,7 +4355,7 @@ impl PathDependentCollectiveConstraint {
                     },
                 }
             },
-            ActionInfo::ExchangeDrawChoice{ draw, relinquish } => {
+            ActionInfo::ExchangeDrawChoice{ redraw, relinquish } => {
                 // TODO: handle the known card case obviously lol
                 self.ambassador_public(player_id);
             },
@@ -4069,7 +4411,7 @@ impl PathDependentCollectiveConstraint {
                     },
                 }
             },
-            ActionInfo::ExchangeDrawChoice{ draw, relinquish } => {
+            ActionInfo::ExchangeDrawChoice{ redraw, relinquish } => {
                 // TODO: handle the known card case obviously lol
                 self.ambassador_public(player_id);
             },

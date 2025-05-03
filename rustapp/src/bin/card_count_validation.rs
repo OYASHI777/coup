@@ -34,7 +34,7 @@ fn main() {
     let num_threads = 12;
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
     // game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
-    game_rnd_constraint_bt_bench(100);
+    // game_rnd_constraint_bt_bench(100);
     // game_rnd_constraint_brute_bench(10);
     // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_pd(game_no, bool_know_priv_info, print_frequency, log_bool, min_dead_check);
@@ -56,7 +56,7 @@ fn main() {
     // instant_delete();
     // bt_test();
     // test();
-    // temp();
+    temp();
 }
 use rustapp::prob_manager::path_dependent_collective_constraint::{self, PathDependentCollectiveConstraint};
 // TODO: Move to collective_constraint when finalized
