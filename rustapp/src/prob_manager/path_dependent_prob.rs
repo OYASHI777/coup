@@ -107,7 +107,7 @@ impl PathDependentCardCountManager {
             self.constraint_history_move_no.push(self.move_no);
         } else if ao_name == AOName::ExchangeChoice {
             let mut last_constraint = self.constraint_history.last().unwrap().clone();
-            let action_info = ActionInfo::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) };
+            let action_info = ActionInfo::ExchangeDrawChoice { redraw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) };
             log::trace!("Adding move ExchangeChoice");
             last_constraint.add_move(ao.player_id() as u8, action_info);
             self.constraint_history.push(last_constraint);

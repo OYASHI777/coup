@@ -2634,7 +2634,7 @@ impl PathDependentCollectiveConstraint {
         return variants
     }
     // TODO: modify inferred_constraints and recurse when no longer testing this
-    pub fn return_variants_exchange_opt(redraw: &Vec<Card>, relinquish: &Vec<Card>, player_lives: u8, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+    pub fn return_variants_exchange_opt(player_lives: u8, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
         let mut iter_cards_player = inferred_constraints[player_loop].clone();
         iter_cards_player.sort_unstable();
@@ -2646,10 +2646,10 @@ impl PathDependentCollectiveConstraint {
         let mut pile_count = [0u8; 5];
         inferred_constraints[player_loop].iter().for_each(|c| player_count[*c as usize] += 1);
         inferred_constraints[6].iter().for_each(|c| pile_count[*c as usize] += 1);
-        let mut redraw_count = [0u8; 5];
-        let mut relinquish_count = [0u8; 5];
-        redraw.iter().for_each(|c| redraw_count[*c as usize] += 1);
-        relinquish.iter().for_each(|c| relinquish_count[*c as usize] += 1);
+        // let mut redraw_count = [0u8; 5];
+        // let mut relinquish_count = [0u8; 5];
+        // redraw.iter().for_each(|c| redraw_count[*c as usize] += 1);
+        // relinquish.iter().for_each(|c| relinquish_count[*c as usize] += 1);
 
         
         // Can maybe consider all possible unique moves characterized by player_to_pile and pile_to_player
@@ -2720,6 +2720,44 @@ impl PathDependentCollectiveConstraint {
             }
         }
         if player_lives > 1 {
+            // 2 player_to_pile move, 0 pile_to_player move
+            if inferred_constraints[player_loop].len() == 2 && inferred_constraints[6].len() < 2 {
+                let card_0 = inferred_constraints[player_loop][0];
+                let card_1 = inferred_constraints[player_loop][1];
+                let mut player_hand = inferred_constraints[player_loop].clone();
+                let mut pile_hand = inferred_constraints[6].clone();
+                player_hand.clear();
+                pile_hand.push(card_0);
+                pile_hand.push(card_1);
+                let mut temp = inferred_constraints.clone();
+                temp[player_loop] = player_hand.clone();
+                temp[6] = pile_hand.clone();
+                variants.push(temp);
+            }
+            // 0 player_to_pile move, 2 pile_to_player move
+            if inferred_constraints[player_loop].len() == 0 && inferred_constraints[6].len() > 1 {
+                for index_pile_to_player_0 in 0..iter_cards_pile.len() {
+                    for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
+                        if index_pile_to_player_0 == index_pile_to_player_1 && pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2 {
+                            continue; // Ensure enough cards to move
+                        }
+                        let mut player_hand = inferred_constraints[player_loop].clone();
+                        let mut pile_hand = inferred_constraints[6].clone();
+                        if let Some(pos) = pile_hand.iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                            pile_hand.swap_remove(pos);
+                        }
+                        if let Some(pos) = pile_hand.iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                            pile_hand.swap_remove(pos);
+                        }
+                        player_hand.push(iter_cards_pile[index_pile_to_player_0]);
+                        player_hand.push(iter_cards_pile[index_pile_to_player_1]);
+                        let mut temp = inferred_constraints.clone();
+                        temp[player_loop] = player_hand.clone();
+                        temp[6] = pile_hand.clone();
+                        variants.push(temp);
+                    }
+                }
+            }
             // 2 player_to_pile move, 1 pile_to_player move
             if inferred_constraints[6].len() > 0 && inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 1 {
                 for card_pile in iter_cards_pile.iter() {
@@ -2788,9 +2826,9 @@ impl PathDependentCollectiveConstraint {
                             if let Some(pos) = player_hand.iter().rposition(|c| *c == *card_player) {
                                 player_hand.swap_remove(pos);
                             }
-                            pile_hand.push(iter_cards_pile[index_pile_to_player_0]);
-                            pile_hand.push(iter_cards_pile[index_pile_to_player_1]);
-                            player_hand.push(*card_player);
+                            player_hand.push(iter_cards_pile[index_pile_to_player_0]);
+                            player_hand.push(iter_cards_pile[index_pile_to_player_1]);
+                            pile_hand.push(*card_player);
                             let mut temp = inferred_constraints.clone();
                             temp[player_loop] = player_hand.clone();
                             temp[6] = pile_hand.clone();
@@ -2810,11 +2848,11 @@ impl PathDependentCollectiveConstraint {
                         }
                         // Check DF
                         for index_pile_to_player_0 in 0..iter_cards_pile.len() {
-                            if index_pile_to_player_0 == index_player_to_pile_0 || index_pile_to_player_0 == index_player_to_pile_1 {
+                            if iter_cards_pile[index_pile_to_player_0] == iter_cards_player[index_player_to_pile_0] || iter_cards_pile[index_pile_to_player_0] == iter_cards_player[index_player_to_pile_1] {
                                 continue; // Avoid Duplicates
                             }
                             for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
-                                if index_pile_to_player_1 == index_player_to_pile_0 || index_pile_to_player_1 == index_player_to_pile_1 {
+                                if iter_cards_pile[index_pile_to_player_1] == iter_cards_player[index_player_to_pile_0] || iter_cards_pile[index_pile_to_player_1] == iter_cards_player[index_player_to_pile_1] {
                                     continue; // Avoid Duplicates
                                 }
                                 if index_pile_to_player_0 == index_pile_to_player_1 && (pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2) {
@@ -2836,10 +2874,10 @@ impl PathDependentCollectiveConstraint {
                                 if let Some(pos) = player_hand.iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
                                     player_hand.swap_remove(pos);
                                 }
-                                pile_hand.push(iter_cards_pile[index_pile_to_player_0]);
-                                pile_hand.push(iter_cards_pile[index_pile_to_player_1]);
-                                player_hand.push(iter_cards_player[index_player_to_pile_0]);
-                                player_hand.push(iter_cards_player[index_player_to_pile_1]);
+                                player_hand.push(iter_cards_pile[index_pile_to_player_0]);
+                                player_hand.push(iter_cards_pile[index_pile_to_player_1]);
+                                pile_hand.push(iter_cards_player[index_player_to_pile_0]);
+                                pile_hand.push(iter_cards_player[index_player_to_pile_1]);
                                 let mut temp = inferred_constraints.clone();
                                 temp[player_loop] = player_hand.clone();
                                 temp[6] = pile_hand.clone();

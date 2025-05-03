@@ -91,7 +91,13 @@ pub fn temp() {
             }
         }
     }
-    for item in test_inferred_constraints.iter() {
+    'outer: for item in test_inferred_constraints.iter() {
+        for card_num in 0..5 {
+            if item.iter().map(|v| v.iter().filter(|c| **c as usize == card_num).count() as u8).sum::<u8>() > 3 {
+                continue 'outer;
+            }
+        }
+        // dest: [[Assassin, Assassin], [], [], [], [], [], [Captain, Captain]] no double swap
         let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
         log::info!("src rr unop: {:?}", reveal);
         let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
@@ -100,6 +106,10 @@ pub fn temp() {
         log::info!("src rr draw: {:?}", redraw);
         let relin = PathDependentCollectiveConstraint::return_variants_reveal_relinquish_opt(Card::Ambassador, 0, item);
         log::info!("src rr rel: {:?}", relin);
+        let exchange_1 = PathDependentCollectiveConstraint::return_variants_exchange_opt(1, 0, item);
+        log::info!("src ex one: {:?}", exchange_1);
+        let exchange_2 = PathDependentCollectiveConstraint::return_variants_exchange_opt(2, 0, item);
+        log::info!("src ex two: {:?}", exchange_2);
         if reveal.len() < relin.len() {
             log::warn!("reveal failed constraint check");
         }
