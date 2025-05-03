@@ -97,7 +97,6 @@ pub fn temp() {
                 continue 'outer;
             }
         }
-        // dest: [[Assassin, Assassin], [], [], [], [], [], [Captain, Captain]] no double swap
         let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
         log::info!("src rr unop: {:?}", reveal);
         let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
