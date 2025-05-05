@@ -165,16 +165,16 @@ where
         self.latest_constraint_mut().sorted_inferred_constraints()
     }
 
-    fn player_impossible_constraints(&self) -> &[[bool; 5]; 7] {
-        self.latest_constraint().player_impossible_constraints()
+    fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7] {
+        self.latest_constraint_mut().player_impossible_constraints()
     }
 
-    fn player_impossible_constraints_paired(&self) -> &[[[bool; 5]; 5]; 7] {
-        self.latest_constraint().player_impossible_constraints_paired()
+    fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7] {
+        self.latest_constraint_mut().player_impossible_constraints_paired()
     }
 
-    fn player_impossible_constraints_triple(&self) -> &[[[bool; 5]; 5]; 5] {
-        self.latest_constraint().player_impossible_constraints_triple()
+    fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5] {
+        self.latest_constraint_mut().player_impossible_constraints_triple()
     }
 
     fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool {
@@ -211,11 +211,11 @@ pub trait CoupConstraintAnalysis {
     /// Returns reference to latest sorted Inferred Constraints
     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
     /// Returns reference to array[player][card] storing whether a player can have a card alive
-    fn player_impossible_constraints(&self) -> &[[bool; 5]; 7];
+    fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7];
     /// Returns reference to array[player][card_i][card_j] storing whether a player can have a card_i and card_j alive
-    fn player_impossible_constraints_paired(&self) -> &[[[bool; 5]; 5]; 7];
+    fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7];
     /// Returns reference to array[card_i][card_j][card_k] storing whether pile can have card_i, card_j, and card_k
-    fn player_impossible_constraints_triple(&self) -> &[[[bool; 5]; 5]; 5];
+    fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5];
     /// Returns true if player can have a particular card alive
     fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool;
     /// Returns true if player can have a collection of cards alive

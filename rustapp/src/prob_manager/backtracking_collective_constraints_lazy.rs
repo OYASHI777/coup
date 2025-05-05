@@ -144,7 +144,7 @@ impl SignificantAction {
 /// Lighter version to provide only functionality for latest move inference
 ///     - Is memoized and not lazy evaluated
 ///     - Does not regenerate path so inference of past states is impossible
-pub struct BackTrackCollectiveConstraintLight {
+pub struct BackTrackCollectiveConstraintLazy {
     public_constraints: Vec<Vec<Card>>, // Stores all the dead cards of dead players, None are all behind
     inferred_constraints: Vec<Vec<Card>>, // Stores all the inferred cards of alive players 
     impossible_constraints: [[bool; 5]; 7], // For each player store an array of bool where each index is a Card, this represents whether a player cannot have a card true => cannot
@@ -154,7 +154,7 @@ pub struct BackTrackCollectiveConstraintLight {
     history: Vec<SignificantAction>, // Stores 
 }
 
-impl BackTrackCollectiveConstraintLight {
+impl BackTrackCollectiveConstraintLazy {
     /// TODO: change gamestart for different inferred starting hands
     /// Recreates start state based on Start ActionInfo which may include inferred cards
     fn regenerate_game_start(&mut self) {
@@ -207,16 +207,17 @@ impl BackTrackCollectiveConstraintLight {
             ActionInfo::ExchangeDrawChoice{ .. } => {
             },
         }
-        self.generate_impossible_constraints(self.history.len() - 1);
+        // Lazy evaluation stores nothing but death
+        // self.generate_impossible_constraints(self.history.len() - 1);
         // self.generate_inferred_constraints();
-        self.history[history_index].meta_data = self.to_meta_data();
+        // self.history[history_index].meta_data = self.to_meta_data();
         log::info!("recalculated_stored_move_initial: {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
     }   
     // Add other normal methods for inference
 }
 
-impl BackTrackCollectiveConstraintLight {
+impl BackTrackCollectiveConstraintLazy {
     // pub fn sorted_public_constraints(&self) -> Vec<Vec<Card>> {
     //     let mut output = self.public_constraints.clone();
     //     for card_vec in output.iter_mut() {
@@ -776,18 +777,19 @@ impl BackTrackCollectiveConstraintLight {
             log::trace!("is_valid_combination pile has too many cards");
             return false
         }
-        for player in 0..7 {
-            if inferred_constraints[player].len() == 1 && self.history[index_loop].impossible_constraints()[player][inferred_constraints[player][0] as usize]{
-                return false
-            }
-            if inferred_constraints[player].len() == 2 && self.history[index_loop].impossible_constraints_2()[player][inferred_constraints[player][0] as usize][inferred_constraints[player][1] as usize]{
-                return false
-            }
-        }
-        if inferred_constraints[6].len() == 3 && self.history[index_loop].impossible_constraints_3()[inferred_constraints[6][0] as usize][inferred_constraints[6][1] as usize][inferred_constraints[6][2] as usize]{
-            return false
-        }
-        // This is not used in Light Constraints as inferred_constraints are not generated and thus not stored...
+        // This is not used in Lazy Constraints as impossible_constraints are not generated and thus not stored...
+        // for player in 0..7 {
+        //     if inferred_constraints[player].len() == 1 && self.history[index_loop].impossible_constraints()[player][inferred_constraints[player][0] as usize]{
+        //         return false
+        //     }
+        //     if inferred_constraints[player].len() == 2 && self.history[index_loop].impossible_constraints_2()[player][inferred_constraints[player][0] as usize][inferred_constraints[player][1] as usize]{
+        //         return false
+        //     }
+        // }
+        // if inferred_constraints[6].len() == 3 && self.history[index_loop].impossible_constraints_3()[inferred_constraints[6][0] as usize][inferred_constraints[6][1] as usize][inferred_constraints[6][2] as usize]{
+        //     return false
+        // }
+        // This is not used in Lazy Constraints as inferred_constraints are not generated and thus not stored...
         // =========================================
         // for player in 0..7 {
         //     let mut current_card_counts: [u8; 5] = [0; 5];
@@ -1355,7 +1357,7 @@ impl BackTrackCollectiveConstraintLight {
     }
 }
 
-impl CoupConstraint for BackTrackCollectiveConstraintLight {
+impl CoupConstraint for BackTrackCollectiveConstraintLazy {
     fn game_start() -> Self {
         let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
         let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
@@ -1422,7 +1424,7 @@ impl CoupConstraint for BackTrackCollectiveConstraintLight {
         log::info!("{}", format!("History: {:?}", self.history.iter().map(|s| s.action_info_str()).collect::<Vec<String>>()));
     }
 }
-impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLight {
+impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLazy {
     fn public_constraints(&self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }
@@ -1433,48 +1435,44 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLight {
     }
     
     fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.generate_impossible_constraints(self.history.len() - 1);
         self.generate_inferred_constraints();
         &self.inferred_constraints
     }
     
     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.generate_impossible_constraints(self.history.len() - 1);
         self.generate_inferred_constraints();
         self.inferred_constraints.iter_mut().for_each(|v| v.sort_unstable());
         &self.inferred_constraints
     }
 
-    fn player_impossible_constraints(&self) -> &[[bool; 5]; 7] {
+    fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7] {
+        self.generate_impossible_constraints(self.history.len() - 1);
         &self.impossible_constraints
     }
 
-    fn player_impossible_constraints_paired(&self) -> &[[[bool; 5]; 5]; 7] {
+    fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7] {
+        self.generate_impossible_constraints(self.history.len() - 1);
         &self.impossible_constraints_2
     }
 
-    fn player_impossible_constraints_triple(&self) -> &[[[bool; 5]; 5]; 5] {
+    fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5] {
+        self.generate_impossible_constraints(self.history.len() - 1);
         &self.impossible_constraints_3
     }
     
     fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool{
-        self.impossible_constraints[player as usize][card as usize]
+        let mut cards = [0; 5];
+        cards[card as usize] = 1;
+        self.impossible_to_have_cards_general(self.history.len() - 1, player as usize, &cards)
     }
     
     fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool{
-        if player < 6 {
-            if cards.len() == 2 {
-                return self.impossible_constraints_2[player as usize][cards[0] as usize][cards[1] as usize]
-            } else if cards.len() == 1 {
-                return self.player_can_have_card_alive(player, cards[0])
-            }
-        } else if player == 6 {
-            if cards.len() == 1 {
-                return self.player_can_have_card_alive(player, cards[0])
-            } else if cards.len() == 2 {
-                return self.impossible_constraints_2[player as usize][cards[0] as usize][cards[1] as usize]
-            } else if cards.len() == 3 {
-                return self.impossible_constraints_3[cards[0] as usize][cards[1] as usize][cards[2] as usize]
-            }
+        let mut cards_input = [0; 5];
+        for card in cards.iter() {
+            cards_input[*card as usize] += 1;
         }
-        false
+        self.impossible_to_have_cards_general(self.history.len() - 1, player as usize, &cards_input)
     }
 }

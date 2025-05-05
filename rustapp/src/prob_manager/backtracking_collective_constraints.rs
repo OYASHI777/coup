@@ -2551,15 +2551,15 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraint {
         &self.inferred_constraints
     }
 
-    fn player_impossible_constraints(&self) -> &[[bool; 5]; 7] {
+    fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7] {
         &self.impossible_constraints
     }
 
-    fn player_impossible_constraints_paired(&self) -> &[[[bool; 5]; 5]; 7] {
+    fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7] {
         &self.impossible_constraints_2
     }
 
-    fn player_impossible_constraints_triple(&self) -> &[[[bool; 5]; 5]; 5] {
+    fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5] {
         &self.impossible_constraints_3
     }
     
