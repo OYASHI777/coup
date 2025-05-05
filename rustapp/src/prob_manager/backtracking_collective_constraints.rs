@@ -1924,7 +1924,7 @@ impl BackTrackCollectiveConstraint {
         true
     }
     pub fn recurse_variants_exchange(&self, index_loop: usize, index_of_interest: usize, player_of_interest: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, player_loop: usize, cards: &[u8; 5]) -> bool {
-        let player_lives = self.history[index_loop].public_constraints()[player_loop].len() as u8;
+        let player_lives = 2 - self.history[index_loop].public_constraints()[player_loop].len() as u8;
         let mut iter_cards_player = inferred_constraints[player_loop].clone();
         iter_cards_player.sort_unstable();
         iter_cards_player.dedup();
