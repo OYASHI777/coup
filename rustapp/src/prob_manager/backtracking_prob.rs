@@ -105,7 +105,7 @@ impl BackTrackCardCountManager {
             // last_constraint.sort_unstable();
             self.constraint_history.push(last_constraint);
             self.constraint_history_move_no.push(self.move_no);
-        } else if ao_name == AOName::ExchangeChoice {
+        } else if ao_name == AOName::ExchangeDraw {
             let mut last_constraint = self.constraint_history.last().unwrap().clone();
             let action_info = ActionInfo::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) };
             log::trace!("Adding move ExchangeChoice");

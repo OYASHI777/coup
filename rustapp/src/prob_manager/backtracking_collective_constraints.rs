@@ -1359,10 +1359,11 @@ impl BackTrackCollectiveConstraint {
     /// Assume cards should be sorted before use
     pub fn possible_to_have_cards_recurse(&self, index_loop: usize, index_of_interest: usize, player_of_interest: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, cards: &[u8; 5]) -> bool {
         // Will temporarily not use memo and generate all group_constraints from start
+        // Needed for checks
         log::trace!("After");
         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
-        log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-        if !self.is_valid_combination(index_loop, index_of_interest, public_constraints, inferred_constraints) {
+        log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
+        if !self.is_valid_combination(index_loop, index_of_interest, inferred_constraints) {
             // early exit before terminal node
             log::trace!("is_valid_combination evaluated to false");
             return false
@@ -1384,7 +1385,7 @@ impl BackTrackCollectiveConstraint {
             }
             log::trace!("possible_to_have_cards_recurse at index_of_interest - 1, player_of_interest: {player_of_interest} added :{:?} to inferred_constraints to become: {:?}", cards, inferred_constraints);
             // Checking if valid as its possible to have inferred_constraint burst its limits only to get cards removed in code later, when handling the move
-            let fulfilled: bool = self.is_valid_combination(index_loop, index_of_interest, public_constraints, inferred_constraints);
+            let fulfilled: bool = self.is_valid_combination(index_loop, index_of_interest, inferred_constraints);
             // This is wrong, cause I need to run through the rest first before removing this
             if !fulfilled {
                 for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
@@ -1834,8 +1835,8 @@ impl BackTrackCollectiveConstraint {
         response
     }
     /// Return true if hypothesised card permutations cannot be shown to be impossible
-    pub fn is_valid_combination(&self, index_loop: usize ,index_of_interest: usize, public_constraints: &Vec<Vec<Card>>, inferred_constraints: &Vec<Vec<Card>>) -> bool {
-
+    pub fn is_valid_combination(&self, index_loop: usize ,index_of_interest: usize, inferred_constraints: &Vec<Vec<Card>>) -> bool {
+        let public_constraints = self.history[index_loop].public_constraints();
         // Check actual constraints at leaf node
         // All public_constraints inside actual
         log::trace!("is_valid_combination for: index {}, considering public_constraints: {:?}, inferred_constraints: {:?}", index_loop, public_constraints, inferred_constraints);
