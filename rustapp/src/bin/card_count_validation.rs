@@ -3,7 +3,8 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
 use rustapp::prob_manager::backtracking_collective_constraints::BackTrackCollectiveConstraint;
-use rustapp::prob_manager::backtracking_prob::BackTrackCardCountManager;
+use rustapp::prob_manager::backtracking_collective_constraints_light::BackTrackCollectiveConstraintLight;
+use rustapp::prob_manager::backtracking_prob::{BackTrackCardCountManager, CoupConstraintAnalysis};
 use rustapp::prob_manager::brute_prob_generic::{BruteCardCountManagerGeneric};
 use rustapp::prob_manager::card_state::card_state_u64::{self, CardStateu64};
 use rustapp::prob_manager::compressed_group_constraint::{CompressedGroupConstraint};
@@ -989,7 +990,8 @@ pub fn game_rnd_constraint_bt_st(game_no: usize, bool_know_priv_info: bool, min_
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
-    let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
+    // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
+    let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
     let mut public_constraints_correct: usize = 0;
     let mut inferred_constraints_correct: usize = 0;
     let mut impossible_constraints_correct: usize = 0;
@@ -1034,14 +1036,14 @@ pub fn game_rnd_constraint_bt_st(game_no: usize, bool_know_priv_info: bool, min_
                 hh.push_ao(output);
                 prob.push_ao(&output, bool_know_priv_info);
                 bit_prob.push_ao_public(&output);
-                let total_dead: usize = bit_prob.latest_constraint().sorted_public_constraints().iter().map(|v| v.len()).sum();
+                let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
                 if total_dead >= min_dead_check {
                     let validated_public_constraints = prob.validated_public_constraints();
                     let validated_inferred_constraints = prob.validated_inferred_constraints();
                     let validated_impossible_constraints = prob.validated_impossible_constraints();
-                    let test_public_constraints = bit_prob.latest_constraint().sorted_public_constraints();
-                    let test_inferred_constraints = bit_prob.latest_constraint().sorted_inferred_constraints();
-                    let test_impossible_constraints = bit_prob.latest_constraint().generate_one_card_impossibilities_player_card_indexing();
+                    let test_public_constraints = bit_prob.sorted_public_constraints().clone();
+                    let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
+                    let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
                     let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
                     let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
                     let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;

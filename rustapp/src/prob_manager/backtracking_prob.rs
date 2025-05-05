@@ -4,11 +4,11 @@
 // This is too long
 // Tried instead to save into hashmap and store in bson
 
-use rayon::iter::Chain;
-
+// TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 use crate::history_public::{Card, AOName, ActionObservation};
-use super::backtracking_collective_constraints::{ActionInfo, BackTrackCollectiveConstraint};
+use super::backtracking_collective_constraints::{ActionInfo};
 // TODO: Store also a version of constraint_history but split by players
+// TODO: Improve analysis interface when using the manager... using last_constraint then the analysis is very clunky
 // So it is easier to know the first time a player does something
 // May be useful later
 pub struct BackTrackCardCountManager<C> 
@@ -145,6 +145,47 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
 }
 
 
+impl<C> CoupConstraintAnalysis for BackTrackCardCountManager<C>
+where
+    C: CoupConstraint + CoupConstraintAnalysis,
+{
+    fn public_constraints(&self) -> &Vec<Vec<Card>> {
+        self.latest_constraint().public_constraints()
+    }
+
+    fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.latest_constraint_mut().sorted_public_constraints()
+    }
+
+    fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
+        self.latest_constraint().inferred_constraints()
+    }
+
+    fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.latest_constraint_mut().sorted_inferred_constraints()
+    }
+
+    fn player_impossible_constraints(&self) -> &[[bool; 5]; 7] {
+        self.latest_constraint().player_impossible_constraints()
+    }
+
+    fn player_impossible_constraints_paired(&self) -> &[[[bool; 5]; 5]; 7] {
+        self.latest_constraint().player_impossible_constraints_paired()
+    }
+
+    fn player_impossible_constraints_triple(&self) -> &[[[bool; 5]; 5]; 5] {
+        self.latest_constraint().player_impossible_constraints_triple()
+    }
+
+    fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool {
+        self.latest_constraint().player_can_have_card_alive(player, card)
+    }
+
+    fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool {
+        self.latest_constraint().player_can_have_cards_alive(player, cards)
+    }
+}
+
 /// A trait providing the interface for a constraint
 pub trait CoupConstraint: Clone {
     /// Initializes the state at beginning of the game
@@ -160,7 +201,7 @@ pub trait CoupConstraint: Clone {
     fn printlog(&self);
 }
 
-pub trait CoupConstraintAnalysis: CoupConstraint {
+pub trait CoupConstraintAnalysis {
     /// Returns reference to latest Public Constraints
     fn public_constraints(&self) -> &Vec<Vec<Card>>;
     /// Returns reference to latest sorted Public Constraints
