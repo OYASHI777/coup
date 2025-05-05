@@ -1461,7 +1461,7 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLite {
     fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool{
         if player < 6 {
             if cards.len() == 2 {
-                return self.impossible_constraints_2[player as usize][cards[0] as usize][cards[1] as usize]
+                return !self.impossible_constraints_2[player as usize][cards[0] as usize][cards[1] as usize]
             } else if cards.len() == 1 {
                 return self.player_can_have_card_alive(player, cards[0])
             }
@@ -1469,9 +1469,9 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLite {
             if cards.len() == 1 {
                 return self.player_can_have_card_alive(player, cards[0])
             } else if cards.len() == 2 {
-                return self.impossible_constraints_2[player as usize][cards[0] as usize][cards[1] as usize]
+                return !self.impossible_constraints_2[player as usize][cards[0] as usize][cards[1] as usize]
             } else if cards.len() == 3 {
-                return self.impossible_constraints_3[cards[0] as usize][cards[1] as usize][cards[2] as usize]
+                return !self.impossible_constraints_3[cards[0] as usize][cards[1] as usize][cards[2] as usize]
             }
         }
         false

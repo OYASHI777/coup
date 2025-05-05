@@ -1465,7 +1465,7 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLazy {
     fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool{
         let mut cards = [0; 5];
         cards[card as usize] = 1;
-        self.impossible_to_have_cards_general(self.history.len() - 1, player as usize, &cards)
+        !self.impossible_to_have_cards_general(self.history.len() - 1, player as usize, &cards)
     }
     
     fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool{
@@ -1473,6 +1473,6 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLazy {
         for card in cards.iter() {
             cards_input[*card as usize] += 1;
         }
-        self.impossible_to_have_cards_general(self.history.len() - 1, player as usize, &cards_input)
+        !self.impossible_to_have_cards_general(self.history.len() - 1, player as usize, &cards_input)
     }
 }

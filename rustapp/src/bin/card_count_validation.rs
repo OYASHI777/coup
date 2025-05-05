@@ -36,11 +36,11 @@ fn main() {
     let min_dead_check: usize = 8;
     let num_threads = 12;
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
-    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
-    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLight>(1000);
-    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
+    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
+    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(1000);
+    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
     // game_rnd_constraint_bt_bench(100);
     // game_rnd_constraint_brute_bench(10);
     // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
@@ -1293,19 +1293,23 @@ pub fn game_rnd_constraint_bt_generic_bench<C>(game_no : usize)
                 if output.name() == AOName::Discard{
                     let true_legality = if output.no_cards() == 1 {
                         // let start_time = Instant::now();
+                        // bit_prob.player_can_have_card_alive(output.player_id() as u8, output.cards()[0])
                         !bit_prob.player_impossible_constraints()[output.player_id()][output.cards()[0] as usize]
                     } else {
+                        // bit_prob.player_can_have_cards_alive(output.player_id() as u8, &output.cards().to_vec())
                         !bit_prob.player_impossible_constraints_paired()[output.player_id()][output.cards()[0] as usize][output.cards()[1] as usize]
                     };
                     if !true_legality{
                         break    
                     } 
                 } else if output.name() == AOName::RevealRedraw {
+                    // let true_legality: bool = bit_prob.player_can_have_card_alive(output.player_id() as u8, output.card());
                     let true_legality: bool = !bit_prob.player_impossible_constraints()[output.player_id()][output.card() as usize];
                     if !true_legality{
                         break    
                     } 
                 } else if output.name() == AOName::ExchangeDraw {
+                    // let true_legality: bool = bit_prob.player_can_have_cards_alive(output.player_id() as u8, &output.cards().to_vec());
                     let true_legality: bool = !bit_prob.player_impossible_constraints_paired()[output.player_id()][output.cards()[0] as usize][output.cards()[1] as usize];
                     if !true_legality {
                         break    
