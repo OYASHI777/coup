@@ -2,6 +2,7 @@ use log::LevelFilter;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
+use rustapp::prob_manager::backtracking_collective_constraints::BackTrackCollectiveConstraint;
 use rustapp::prob_manager::backtracking_prob::BackTrackCardCountManager;
 use rustapp::prob_manager::brute_prob_generic::{BruteCardCountManagerGeneric};
 use rustapp::prob_manager::card_state::card_state_u64::{self, CardStateu64};
@@ -988,7 +989,7 @@ pub fn game_rnd_constraint_bt_st(game_no: usize, bool_know_priv_info: bool, min_
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
-    let mut bit_prob = BackTrackCardCountManager::new();
+    let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     let mut public_constraints_correct: usize = 0;
     let mut inferred_constraints_correct: usize = 0;
     let mut impossible_constraints_correct: usize = 0;
@@ -1236,7 +1237,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
 }
 pub fn game_rnd_constraint_bt_bench(game_no : usize) {
     let mut game: usize = 0;
-    let mut bit_prob = BackTrackCardCountManager::new();
+    let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     let mut actions_processed: u128 = 0;
     let mut start_time = Instant::now();
     while game < game_no {
@@ -1376,7 +1377,7 @@ pub fn game_rnd_constraint_pd(game_no: usize, bool_know_priv_info: bool, print_f
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
-    let mut bit_prob = BackTrackCardCountManager::new();
+    let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     let mut public_constraints_correct: usize = 0;
     let mut inferred_constraints_correct: usize = 0;
     let mut impossible_constraints_correct: usize = 0;
@@ -1631,7 +1632,7 @@ pub fn game_rnd_constraint_debug_pd(game_no: usize, print_frequency: usize, log_
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob = BruteCardCountManager::new();
-    let mut bit_prob = BackTrackCardCountManager::new();
+    let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     let mut public_constraints_correct: usize = 0;
     let mut inferred_constraints_correct: usize = 0;
     let mut impossible_constraints_correct: usize = 0;
@@ -2163,7 +2164,7 @@ pub fn replay_game_constraint_bt(replay: Vec<ActionObservation>, bool_know_priv_
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
-    let mut bit_prob = BackTrackCardCountManager::new();
+    let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     let mut public_constraints_correct: usize = 0;
     let mut inferred_constraints_correct: usize = 0;
     let mut impossible_constraints_correct: usize = 0;

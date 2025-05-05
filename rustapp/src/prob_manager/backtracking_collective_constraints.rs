@@ -1,5 +1,5 @@
 use crate::history_public::{AOName, ActionObservation, Card};
-use super::{collective_constraint::CompressedCollectiveConstraint, compressed_group_constraint::CompressedGroupConstraint};
+use super::{backtracking_prob::BackTrackConstraint, collective_constraint::CompressedCollectiveConstraint, compressed_group_constraint::CompressedGroupConstraint};
 use ahash::AHashSet;
 use crossbeam::channel::after;
 use std::{marker::Copy, path::Path};
@@ -355,27 +355,6 @@ pub struct BackTrackCollectiveConstraint {
 }
 
 impl BackTrackCollectiveConstraint {
-    pub fn game_start() -> Self {
-        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
-        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
-        // let revealed_status = vec![Vec::with_capacity(5); 7];
-        // TODO: Add inferred_card_count
-        let mut history: Vec<SignificantAction> = Vec::with_capacity(50);
-        // Start takes the inferred information discovered via a pathdependent lookback
-        history.push(SignificantAction::start());
-        // StartInferred takes the inferred information from start, and runs add_inferred_information
-        // This seperation prevents handling cases where you add discovered information that is already inside due to add_inferred_information
-        history.push(SignificantAction::start_inferred());
-        Self {
-            public_constraints,
-            inferred_constraints,
-            impossible_constraints: [[false; 5]; 7],
-            impossible_constraints_2: [[[false; 5]; 5]; 7], 
-            impossible_constraints_3: [[[false; 5]; 5]; 5], 
-            move_no: 1,
-            history,
-        }
-    }
     /// TODO: change gamestart for different inferred starting hands
     /// Recreates start state based on Start ActionInfo which may include inferred cards
     fn regenerate_game_start(&mut self) {
@@ -536,42 +515,6 @@ impl BackTrackCollectiveConstraint {
         log::info!("recalculated_stored_move_initial: {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
     }   
-    // TODO: [OPTIMIZE] this to make it more ergonomic 
-    /// handles pushing of LATEST moves only
-    /// Does not care for public/private state of action_info
-    /// NOTE: move_no in collective_constraint is different from move_no in game
-    pub fn add_move(&mut self, player_id: u8, action_info: ActionInfo) {
-        match action_info {
-            ActionInfo::Discard { .. } => {
-                let significant_action = SignificantAction::initial(self.move_no, player_id, action_info);
-                // Pushing before due to recursion mechanic
-                self.history.push(significant_action);
-                self.calculate_stored_move_initial();
-                // Handle inference
-            },
-            ActionInfo::RevealRedraw { .. } => {
-                let significant_action = SignificantAction::initial(self.move_no, player_id, action_info);
-                self.history.push(significant_action);
-                self.calculate_stored_move_initial();
-                // Handle inference
-            },
-            ActionInfo::ExchangeDrawChoice { .. } => {
-                let significant_action = SignificantAction::initial(self.move_no, player_id, action_info);
-                // Handle inference
-                // TODO: This is temporary, unsure how might split between public and private
-                // It is possible that we can just use private, since public is just private with empty vec?
-                self.history.push(significant_action);
-                self.calculate_stored_move_initial();
-            },
-            ActionInfo::Start 
-            | ActionInfo::StartInferred => {
-                // TODO: Consider removing Start, so we can eliminate this branch entirely
-                debug_assert!(false, "should not be pushing this!");
-            },
-        }
-        // post increment
-        self.move_no += 1;
-    }
     // Add other normal methods for inference
 }
 
@@ -622,13 +565,6 @@ impl BackTrackCollectiveConstraint {
             }
         }
         counts
-    }
-    /// Logs the state
-    pub fn printlog(&self) {
-        log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));
-        log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints));
-        let info_strings = self.history.iter().map(|s| s.action_info_str()).collect::<Vec<String>>();
-        log::info!("{}", format!("History: {:?}", info_strings));
     }
     /// Gets the number of dead cards a player has for a particular card
     /// NOTE:
@@ -2513,5 +2449,73 @@ impl BackTrackCollectiveConstraint {
     }
     pub fn generate_three_card_impossibilities_player_card_indexing(&self) -> [[[bool; 5]; 5]; 5] {
         self.impossible_constraints_3.clone()
+    }
+}
+
+impl BackTrackConstraint for BackTrackCollectiveConstraint {
+    fn game_start() -> Self {
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
+        // let revealed_status = vec![Vec::with_capacity(5); 7];
+        // TODO: Add inferred_card_count
+        let mut history: Vec<SignificantAction> = Vec::with_capacity(50);
+        // Start takes the inferred information discovered via a pathdependent lookback
+        history.push(SignificantAction::start());
+        // StartInferred takes the inferred information from start, and runs add_inferred_information
+        // This seperation prevents handling cases where you add discovered information that is already inside due to add_inferred_information
+        history.push(SignificantAction::start_inferred());
+        Self {
+            public_constraints,
+            inferred_constraints,
+            impossible_constraints: [[false; 5]; 7],
+            impossible_constraints_2: [[[false; 5]; 5]; 7], 
+            impossible_constraints_3: [[[false; 5]; 5]; 5], 
+            move_no: 1,
+            history,
+        }
+    }
+
+    fn add_move_public(&mut self, player_id: u8, action: ActionInfo) {
+        match action {
+            ActionInfo::Discard { .. } => {
+                let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+                // Pushing before due to recursion mechanic
+                self.history.push(significant_action);
+                self.calculate_stored_move_initial();
+                // Handle inference
+            },
+            ActionInfo::RevealRedraw { .. } => {
+                let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+                self.history.push(significant_action);
+                self.calculate_stored_move_initial();
+                // Handle inference
+            },
+            ActionInfo::ExchangeDrawChoice { .. } => {
+                let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+                // Handle inference
+                // TODO: This is temporary, unsure how might split between public and private
+                // It is possible that we can just use private, since public is just private with empty vec?
+                self.history.push(significant_action);
+                self.calculate_stored_move_initial();
+            },
+            ActionInfo::Start 
+            | ActionInfo::StartInferred => {
+                // TODO: Consider removing Start, so we can eliminate this branch entirely
+                debug_assert!(false, "should not be pushing this!");
+            },
+        }
+        // post increment
+        self.move_no += 1;
+    }
+
+    fn add_move_private(&mut self, player_id: u8) {
+        todo!()
+    }
+
+    fn printlog(&self) {
+        log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));
+        log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints));
+        // let info_strings = self.history.iter().map(|s| s.action_info_str()).collect::<Vec<String>>();
+        log::info!("{}", format!("History: {:?}", self.history.iter().map(|s| s.action_info_str()).collect::<Vec<String>>()));
     }
 }
