@@ -38,6 +38,7 @@ fn main() {
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
     // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
+    // TODO: Make a Lite with Lazy Inferred Constraints
     game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
     game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(1000);
     game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
