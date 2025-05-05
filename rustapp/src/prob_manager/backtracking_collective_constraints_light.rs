@@ -208,7 +208,7 @@ impl BackTrackCollectiveConstraintLight {
             },
         }
         self.generate_impossible_constraints(self.history.len() - 1);
-        self.generate_inferred_constraints();
+        // self.generate_inferred_constraints();
         self.history[history_index].meta_data = self.to_meta_data();
         log::info!("recalculated_stored_move_initial: {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
@@ -787,27 +787,28 @@ impl BackTrackCollectiveConstraintLight {
         if inferred_constraints[6].len() == 3 && self.history[index_loop].impossible_constraints_3()[inferred_constraints[6][0] as usize][inferred_constraints[6][1] as usize][inferred_constraints[6][2] as usize]{
             return false
         }
+        // This is not used in Light Constraints as inferred_constraints are not generated and thus not stored...
         // =========================================
-        for player in 0..7 {
-            let mut current_card_counts: [u8; 5] = [0; 5];
-            inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
+        // for player in 0..7 {
+        //     let mut current_card_counts: [u8; 5] = [0; 5];
+        //     inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
             
-            let mut required_card_counts: [u8; 5] = [0; 5];
-            self.history[index_loop].inferred_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
-            self.history[index_loop].public_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
+        //     let mut required_card_counts: [u8; 5] = [0; 5];
+        //     self.history[index_loop].inferred_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
+        //     self.history[index_loop].public_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
 
-            let mut total_count : u8 = 0;
-            current_card_counts.iter().zip(required_card_counts.iter()).for_each(|(cur, req)| total_count += *cur.max(req));
-            let fulfilled = if player == 6 {
-                total_count <= 3
-            } else {
-                total_count <= 2
-            };
-            if !fulfilled {
-                log::trace!("is_valid_combination player {} failed to fulfil previous state!", player);
-                return false
-            }
-        }
+        //     let mut total_count : u8 = 0;
+        //     current_card_counts.iter().zip(required_card_counts.iter()).for_each(|(cur, req)| total_count += *cur.max(req));
+        //     let fulfilled = if player == 6 {
+        //         total_count <= 3
+        //     } else {
+        //         total_count <= 2
+        //     };
+        //     if !fulfilled {
+        //         log::trace!("is_valid_combination player {} failed to fulfil previous state!", player);
+        //         return false
+        //     }
+        // }
         true
     }
     pub fn recurse_variants_exchange(&self, index_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, player_loop: usize, cards: &[u8; 5]) -> bool {
@@ -1431,11 +1432,13 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLight {
         &self.public_constraints
     }
     
-    fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
+    fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.generate_inferred_constraints();
         &self.inferred_constraints
     }
     
     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.generate_inferred_constraints();
         self.inferred_constraints.iter_mut().for_each(|v| v.sort_unstable());
         &self.inferred_constraints
     }

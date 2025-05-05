@@ -2542,7 +2542,7 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraint {
         &self.public_constraints
     }
     
-    fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
+    fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
         &self.inferred_constraints
     }
     

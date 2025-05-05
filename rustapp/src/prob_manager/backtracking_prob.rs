@@ -157,8 +157,8 @@ where
         self.latest_constraint_mut().sorted_public_constraints()
     }
 
-    fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
-        self.latest_constraint().inferred_constraints()
+    fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.latest_constraint_mut().inferred_constraints()
     }
 
     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
@@ -207,7 +207,7 @@ pub trait CoupConstraintAnalysis {
     /// Returns reference to latest sorted Public Constraints
     fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>>;
     /// Returns reference to latest Inferred Constraints
-    fn inferred_constraints(&self) -> &Vec<Vec<Card>>;
+    fn inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
     /// Returns reference to latest sorted Inferred Constraints
     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
     /// Returns reference to array[player][card] storing whether a player can have a card alive
