@@ -717,7 +717,7 @@ impl BackTrackCollectiveConstraint {
     pub fn death_initial(&mut self, player_id: usize, card: Card) {
         self.add_dead_card(player_id, card);
         // Check before recursing
-        self.update_past_move_hidden_info();
+        // self.update_past_move_hidden_info();
     }
     /// Used for recalculation
     pub fn death(&mut self, player_id: usize, card: Card) {
@@ -738,7 +738,7 @@ impl BackTrackCollectiveConstraint {
     /// Used for when move is added to history and not for recalculation
     pub fn reveal_redraw_initial(&mut self, player_id: usize, card: Card) {
         // Consider moving the impossible states around?
-        self.update_past_move_hidden_info();
+        // self.update_past_move_hidden_info();
         // TODO: Custom impossible swaps and generation
     }
     /// Function to call when the card revealed and the redrawn card is the same card
@@ -887,7 +887,6 @@ impl BackTrackCollectiveConstraint {
                                     }
                                 },
                                 ActionInfoName::ExchangeDrawChoice => {
-                                    unimplemented!()
                                 },
                                 _ => {}
                             }
@@ -1002,7 +1001,6 @@ impl BackTrackCollectiveConstraint {
                             }
                         },
                         ActionInfoName::ExchangeDrawChoice => {
-                            unimplemented!()
                         },
                         _ => {},
                     }
@@ -1181,7 +1179,8 @@ impl BackTrackCollectiveConstraint {
                         players_had_revealed_or_discarded[player_i] = true;
                     }
                 },
-                ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                ActionInfo::ExchangeDrawChoice { .. } => {
+                    players_had_revealed_or_discarded[player_i] = false;
                 },
                 ActionInfo::Start => {},
                 ActionInfo::StartInferred => {},
@@ -2106,7 +2105,7 @@ impl BackTrackCollectiveConstraint {
                         if bool_pile_removed_1 {
                             inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_1]);
                         }
-                        if bool_pile_removed_1 {
+                        if bool_pile_removed_0 {
                             inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_0]);
                         }
                     }
