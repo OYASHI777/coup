@@ -63,7 +63,7 @@ impl BackTrackCardCountManager {
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of public information but not private information
     pub fn push_ao_public(&mut self, ao: &ActionObservation){
-
+        // TODO: might need to seperate exchangedraw and exchangechoice for private!
         // Handle different move types
         let ao_name = ao.name();
         if ao_name == AOName::Discard {

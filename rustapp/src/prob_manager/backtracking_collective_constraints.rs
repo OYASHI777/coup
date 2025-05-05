@@ -1951,6 +1951,10 @@ impl BackTrackCollectiveConstraint {
         // NOTE AMB player to pile and AMB pile to player cancel out so no intersection of player and pile ish
 
         // 0 player_to_pile move, 0 pile_to_player move
+        log::trace!("Before Exchange Same");
+        log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+        log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                
         if self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards) {
             return true;
         }
@@ -1962,6 +1966,10 @@ impl BackTrackCollectiveConstraint {
                 // let mut player_hand = inferred_constraints[player_loop].clone();
                 // let mut pile_hand = inferred_constraints[6].clone();
                 if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_player) {
+                    log::trace!("Before Exchange 1 player_to_pile 0 pile_to_player");
+                    log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+        
                     inferred_constraints[player_loop].swap_remove(pos);
                     inferred_constraints[6].push(*card_player);
                     // let mut temp = inferred_constraints.clone();
@@ -1985,6 +1993,10 @@ impl BackTrackCollectiveConstraint {
                 // let mut player_hand = inferred_constraints[player_loop].clone();
                 // let mut pile_hand = inferred_constraints[6].clone();
                 if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_pile) {
+                    log::trace!("Before Exchange 0 player_to_pile 1 pile_to_player");
+                    log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+        
                     inferred_constraints[6].swap_remove(pos);
                     inferred_constraints[player_loop].push(*card_pile);
                     // let mut temp = inferred_constraints.clone();
@@ -2010,6 +2022,10 @@ impl BackTrackCollectiveConstraint {
                     }
                     // let mut player_hand = inferred_constraints[player_loop].clone();
                     // let mut pile_hand = inferred_constraints[6].clone();
+                    log::trace!("Before Exchange 1 player_to_pile 1 pile_to_player");
+                    log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+        
                     let (mut bool_pile_removed, mut bool_player_removed) = (false, false);
                     if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_pile) {
                         inferred_constraints[6].swap_remove(pos);
@@ -2046,6 +2062,10 @@ impl BackTrackCollectiveConstraint {
         if player_lives > 1 {
             // 2 player_to_pile move, 0 pile_to_player move
             if inferred_constraints[player_loop].len() == 2 && inferred_constraints[6].len() < 2 {
+                log::trace!("Before Exchange 2 player_to_pile 0 pile_to_player");
+                log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+        
                 let card_0 = inferred_constraints[player_loop][0];
                 let card_1 = inferred_constraints[player_loop][1];
                 // let mut player_hand = inferred_constraints[player_loop].clone();
@@ -2076,6 +2096,10 @@ impl BackTrackCollectiveConstraint {
                         if index_pile_to_player_0 == index_pile_to_player_1 && pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2 {
                             continue; // Ensure enough cards to move
                         }
+                        log::trace!("Before Exchange 0 player_to_pile 2 pile_to_player");
+                        log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                        log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+        
                         // let mut player_hand = inferred_constraints[player_loop].clone();
                         // let mut pile_hand = inferred_constraints[6].clone();
                         let (mut bool_pile_removed_0, mut bool_pile_removed_1) = (false, false);
@@ -2129,6 +2153,10 @@ impl BackTrackCollectiveConstraint {
                                 // TODO: OPTIMIZE Can shift this out of for loop actually
                                 continue // Ensure enough cards to move
                             }
+                            log::trace!("Before Exchange 2 player_to_pile 1 pile_to_player");
+                            log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                            log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+        
                             // let mut player_hand = inferred_constraints[player_loop].clone();
                             // let mut pile_hand = inferred_constraints[6].clone();
                             let (mut bool_player_removed_0, mut bool_player_removed_1, mut bool_pile_removed_0) = (false, false, false);
@@ -2193,6 +2221,10 @@ impl BackTrackCollectiveConstraint {
                                 // TODO: OPTIMIZE Can shift this out of for loop actually
                                 continue // Ensure enough cards to move
                             }
+                            log::trace!("Before Exchange 1 player_to_pile 2 pile_to_player");
+                            log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                            log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+        
                             // let mut player_hand = inferred_constraints[player_loop].clone();
                             // let mut pile_hand = inferred_constraints[6].clone();
                             let (mut bool_pile_removed_0, mut bool_pile_removed_1, mut bool_player_removed_0) = (false, false, false);
@@ -2263,6 +2295,10 @@ impl BackTrackCollectiveConstraint {
                                     // TODO: OPTIMIZE Can shift this out of for loop actually
                                     continue // Ensure enough cards to move
                                 }
+                                log::trace!("Before Exchange 2 player_to_pile 2 pile_to_player");
+                                log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+                                log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+        
                                 // let mut player_hand = inferred_constraints[player_loop].clone();
                                 // let mut pile_hand = inferred_constraints[6].clone();
                                 let (mut bool_pile_removed_0, mut bool_pile_removed_1, mut bool_player_removed_0, mut bool_player_removed_1) = (false, false, false, false);
