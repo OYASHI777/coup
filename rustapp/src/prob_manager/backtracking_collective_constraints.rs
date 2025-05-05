@@ -1795,6 +1795,17 @@ impl BackTrackCollectiveConstraint {
             log::trace!("is_valid_combination pile has too many cards");
             return false
         }
+        for player in 0..7 {
+            if inferred_constraints[player].len() == 1 && self.history[index_loop].impossible_constraints()[player][inferred_constraints[player][0] as usize]{
+                return false
+            }
+            if inferred_constraints[player].len() == 2 && self.history[index_loop].impossible_constraints_2()[player][inferred_constraints[player][0] as usize][inferred_constraints[player][1] as usize]{
+                return false
+            }
+        }
+        if inferred_constraints[6].len() == 3 && self.history[index_loop].impossible_constraints_3()[inferred_constraints[6][0] as usize][inferred_constraints[6][1] as usize][inferred_constraints[6][2] as usize]{
+            return false
+        }
         // =========================================
         for player in 0..7 {
             let mut current_card_counts: [u8; 5] = [0; 5];

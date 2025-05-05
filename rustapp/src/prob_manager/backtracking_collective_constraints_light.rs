@@ -766,7 +766,6 @@ impl BackTrackCollectiveConstraintLight {
                 return false
             }
         }
-        // TODO: OPTIMIZE Do we really need this?
         for player in 0..6 {
             if public_constraints[player].len() + inferred_constraints[player].len() > 2 {
                 log::trace!("is_valid_combination player {} has too many cards", player);
@@ -775,6 +774,17 @@ impl BackTrackCollectiveConstraintLight {
         }
         if public_constraints[6].len() + inferred_constraints[6].len() > 3 {
             log::trace!("is_valid_combination pile has too many cards");
+            return false
+        }
+        for player in 0..7 {
+            if inferred_constraints[player].len() == 1 && self.history[index_loop].impossible_constraints()[player][inferred_constraints[player][0] as usize]{
+                return false
+            }
+            if inferred_constraints[player].len() == 2 && self.history[index_loop].impossible_constraints_2()[player][inferred_constraints[player][0] as usize][inferred_constraints[player][1] as usize]{
+                return false
+            }
+        }
+        if inferred_constraints[6].len() == 3 && self.history[index_loop].impossible_constraints_3()[inferred_constraints[6][0] as usize][inferred_constraints[6][1] as usize][inferred_constraints[6][2] as usize]{
             return false
         }
         // =========================================
