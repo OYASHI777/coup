@@ -1,5 +1,5 @@
 use crate::history_public::{AOName, ActionObservation, Card};
-use super::{backtracking_prob::BackTrackConstraint, collective_constraint::CompressedCollectiveConstraint, compressed_group_constraint::CompressedGroupConstraint};
+use super::{backtracking_prob::{CoupConstraint, CoupConstraintAnalysis}, collective_constraint::CompressedCollectiveConstraint, compressed_group_constraint::CompressedGroupConstraint};
 use ahash::AHashSet;
 use crossbeam::channel::after;
 use std::{marker::Copy, path::Path};
@@ -2452,7 +2452,7 @@ impl BackTrackCollectiveConstraint {
     }
 }
 
-impl BackTrackConstraint for BackTrackCollectiveConstraint {
+impl CoupConstraint for BackTrackCollectiveConstraint {
     fn game_start() -> Self {
         let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
         let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
@@ -2517,5 +2517,59 @@ impl BackTrackConstraint for BackTrackCollectiveConstraint {
         log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints));
         // let info_strings = self.history.iter().map(|s| s.action_info_str()).collect::<Vec<String>>();
         log::info!("{}", format!("History: {:?}", self.history.iter().map(|s| s.action_info_str()).collect::<Vec<String>>()));
+    }
+}
+impl CoupConstraintAnalysis for BackTrackCollectiveConstraint {
+    fn public_constraints(&self) -> &Vec<Vec<Card>> {
+        &self.public_constraints
+    }
+
+    fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.public_constraints.iter_mut().for_each(|v| v.sort_unstable());
+        &self.public_constraints
+    }
+    
+    fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
+        &self.inferred_constraints
+    }
+    
+    fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.inferred_constraints.iter_mut().for_each(|v| v.sort_unstable());
+        &self.inferred_constraints
+    }
+
+    fn player_impossible_constraints(&self) -> &[[bool; 5]; 7] {
+        &self.impossible_constraints
+    }
+
+    fn player_impossible_constraints_paired(&self) -> &[[[bool; 5]; 5]; 7] {
+        &self.impossible_constraints_2
+    }
+
+    fn player_impossible_constraints_triple(&self) -> &[[[bool; 5]; 5]; 5] {
+        &self.impossible_constraints_3
+    }
+    
+    fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool{
+        self.impossible_constraints[player as usize][card as usize]
+    }
+    
+    fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool{
+        if player < 6 {
+            if cards.len() == 2 {
+                return self.impossible_constraints_2[player as usize][cards[0] as usize][cards[1] as usize]
+            } else if cards.len() == 1 {
+                return self.player_can_have_card_alive(player, cards[0])
+            }
+        } else if player == 6 {
+            if cards.len() == 1 {
+                return self.player_can_have_card_alive(player, cards[0])
+            } else if cards.len() == 2 {
+                return self.impossible_constraints_2[player as usize][cards[0] as usize][cards[1] as usize]
+            } else if cards.len() == 3 {
+                return self.impossible_constraints_3[cards[0] as usize][cards[1] as usize][cards[2] as usize]
+            }
+        }
+        false
     }
 }

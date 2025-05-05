@@ -13,7 +13,7 @@ use super::backtracking_collective_constraints::{ActionInfo, BackTrackCollective
 // May be useful later
 pub struct BackTrackCardCountManager<C> 
     where
-        C: BackTrackConstraint,
+        C: CoupConstraint,
 {
     // a vec of constraints to push and pop
     // dead cards to push or pop
@@ -24,7 +24,7 @@ pub struct BackTrackCardCountManager<C>
     // The shared LRU cache is maintained here and passed to each constraint.
     // cache: Rc<RefCell<LruCache<ConstraintKey, ActionMetaData>>>,
 }
-impl<C: BackTrackConstraint> BackTrackCardCountManager<C> {
+impl<C: CoupConstraint> BackTrackCardCountManager<C> {
     /// Constructor
     pub fn new() -> Self {
         let mut constraint_history = Vec::with_capacity(120);
@@ -146,7 +146,7 @@ impl<C: BackTrackConstraint> BackTrackCardCountManager<C> {
 
 
 /// A trait providing the interface for a constraint
-pub trait BackTrackConstraint: Clone {
+pub trait CoupConstraint: Clone {
     /// Initializes the state at beginning of the game
     fn game_start() -> Self;
 
@@ -159,3 +159,24 @@ pub trait BackTrackConstraint: Clone {
     /// Emit debug info about the constraint.
     fn printlog(&self);
 }
+
+pub trait CoupConstraintAnalysis: CoupConstraint {
+    /// Returns reference to latest Public Constraints
+    fn public_constraints(&self) -> &Vec<Vec<Card>>;
+    /// Returns reference to latest sorted Public Constraints
+    fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>>;
+    /// Returns reference to latest Inferred Constraints
+    fn inferred_constraints(&self) -> &Vec<Vec<Card>>;
+    /// Returns reference to latest sorted Inferred Constraints
+    fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
+    /// Returns reference to array[player][card] storing whether a player can have a card alive
+    fn player_impossible_constraints(&self) -> &[[bool; 5]; 7];
+    /// Returns reference to array[player][card_i][card_j] storing whether a player can have a card_i and card_j alive
+    fn player_impossible_constraints_paired(&self) -> &[[[bool; 5]; 5]; 7];
+    /// Returns reference to array[card_i][card_j][card_k] storing whether pile can have card_i, card_j, and card_k
+    fn player_impossible_constraints_triple(&self) -> &[[[bool; 5]; 5]; 5];
+    /// Returns true if player can have a particular card alive
+    fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool;
+    /// Returns true if player can have a collection of cards alive
+    fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool;
+} 
