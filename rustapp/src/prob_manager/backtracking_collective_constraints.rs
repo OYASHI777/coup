@@ -1406,7 +1406,7 @@ impl BackTrackCollectiveConstraint {
             ActionInfo::Discard { discard } => {
                 log::trace!("Before Discard");
                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
-                log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
                 let mut removed_discard = false;
                 if let Some(pos) = public_constraints[player_loop].iter().rposition(|c| *c == *discard) {
                     public_constraints.swap_remove(pos);
@@ -1440,7 +1440,7 @@ impl BackTrackCollectiveConstraint {
                     Some(redraw_i) => {
                         log::trace!("Before Reveal Redraw");
                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
-                        log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                        log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
                 
                         let (mut removed_redraw, mut removed_reveal) = (false, false);
                         if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *redraw_i) {
@@ -1492,7 +1492,7 @@ impl BackTrackCollectiveConstraint {
                                 }
                                 log::trace!("Before Reveal Relinquish");
                                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
-                                log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                                log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
                 
                                 if inferred_constraints[player_loop].is_empty() {
                                     log::trace!("inferred_constraints[player_loop].is_empty(): {:?}", inferred_constraints[player_loop]);
@@ -1533,7 +1533,7 @@ impl BackTrackCollectiveConstraint {
                                     // Card Source was not from Pile
                                     log::trace!("Before Reveal Relinquish B");
                                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
-                                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
                 
                                     if inferred_constraints[player_loop].len() < 2 {
                                         let mut bool_move_from_pile_to_player = false;
@@ -1572,7 +1572,7 @@ impl BackTrackCollectiveConstraint {
                                     if *card_player != *reveal {
                                         log::trace!("Before Reveal Relinquish C");
                                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
-                                        log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                                        log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
                 
                                         let mut bool_move_from_pile_to_player = false;
                                         let mut bool_move_from_player_to_pile = false;
@@ -1640,7 +1640,7 @@ impl BackTrackCollectiveConstraint {
                                 if inferred_constraints[player_loop].is_empty() {
                                     log::trace!("Before Reveal Redraw None");
                                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
-                                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
                 
                                     let mut bool_move_from_pile_to_player = false;
                                     if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
@@ -1685,7 +1685,7 @@ impl BackTrackCollectiveConstraint {
                                 for (_, card_player) in iter_cards.iter().enumerate() {
                                     log::trace!("Before Reveal Redraw None B");
                                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
-                                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
                 
                                     // Card Source was not from Pile
                                     let mut bool_move_from_pile_to_player = false;
@@ -1729,7 +1729,7 @@ impl BackTrackCollectiveConstraint {
                                     }
                                     log::trace!("Before Reveal Redraw None C");
                                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, index_of_interest: {index_of_interest}, player_of_interest: {player_of_interest} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
-                                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
                 
                                     // Card Source was from Pile
                                     let mut bool_move_from_pile_to_player_2 = false;
@@ -1810,8 +1810,7 @@ impl BackTrackCollectiveConstraint {
                 }
             },
             ActionInfo::ExchangeDrawChoice { .. } => {
-                let player_lives = 0;
-                response = self.recurse_variants_exchange(index_loop, index_of_interest, player_of_interest, public_constraints, inferred_constraints, player_lives, player_loop, cards);
+                response = self.recurse_variants_exchange(index_loop, index_of_interest, player_of_interest, public_constraints, inferred_constraints, player_loop, cards);
             },
             ActionInfo::Start
             | ActionInfo::StartInferred => {
@@ -1924,7 +1923,8 @@ impl BackTrackCollectiveConstraint {
         }
         true
     }
-    pub fn recurse_variants_exchange(&self, index_loop: usize, index_of_interest: usize, player_of_interest: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, player_lives: u8, player_loop: usize, cards: &[u8; 5]) -> bool {
+    pub fn recurse_variants_exchange(&self, index_loop: usize, index_of_interest: usize, player_of_interest: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, player_loop: usize, cards: &[u8; 5]) -> bool {
+        let player_lives = self.history[index_loop].public_constraints()[player_loop].len() as u8;
         let mut iter_cards_player = inferred_constraints[player_loop].clone();
         iter_cards_player.sort_unstable();
         iter_cards_player.dedup();
