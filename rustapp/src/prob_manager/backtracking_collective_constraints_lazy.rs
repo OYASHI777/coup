@@ -1,6 +1,6 @@
 use crate::history_public::{AOName, ActionObservation, Card};
 use super::{backtracking_prob::{CoupConstraint, CoupConstraintAnalysis}, collective_constraint::CompressedCollectiveConstraint, compressed_group_constraint::CompressedGroupConstraint};
-use super::backtracking_collective_constraints::{BacktrackMetaData, ActionInfo, ActionInfoName};
+use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
 use ahash::AHashSet;
 use crossbeam::channel::after;
 use std::{marker::Copy, path::Path};
@@ -11,12 +11,12 @@ pub struct SignificantAction {
     move_no: usize, // move_no is seperate from the game move number
     player: u8,
     action_info: ActionInfo,
-    meta_data: BacktrackMetaData,
+    meta_data: BacktrackMetaDataLazy,
 }
 
 impl SignificantAction {
     pub fn initial(move_no: usize, player: u8, action_info: ActionInfo) -> Self {
-        let pd_metadata = BacktrackMetaData::initial();
+        let pd_metadata = BacktrackMetaDataLazy::initial();
         Self {
             move_no,
             player,
@@ -25,7 +25,7 @@ impl SignificantAction {
         }
     }
     pub fn start() -> Self {
-        let meta_data: BacktrackMetaData = BacktrackMetaData::start();
+        let meta_data: BacktrackMetaDataLazy = BacktrackMetaDataLazy::start();
         Self {
             move_no: 0,
             player: 77,
@@ -34,7 +34,7 @@ impl SignificantAction {
         }
     }
     pub fn start_inferred() -> Self {
-        let meta_data: BacktrackMetaData = BacktrackMetaData::start();
+        let meta_data: BacktrackMetaDataLazy = BacktrackMetaDataLazy::start();
         Self {
             move_no: 0,
             player: 77,
@@ -57,83 +57,155 @@ impl SignificantAction {
     pub fn action_info_mut(&mut self) -> &mut ActionInfo {
         &mut self.action_info
     }
-    pub fn meta_data(&self) -> &BacktrackMetaData {
+    pub fn meta_data(&self) -> &BacktrackMetaDataLazy {
         &self.meta_data
     }
     pub fn public_constraints(&self) -> &Vec<Vec<Card>> {
         self.meta_data.public_constraints()
     }
-    pub fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
-        self.meta_data.inferred_constraints()
-    }
-    pub fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
-        self.meta_data.set_inferred_constraints(inferred_constraints)
-    }
-    pub fn impossible_constraints(&self) -> &[[bool; 5]; 7] {
-        self.meta_data.impossible_constraints()
-    }
-    pub fn impossible_constraints_2(&self) -> &[[[bool; 5]; 5]; 7] {
-        self.meta_data.impossible_constraints_2()
-    }
-    pub fn impossible_constraints_3(&self) -> &[[[bool; 5]; 5]; 5] {
-        self.meta_data.impossible_constraints_3()
-    }
-    pub fn set_impossible_constraints(&mut self, impossible_constraints: &[[bool; 5]; 7]) {
-        self.meta_data.set_impossible_constraints(impossible_constraints);
-    }
-    pub fn add_inferred_constraints(&mut self, player_id: usize, card: Card)  {
-        self.meta_data.inferred_constraints[player_id].push(card);
-        debug_assert!(player_id < 6 
-            && self.meta_data.inferred_constraints[player_id].len() < 3 
-            || player_id == 6 
-            && self.meta_data.inferred_constraints[player_id].len() < 4, 
-            "bad push");
-    }
-    pub fn check_add_inferred_constraints(&mut self, player_id: usize, card: Card) -> bool {
-        if !self.meta_data.inferred_constraints[player_id].contains(&card) {
-            self.meta_data.inferred_constraints[player_id].push(card);
-            debug_assert!(player_id < 6 
-                && self.meta_data.inferred_constraints[player_id].len() < 3 
-                || player_id == 6 
-                && self.meta_data.inferred_constraints[player_id].len() < 4, 
-                "bad push");
-            return true;
-        }
-        false
-    }
-    pub fn player_cards_known<T>(&self, player_id: T) -> usize 
-    where
-        T: Into<usize> + Copy,
-    {
-        self.meta_data.player_cards_known(player_id)
-    }
-    pub fn player_has_public_constraint<T>(&self, player_id: T, card: Card) -> bool 
-    where
-        T: Into<usize> + Copy,
-    {   
-        self.meta_data.player_has_public_constraint(player_id, card)
-    }
-    pub fn player_has_inferred_constraint<T>(&self, player_id: T, card: Card) -> bool 
-    where
-        T: Into<usize> + Copy,
-        {   
-            self.meta_data.player_has_inferred_constraint(player_id, card)
-        }
-    pub fn player_constraints_all_full<T>(&self, player_id: T, card: Card) -> bool 
-    where
-        T: Into<usize> + Copy,
-    {
-        self.meta_data.player_constraints_all_full(player_id, card)
-    }
-    pub fn known_card_count(&self, card: Card) -> u8 {
-        self.meta_data.inferred_constraints().iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>()
-        + self.meta_data.public_constraints().iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>()
-    }
+    // pub fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
+    //     self.meta_data.inferred_constraints()
+    // }
+    // pub fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
+    //     self.meta_data.set_inferred_constraints(inferred_constraints)
+    // }
+    // pub fn impossible_constraints(&self) -> &[[bool; 5]; 7] {
+    //     self.meta_data.impossible_constraints()
+    // }
+    // pub fn impossible_constraints_2(&self) -> &[[[bool; 5]; 5]; 7] {
+    //     self.meta_data.impossible_constraints_2()
+    // }
+    // pub fn impossible_constraints_3(&self) -> &[[[bool; 5]; 5]; 5] {
+    //     self.meta_data.impossible_constraints_3()
+    // }
+    // pub fn set_impossible_constraints(&mut self, impossible_constraints: &[[bool; 5]; 7]) {
+    //     self.meta_data.set_impossible_constraints(impossible_constraints);
+    // }
+    // pub fn add_inferred_constraints(&mut self, player_id: usize, card: Card)  {
+    //     self.meta_data.inferred_constraints[player_id].push(card);
+    //     debug_assert!(player_id < 6 
+    //         && self.meta_data.inferred_constraints[player_id].len() < 3 
+    //         || player_id == 6 
+    //         && self.meta_data.inferred_constraints[player_id].len() < 4, 
+    //         "bad push");
+    // }
+    // pub fn check_add_inferred_constraints(&mut self, player_id: usize, card: Card) -> bool {
+    //     if !self.meta_data.inferred_constraints[player_id].contains(&card) {
+    //         self.meta_data.inferred_constraints[player_id].push(card);
+    //         debug_assert!(player_id < 6 
+    //             && self.meta_data.inferred_constraints[player_id].len() < 3 
+    //             || player_id == 6 
+    //             && self.meta_data.inferred_constraints[player_id].len() < 4, 
+    //             "bad push");
+    //         return true;
+    //     }
+    //     false
+    // }
+    // pub fn player_cards_known<T>(&self, player_id: T) -> usize 
+    // where
+    //     T: Into<usize> + Copy,
+    // {
+    //     self.meta_data.player_cards_known(player_id)
+    // }
+    // pub fn player_has_public_constraint<T>(&self, player_id: T, card: Card) -> bool 
+    // where
+    //     T: Into<usize> + Copy,
+    // {   
+    //     self.meta_data.player_has_public_constraint(player_id, card)
+    // }
+    // pub fn player_has_inferred_constraint<T>(&self, player_id: T, card: Card) -> bool 
+    // where
+    //     T: Into<usize> + Copy,
+    //     {   
+    //         self.meta_data.player_has_inferred_constraint(player_id, card)
+    //     }
+    // pub fn player_constraints_all_full<T>(&self, player_id: T, card: Card) -> bool 
+    // where
+    //     T: Into<usize> + Copy,
+    // {
+    //     self.meta_data.player_constraints_all_full(player_id, card)
+    // }
+    // pub fn known_card_count(&self, card: Card) -> u8 {
+    //     self.meta_data.inferred_constraints().iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>()
+    //     + self.meta_data.public_constraints().iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>()
+    // }
     pub fn action_info_str(&self) -> String {
-        format!("Player: {} {:?} public_constraints: {:?}, inferred_constraints: {:?}, impossible_constraints: {:?}", self.player, self.action_info, self.public_constraints(), self.inferred_constraints(), self.impossible_constraints())
+        // format!("Player: {} {:?} public_constraints: {:?}, inferred_constraints: {:?}, impossible_constraints: {:?}", self.player, self.action_info, self.public_constraints(), self.inferred_constraints(), self.impossible_constraints())
+        format!("Player: {} {:?} public_constraints: {:?}", self.player, self.action_info, self.public_constraints())
     }
 }   
+// TODO: change gamestart for different inferred starting hands
+// TODO: DO NOT calculate if all ambassadors before are unknown, and current is ambassador
+// TODO: Implement move counter properly
+// TODO: implement Into<BacktrackMetaData> for BackTrackCollectiveConstraint
+// TODO: Store SignificantAction
+// TODO: Fix up add_inferred_cards API to not take vec_changes
+// TOD: Fix up reveal_redraw API to make inline with add_inferred_card, even though it also adds a group
+// TODO: [OPTIMIZE] impossible_constraints can be stored as a u64 / 7 u8s (56 bits)
+#[derive(Clone, Debug)]
+pub struct BacktrackMetaDataLazy {
+    pub public_constraints: Vec<Vec<Card>>,
+}
 
+impl BacktrackMetaDataLazy {
+    pub fn initial() -> Self {
+        Self::start()
+    }
+    pub fn start() -> Self {
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
+        Self {
+            public_constraints,
+        }
+    }
+    pub fn public_constraints(&self) -> &Vec<Vec<Card>> {
+        &self.public_constraints
+    }
+    // pub fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
+    //     &self.inferred_constraints
+    // }   
+    // pub fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
+    //     self.inferred_constraints = inferred_constraints.clone();
+    // }   
+    // pub fn impossible_constraints(&self) -> &[[bool; 5]; 7] {
+    //     &self.impossible_constraints
+    // }   
+    // pub fn impossible_constraints_2(&self) -> &[[[bool; 5]; 5]; 7] {
+    //     &self.impossible_constraints_2
+    // }   
+    // pub fn impossible_constraints_3(&self) -> &[[[bool; 5]; 5]; 5] {
+    //     &self.impossible_constraints_3
+    // }   
+    // /// Changes stored impossible_constraints
+    // pub fn set_impossible_constraints(&mut self, impossible_constraints: &[[bool; 5]; 7]) {
+    //     self.impossible_constraints = impossible_constraints.clone();
+    // }
+    // pub fn player_cards_known<T>(&self, player_id: T) -> usize 
+    // where
+    //     T: Into<usize> + Copy,
+    // {
+    //     self.public_constraints[player_id.into()].len() + self.inferred_constraints[player_id.into()].len()
+    // }
+    // pub fn player_has_public_constraint<T>(&self, player_id: T, card: Card) -> bool 
+    // where
+    //     T: Into<usize> + Copy,
+    // {   
+    //     self.public_constraints[player_id.into()].contains(&card)
+    // }
+    // pub fn player_has_inferred_constraint<T>(&self, player_id: T, card: Card) -> bool 
+    // where
+    //     T: Into<usize> + Copy,
+    // {   
+    //     self.inferred_constraints[player_id.into()].contains(&card)
+    // }
+    // pub fn player_constraints_all_full<T>(&self, player_id: T, card: Card) -> bool 
+    // where
+    //     T: Into<usize> + Copy,
+    // {   
+    //     self.player_cards_known(player_id) == 2 &&
+    //     self.inferred_constraints[player_id.into()].iter().all(|&c| c == card) &&
+    //     self.public_constraints[player_id.into()].iter().all(|&c| c == card)
+    // }
+}   
 // 1: Add recursion on finding inferred constraint
 //      - Can possibly store a boolean that determines if any empty redraw is before a number, so no need to lookback for that
 // 2: Optimize to consider where we might not need to recurse (non recursive method can get 1/250 games wrong)
@@ -159,10 +231,10 @@ impl BackTrackCollectiveConstraintLazy {
     /// Recreates start state based on Start ActionInfo which may include inferred cards
     fn regenerate_game_start(&mut self) {
         self.public_constraints.iter_mut().for_each(|v| v.clear());
-        self.inferred_constraints = self.history.first().unwrap().inferred_constraints().clone();
-        self.impossible_constraints = [[false; 5]; 7];
-        self.impossible_constraints_2 = [[[false; 5]; 5]; 7]; 
-        self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
+        // self.inferred_constraints = self.history.first().unwrap().inferred_constraints().clone();
+        // self.impossible_constraints = [[false; 5]; 7];
+        // self.impossible_constraints_2 = [[[false; 5]; 5]; 7]; 
+        // self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
         // TODO: Make this nicer
         // !! Not gonna reset move_no
         // Not adding inferred information as sometimes a discard could try to insert
@@ -172,14 +244,17 @@ impl BackTrackCollectiveConstraintLazy {
         log::trace!("regenerate_game_start");
         self.printlog();
     }
-    pub fn to_meta_data(&mut self) -> BacktrackMetaData {
-        BacktrackMetaData { 
+    pub fn to_meta_data(&mut self) -> BacktrackMetaDataLazy {
+        BacktrackMetaDataLazy { 
             public_constraints: self.public_constraints.clone(), 
-            inferred_constraints: self.inferred_constraints.clone(), 
-            impossible_constraints: self.impossible_constraints.clone(),
-            impossible_constraints_2: self.impossible_constraints_2.clone(),
-            impossible_constraints_3: self.impossible_constraints_3.clone(),
         }
+        // BacktrackMetaDataLazy { 
+        //     public_constraints: self.public_constraints.clone(), 
+        //     inferred_constraints: self.inferred_constraints.clone(), 
+        //     impossible_constraints: self.impossible_constraints.clone(),
+        //     impossible_constraints_2: self.impossible_constraints_2.clone(),
+        //     impossible_constraints_3: self.impossible_constraints_3.clone(),
+        // }
     }
     /// Calculate for the latest addition
     fn calculate_stored_move_initial(&mut self) {
@@ -1467,7 +1542,7 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLazy {
         cards[card as usize] = 1;
         !self.impossible_to_have_cards_general(self.history.len() - 1, player as usize, &cards)
     }
-    
+    // TODO: Change Vec<> to a Slice
     fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool{
         let mut cards_input = [0; 5];
         for card in cards.iter() {
