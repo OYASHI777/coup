@@ -460,37 +460,37 @@ impl BackTrackCollectiveConstraintLight {
             return false
         }
         log::trace!("is_valid_combination evaluated to true");
-        let mut current_card_counts: [u8; 5] = [0; 5];
-        if index_loop == index_of_interest - 1 {
-            // TODO: Terminal node
-            // Check if possible to have cards
-            for card in inferred_constraints[player_of_interest].iter() {
-                current_card_counts[*card as usize] += 1;
-            }
-            for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                if *query_card_count > *current_card_count {
-                    for _ in 0..(*query_card_count - *current_card_count) {
-                        inferred_constraints[player_of_interest].push(Card::try_from(card_num as u8).unwrap());
-                    }
-                }
-            }
-            log::trace!("possible_to_have_cards_recurse at index_of_interest - 1, player_of_interest: {player_of_interest} added :{:?} to inferred_constraints to become: {:?}", cards, inferred_constraints);
-            // Checking if valid as its possible to have inferred_constraint burst its limits only to get cards removed in code later, when handling the move
-            let fulfilled: bool = self.is_valid_combination(index_loop, index_of_interest, inferred_constraints);
-            // This is wrong, cause I need to run through the rest first before removing this
-            if !fulfilled {
-                for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                    if *query_card_count > *current_card_count {
-                        for _ in 0..(*query_card_count - *current_card_count) {
-                            if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                inferred_constraints[player_of_interest].swap_remove(pos);
-                            }
-                        }
-                    }
-                }
-                return false;
-            }
-        }
+        // let mut current_card_counts: [u8; 5] = [0; 5];
+        // if index_loop == index_of_interest - 1 {
+        //     // TODO: Terminal node
+        //     // Check if possible to have cards
+        //     for card in inferred_constraints[player_of_interest].iter() {
+        //         current_card_counts[*card as usize] += 1;
+        //     }
+        //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+        //         if *query_card_count > *current_card_count {
+        //             for _ in 0..(*query_card_count - *current_card_count) {
+        //                 inferred_constraints[player_of_interest].push(Card::try_from(card_num as u8).unwrap());
+        //             }
+        //         }
+        //     }
+        //     log::trace!("possible_to_have_cards_recurse at index_of_interest - 1, player_of_interest: {player_of_interest} added :{:?} to inferred_constraints to become: {:?}", cards, inferred_constraints);
+        //     // Checking if valid as its possible to have inferred_constraint burst its limits only to get cards removed in code later, when handling the move
+        //     let fulfilled: bool = self.is_valid_combination(index_loop, index_of_interest, inferred_constraints);
+        //     // This is wrong, cause I need to run through the rest first before removing this
+        //     if !fulfilled {
+        //         for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+        //             if *query_card_count > *current_card_count {
+        //                 for _ in 0..(*query_card_count - *current_card_count) {
+        //                     if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+        //                         inferred_constraints[player_of_interest].swap_remove(pos);
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         return false;
+        //     }
+        // }
         let player_loop = self.history[index_loop].player() as usize;
         let mut response = false;
         match self.history[index_loop].action_info() {
@@ -512,17 +512,17 @@ impl BackTrackCollectiveConstraintLight {
                 if removed_discard {
                     public_constraints[player_loop].push(*discard);
                 }
-                if index_loop == index_of_interest - 1 {
-                    for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                        if *query_card_count > *current_card_count {
-                            for _ in 0..(*query_card_count - *current_card_count) {
-                                if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                    inferred_constraints[player_of_interest].swap_remove(pos);
-                                }
-                            }
-                        }
-                    }
-                }
+                // if index_loop == index_of_interest - 1 {
+                //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                //         if *query_card_count > *current_card_count {
+                //             for _ in 0..(*query_card_count - *current_card_count) {
+                //                 if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                //                     inferred_constraints[player_of_interest].swap_remove(pos);
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
                 return response;
             },
             ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
@@ -568,17 +568,17 @@ impl BackTrackCollectiveConstraintLight {
                                 if inferred_constraints[6].len() == 3
                                 && !inferred_constraints[6].contains(&reveal) {
                                     // This state cannot be arrive after the reveal_redraw
-                                    if index_loop == index_of_interest - 1 {
-                                        for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                            if *query_card_count > *current_card_count {
-                                                for _ in 0..(*query_card_count - *current_card_count) {
-                                                    if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                        inferred_constraints[player_of_interest].swap_remove(pos);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                                    // if index_loop == index_of_interest - 1 {
+                                    //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                    //         if *query_card_count > *current_card_count {
+                                    //             for _ in 0..(*query_card_count - *current_card_count) {
+                                    //                 if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                    //                     inferred_constraints[player_of_interest].swap_remove(pos);
+                                    //                 }
+                                    //             }
+                                    //         }
+                                    //     }
+                                    // }
                                     return false;
                                 }
                                 log::trace!("Before Reveal Relinquish");
@@ -604,17 +604,17 @@ impl BackTrackCollectiveConstraintLight {
                                     if removed_reveal {
                                         inferred_constraints[6].push(*reveal);
                                     }
-                                    if index_loop == index_of_interest - 1 {
-                                        for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                            if *query_card_count > *current_card_count {
-                                                for _ in 0..(*query_card_count - *current_card_count) {
-                                                    if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                        inferred_constraints[player_of_interest].swap_remove(pos);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                                    // if index_loop == index_of_interest - 1 {
+                                    //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                    //         if *query_card_count > *current_card_count {
+                                    //             for _ in 0..(*query_card_count - *current_card_count) {
+                                    //                 if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                    //                     inferred_constraints[player_of_interest].swap_remove(pos);
+                                    //                 }
+                                    //             }
+                                    //         }
+                                    //     }
+                                    // }
                                     return response;
                                 }
                                 let mut iter_cards = inferred_constraints[player_loop].clone();
@@ -645,17 +645,17 @@ impl BackTrackCollectiveConstraintLight {
                                             inferred_constraints[6].push(*reveal);
                                         }
                                         if response {
-                                            if index_loop == index_of_interest - 1 {
-                                                for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                                    if *query_card_count > *current_card_count {
-                                                        for _ in 0..(*query_card_count - *current_card_count) {
-                                                            if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                                inferred_constraints[player_of_interest].swap_remove(pos);
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                            // if index_loop == index_of_interest - 1 {
+                                            //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                            //         if *query_card_count > *current_card_count {
+                                            //             for _ in 0..(*query_card_count - *current_card_count) {
+                                            //                 if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                            //                     inferred_constraints[player_of_interest].swap_remove(pos);
+                                            //                 }
+                                            //             }
+                                            //         }
+                                            //     }
+                                            // }
                                             return true;
                                         }
                                     }
@@ -693,17 +693,17 @@ impl BackTrackCollectiveConstraintLight {
                                             inferred_constraints[player_loop].push(*card_player);
                                         }
                                         if response {
-                                            if index_loop == index_of_interest - 1 {
-                                                for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                                    if *query_card_count > *current_card_count {
-                                                        for _ in 0..(*query_card_count - *current_card_count) {
-                                                            if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                                inferred_constraints[player_of_interest].swap_remove(pos);
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                            // if index_loop == index_of_interest - 1 {
+                                            //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                            //         if *query_card_count > *current_card_count {
+                                            //             for _ in 0..(*query_card_count - *current_card_count) {
+                                            //                 if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                            //                     inferred_constraints[player_of_interest].swap_remove(pos);
+                                            //                 }
+                                            //             }
+                                            //         }
+                                            //     }
+                                            // }
                                             return true;
                                         }
                                     }
@@ -714,17 +714,17 @@ impl BackTrackCollectiveConstraintLight {
                                 && !inferred_constraints[player_loop].contains(&reveal)
                                 && !inferred_constraints[6].contains(&reveal) {
                                     // This state cannot be arrive after the reveal_redraw
-                                    if index_loop == index_of_interest - 1 {
-                                        for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                            if *query_card_count > *current_card_count {
-                                                for _ in 0..(*query_card_count - *current_card_count) {
-                                                    if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                        inferred_constraints[player_of_interest].swap_remove(pos);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                                    // if index_loop == index_of_interest - 1 {
+                                    //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                    //         if *query_card_count > *current_card_count {
+                                    //             for _ in 0..(*query_card_count - *current_card_count) {
+                                    //                 if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                    //                     inferred_constraints[player_of_interest].swap_remove(pos);
+                                    //                 }
+                                    //             }
+                                    //         }
+                                    //     }
+                                    // }
                                     return false;
                                 }
  
@@ -755,17 +755,17 @@ impl BackTrackCollectiveConstraintLight {
                                     }
                                     // Add query card thing
                                     // if response {
-                                        if index_loop == index_of_interest - 1 {
-                                            for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                                if *query_card_count > *current_card_count {
-                                                    for _ in 0..(*query_card_count - *current_card_count) {
-                                                        if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                            inferred_constraints[player_of_interest].swap_remove(pos);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
+                                        // if index_loop == index_of_interest - 1 {
+                                        //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                        //         if *query_card_count > *current_card_count {
+                                        //             for _ in 0..(*query_card_count - *current_card_count) {
+                                        //                 if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                        //                     inferred_constraints[player_of_interest].swap_remove(pos);
+                                        //                 }
+                                        //             }
+                                        //         }
+                                        //     }
+                                        // }
                                     // }
                                     return response;
                                 }
@@ -804,17 +804,17 @@ impl BackTrackCollectiveConstraintLight {
                                             inferred_constraints[6].push(*reveal);
                                         }
                                         if response {
-                                            if index_loop == index_of_interest - 1 {
-                                                for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                                    if *query_card_count > *current_card_count {
-                                                        for _ in 0..(*query_card_count - *current_card_count) {
-                                                            if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                                inferred_constraints[player_of_interest].swap_remove(pos);
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                            // if index_loop == index_of_interest - 1 {
+                                            //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                            //         if *query_card_count > *current_card_count {
+                                            //             for _ in 0..(*query_card_count - *current_card_count) {
+                                            //                 if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                            //                     inferred_constraints[player_of_interest].swap_remove(pos);
+                                            //                 }
+                                            //             }
+                                            //         }
+                                            //     }
+                                            // }
                                             return true;
                                         }
                                     }
@@ -858,17 +858,17 @@ impl BackTrackCollectiveConstraintLight {
                                         inferred_constraints[player_loop].push(*card_player);
                                     }
                                     if response {
-                                        if index_loop == index_of_interest - 1 {
-                                            for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                                                if *query_card_count > *current_card_count {
-                                                    for _ in 0..(*query_card_count - *current_card_count) {
-                                                        if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                                                            inferred_constraints[player_of_interest].swap_remove(pos);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
+                                        // if index_loop == index_of_interest - 1 {
+                                        //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+                                        //         if *query_card_count > *current_card_count {
+                                        //             for _ in 0..(*query_card_count - *current_card_count) {
+                                        //                 if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+                                        //                     inferred_constraints[player_of_interest].swap_remove(pos);
+                                        //                 }
+                                        //             }
+                                        //         }
+                                        //     }
+                                        // }
                                         return true
                                     }
                                 }
@@ -888,17 +888,17 @@ impl BackTrackCollectiveConstraintLight {
             },
         }
         // Did not find a valid combination
-        if index_loop == index_of_interest - 1 {
-            for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
-                if *query_card_count > *current_card_count {
-                    for _ in 0..(*query_card_count - *current_card_count) {
-                        if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
-                            inferred_constraints[player_of_interest].swap_remove(pos);
-                        }
-                    }
-                }
-            }
-        }
+        // if index_loop == index_of_interest - 1 {
+        //     for (card_num, (query_card_count, current_card_count)) in cards.iter().zip(current_card_counts.iter()).enumerate() {
+        //         if *query_card_count > *current_card_count {
+        //             for _ in 0..(*query_card_count - *current_card_count) {
+        //                 if let Some(pos) = inferred_constraints[player_of_interest].iter().rposition(|c| *c as usize == card_num) {
+        //                     inferred_constraints[player_of_interest].swap_remove(pos);
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
         response
     }
     /// Return true if hypothesised card permutations cannot be shown to be impossible
