@@ -1809,7 +1809,10 @@ impl BackTrackCollectiveConstraint {
                     },
                 }
             },
-            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {},
+            ActionInfo::ExchangeDrawChoice { .. } => {
+                let player_lives = 0;
+                response = self.recurse_variants_exchange(index_loop, index_of_interest, player_of_interest, public_constraints, inferred_constraints, player_lives, player_loop, cards);
+            },
             ActionInfo::Start
             | ActionInfo::StartInferred => {
                 // Managed to reach base
@@ -1920,6 +1923,408 @@ impl BackTrackCollectiveConstraint {
             return count_total <= 3
         }
         true
+    }
+    pub fn recurse_variants_exchange(&self, index_loop: usize, index_of_interest: usize, player_of_interest: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, player_lives: u8, player_loop: usize, cards: &[u8; 5]) -> bool {
+        let mut iter_cards_player = inferred_constraints[player_loop].clone();
+        iter_cards_player.sort_unstable();
+        iter_cards_player.dedup();
+        let mut iter_cards_pile = inferred_constraints[6].clone();
+        iter_cards_pile.sort_unstable();
+        iter_cards_pile.dedup();
+        let mut player_count = [0u8; 5];
+        let mut pile_count = [0u8; 5];
+        inferred_constraints[player_loop].iter().for_each(|c| player_count[*c as usize] += 1);
+        inferred_constraints[6].iter().for_each(|c| pile_count[*c as usize] += 1);
+        // let mut redraw_count = [0u8; 5];
+        // let mut relinquish_count = [0u8; 5];
+        // redraw.iter().for_each(|c| redraw_count[*c as usize] += 1);
+        // relinquish.iter().for_each(|c| relinquish_count[*c as usize] += 1);
+
+        
+        // Can maybe consider all possible unique moves characterized by player_to_pile and pile_to_player
+        // redraw_count and relinquish_count define the degree of freedom for both of those
+        // the possible choices that can be player_to_pile depend on whats in player_hand
+        // 2 AMB -> up to 2 AMB from player_to_pile
+        // 1 AMB -> 1 AMB from player_to_pile
+        // So I guess can loop through all possible version of player_to_pile and pile_to_player
+        // player_count
+        // 0 moves, 1 moves, 2 moves
+        // NOTE AMB player to pile and AMB pile to player cancel out so no intersection of player and pile ish
+
+        // 0 player_to_pile move, 0 pile_to_player move
+        if self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards) {
+            return true;
+        }
+        // variants.push(inferred_constraints.clone());
+        // 1 player_to_pile move, 0 pile_to_player move
+        if inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 0{
+            for card_player in iter_cards_player.iter() {
+            // move to pile
+                // let mut player_hand = inferred_constraints[player_loop].clone();
+                // let mut pile_hand = inferred_constraints[6].clone();
+                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_player) {
+                    inferred_constraints[player_loop].swap_remove(pos);
+                    inferred_constraints[6].push(*card_player);
+                    // let mut temp = inferred_constraints.clone();
+                    // temp[player_loop] = inferred_constraints[player_loop].clone();
+                    // temp[6] = inferred_constraints[6].clone();
+                    // variants.push(temp);
+                    if self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards) {
+                        return true;
+                    }
+                    inferred_constraints[player_loop].push(*card_player);
+                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_player) {
+                        inferred_constraints[6].swap_remove(pos);
+                    }
+                }
+            }
+        }
+        // 0 player_to_pile move, 1 pile_to_player move
+        if inferred_constraints[player_loop].len() < 2 && inferred_constraints[6].len() > 0{
+            for card_pile in iter_cards_pile.iter() {
+            // move to player
+                // let mut player_hand = inferred_constraints[player_loop].clone();
+                // let mut pile_hand = inferred_constraints[6].clone();
+                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_pile) {
+                    inferred_constraints[6].swap_remove(pos);
+                    inferred_constraints[player_loop].push(*card_pile);
+                    // let mut temp = inferred_constraints.clone();
+                    // temp[player_loop] = player_hand.clone();
+                    // temp[6] = pile_hand.clone();
+                    // variants.push(temp);
+                    if self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards) {
+                        return true;
+                    }
+                    inferred_constraints[6].push(*card_pile);
+                    if let Some(pos) = inferred_constraints[player_loop].iter().position(|c| *c == *card_pile) {
+                        inferred_constraints[player_loop].swap_remove(pos);
+                    }
+                }
+            }
+        }
+        // 1 player_to_pile move, 1 pile_to_player move
+        if inferred_constraints[player_loop].len() > 0 && inferred_constraints[6].len() > 0 {
+            for card_player in iter_cards_player.iter() {
+                for card_pile in iter_cards_pile.iter() {
+                    if card_player == card_pile {
+                        continue;
+                    }
+                    // let mut player_hand = inferred_constraints[player_loop].clone();
+                    // let mut pile_hand = inferred_constraints[6].clone();
+                    let (mut bool_pile_removed, mut bool_player_removed) = (false, false);
+                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_pile) {
+                        inferred_constraints[6].swap_remove(pos);
+                        bool_pile_removed = true;
+                    }
+                    if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_player) {
+                        inferred_constraints[player_loop].swap_remove(pos);
+                        bool_player_removed = true;
+                    }
+                    inferred_constraints[6].push(*card_player);
+                    inferred_constraints[player_loop].push(*card_pile);
+                    // let mut temp = inferred_constraints.clone();
+                    // temp[player_loop] = player_hand.clone();
+                    // temp[6] = pile_hand.clone();
+                    // variants.push(temp);
+                    if self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards) {
+                        return true;
+                    }
+                    if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_pile) {
+                        inferred_constraints[player_loop].swap_remove(pos);
+                    }
+                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_player) {
+                        inferred_constraints[6].swap_remove(pos);
+                    }
+                    if bool_player_removed {
+                        inferred_constraints[player_loop].push(*card_player);
+                    }
+                    if bool_pile_removed {
+                        inferred_constraints[6].push(*card_pile);
+                    }
+                }
+            }
+        }
+        if player_lives > 1 {
+            // 2 player_to_pile move, 0 pile_to_player move
+            if inferred_constraints[player_loop].len() == 2 && inferred_constraints[6].len() < 2 {
+                let card_0 = inferred_constraints[player_loop][0];
+                let card_1 = inferred_constraints[player_loop][1];
+                // let mut player_hand = inferred_constraints[player_loop].clone();
+                // let mut pile_hand = inferred_constraints[6].clone();
+                inferred_constraints[player_loop].clear();
+                inferred_constraints[6].push(card_0);
+                inferred_constraints[6].push(card_1);
+                // let mut temp = inferred_constraints.clone();
+                // temp[player_loop] = inferred_constraints[player_loop].clone();
+                // temp[6] = pile_hand.clone();
+                // variants.push(temp);
+                if self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards) {
+                    return true;
+                }
+                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == card_0) {
+                    inferred_constraints[6].swap_remove(pos);
+                }
+                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == card_1) {
+                    inferred_constraints[6].swap_remove(pos);
+                }
+                inferred_constraints[player_loop].push(card_0);
+                inferred_constraints[player_loop].push(card_1);
+            }
+            // 0 player_to_pile move, 2 pile_to_player move
+            if inferred_constraints[player_loop].len() == 0 && inferred_constraints[6].len() > 1 {
+                for index_pile_to_player_0 in 0..iter_cards_pile.len() {
+                    for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
+                        if index_pile_to_player_0 == index_pile_to_player_1 && pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2 {
+                            continue; // Ensure enough cards to move
+                        }
+                        // let mut player_hand = inferred_constraints[player_loop].clone();
+                        // let mut pile_hand = inferred_constraints[6].clone();
+                        let (mut bool_pile_removed_0, mut bool_pile_removed_1) = (false, false);
+                        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                            inferred_constraints[6].swap_remove(pos);
+                            bool_pile_removed_0 = true;
+                        }
+                        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                            inferred_constraints[6].swap_remove(pos);
+                            bool_pile_removed_1 = true;
+                        }
+                        inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_0]);
+                        inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_1]);
+                        // let mut temp = inferred_constraints.clone();
+                        // temp[player_loop] = player_hand.clone();
+                        // temp[6] = pile_hand.clone();
+                        // variants.push(temp);
+                        if self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards) {
+                            return true;
+                        }
+                        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                            inferred_constraints[player_loop].swap_remove(pos);
+                        }
+                        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                            inferred_constraints[player_loop].swap_remove(pos);
+                        }
+                        if bool_pile_removed_1 {
+                            inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_1]);
+                        }
+                        if bool_pile_removed_1 {
+                            inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_0]);
+                        }
+                    }
+                }
+            }
+            // 2 player_to_pile move, 1 pile_to_player move
+            if inferred_constraints[6].len() > 0 && inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 1 {
+                for card_pile in iter_cards_pile.iter() {
+                    for index_player_to_pile_0 in 0..iter_cards_player.len() {
+                        // TODO: Shift index_player_to_pile == case shift here
+                        if iter_cards_player[index_player_to_pile_0] == *card_pile {
+                            continue; // Avoid duplicates
+                        }
+                        for index_player_to_pile_1 in index_player_to_pile_0..iter_cards_player.len() {
+                            // Check DF
+                            if iter_cards_player[index_player_to_pile_1] == *card_pile {
+                                continue; // Avoid duplicates
+                            }
+                            if index_player_to_pile_0 == index_player_to_pile_1 && player_count[iter_cards_player[index_player_to_pile_0] as usize] < 2 {
+                                // Checks that player has enough cards to move out
+                                // TODO: OPTIMIZE Can shift this out of for loop actually
+                                continue // Ensure enough cards to move
+                            }
+                            // let mut player_hand = inferred_constraints[player_loop].clone();
+                            // let mut pile_hand = inferred_constraints[6].clone();
+                            let (mut bool_player_removed_0, mut bool_player_removed_1, mut bool_pile_removed_0) = (false, false, false);
+                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
+                                inferred_constraints[player_loop].swap_remove(pos);
+                                bool_player_removed_0 = true;
+                            }
+                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
+                                inferred_constraints[player_loop].swap_remove(pos);
+                                bool_player_removed_1 = true;
+                            }
+                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_pile) {
+                                inferred_constraints[6].swap_remove(pos);
+                                bool_pile_removed_0 = true;
+                            }
+                            inferred_constraints[6].push(iter_cards_player[index_player_to_pile_0]);
+                            inferred_constraints[6].push(iter_cards_player[index_player_to_pile_1]);
+                            inferred_constraints[player_loop].push(*card_pile);
+                            // let mut temp = inferred_constraints.clone();
+                            // temp[player_loop] = player_hand.clone();
+                            // temp[6] = pile_hand.clone();
+                            // variants.push(temp);
+                            if self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards) {
+                                return true;
+                            }
+                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_pile) {
+                                inferred_constraints[player_loop].swap_remove(pos);
+                            }
+                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
+                                inferred_constraints[6].swap_remove(pos);
+                            }
+                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
+                                inferred_constraints[6].swap_remove(pos);
+                            }
+                            if bool_pile_removed_0 {
+                                inferred_constraints[6].push(*card_pile);
+                            }
+                            if bool_player_removed_1 {
+                                inferred_constraints[player_loop].push(iter_cards_player[index_player_to_pile_1]);
+                            }
+                            if bool_player_removed_0 {
+                                inferred_constraints[player_loop].push(iter_cards_player[index_player_to_pile_0]);
+                            }
+                        }
+                    }
+                }
+            }
+            // 1 player_to_pile move, 2 pile_to_player move
+            if inferred_constraints[player_loop].len() == 1 && inferred_constraints[6].len() > 1{
+                for card_player in iter_cards_player.iter() {
+                    for index_pile_to_player_0 in 0..iter_cards_pile.len() {
+                        if iter_cards_pile[index_pile_to_player_0] == *card_player {
+                            continue; // Avoid Duplicates
+                        }
+                        for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
+                            // Check DF
+                            if iter_cards_pile[index_pile_to_player_1] == *card_player {
+                                continue; // Avoid Duplicates
+                            }
+                            if index_pile_to_player_0 == index_pile_to_player_1 && (pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2) {
+                                // Checks that player has enough cards to move out
+                                // TODO: OPTIMIZE Can shift this out of for loop actually
+                                continue // Ensure enough cards to move
+                            }
+                            // let mut player_hand = inferred_constraints[player_loop].clone();
+                            // let mut pile_hand = inferred_constraints[6].clone();
+                            let (mut bool_pile_removed_0, mut bool_pile_removed_1, mut bool_player_removed_0) = (false, false, false);
+                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                                inferred_constraints[6].swap_remove(pos);
+                                bool_pile_removed_0 = true;
+                            }
+                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                                inferred_constraints[6].swap_remove(pos);
+                                bool_pile_removed_1 = true;
+                            }
+                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_player) {
+                                inferred_constraints[player_loop].swap_remove(pos);
+                                bool_player_removed_0 = true;
+                            }
+                            inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_0]);
+                            inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_1]);
+                            inferred_constraints[6].push(*card_player);
+                            // let mut temp = inferred_constraints.clone();
+                            // temp[player_loop] = player_hand.clone();
+                            // temp[6] = pile_hand.clone();
+                            // variants.push(temp);
+                            if self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards) {
+                                return true;
+                            }
+                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_player) {
+                                inferred_constraints[6].swap_remove(pos);
+                            }
+                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                                inferred_constraints[player_loop].swap_remove(pos);
+                            }
+                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                                inferred_constraints[player_loop].swap_remove(pos);
+                            }
+                            if bool_player_removed_0 {
+                                inferred_constraints[player_loop].push(*card_player);
+                            }
+                            if bool_pile_removed_1 {
+                                inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_1]);
+                            }
+                            if bool_pile_removed_0 {
+                                inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_0]);
+                            }
+                        }
+                    }
+                }
+            }
+            // 2 player_to_pile move, 2 pile_to_player move
+            if inferred_constraints[player_loop].len() > 1 && inferred_constraints[6].len() > 1 {
+                for index_player_to_pile_0 in 0..iter_cards_player.len() {
+                    for index_player_to_pile_1 in index_player_to_pile_0..iter_cards_player.len() {
+                        if index_player_to_pile_0 == index_player_to_pile_1 && player_count[iter_cards_player[index_player_to_pile_0] as usize] < 2 {
+                            // Checks that player has enough cards to move out
+                            // TODO: OPTIMIZE Can shift this out of for loop actually
+                            continue // Ensure enough cards to move
+                        }
+                        // Check DF
+                        for index_pile_to_player_0 in 0..iter_cards_pile.len() {
+                            if iter_cards_pile[index_pile_to_player_0] == iter_cards_player[index_player_to_pile_0] || iter_cards_pile[index_pile_to_player_0] == iter_cards_player[index_player_to_pile_1] {
+                                continue; // Avoid Duplicates
+                            }
+                            for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
+                                if iter_cards_pile[index_pile_to_player_1] == iter_cards_player[index_player_to_pile_0] || iter_cards_pile[index_pile_to_player_1] == iter_cards_player[index_player_to_pile_1] {
+                                    continue; // Avoid Duplicates
+                                }
+                                if index_pile_to_player_0 == index_pile_to_player_1 && (pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2) {
+                                    // Checks that player has enough cards to move out
+                                    // TODO: OPTIMIZE Can shift this out of for loop actually
+                                    continue // Ensure enough cards to move
+                                }
+                                // let mut player_hand = inferred_constraints[player_loop].clone();
+                                // let mut pile_hand = inferred_constraints[6].clone();
+                                let (mut bool_pile_removed_0, mut bool_pile_removed_1, mut bool_player_removed_0, mut bool_player_removed_1) = (false, false, false, false);
+                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                                    inferred_constraints[6].swap_remove(pos);
+                                    bool_pile_removed_0 = true;
+                                }
+                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                                    inferred_constraints[6].swap_remove(pos);
+                                    bool_pile_removed_1 = true;
+                                }
+                                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
+                                    inferred_constraints[player_loop].swap_remove(pos);
+                                    bool_player_removed_0 = true;
+                                }
+                                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
+                                    inferred_constraints[player_loop].swap_remove(pos);
+                                    bool_player_removed_1 = true;
+                                }
+                                inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_0]);
+                                inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_1]);
+                                inferred_constraints[6].push(iter_cards_player[index_player_to_pile_0]);
+                                inferred_constraints[6].push(iter_cards_player[index_player_to_pile_1]);
+                                // let mut temp = inferred_constraints.clone();
+                                // temp[player_loop] = player_hand.clone();
+                                // temp[6] = pile_hand.clone();
+                                // variants.push(temp);
+                                if self.possible_to_have_cards_recurse(index_loop - 1, index_of_interest, player_of_interest, public_constraints, inferred_constraints, cards) {
+                                    return true;
+                                }
+                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
+                                    inferred_constraints[6].swap_remove(pos);
+                                }
+                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
+                                    inferred_constraints[6].swap_remove(pos);
+                                }
+                                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                                    inferred_constraints[player_loop].swap_remove(pos);
+                                }
+                                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                                    inferred_constraints[player_loop].swap_remove(pos);
+                                }
+                                if bool_player_removed_1 {
+                                    inferred_constraints[player_loop].push(iter_cards_player[index_player_to_pile_1]);
+                                }
+                                if bool_player_removed_0 {
+                                    inferred_constraints[player_loop].push(iter_cards_player[index_player_to_pile_0]);
+                                }
+                                if bool_pile_removed_1 {
+                                    inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_1]);
+                                }
+                                if bool_pile_removed_0 {
+                                    inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_0]);
+                                }
+                            } 
+                        }
+                    }
+                }
+            }
+        }
+        false
     }
     /// Brute force generates everything
     fn generate_impossible_constraints(&mut self, history_index: usize) {
