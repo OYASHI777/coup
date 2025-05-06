@@ -38,7 +38,7 @@ fn main() {
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
     // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     
-    // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
     // TODO: Make a Lite with Lazy Inferred Constraints
     // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
@@ -64,8 +64,8 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    bt_test::<BackTrackCollectiveConstraintLazy>();
     // bt_test::<BackTrackCollectiveConstraintLite>();
+    bt_test::<BackTrackCollectiveConstraintLazy>();
     // bt_test::<BackTrackCollectiveConstraint>();
     // test();
     // temp();
@@ -184,7 +184,7 @@ pub fn bt_test<C>()
     // println!("Testing: {}", stringify!(amb_4)); 
     // replay_game_constraint_bt::<C>(amb_4, false, false);
     println!("Testing: {}", stringify!(amb_5)); 
-    replay_game_constraint_bt::<C>(amb_5.clone(), false, false);
+    replay_game_constraint_bt::<C>(amb_5.clone(), false, true);
 }
 pub fn test<C>() 
     where
@@ -1275,11 +1275,11 @@ pub fn game_rnd_constraint_bt_st_g<V, T>(game_no: usize, bool_know_priv_info: bo
                 let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
                 if total_dead >= min_dead_check {
                     let validated_public_constraints = prob.sorted_public_constraints().clone();
-                    let validated_inferred_constraints = prob.sorted_public_constraints().clone();
-                    let validated_impossible_constraints = prob.sorted_public_constraints().clone();
+                    let validated_inferred_constraints = prob.sorted_inferred_constraints().clone();
+                    let validated_impossible_constraints = prob.player_impossible_constraints().clone();
                     let test_public_constraints = bit_prob.sorted_public_constraints().clone();
-                    let test_inferred_constraints = bit_prob.sorted_public_constraints().clone();
-                    let test_impossible_constraints = bit_prob.sorted_public_constraints().clone();
+                    let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
+                    let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
                     let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
                     let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
                     let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
