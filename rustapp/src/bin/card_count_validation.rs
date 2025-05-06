@@ -29,20 +29,20 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 pub const LOG_FILE_NAME: &str = "just_test_replay_00000000.log";
 // TODO: Add a test function to compare path_dependent_group_constraint with new approach and if different run inference for the brute force approach
 fn main() {
-    let game_no = 1000;
+    let game_no = 100000000;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 500;
+    let print_frequency: usize = 100;
     let min_dead_check: usize = 8;
     let num_threads = 12;
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(1, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
     // TODO: Make a Lite with Lazy Inferred Constraints
-    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
-    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(1000);
-    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
+    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
+    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(1000);
+    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
     // game_rnd_constraint_bt_bench(100);
     // game_rnd_constraint_brute_bench(10);
     // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
