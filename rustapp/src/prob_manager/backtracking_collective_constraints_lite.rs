@@ -1455,7 +1455,7 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLite {
     }
     
     fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool{
-        self.impossible_constraints[player as usize][card as usize]
+        !self.impossible_constraints[player as usize][card as usize]
     }
     
     fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool{

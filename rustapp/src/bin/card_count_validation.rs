@@ -29,14 +29,15 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 pub const LOG_FILE_NAME: &str = "just_test_replay_00000000.log";
 // TODO: Add a test function to compare path_dependent_group_constraint with new approach and if different run inference for the brute force approach
 fn main() {
-    let game_no = 10000000;
+    let game_no = 1000;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 100;
+    let print_frequency: usize = 500;
     let min_dead_check: usize = 8;
     let num_threads = 12;
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(1, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
     // TODO: Make a Lite with Lazy Inferred Constraints
     game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
@@ -62,9 +63,9 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    bt_test::<BackTrackCollectiveConstraintLazy>();
-    bt_test::<BackTrackCollectiveConstraintLite>();
-    bt_test::<BackTrackCollectiveConstraint>();
+    // bt_test::<BackTrackCollectiveConstraintLazy>();
+    // bt_test::<BackTrackCollectiveConstraintLite>();
+    // bt_test::<BackTrackCollectiveConstraint>();
     // test();
     // temp();
 }
@@ -163,6 +164,7 @@ pub fn bt_test<C>()
     // Unsure if this is just Lazy or affects all?
     let amb_3 = vec![Steal { player_id: 0, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, false, false, true, true], opposing_player_id: 0, final_actioner: 4 }, Discard { player_id: 0, card: [Assassin, Assassin], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [true, false, false, true, true, false], opposing_player_id: 1, final_actioner: 0 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Income { player_id: 2 }, Income { player_id: 3 }, Steal { player_id: 4, opposing_player_id: 3, amount: 2 }, CollectiveChallenge { participants: [false, true, false, true, false, false], opposing_player_id: 4, final_actioner: 3 }, RevealRedraw { player_id: 4, card: Captain }, Discard { player_id: 3, card: [Duke, Duke], no_cards: 1 }, BlockSteal { player_id: 3, opposing_player_id: 4, card: Ambassador }, CollectiveChallenge { participants: [true, false, true, false, false, true], opposing_player_id: 3, final_actioner: 5 }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, Exchange { player_id: 5 }, CollectiveChallenge { participants: [false, true, false, false, true, false], opposing_player_id: 5, final_actioner: 4 }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, Income { player_id: 0 }, Exchange { player_id: 1 }, CollectiveChallenge { participants: [false, false, false, false, false, true], opposing_player_id: 1, final_actioner: 5 }, RevealRedraw { player_id: 1, card: Ambassador }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, ExchangeDraw { player_id: 1, card: [Captain, Contessa] }, ExchangeChoice { player_id: 1, no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, true, false], opposing_player_id: 2, final_actioner: 0 }, RevealRedraw { player_id: 2, card: Captain }, Discard { player_id: 0, card: [Assassin, Assassin], no_cards: 1 }, BlockSteal { player_id: 1, opposing_player_id: 2, card: Ambassador }, CollectiveChallenge { participants: [false, false, true, false, true, false], opposing_player_id: 1, final_actioner: 2 }, RevealRedraw { player_id: 1, card: Ambassador }, Discard { player_id: 2, card: [Ambassador, Ambassador], no_cards: 1 }, Exchange { player_id: 4 }, CollectiveChallenge { participants: [false, false, true, false, false, false], opposing_player_id: 4, final_actioner: 2 }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, false, false], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Assassin, Assassin], no_cards: 1 }];
     let amb_4 = vec![Steal { player_id: 0, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, false, false, true, true], opposing_player_id: 0, final_actioner: 5 }, RevealRedraw { player_id: 0, card: Captain }, Discard { player_id: 5, card: [Captain, Captain], no_cards: 1 }, BlockSteal { player_id: 5, opposing_player_id: 5, card: Captain }, Steal { player_id: 1, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [true, false, false, true, false, true], opposing_player_id: 1, final_actioner: 0 }, Discard { player_id: 1, card: [Duke, Duke], no_cards: 1 }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [true, true, false, true, false, true], opposing_player_id: 2, final_actioner: 0 }, CollectiveChallenge { participants: [false, true, true, false, false, false], opposing_player_id: 0, final_actioner: 2 }, RevealRedraw { player_id: 0, card: Duke }, Discard { player_id: 2, card: [Captain, Captain], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [true, true, true, false, true, true], opposing_player_id: 3, final_actioner: 4 }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, Tax { player_id: 4 }, CollectiveChallenge { participants: [false, true, true, true, false, false], opposing_player_id: 4, final_actioner: 3 }, Discard { player_id: 4, card: [Contessa, Contessa], no_cards: 1 }, Exchange { player_id: 5 }, CollectiveChallenge { participants: [false, true, true, true, true, false], opposing_player_id: 5, final_actioner: 2 }, RevealRedraw { player_id: 5, card: Ambassador }, Discard { player_id: 2, card: [Duke, Duke], no_cards: 1 }, ExchangeDraw { player_id: 5, card: [Assassin, Assassin] }, ExchangeChoice { player_id: 5, no_cards: 1 }, Assassinate { player_id: 0, opposing_player_id: 3 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 0, final_actioner: 3 }, RevealRedraw { player_id: 0, card: Assassin }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, ForeignAid { player_id: 1 }, CollectiveBlock { participants: [true, false, false, false, false, false], opposing_player_id: 1, final_actioner: 0 }, CollectiveChallenge { participants: [false, true, false, false, true, true], opposing_player_id: 0, final_actioner: 5 }, Discard { player_id: 0, card: [Captain, Captain], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 5, amount: 0 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 4, final_actioner: 5 }, Discard { player_id: 4, card: [Contessa, Contessa], no_cards: 1 }, Tax { player_id: 5 }, CollectiveChallenge { participants: [true, true, false, false, false, false], opposing_player_id: 5, final_actioner: 1 }, RevealRedraw { player_id: 5, card: Duke }, Discard { player_id: 1, card: [Ambassador, Ambassador], no_cards: 1 }, ForeignAid { player_id: 0 }, CollectiveBlock { participants: [false, false, false, false, false, true], opposing_player_id: 0, final_actioner: 5 }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 5, final_actioner: 0 }, Discard { player_id: 5, card: [Assassin, Assassin], no_cards: 1 }];
+    let amb_5 = vec![Steal { player_id: 0, opposing_player_id: 3, amount: 2 }, CollectiveChallenge { participants: [false, true, false, false, false, true], opposing_player_id: 0, final_actioner: 1 }, RevealRedraw { player_id: 0, card: Captain }, Discard { player_id: 1, card: [Captain, Captain], no_cards: 1 }, BlockSteal { player_id: 3, opposing_player_id: 0, card: Ambassador }, CollectiveChallenge { participants: [true, false, false, false, true, true], opposing_player_id: 3, final_actioner: 4 }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, Exchange { player_id: 1 }, CollectiveChallenge { participants: [true, false, false, true, false, false], opposing_player_id: 1, final_actioner: 3 }, RevealRedraw { player_id: 1, card: Ambassador }, Discard { player_id: 3, card: [Duke, Duke], no_cards: 1 }, ExchangeDraw { player_id: 1, card: [Assassin, Captain] }, ExchangeChoice { player_id: 1, no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 2, final_actioner: 4 }, RevealRedraw { player_id: 2, card: Captain }, Discard { player_id: 4, card: [Assassin, Assassin], no_cards: 1 }, BlockSteal { player_id: 4, opposing_player_id: 4, card: Captain }, Steal { player_id: 4, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 4, final_actioner: 2 }, Discard { player_id: 4, card: [Contessa, Contessa], no_cards: 1 }, Exchange { player_id: 5 }, CollectiveChallenge { participants: [true, false, true, false, false, false], opposing_player_id: 5, final_actioner: 0 }, RevealRedraw { player_id: 5, card: Ambassador }, Discard { player_id: 0, card: [Ambassador, Ambassador], no_cards: 1 }, ExchangeDraw { player_id: 5, card: [Ambassador, Ambassador] }, ExchangeChoice { player_id: 5, no_cards: 2 }, Assassinate { player_id: 0, opposing_player_id: 1 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 0, final_actioner: 2 }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, Tax { player_id: 1 }, CollectiveChallenge { participants: [false, false, true, false, false, true], opposing_player_id: 1, final_actioner: 2 }, RevealRedraw { player_id: 1, card: Duke }, Discard { player_id: 2, card: [Duke, Duke], no_cards: 1 }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [false, true, false, false, false, true], opposing_player_id: 2, final_actioner: 1 }, CollectiveChallenge { participants: [false, false, true, false, false, true], opposing_player_id: 1, final_actioner: 2 }, RevealRedraw { player_id: 1, card: Duke }, Discard { player_id: 2, card: [Ambassador, Ambassador], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, true, false, false, false, false], opposing_player_id: 5, final_actioner: 1 }, CollectiveChallenge { participants: [false, false, false, false, false, true], opposing_player_id: 1, final_actioner: 5 }, Discard { player_id: 1, card: [Assassin, Assassin], no_cards: 1 }];
     
     // println!("Testing: {}", stringify!(rr_0)); 
     // replay_game_constraint_bt::<C>(rr_0, false, true);
@@ -178,8 +180,10 @@ pub fn bt_test<C>()
     // replay_game_constraint_bt::<C>(amb_2, false, true);
     // println!("Testing: {}", stringify!(amb_3)); 
     // replay_game_constraint_bt::<C>(amb_3, false, true);
-    println!("Testing: {}", stringify!(amb_4)); 
-    replay_game_constraint_bt::<C>(amb_4, false, false);
+    // println!("Testing: {}", stringify!(amb_4)); 
+    // replay_game_constraint_bt::<C>(amb_4, false, false);
+    println!("Testing: {}", stringify!(amb_5)); 
+    replay_game_constraint_bt::<C>(amb_5, false, true);
 }
 pub fn test<C>() 
     where
@@ -735,6 +739,83 @@ pub fn game_rnd_constraint_bt_mt<C>(num_threads: usize, game_no: usize, bool_kno
         let thread_min_dead_check = min_dead_check;
         let handle = thread::spawn(move || {
             game_rnd_constraint_bt_st::<C>(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
+            // game_rnd_constraint_bt_st::<V, T>(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
+        });
+        handles.push(handle);
+    }
+
+
+    let mut final_stats = Stats::new();
+    for received in rx {
+        let mut log_replay = false;
+        let mut status = "".to_string();
+        if !received.public_correct() {
+            status = format!("{status}|PUBLIC CONSTRAINTS WRONG");
+            log_replay = true;
+        }
+        if !received.inferred_correct() {
+            if received.overinferred() {
+                status = format!("{status}|>+ OVERINFERRED INFERRED CONSTRAINTS");
+            } else {
+                status = format!("{status}|<- UNDERINFERRED INFERRED CONSTRAINTS");
+            }
+            log_replay = true;
+        }
+        if !received.impossible_correct() {
+            status = format!("{status}|<- WRONG IMPOSSIBLE CONSTRAINTS");
+            log_replay = true;
+        }
+        if received.pushed_bad_move() {
+            status = format!("{status}|PUSHED BAD MOVE");
+            log_replay = true;
+        }
+        // if !received.impossible_constraints_correct {
+        //     status = format!("{status}|IMPOSSIBLE CONSTRAINTS WRONG");
+        //     log_replay = true;
+        // }
+        if log_replay {
+            let replay_data = received.replay_string.clone();
+            if let Ok(mut file) = replay_file.lock() {
+                // Append a separator and the replay content to the file.
+                writeln!(file, "{status}").expect("Failed to write to file");
+                writeln!(file, "{}", replay_data).expect("Failed to write replay");
+            }
+        }
+        final_stats.add(&received);
+        if final_stats.games() % print_frequency == 0 {
+            final_stats.print();
+        }
+    }
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}
+pub fn game_rnd_constraint_bt_mt_g<V, T>(num_threads: usize, game_no: usize, bool_know_priv_info: bool, print_frequency: usize, min_dead_check: usize)
+    where
+        V: CoupConstraint + CoupConstraintAnalysis,
+        T: CoupConstraint + CoupConstraintAnalysis,
+{
+    let replay_file = Arc::new(Mutex::new(
+        OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open("replays_only.log")
+            .expect("Unable to open replays_only.log"),
+    ));
+    
+    let (tx, rx) = mpsc::channel();
+    let games_per_thread = game_no / num_threads;
+    let extra_games = game_no % num_threads;
+    let mut handles = Vec::new();
+
+    for i in 0..num_threads {
+        let thread_tx = tx.clone();
+        let thread_games = games_per_thread + if i < extra_games {1} else {0};
+        let thread_bool_know_priv_info = bool_know_priv_info;
+        let thread_min_dead_check = min_dead_check;
+        let handle = thread::spawn(move || {
+            game_rnd_constraint_bt_st_g::<V, T>(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
         });
         handles.push(handle);
     }
@@ -1093,6 +1174,9 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
                         // panic!("Inferred to many items!")
                     }
                     if !pass_inferred_constraints {
+                        println!("vali: {:?}", validated_inferred_constraints);
+                        println!("test: {:?}", test_inferred_constraints);
+                        println!("{}", hh.get_replay_history_braindead());
                         break;
                         // let replay = hh.get_history(hh.store_len());
                         // replay_game_constraint(replay, bool_know_priv_info, log_bool);
@@ -1101,6 +1185,131 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
                     if !pass_impossible_constraints {
                         println!("vali: {:?}", validated_impossible_constraints);
                         println!("test: {:?}", test_impossible_constraints);
+                        break;
+                        // let replay = hh.get_history(hh.store_len());
+                        // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                        // panic!()
+                    }
+                }
+
+
+            } else {
+                // log::trace!("Pushed bad move somewhere earlier!");
+                stats.pushed_bad_move += 1;
+                break;
+            }
+            // bit_prob.debug_panicker();
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+        }
+        if step > max_steps {
+            max_steps = step;
+        }
+        stats.replay_string = hh.get_replay_history_braindead();
+        stats.games += 1;
+        tx.send(stats).unwrap();
+        prob.reset();
+        bit_prob.reset();
+        game += 1;
+    }
+}
+pub fn game_rnd_constraint_bt_st_g<V, T>(game_no: usize, bool_know_priv_info: bool, min_dead_check: usize, tx: Sender<Stats>)
+    where
+        V: CoupConstraint + CoupConstraintAnalysis,
+        T: CoupConstraint + CoupConstraintAnalysis,
+{
+    let mut game: usize = 0;
+    let mut max_steps: usize = 0;
+    // let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
+    // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
+    // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
+    let mut prob: BackTrackCardCountManager<V> = BackTrackCardCountManager::new();
+    let mut bit_prob: BackTrackCardCountManager<T> = BackTrackCardCountManager::new();
+    let mut public_constraints_correct: usize = 0;
+    let mut inferred_constraints_correct: usize = 0;
+    let mut impossible_constraints_correct: usize = 0;
+    let mut over_inferred_count: usize = 0;
+    let mut total_tries: usize = 0;
+    while game < game_no {
+        let mut stats = Stats::new();
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        while !hh.game_won() {
+            
+            // hh.log_state();
+            // prob.printlog();
+            // bit_prob.printlog();
+            new_moves = hh.generate_legal_moves();
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
+            // new_moves.retain(|m| m.name() != AOName::Exchange);
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                if output.name() == AOName::Discard{
+                    let true_legality = if output.no_cards() == 1 {
+                        prob.player_can_have_card_alive(output.player_id() as u8, output.cards()[0])
+                    } else {
+                        prob.player_can_have_cards_alive(output.player_id() as u8, &output.cards().to_vec())
+                    };
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::RevealRedraw {
+                    let true_legality: bool = prob.player_can_have_card_alive(output.player_id() as u8, output.card());
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::ExchangeDraw {
+                    let true_legality: bool = prob.player_can_have_cards_alive(6, &output.cards().to_vec());
+                    if !true_legality {
+                        break    
+                    }
+                } 
+                hh.push_ao(output);
+                prob.push_ao_public(&output);
+                bit_prob.push_ao_public(&output);
+                let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
+                if total_dead >= min_dead_check {
+                    let validated_public_constraints = prob.sorted_public_constraints().clone();
+                    let validated_inferred_constraints = prob.sorted_public_constraints().clone();
+                    let validated_impossible_constraints = prob.sorted_public_constraints().clone();
+                    let test_public_constraints = bit_prob.sorted_public_constraints().clone();
+                    let test_inferred_constraints = bit_prob.sorted_public_constraints().clone();
+                    let test_impossible_constraints = bit_prob.sorted_public_constraints().clone();
+                    let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
+                    let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
+                    let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
+                    let bool_test_over_inferred: bool = validated_inferred_constraints.iter().zip(test_inferred_constraints.iter()).any(|(val, test)| {
+                        test.iter().any(|item| !val.contains(item)) || test.len() > val.len()
+                    });
+                    // let pass_brute_prob_validity = prob.validate();
+                    stats.public_constraints_correct += pass_public_constraints as usize;
+                    stats.inferred_constraints_correct += pass_inferred_constraints as usize;
+                    stats.impossible_constraints_correct += pass_impossible_constraints as usize;
+                    stats.total_tries += 1;
+                    if bool_test_over_inferred {
+                        // what we are testing inferred too many things
+                        stats.over_inferred_count += 1;
+                        break;
+                        // let replay = hh.get_history(hh.store_len());
+                        // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                        // panic!("Inferred to many items!")
+                    }
+                    if !pass_inferred_constraints {
+                        println!("vali: {:?}", validated_inferred_constraints);
+                        println!("vali: {:?}", test_inferred_constraints);
+                        break;
+                        // let replay = hh.get_history(hh.store_len());
+                        // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                        // panic!("Inferred constraints do not match!")
+                    }
+                    if !pass_impossible_constraints {
+                        println!("vali: {:?}", validated_impossible_constraints);
+                        println!("test: {:?}", test_impossible_constraints);
+                        println!("{}", hh.get_replay_history_braindead());
                         break;
                         // let replay = hh.get_history(hh.store_len());
                         // replay_game_constraint(replay, bool_know_priv_info, log_bool);
@@ -1282,36 +1491,25 @@ pub fn game_rnd_constraint_bt_generic_bench<C>(game_no : usize)
         log::trace!("Game Made:");
         while !hh.game_won() {
             
-            // log::info!("{}", format!("Step : {:?}",step));
-            hh.log_state();
-            bit_prob.printlog();
             new_moves = hh.generate_legal_moves();
-            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
-            // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-            new_moves.retain(|m| m.name() != AOName::Exchange);
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 if output.name() == AOName::Discard{
                     let true_legality = if output.no_cards() == 1 {
-                        // let start_time = Instant::now();
-                        // bit_prob.player_can_have_card_alive(output.player_id() as u8, output.cards()[0])
-                        !bit_prob.player_impossible_constraints()[output.player_id()][output.cards()[0] as usize]
+                        bit_prob.player_can_have_card_alive(output.player_id() as u8, output.cards()[0])
                     } else {
-                        // bit_prob.player_can_have_cards_alive(output.player_id() as u8, &output.cards().to_vec())
-                        !bit_prob.player_impossible_constraints_paired()[output.player_id()][output.cards()[0] as usize][output.cards()[1] as usize]
+                        bit_prob.player_can_have_cards_alive(output.player_id() as u8, &output.cards().to_vec())
                     };
                     if !true_legality{
                         break    
                     } 
                 } else if output.name() == AOName::RevealRedraw {
-                    // let true_legality: bool = bit_prob.player_can_have_card_alive(output.player_id() as u8, output.card());
-                    let true_legality: bool = !bit_prob.player_impossible_constraints()[output.player_id()][output.card() as usize];
+                    let true_legality: bool = bit_prob.player_can_have_card_alive(output.player_id() as u8, output.card());
                     if !true_legality{
                         break    
                     } 
                 } else if output.name() == AOName::ExchangeDraw {
-                    // let true_legality: bool = bit_prob.player_can_have_cards_alive(output.player_id() as u8, &output.cards().to_vec());
-                    let true_legality: bool = !bit_prob.player_impossible_constraints_paired()[output.player_id()][output.cards()[0] as usize][output.cards()[1] as usize];
+                    let true_legality: bool = bit_prob.player_can_have_cards_alive(6, &output.cards().to_vec());
                     if !true_legality {
                         break    
                     }
