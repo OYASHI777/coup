@@ -32,5 +32,6 @@ Some papers to reference.
   📜 [Combining Deep Reinforcement Learning and Search for Imperfect-Information Games](https://arxiv.org/abs/2007.13544)  
   📜 [Mastering the Game of Stratego with Model-Free Multiagent Reinforcement Learning](https://arxiv.org/abs/2206.15378)  
     - [Sample Implementation](https://github.com/baskuit/R-NaD)
+  📜 [PerfectDou: Dominating DouDizhu with Perfect Information Distillationg](https://arxiv.org/abs/2203.16406)  
 
 
