@@ -25,7 +25,7 @@ use std::thread;
 use env_logger::{Builder, Env, Target};
 use ActionObservation::*;
 use Card::*;
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
 pub const LOG_FILE_NAME: &str = "just_test_replay_00000000.log";
 // TODO: Add a test function to compare path_dependent_group_constraint with new approach and if different run inference for the brute force approach
 fn main() {
@@ -184,7 +184,7 @@ pub fn bt_test<C>()
     // println!("Testing: {}", stringify!(amb_4)); 
     // replay_game_constraint_bt::<C>(amb_4, false, false);
     println!("Testing: {}", stringify!(amb_5)); 
-    // replay_game_constraint_bt::<C>(amb_5, false, true);
+    replay_game_constraint_bt::<C>(amb_5, false, true);
     game_rnd_constraint_bt_st_replay::<C>(amb_5, true);
 }
 pub fn test<C>() 
