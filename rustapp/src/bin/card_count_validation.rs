@@ -184,8 +184,7 @@ pub fn bt_test<C>()
     // println!("Testing: {}", stringify!(amb_4)); 
     // replay_game_constraint_bt::<C>(amb_4, false, false);
     println!("Testing: {}", stringify!(amb_5)); 
-    replay_game_constraint_bt::<C>(amb_5, false, true);
-    game_rnd_constraint_bt_st_replay::<C>(amb_5, true);
+    replay_game_constraint_bt::<C>(amb_5.clone(), false, false);
 }
 pub fn test<C>() 
     where
@@ -1216,107 +1215,6 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
         bit_prob.reset();
         game += 1;
     }
-}
-pub fn game_rnd_constraint_bt_st_replay<C>(replay: Vec<ActionObservation>, log_bool: bool)
-    where
-        C: CoupConstraint + CoupConstraintAnalysis,
-{
-    if log_bool{
-        logger(LOG_LEVEL);
-    }
-    let bool_know_priv_info = false;
-    let mut game: usize = 0;
-    let mut max_steps: usize = 0;
-    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
-    // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
-    // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
-    let mut bit_prob: BackTrackCardCountManager<C> = BackTrackCardCountManager::new();
-    let mut public_constraints_correct: usize = 0;
-    let mut inferred_constraints_correct: usize = 0;
-    let mut impossible_constraints_correct: usize = 0;
-    let mut over_inferred_count: usize = 0;
-    let mut total_tries: usize = 0;
-    let mut stats = Stats::new();
-    let mut hh = History::new(0);
-    let mut step: usize = 0;
-    let mut new_moves: Vec<ActionObservation>;
-    while !hh.game_won() {
-        
-        // hh.log_state();
-        // prob.printlog();
-        // bit_prob.printlog();
-        new_moves = hh.generate_legal_moves();
-        // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
-        // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-        // new_moves.retain(|m| m.name() != AOName::Exchange);
-        
-        if let Some(output) = replay.get(step){
-            hh.push_ao(*output);
-            prob.push_ao(&output, bool_know_priv_info);
-            bit_prob.push_ao_public(&output);
-            let validated_public_constraints = prob.validated_public_constraints();
-            let validated_inferred_constraints = prob.validated_inferred_constraints();
-            let validated_impossible_constraints = prob.validated_impossible_constraints();
-            let test_public_constraints = bit_prob.sorted_public_constraints().clone();
-            let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
-            let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
-            let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
-            let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
-            let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
-            let bool_test_over_inferred: bool = validated_inferred_constraints.iter().zip(test_inferred_constraints.iter()).any(|(val, test)| {
-                test.iter().any(|item| !val.contains(item)) || test.len() > val.len()
-            });
-            // let pass_brute_prob_validity = prob.validate();
-            stats.public_constraints_correct += pass_public_constraints as usize;
-            stats.inferred_constraints_correct += pass_inferred_constraints as usize;
-            stats.impossible_constraints_correct += pass_impossible_constraints as usize;
-            stats.total_tries += 1;
-            if bool_test_over_inferred {
-                // what we are testing inferred too many things
-                stats.over_inferred_count += 1;
-                break;
-                // let replay = hh.get_history(hh.store_len());
-                // replay_game_constraint(replay, bool_know_priv_info, log_bool);
-                // panic!("Inferred to many items!")
-            }
-            if !pass_inferred_constraints {
-                println!("vali: {:?}", validated_inferred_constraints);
-                println!("test: {:?}", test_inferred_constraints);
-                println!("{}", hh.get_replay_history_braindead());
-                break;
-                // let replay = hh.get_history(hh.store_len());
-                // replay_game_constraint(replay, bool_know_priv_info, log_bool);
-                // panic!("Inferred constraints do not match!")
-            }
-            if !pass_impossible_constraints {
-                println!("vali: {:?}", validated_impossible_constraints);
-                println!("test: {:?}", test_impossible_constraints);
-                break;
-                // let replay = hh.get_history(hh.store_len());
-                // replay_game_constraint(replay, bool_know_priv_info, log_bool);
-                // panic!()
-            }
-
-
-        } else {
-            // log::trace!("Pushed bad move somewhere earlier!");
-            stats.pushed_bad_move += 1;
-            break;
-        }
-        // bit_prob.debug_panicker();
-        step += 1;
-        if step > 1000 {
-            break;
-        }
-    }
-    if step > max_steps {
-        max_steps = step;
-    }
-    stats.replay_string = hh.get_replay_history_braindead();
-    stats.games += 1;
-    prob.reset();
-    bit_prob.reset();
-    game += 1;
 }
 pub fn game_rnd_constraint_bt_st_g<V, T>(game_no: usize, bool_know_priv_info: bool, min_dead_check: usize, tx: Sender<Stats>)
     where
@@ -2520,10 +2418,6 @@ pub fn replay_game_constraint_pd(replay: Vec<ActionObservation>, bool_know_priv_
                 hh.print_replay_history_braindead();
                 panic!()
             }
-            if !pass_impossible_constraints {
-                hh.print_replay_history_braindead();
-                panic!()
-            }
             // if !pass_brute_prob_validity{
             //     hh.print_replay_history_braindead();
             //     panic!()
@@ -2568,16 +2462,10 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
     if log_bool{
         logger(LOG_LEVEL);
     }
-    log::info!("REPLAY ID");
-    log::info!("vec!{:?};", replay);
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
-    let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLite> = BackTrackCardCountManager::new();
-    let mut public_constraints_correct: usize = 0;
-    let mut inferred_constraints_correct: usize = 0;
-    let mut impossible_constraints_correct: usize = 0;
-    let mut total_tries: usize = 0;
+    let mut bit_prob: BackTrackCardCountManager<C> = BackTrackCardCountManager::new();
     if log_bool {
         clear_log().expect("failed to clear log");
     }
@@ -2588,53 +2476,13 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
     log::trace!("Game Made:");
     while !hh.game_won() {
         
-        // log::info!("{}", format!("Step : {:?}",step));
-        hh.log_state();
-        log::info!("=== Prob ===");
-        prob.printlog();
-        log::info!("=== BitProb ===");
-        bit_prob.printlog();
         // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
         // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
         new_moves = hh.generate_legal_moves();
-        log::info!("{}", format!("Legal Moves: {:?}", new_moves));
-        log::info!("{}", format!("Legal Moves Retained: {:?}", new_moves));
-        if new_moves[0].name() != AOName::CollectiveChallenge {
-            // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
-        } else {
-            // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
-            log::info!("{}", format!("Legal Moves: CollectiveChallenge"));
-        }
         
-        if let Some(output_ref) = replay.get(step) {
-            let output = output_ref.clone();
+        if let Some(output) = replay.get(step) {
             log::info!("{}", format!("Choice: {:?}", output));
-            if output.name() == AOName::Discard{
-                let true_legality = if output.no_cards() == 1 {
-                    // let start_time = Instant::now();
-                    prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
-                } else {
-                    prob.player_can_have_cards(output.player_id(), output.cards())
-                };
-                if !true_legality{
-                    log::info!("Illegal Move, Ending Game");
-                    break    
-                } 
-            } else if output.name() == AOName::RevealRedraw {
-                let true_legality: bool = prob.player_can_have_card_alive(output.player_id(), output.card());
-                if !true_legality{
-                    log::info!("Illegal Move, Ending Game");
-                    break    
-                } 
-            } else if output.name() == AOName::ExchangeDraw {
-                let true_legality: bool = prob.player_can_have_cards(6, output.cards());
-                if !true_legality {
-                    log::info!("Illegal Move, Ending Game");
-                    break    
-                }
-            } 
-            hh.push_ao(output);
-            hh.print_replay_history_braindead();
+            hh.push_ao(*output);
             prob.push_ao(&output, bool_know_priv_info);
             bit_prob.push_ao_public(&output);
             log::info!("Just before validation");
@@ -2689,7 +2537,9 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
                 false => "FAILED",
             });
             if !pass_inferred_constraints {
-                prob.print_legal_states();
+                // prob.print_legal_states();
+                println!("vali: {:?}", validated_inferred_constraints);
+                println!("test: {:?}", test_inferred_constraints);
                 hh.print_replay_history_braindead();
                 panic!()
             }
@@ -2698,10 +2548,6 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
                 panic!()
             }
             
-            public_constraints_correct += pass_public_constraints as usize;
-            inferred_constraints_correct += pass_inferred_constraints as usize;
-            impossible_constraints_correct += pass_impossible_constraints as usize;
-            total_tries += 1;
         } else {
             log::trace!("End of Replay!");
             println!("=> no issues");
@@ -2713,6 +2559,7 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
         }
         log::info!("");
     }
+    
     if step > max_steps {
         max_steps = step;
     }
@@ -2729,6 +2576,7 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
     // println!("Impossible Cases Correct: {}/{}", public_constraints_correct, total_tries);
     // println!("Total Tries: {}", total_tries);
 }
+
 pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool){
     if log_bool{
         logger(LOG_LEVEL);
