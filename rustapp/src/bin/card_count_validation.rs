@@ -33,12 +33,13 @@ fn main() {
     let log_bool = true;
     let bool_know_priv_info = false;
     let print_frequency: usize = 100;
+    let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
     // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     
-    game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
     // TODO: Make a Lite with Lazy Inferred Constraints
     // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
@@ -64,7 +65,7 @@ fn main() {
     // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
     // temp_test_brute();
     // instant_delete();
-    // bt_test::<BackTrackCollectiveConstraintLite>();
+    bt_test::<BackTrackCollectiveConstraintLite>();
     bt_test::<BackTrackCollectiveConstraintLazy>();
     // bt_test::<BackTrackCollectiveConstraint>();
     // test();
@@ -184,7 +185,7 @@ pub fn bt_test<C>()
     // println!("Testing: {}", stringify!(amb_4)); 
     // replay_game_constraint_bt::<C>(amb_4, false, false);
     println!("Testing: {}", stringify!(amb_5)); 
-    replay_game_constraint_bt::<C>(amb_5.clone(), false, true);
+    replay_game_constraint_bt::<C>(amb_5.clone(), false, false);
 }
 pub fn test<C>() 
     where

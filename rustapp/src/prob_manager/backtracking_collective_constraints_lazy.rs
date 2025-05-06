@@ -285,7 +285,7 @@ impl BackTrackCollectiveConstraintLazy {
         // Lazy evaluation stores nothing but death
         // self.generate_impossible_constraints(self.history.len() - 1);
         // self.generate_inferred_constraints();
-        // self.history[history_index].meta_data = self.to_meta_data();
+        self.history[history_index].meta_data = self.to_meta_data();
         log::info!("recalculated_stored_move_initial: {} {:?}", history_index, self.history[history_index].action_info());
         self.printlog();
     }   
