@@ -10,7 +10,6 @@ ARG USER=devuser
 ARG UID=1337
 RUN useradd -m -u ${UID} ${USER}
 
-
 # Uncomment to switch to non-root user
 # USER ${USER}
 
