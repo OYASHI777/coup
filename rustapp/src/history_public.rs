@@ -155,7 +155,7 @@ pub enum ActionObservation {
     Discard {
         player_id: usize,
         card: [Card; 2],
-        no_cards: u8,
+        no_cards: usize,
     },
     RevealRedraw {
         player_id: usize,
@@ -173,7 +173,7 @@ pub enum ActionObservation {
         // cards represents their choice of hand
         // For no_cards == 1, both cards in cards should be the same
         player_id: usize,
-        no_cards: u8, 
+        no_cards: usize, 
         hand: [Card; 2],
         relinquish: [Card; 2], // Assume either all is known or none are known
     },
@@ -274,7 +274,7 @@ impl ActionObservation {
             _ => panic!("This ActionObservation variant does not contain a result"),
         }
     }
-    pub fn no_cards(&self) -> u8 {
+    pub fn no_cards(&self) -> usize {
         match self {
             ActionObservation::Discard { no_cards, .. } => *no_cards, 
             // ActionObservation::ExchangeDraw { no_cards, .. } => *no_cards, 
@@ -1296,7 +1296,7 @@ impl History {
                     //     }
                     // }
                     // Assumes hand and relinquish are unknown, so placeholder Ambassadors are left there
-                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: self.latest_influence()[player_id], hand: [Card::Ambassador, Card::Ambassador], relinquish: [Card::Ambassador, Card::Ambassador]});
+                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: self.latest_influence()[player_id] as usize, hand: [Card::Ambassador, Card::Ambassador], relinquish: [Card::Ambassador, Card::Ambassador]});
                 }
             },
             AOName::ExchangeDraw => {

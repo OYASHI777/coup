@@ -1310,22 +1310,22 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
                 prob.push_ao_public(&action_obs);
                 bit_prob.push_ao_public(&action_obs);
             }
-            if let Some(ai) = action_info {
-                // TEMP fix for no DiscardMultiple
-                // TODO: Change back to nice API
-                if let ActionObservation::Discard { player_id, card, no_cards } = action_obs {
-                    if no_cards == 2 { 
-                        prob.push_ao_public(&action_obs);
-                        bit_prob.push_ao_public(&action_obs);
-                    } else {
-                        prob.push_ao(player, &ai);
-                        bit_prob.push_ao(player, &ai);
-                    }
-                } else {
-                    prob.push_ao(player, &ai);
-                    bit_prob.push_ao(player, &ai);
-                }
-            }
+            // if let Some(ai) = action_info {
+            //     // TEMP fix for no DiscardMultiple
+            //     // TODO: Change back to nice API
+            //     if let ActionObservation::Discard { player_id, card, no_cards } = action_obs {
+            //         if no_cards == 2 { 
+            //             prob.push_ao_public(&action_obs);
+            //             bit_prob.push_ao_public(&action_obs);
+            //         } else {
+            //             prob.push_ao(player, &ai);
+            //             bit_prob.push_ao(player, &ai);
+            //         }
+            //     } else {
+            //         prob.push_ao(player, &ai);
+            //         bit_prob.push_ao(player, &ai);
+            //     }
+            // }
             // TEST
             // prob.push_ao_public(&action_public);
             // bit_prob.push_ao_public(&action_public);
