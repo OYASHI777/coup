@@ -1355,7 +1355,8 @@ impl BackTrackCollectiveConstraintLite {
 }
 
 impl CoupConstraint for BackTrackCollectiveConstraintLite {
-    fn game_start() -> Self {
+    // TODO: OPTIMIZE, i guess you don't really need history inside here...
+    fn game_start_public() -> Self {
         let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
         let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
         // let revealed_status = vec![Vec::with_capacity(5); 7];
@@ -1376,8 +1377,48 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
             history,
         }
     }
-
-    fn add_move_public(&mut self, player_id: u8, action: ActionInfo) {
+    // TODO: OPTIMIZE, i guess you don't really need history inside here...
+    fn game_start_private(player: usize, cards: &[Card; 2]) -> Self {
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
+        // let revealed_status = vec![Vec::with_capacity(5); 7];
+        // TODO: Add inferred_card_count
+        let mut history: Vec<SignificantAction> = Vec::with_capacity(50);
+        // Start takes the inferred information discovered via a pathdependent lookback
+        let mut start = SignificantAction::start(); 
+        start.add_inferred_constraints(player, cards[0]);
+        start.add_inferred_constraints(player, cards[1]);
+        start.meta_data.impossible_constraints[player] = [true; 5];
+        start.meta_data.impossible_constraints[player][cards[0] as usize] = false;
+        start.meta_data.impossible_constraints[player][cards[1] as usize] = false;
+        start.meta_data.impossible_constraints_2[player] = [[true; 5]; 5];
+        start.meta_data.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
+        start.meta_data.impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
+        history.push(start);
+        // StartInferred takes the inferred information from start, and runs add_inferred_information
+        // This seperation prevents handling cases where you add discovered information that is already inside due to add_inferred_information
+        let mut start_inferred = SignificantAction::start_inferred(); 
+        start_inferred.add_inferred_constraints(player, cards[0]);
+        start_inferred.add_inferred_constraints(player, cards[1]);
+        start_inferred.meta_data.impossible_constraints[player] = [true; 5];
+        start_inferred.meta_data.impossible_constraints[player][cards[0] as usize] = false;
+        start_inferred.meta_data.impossible_constraints[player][cards[1] as usize] = false;
+        start_inferred.meta_data.impossible_constraints_2[player] = [[true; 5]; 5];
+        start_inferred.meta_data.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
+        start_inferred.meta_data.impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
+        history.push(start_inferred);
+        Self {
+            public_constraints,
+            inferred_constraints,
+            impossible_constraints: [[false; 5]; 7],
+            impossible_constraints_2: [[[false; 5]; 5]; 7], 
+            impossible_constraints_3: [[[false; 5]; 5]; 5], 
+            move_no: 1,
+            history,
+        }
+    }
+    /// Adds move that may contain private or public info
+    fn add_move(&mut self, player_id: u8, action: ActionInfo) {
         match action {
             ActionInfo::Discard { .. } => {
                 let significant_action = SignificantAction::initial(self.move_no, player_id, action);
@@ -1408,10 +1449,6 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
         }
         // post increment
         self.move_no += 1;
-    }
-
-    fn add_move_private(&mut self, player_id: u8) {
-        todo!()
     }
 
     fn printlog(&self) {

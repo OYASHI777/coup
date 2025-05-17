@@ -6,7 +6,7 @@
 
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 use crate::history_public::{Card, AOName, ActionObservation};
-use super::backtracking_collective_constraints::{ActionInfo};
+use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
 // TODO: Store also a version of constraint_history but split by players
 // TODO: Improve analysis interface when using the manager... using last_constraint then the analysis is very clunky
 // So it is easier to know the first time a player does something
@@ -18,6 +18,7 @@ pub struct BackTrackCardCountManager<C>
     // a vec of constraints to push and pop
     // dead cards to push or pop
     // Will not locally store game history, jsut the constraint history
+    private_player: Option<usize>,
     constraint_history: Vec<C>, // I think None is stored if there are no changes
     constraint_history_move_no: Vec<usize>, // TODO: determine if more optimal to put in constraint_history
     move_no: usize,
@@ -28,21 +29,50 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
     /// Constructor
     pub fn new() -> Self {
         let mut constraint_history = Vec::with_capacity(120);
-        constraint_history.push(C::game_start());
+        // constraint_history.push(C::game_start());
         let mut constraint_history_move_no = Vec::with_capacity(120);
-        constraint_history_move_no.push(0);
+        // constraint_history_move_no.push(0);
         Self {
+            private_player: None,
             constraint_history,
             constraint_history_move_no,
             move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
         }
     }
+    // /// Constructor
+    // pub fn new() -> Self {
+    //     let mut constraint_history = Vec::with_capacity(120);
+    //     constraint_history.push(C::game_start());
+    //     let mut constraint_history_move_no = Vec::with_capacity(120);
+    //     constraint_history_move_no.push(0);
+    //     Self {
+    //         private_player: None,
+    //         constraint_history,
+    //         constraint_history_move_no,
+    //         move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
+    //     }
+    // }
+    /// Adding private player starting hand
+    pub fn start_public(&mut self) {
+        self.constraint_history.push(C::game_start_public());
+        self.constraint_history_move_no.push(0);
+        self.move_no = 1;
+    }
+    /// Adding private player starting hand
+    pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
+        self.private_player = Some(player);
+        // TODO: Add cards
+        self.constraint_history.push(C::game_start_private(player, cards));
+        self.constraint_history_move_no.push(0);
+        self.move_no = 1;
+    }
     /// Returns everything to original state
     pub fn reset(&mut self) {
+        self.private_player = None;
         self.constraint_history.clear();
-        self.constraint_history.push(C::game_start());
+        // self.constraint_history.push(C::game_start());
         self.constraint_history_move_no.clear();
-        self.constraint_history_move_no.push(0);
+        // self.constraint_history_move_no.push(0);
         self.move_no = 1;
     }
     /// Logs the constraint's log
@@ -79,7 +109,7 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
                     let mut last_constraint = self.constraint_history.last().unwrap().clone();
                     let action_info = ActionInfo::Discard { discard: *temp_card };
                     log::trace!("Adding move discard 1");
-                    last_constraint.add_move_public(ao.player_id() as u8, action_info);
+                    last_constraint.add_move(ao.player_id() as u8, action_info);
                     // last_constraint.sort_unstable();
                     self.constraint_history.push(last_constraint);
                     self.constraint_history_move_no.push(self.move_no);
@@ -90,10 +120,10 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
                     let mut last_constraint = self.constraint_history.last().unwrap().clone();
                     let action_info = ActionInfo::Discard { discard: temp_cards[0] };
                     log::trace!("Adding move discard 2");
-                    last_constraint.add_move_public(ao.player_id() as u8, action_info);
+                    last_constraint.add_move(ao.player_id() as u8, action_info);
                     let action_info = ActionInfo::Discard { discard: temp_cards[1] };
                     log::trace!("Adding move discard 2");
-                    last_constraint.add_move_public(ao.player_id() as u8, action_info);
+                    last_constraint.add_move(ao.player_id() as u8, action_info);
                     // last_constraint.sort_unstable();
                     self.constraint_history.push(last_constraint);
                     self.constraint_history_move_no.push(self.move_no);
@@ -106,7 +136,7 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
             let mut last_constraint = self.constraint_history.last().unwrap().clone();
             let action_info = ActionInfo::RevealRedraw { reveal: ao.card(), redraw: None, relinquish: None };
             log::trace!("Adding move RevealRedraw");
-            last_constraint.add_move_public(ao.player_id() as u8, action_info);
+            last_constraint.add_move(ao.player_id() as u8, action_info);
             // last_constraint.sort_unstable();
             self.constraint_history.push(last_constraint);
             self.constraint_history_move_no.push(self.move_no);
@@ -114,7 +144,7 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
             let mut last_constraint = self.constraint_history.last().unwrap().clone();
             let action_info = ActionInfo::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) };
             log::trace!("Adding move ExchangeChoice");
-            last_constraint.add_move_public(ao.player_id() as u8, action_info);
+            last_constraint.add_move(ao.player_id() as u8, action_info);
             self.constraint_history.push(last_constraint);
             self.constraint_history_move_no.push(self.move_no);
         }
@@ -124,10 +154,9 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
     }
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of both public and private information
-    pub fn push_ao_private(&mut self, ao: &ActionObservation){
-
-        // Handle different move types
-        unimplemented!();
+    pub fn push_ao(&mut self, player: usize, action_info: &ActionInfo){
+        let mut last_constraint = self.constraint_history.last().unwrap().clone();
+        last_constraint.add_move(player as u8, action_info.clone());
         // shove move_no into CollectiveConstraint
         // post_increment: move_no is now the number of the next move
         self.move_no += 1;
@@ -189,13 +218,12 @@ where
 /// A trait providing the interface for a constraint
 pub trait CoupConstraint: Clone {
     /// Initializes the state at beginning of the game
-    fn game_start() -> Self;
+    fn game_start_public() -> Self;
+    /// Initializes the state at beginning of the game
+    fn game_start_private(player: usize, cards: &[Card; 2]) -> Self;
 
     /// Records a public move into the constraint.
-    fn add_move_public(&mut self, player_id: u8, action: ActionInfo);
-
-    /// Records a private move with information known to a particular player into the constraint.
-    fn add_move_private(&mut self, player_id: u8);
+    fn add_move(&mut self, player_id: u8, action: ActionInfo);
 
     /// Emit debug info about the constraint.
     fn printlog(&self);

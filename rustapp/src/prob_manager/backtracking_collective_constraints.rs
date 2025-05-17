@@ -2466,7 +2466,7 @@ impl BackTrackCollectiveConstraint {
 }
 
 impl CoupConstraint for BackTrackCollectiveConstraint {
-    fn game_start() -> Self {
+    fn game_start_public() -> Self {
         let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
         let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
         // let revealed_status = vec![Vec::with_capacity(5); 7];
@@ -2488,7 +2488,35 @@ impl CoupConstraint for BackTrackCollectiveConstraint {
         }
     }
 
-    fn add_move_public(&mut self, player_id: u8, action: ActionInfo) {
+    fn game_start_private(player: usize, cards: &[Card; 2]) -> Self {
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
+        // let revealed_status = vec![Vec::with_capacity(5); 7];
+        // TODO: Add inferred_card_count
+        let mut history: Vec<SignificantAction> = Vec::with_capacity(50);
+        // Start takes the inferred information discovered via a pathdependent lookback
+        let mut start = SignificantAction::start(); 
+        start.add_inferred_constraints(player, cards[0]);
+        start.add_inferred_constraints(player, cards[1]);
+        history.push(start);
+        // StartInferred takes the inferred information from start, and runs add_inferred_information
+        // This seperation prevents handling cases where you add discovered information that is already inside due to add_inferred_information
+        let mut start_inferred = SignificantAction::start_inferred(); 
+        start_inferred.add_inferred_constraints(player, cards[0]);
+        start_inferred.add_inferred_constraints(player, cards[1]);
+        history.push(start_inferred);
+        Self {
+            public_constraints,
+            inferred_constraints,
+            impossible_constraints: [[false; 5]; 7],
+            impossible_constraints_2: [[[false; 5]; 5]; 7], 
+            impossible_constraints_3: [[[false; 5]; 5]; 5], 
+            move_no: 1,
+            history,
+        }
+    }
+
+    fn add_move(&mut self, player_id: u8, action: ActionInfo) {
         match action {
             ActionInfo::Discard { .. } => {
                 let significant_action = SignificantAction::initial(self.move_no, player_id, action);
@@ -2521,16 +2549,14 @@ impl CoupConstraint for BackTrackCollectiveConstraint {
         self.move_no += 1;
     }
 
-    fn add_move_private(&mut self, player_id: u8) {
-        todo!()
-    }
-
     fn printlog(&self) {
         log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints));
         log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints));
         // let info_strings = self.history.iter().map(|s| s.action_info_str()).collect::<Vec<String>>();
         log::info!("{}", format!("History: {:?}", self.history.iter().map(|s| s.action_info_str()).collect::<Vec<String>>()));
     }
+    
+
 }
 impl CoupConstraintAnalysis for BackTrackCollectiveConstraint {
     fn public_constraints(&self) -> &Vec<Vec<Card>> {

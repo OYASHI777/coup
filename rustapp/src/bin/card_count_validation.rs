@@ -1,8 +1,8 @@
 use log::LevelFilter;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
-use rustapp::prob_manager::backtracking_collective_constraints::BackTrackCollectiveConstraint;
+use rustapp::prob_manager::backtracking_collective_constraints::{ActionInfo, BackTrackCollectiveConstraint};
 use rustapp::prob_manager::backtracking_collective_constraints_lazy::BackTrackCollectiveConstraintLazy;
 use rustapp::prob_manager::backtracking_collective_constraints_lite::BackTrackCollectiveConstraintLite;
 use rustapp::prob_manager::backtracking_prob::{BackTrackCardCountManager, CoupConstraint, CoupConstraintAnalysis};
@@ -915,7 +915,7 @@ pub fn game_rnd_constraint_st(game_no: usize, bool_know_priv_info: bool, min_dea
                     }
                 } 
                 hh.push_ao(output);
-                prob.push_ao(&output, bool_know_priv_info);
+                prob.push_ao_public(&output);
                 bit_prob.push_ao(&output, bool_know_priv_info);
                 let total_dead: usize = bit_prob.latest_constraint().sorted_public_constraints().iter().map(|v| v.len()).sum();
                 if total_dead >= min_dead_check {
@@ -1028,7 +1028,7 @@ pub fn game_rnd_constraint_pd_st(game_no: usize, bool_know_priv_info: bool, min_
                     }
                 } 
                 hh.push_ao(output);
-                prob.push_ao(&output, bool_know_priv_info);
+                prob.push_ao_public(&output);
                 bit_prob.push_ao_public(&output);
                 let total_dead: usize = bit_prob.latest_constraint().sorted_public_constraints().iter().map(|v| v.len()).sum();
                 if total_dead >= min_dead_check {
@@ -1098,6 +1098,7 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
     where
         C: CoupConstraint + CoupConstraintAnalysis,
 {
+    assert!(!bool_know_priv_info, "bool_know_priv_info: true not supported");
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
@@ -1114,11 +1115,28 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
         let mut hh = History::new(0);
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
+        let mut rng = thread_rng();
+        let private_player: usize = rng.gen_range(0..6);
+        if bool_know_priv_info {
+            // Choose random player
+            // Initialize for that player
+            let mut rng = thread_rng();
+            let card_0: u8 = rng.gen_range(0..5);
+            let card_1: u8 = rng.gen_range(0..5);
+            let cards = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
+            // TODO: Fill those up
+            prob.start_private(private_player, &cards);
+            bit_prob.start_private(private_player, &cards);
+        } else {
+            prob.start_public();
+            bit_prob.start_public();
+        }
         while !hh.game_won() {
             
             // hh.log_state();
             // prob.printlog();
             // bit_prob.printlog();
+            // These are legal from a public sense only, but may be illegal depending on card constraints
             new_moves = hh.generate_legal_moves();
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
@@ -1146,7 +1164,7 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
                     }
                 } 
                 hh.push_ao(output);
-                prob.push_ao(&output, bool_know_priv_info);
+                prob.push_ao_public(&output);
                 bit_prob.push_ao_public(&output);
                 let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
                 if total_dead >= min_dead_check {
@@ -1216,6 +1234,213 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
         bit_prob.reset();
         game += 1;
     }
+}
+pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: bool, min_dead_check: usize, tx: Sender<Stats>)
+    where
+        C: CoupConstraint + CoupConstraintAnalysis,
+{
+    let mut game: usize = 0;
+    let mut max_steps: usize = 0;
+    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
+    // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
+    // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
+    let mut bit_prob: BackTrackCardCountManager<C> = BackTrackCardCountManager::new();
+    let mut public_constraints_correct: usize = 0;
+    let mut inferred_constraints_correct: usize = 0;
+    let mut impossible_constraints_correct: usize = 0;
+    let mut over_inferred_count: usize = 0;
+    let mut total_tries: usize = 0;
+    while game < game_no {
+        let mut stats = Stats::new();
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        let mut rng = thread_rng();
+        let private_player: usize = rng.gen_range(0..6);
+        if bool_know_priv_info {
+            // Choose random player
+            // Initialize for that player
+            let mut rng = thread_rng();
+            let card_0: u8 = rng.gen_range(0..5);
+            let card_1: u8 = rng.gen_range(0..5);
+            let cards = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
+            // TODO: Fill those up
+            prob.start_private(private_player, &cards);
+            bit_prob.start_private(private_player, &cards);
+        } else {
+            prob.start_public();
+            bit_prob.start_public();
+        }
+        while !hh.game_won() {
+            
+            // hh.log_state();
+            // prob.printlog();
+            // bit_prob.printlog();
+            // These are legal from a public sense only, but may be illegal depending on card constraints
+            new_moves = hh.generate_legal_moves();
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
+            // new_moves.retain(|m| m.name() != AOName::Exchange);
+            // TODO: Return Result
+            let (player, action_public, action_info): (usize, ActionObservation, Option<ActionInfo>) = generate_legal_moves(&mut new_moves, &prob, bool_know_priv_info);
+            
+            hh.push_ao(action_public);
+            if let Some(ai) = action_info {
+                // TEMP fix for no DiscardMultiple
+                // TODO: Change back to nice API
+                if let ActionObservation::Discard { player_id, card, no_cards } = action_public {
+                    if no_cards == 2 { 
+                        prob.push_ao_public(&action_public);
+                        bit_prob.push_ao_public(&action_public);
+                    } else {
+                        prob.push_ao(player, &ai);
+                        bit_prob.push_ao(player, &ai);
+                    }
+                } else {
+                    prob.push_ao(player, &ai);
+                    bit_prob.push_ao(player, &ai);
+                }
+            }
+            let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
+            if total_dead >= min_dead_check {
+                let validated_public_constraints = prob.validated_public_constraints();
+                let validated_inferred_constraints = prob.validated_inferred_constraints();
+                let validated_impossible_constraints = prob.validated_impossible_constraints();
+                let test_public_constraints = bit_prob.sorted_public_constraints().clone();
+                let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
+                let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
+                let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
+                let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
+                let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
+                let bool_test_over_inferred: bool = validated_inferred_constraints.iter().zip(test_inferred_constraints.iter()).any(|(val, test)| {
+                    test.iter().any(|item| !val.contains(item)) || test.len() > val.len()
+                });
+                // let pass_brute_prob_validity = prob.validate();
+                stats.public_constraints_correct += pass_public_constraints as usize;
+                stats.inferred_constraints_correct += pass_inferred_constraints as usize;
+                stats.impossible_constraints_correct += pass_impossible_constraints as usize;
+                stats.total_tries += 1;
+                if bool_test_over_inferred {
+                    // what we are testing inferred too many things
+                    stats.over_inferred_count += 1;
+                    break;
+                    // let replay = hh.get_history(hh.store_len());
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // panic!("Inferred to many items!")
+                }
+                if !pass_inferred_constraints {
+                    println!("vali: {:?}", validated_inferred_constraints);
+                    println!("test: {:?}", test_inferred_constraints);
+                    println!("{}", hh.get_replay_history_braindead());
+                    break;
+                    // let replay = hh.get_history(hh.store_len());
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // panic!("Inferred constraints do not match!")
+                }
+                if !pass_impossible_constraints {
+                    println!("vali: {:?}", validated_impossible_constraints);
+                    println!("test: {:?}", test_impossible_constraints);
+                    break;
+                    // let replay = hh.get_history(hh.store_len());
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // panic!()
+                }
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+        }
+        if step > max_steps {
+            max_steps = step;
+        }
+        stats.replay_string = hh.get_replay_history_braindead();
+        stats.games += 1;
+        tx.send(stats).unwrap();
+        prob.reset();
+        bit_prob.reset();
+        game += 1;
+    }
+}
+pub fn generate_legal_moves(new_moves: &mut Vec<ActionObservation>, prob: &BruteCardCountManagerGeneric<CardStateu64>, bool_know_priv_info: bool) -> (usize, ActionObservation, Option<ActionInfo>) {
+    // Clone the moves and shuffle them in place
+    new_moves.shuffle(&mut thread_rng());
+
+    if bool_know_priv_info {
+        for candidate in new_moves.iter() {
+            match candidate {
+                Discard { player_id, card, no_cards } => {
+                    if *no_cards == 1 {
+                        if prob.player_can_have_card_alive(*player_id, card[0]) {
+                            return (*player_id, *candidate, Some(ActionInfo::Discard { discard: card[0] }));
+                        }
+                    } else {
+                        if prob.player_can_have_cards(candidate.player_id(), candidate.cards()) {
+                            todo!("Make multiple Discard");
+                            return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                        }
+                    }
+                },
+                RevealRedraw { player_id, card } => {
+                    if prob.player_can_have_card_alive(*player_id, *card) {
+                        let mut possible_redraw_cards: Vec<u8> = vec![0, 1, 2, 3, 4];
+                        possible_redraw_cards.shuffle(&mut thread_rng());
+                        for card_num in possible_redraw_cards.iter() {
+                            let redraw_card = Card::try_from(*card_num).unwrap();
+                            if prob.player_can_have_card_alive(6, redraw_card) {
+                                return (candidate.player_id(), *candidate, Some(ActionInfo::RevealRedraw { reveal: *card, redraw: Some(redraw_card), relinquish: None } ));
+                            }
+                        }
+                    }
+                },
+                ExchangeDraw { player_id, card } => {
+                    if prob.player_can_have_cards(6, candidate.cards()) {
+                        todo!("Add ExchangeDraw ActionInfo")
+                    }
+                },
+                ExchangeChoice { player_id, no_cards } => {
+                    todo!("Add ExchangeChoice ActionInfo")
+                },
+                _ => {
+                    return (candidate.player_id(), *candidate, None);
+                }
+            }
+        }
+    } else {
+        for candidate in new_moves.iter() {
+            match candidate {
+                Discard { player_id, card, no_cards } => {
+                    if *no_cards == 1 {
+                        if prob.player_can_have_card_alive(*player_id, card[0]) {
+                            return (*player_id, *candidate, Some(ActionInfo::Discard { discard: card[0] }));
+                        }
+                    } else {
+                        if prob.player_can_have_cards(candidate.player_id(), candidate.cards()) {
+                            todo!("Make multiple Discard");
+                            return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                        }
+                    }
+                },
+                RevealRedraw { player_id, card } => {
+                    if prob.player_can_have_card_alive(*player_id, *card) {
+                        return (candidate.player_id(), *candidate, Some(ActionInfo::RevealRedraw { reveal: *card, redraw: None, relinquish: None }));
+                    }
+                },
+                ExchangeDraw { player_id, card } => {
+                    if prob.player_can_have_cards(6, candidate.cards()) {
+                        return (candidate.player_id(), *candidate, None);
+                    }
+                },
+                ExchangeChoice { player_id, no_cards } => {
+                    return (candidate.player_id(), *candidate, None);
+                },
+                _ => {
+                    return (candidate.player_id(), *candidate, None);
+                }
+            }
+        }
+    }
+    panic!("no legit moves found");
 }
 pub fn game_rnd_constraint_bt_st_g<V, T>(game_no: usize, bool_know_priv_info: bool, min_dead_check: usize, tx: Sender<Stats>)
     where
@@ -1402,7 +1627,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
                     }
                 } 
                 hh.push_ao(output);
-                prob.push_ao(&output, bool_know_priv_info);
+                prob.push_ao_public(&output);
                 bit_prob.push_ao(&output, bool_know_priv_info);
                 let total_dead: usize = bit_prob.latest_constraint().sorted_public_constraints().iter().map(|v| v.len()).sum();
                 if total_dead >= min_dead_check {
@@ -1740,7 +1965,7 @@ pub fn game_rnd_constraint_pd(game_no: usize, bool_know_priv_info: bool, print_f
                 log::info!("{}", format!("Choice: {:?}", output));
                 hh.push_ao(output);
                 hh.print_replay_history_braindead();
-                prob.push_ao(&output, bool_know_priv_info);
+                prob.push_ao_public(&output);
                 bit_prob.push_ao_public(&output);
                 let total_dead: usize = bit_prob.latest_constraint().sorted_public_constraints().iter().map(|v| v.len()).sum();
                 if total_dead >= min_dead_check {
@@ -2209,7 +2434,7 @@ pub fn replay_game_constraint(replay: Vec<ActionObservation>, bool_know_priv_inf
                 }
             } 
             hh.push_ao(output);
-            prob.push_ao(&output, bool_know_priv_info);
+            prob.push_ao_public(&output);
             bit_prob.push_ao(&output, bool_know_priv_info);
             match output.name() {
                 AOName::RevealRedraw | 
@@ -2368,7 +2593,7 @@ pub fn replay_game_constraint_pd(replay: Vec<ActionObservation>, bool_know_priv_
             } 
             hh.push_ao(output);
             hh.print_replay_history_braindead();
-            prob.push_ao(&output, bool_know_priv_info);
+            prob.push_ao_public(&output);
             bit_prob.push_ao_public(&output);
             match output.name() {
                 AOName::RevealRedraw | 
@@ -2484,7 +2709,7 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
         if let Some(output) = replay.get(step) {
             log::info!("{}", format!("Choice: {:?}", output));
             hh.push_ao(*output);
-            prob.push_ao(&output, bool_know_priv_info);
+            prob.push_ao_public(&output);
             bit_prob.push_ao_public(&output);
             log::info!("Just before validation");
             bit_prob.printlog();
@@ -2847,7 +3072,7 @@ fn test_brute(game_no: usize, bool_know_priv_info: bool, print_frequency: usize,
                 } 
                 hh.push_ao(output);
                 prob.push_ao(&output, bool_know_priv_info);
-                test_prob.push_ao(&output, bool_know_priv_info);
+                test_prob.push_ao_public(&output);
                 let validated_public_constraints = prob.validated_public_constraints();
                 let validated_inferred_constraints = prob.validated_inferred_constraints();
                 let validated_impossible_constraints = prob.validated_impossible_constraints();

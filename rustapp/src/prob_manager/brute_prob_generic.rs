@@ -7,6 +7,7 @@
 use std::hash::Hash;
 use crate::history_public::{Card, AOName, ActionObservation};
 use crate::prob_manager::coup_const::MAX_PERM_STATES;
+use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
 use super::card_state::CardPermState;
 // use core::hash::Hasher;
 use ahash::AHashSet;
@@ -16,6 +17,7 @@ pub struct BruteCardCountManagerGeneric<T: CardPermState>
 where
     T: CardPermState + Hash + Eq + Copy + Clone + std::fmt::Display + std::fmt::Debug,
 {
+    private_player: Option<usize>,
     all_states: Vec<T>,
     calculated_states: Vec<T>, // All the states that fulfil current constraints
     public_constraints: Vec<Vec<Card>>,
@@ -40,6 +42,7 @@ where
         let impossible_constraints_2 = [[[false; 5]; 5]; 7];
         let impossible_constraints_3 = [[[false; 5]; 5]; 5];
         Self {
+            private_player: None,
             all_states,
             calculated_states,
             public_constraints,
@@ -49,8 +52,19 @@ where
             impossible_constraints_3,
         }
     }
+    /// Adding private player starting hand
+    pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
+        self.private_player = Some(player);
+        self.restrict(player, cards);
+        self.inferred_constraints[player].push(cards[0]);
+        self.inferred_constraints[player].push(cards[1]);
+    }
+    /// Placeholder
+    pub fn start_public(&mut self) {
+    }
     /// Resets
     pub fn reset(&mut self) {
+        self.private_player = None;
         self.public_constraints = vec![Vec::with_capacity(2); 6];
         self.public_constraints.push(Vec::with_capacity(3));
         self.inferred_constraints = vec![Vec::with_capacity(2); 6];
@@ -63,8 +77,7 @@ where
         self.public_constraints[player_id].push(card);
     }
     /// Modifies internal state based on latest action done by player
-    pub fn push_ao(&mut self, ao: &ActionObservation, bool_know_priv_info: bool) {
-        debug_assert!(!bool_know_priv_info, "Not yet supported!");
+    pub fn push_ao_public(&mut self, ao: &ActionObservation) {
         match ao.name() {
             AOName::Discard => {
                 match ao.no_cards() {
@@ -103,6 +116,41 @@ where
             },
             _ => {
 
+            },
+        };
+    }
+    pub fn push_ao(&mut self, player: usize, action_info: &ActionInfo) {
+        // TODO: Add DiscardMultiple
+        match action_info {
+            ActionInfo::Discard { discard } => {
+                self.public_constraints[player].push(*discard);
+                let current_dead_cards: Vec<Card> = self.public_constraints[player].clone();
+                self.restrict(player, &current_dead_cards);
+                self.update_constraints();
+            },
+            ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
+                if redraw.is_none() {
+                    self.reveal_redraw(player, *reveal);
+                } else if let Some(redraw_card) = redraw {
+                    let mut current_dead_cards: Vec<Card> = self.public_constraints[player].clone();
+                    current_dead_cards.push(*reveal);
+                    self.restrict(player, &[*reveal]);
+                    if *redraw_card != *reveal {
+                        self.restrict(6, &[*redraw_card]);
+                        // swap them
+                        todo!();
+                    }
+                }
+                self.update_constraints();
+            },
+            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+                todo!();
+            },
+            ActionInfo::Start => {
+                unimplemented!()
+            },
+            ActionInfo::StartInferred => {
+                unimplemented!()
             },
         };
     }
