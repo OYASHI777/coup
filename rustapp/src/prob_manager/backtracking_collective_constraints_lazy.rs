@@ -1454,7 +1454,8 @@ impl CoupConstraint for BackTrackCollectiveConstraintLazy {
             history,
         }
     }
-
+    /// Initialize game start with private information for a particular player
+    /// TODO: Consider storing as public_constraints in start_inferred?
     fn game_start_private(player: usize, cards: &[Card; 2]) -> Self {
         let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
         let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 

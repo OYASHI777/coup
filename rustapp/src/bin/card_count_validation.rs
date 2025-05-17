@@ -1303,7 +1303,7 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
                 panic!("no legit moves found");
             });
             hh.push_ao(action_obs);
-            if bool_know_priv_info {
+            if bool_know_priv_info && action_obs.player_id() == private_player {
                 prob.push_ao_private(&action_obs);
                 bit_prob.push_ao_private(&action_obs);
             } else {
@@ -1326,9 +1326,6 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
             //         bit_prob.push_ao(player, &ai);
             //     }
             // }
-            // TEST
-            // prob.push_ao_public(&action_public);
-            // bit_prob.push_ao_public(&action_public);
             let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
             if total_dead >= min_dead_check {
                 let validated_public_constraints = prob.validated_public_constraints();
