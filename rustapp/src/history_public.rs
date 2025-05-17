@@ -365,19 +365,21 @@ pub struct History {
     // coins: [u8; 6],
     gamestate: [Gamestate; MAX_HISTORY_LEN],
     current_player_turn: usize, 
-    public_card_count: HashMap<Card, u8>,
+    // public_card_count: HashMap<Card, u8>, // TODO: Change this to array
+    public_card_count: [u8; 5],
 }
 
 impl History {
     pub fn new(starting_player: usize) -> Self {
         let mut temp: [Gamestate; MAX_HISTORY_LEN] = [Gamestate::empty(); MAX_HISTORY_LEN];
         temp[0] = Gamestate::new();
-        let mut public_card_count: HashMap<Card, u8> = HashMap::new();
-        public_card_count.insert(Card::Ambassador, 0);
-        public_card_count.insert(Card::Assassin, 0);
-        public_card_count.insert(Card::Captain, 0);
-        public_card_count.insert(Card::Duke, 0);
-        public_card_count.insert(Card::Contessa, 0);
+        // let mut public_card_count: HashMap<Card, u8> = HashMap::new();
+        // public_card_count.insert(Card::Ambassador, 0);
+        // public_card_count.insert(Card::Assassin, 0);
+        // public_card_count.insert(Card::Captain, 0);
+        // public_card_count.insert(Card::Duke, 0);
+        // public_card_count.insert(Card::Contessa, 0);
+        let public_card_count = [0; 5];
         History{
             store: [ActionObservation::EmptyAO; MAX_HISTORY_LEN],
             store_len: 0,
@@ -472,11 +474,13 @@ impl History {
         }
     }
     pub fn add_public_card_count(&mut self, card: &Card) {
-        *self.public_card_count.entry(*card).or_insert(0) += 1;
+        // *self.public_card_count.entry(*card).or_insert(0) += 1;
+        self.public_card_count[*card as usize] += 1;
     }
     pub fn subtract_public_card_count(&mut self, card: &Card) {
-        debug_assert!(self.public_card_count[card] > 0, "Card already at zero! Cannot decrease further!");
-        *self.public_card_count.entry(*card).or_insert(0) -= 1;
+        debug_assert!(self.public_card_count[*card as usize] > 0, "Card already at zero! Cannot decrease further!");
+        // *self.public_card_count.entry(*card).or_insert(0) -= 1;
+        self.public_card_count[*card as usize] -= 1;
     }
     pub fn latest_influence(&self) -> &[u8; 6]{
         if self.store_len == 0 {
@@ -515,7 +519,7 @@ impl History {
         }
     }
     pub fn get_public_card_count(&self, card: &Card) -> u8 {
-        self.public_card_count[card]
+        self.public_card_count[*card as usize]
     } 
     pub fn get_history(&self, len: usize) -> Vec<ActionObservation> {
         debug_assert!(len <= MAX_HISTORY_LEN, "Use a proper len in get_history!");

@@ -32,12 +32,15 @@ fn main() {
     let game_no = 100000000;
     let log_bool = true;
     let bool_know_priv_info = false;
-    let print_frequency: usize = 100;
+    let print_frequency: usize = 200;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
     game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraint>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // This has the no legit move issue
+    // vec![Steal { player_id: 0, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 0, final_actioner: 3 }, RevealRedraw { player_id: 0, reveal: Captain, redraw: Duke }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, BlockSteal { player_id: 1, opposing_player_id: 0, card: Ambassador }, CollectiveChallenge { participants: [true, false, true, false, true, true], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 1, final_actioner: 5 }, RevealRedraw { player_id: 1, reveal: Captain, redraw: Captain }, Discard { player_id: 5, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 2, opposing_player_id: 2, card: Captain }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [false, true, false, true, true, true], opposing_player_id: 2, final_actioner: 3 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 3, final_actioner: 0 }, RevealRedraw { player_id: 3, reveal: Duke, redraw: Captain }, Discard { player_id: 0, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 3, final_actioner: 2 }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 4, final_actioner: 1 }, RevealRedraw { player_id: 4, reveal: Captain, redraw: Contessa }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, false, true, false, true, false], opposing_player_id: 5, final_actioner: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 2, final_actioner: 5 }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, Assassinate { player_id: 0, opposing_player_id: 4 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 0, final_actioner: 5 }, RevealRedraw { player_id: 0, reveal: Assassin, redraw: Ambassador }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, BlockAssassinate { player_id: 4, opposing_player_id: 0 }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 4, final_actioner: 0 }];
+    // new_moves: [Discard { player_id: 4, card: [Ambassador, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Ambassador], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Assassin], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Captain], no_cards: 2 }, Discard { player_id: 4, card: [Captain, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Assassin, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Assassin, Captain], no_cards: 2 }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 2 }]
     
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
@@ -1282,8 +1285,17 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
             // TODO: Return Result
-            let (player, action_public, action_info): (usize, ActionObservation, Option<ActionInfo>) = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
-            
+            // let (player, action_public, action_info): (usize, ActionObservation, Option<ActionInfo>) = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
+            let result = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
+            let (player, action_public, action_info) = result.unwrap_or_else(|_| {
+                println!("{}", hh.get_replay_history_braindead());
+                println!("new_moves: {:?}", new_moves);
+                println!("public constraints: {:?}", prob.validated_public_constraints());
+                println!("inferred constraints: {:?}", prob.validated_inferred_constraints());
+                println!("impossible constraints: {:?}", prob.validated_impossible_constraints());
+                println!("impossible constraints_2: {:?}", prob.validated_impossible_constraints_2());
+                panic!("no legit moves found");
+            });
             hh.push_ao(action_public);
             if let Some(ai) = action_info {
                 // TEMP fix for no DiscardMultiple
@@ -1368,30 +1380,29 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
         game += 1;
     }
 }
-pub fn generate_legal_moves_with_card_constraints(new_moves: &mut Vec<ActionObservation>, prob: &BruteCardCountManagerGeneric<CardStateu64>, bool_know_priv_info: bool) -> (usize, ActionObservation, Option<ActionInfo>) {
+pub fn generate_legal_moves_with_card_constraints(new_moves: &mut Vec<ActionObservation>, prob: &BruteCardCountManagerGeneric<CardStateu64>, bool_know_priv_info: bool) -> Result<(usize, ActionObservation, Option<ActionInfo>), ()> {
     // Clone the moves and shuffle them in place
     new_moves.shuffle(&mut thread_rng());
-
     if bool_know_priv_info {
         for candidate in new_moves.iter() {
             match candidate {
                 Discard { player_id, card, no_cards } => {
                     if *no_cards == 1 {
                         if prob.player_can_have_card_alive(*player_id, card[0]) {
-                            return (*player_id, *candidate, Some(ActionInfo::Discard { discard: card[0] }));
+                            return Ok((*player_id, *candidate, Some(ActionInfo::Discard { discard: card[0] })));
                         }
                     } else {
-                        if prob.player_can_have_cards(candidate.player_id(), candidate.cards()) {
+                        if prob.player_can_have_cards(*player_id, candidate.cards()) {
                             // todo!("Make multiple Discard");
-                            // return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
-                            return (candidate.player_id(), *candidate, None);
+                            // return (*player_id, *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                            return Ok((*player_id, *candidate, None));
                         }
                     }
                 },
                 RevealRedraw { player_id, reveal: reveal_card , redraw: redraw_card} => {
                     if prob.player_can_have_card_alive(*player_id, *reveal_card) {
                         if prob.player_can_have_card_alive(6, *redraw_card) {
-                            return (candidate.player_id(), *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: Some(*redraw_card), relinquish: None } ));
+                            return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: Some(*redraw_card), relinquish: None } )));
                         }
                     }
                 },
@@ -1404,7 +1415,7 @@ pub fn generate_legal_moves_with_card_constraints(new_moves: &mut Vec<ActionObse
                     todo!("Add ExchangeChoice ActionInfo")
                 },
                 _ => {
-                    return (candidate.player_id(), *candidate, None);
+                    return Ok((candidate.player_id(), *candidate, None));
                 }
             }
         }
@@ -1414,35 +1425,35 @@ pub fn generate_legal_moves_with_card_constraints(new_moves: &mut Vec<ActionObse
                 Discard { player_id, card, no_cards } => {
                     if *no_cards == 1 {
                         if prob.player_can_have_card_alive(*player_id, card[0]) {
-                            return (*player_id, *candidate, Some(ActionInfo::Discard { discard: card[0] }));
+                            return Ok((*player_id, *candidate, Some(ActionInfo::Discard { discard: card[0] })));
                         }
                     } else {
                         if prob.player_can_have_cards(*player_id, candidate.cards()) {
                             // todo!("Make multiple Discard");
                             // return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
-                            return (*player_id, *candidate, None);
+                            return Ok((*player_id, *candidate, None));
                         }
                     }
                 },
                 RevealRedraw { player_id, reveal: card , ..} => {
                     if prob.player_can_have_card_alive(*player_id, *card) {
-                        return (*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *card, redraw: None, relinquish: None }));
+                        return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *card, redraw: None, relinquish: None })));
                     }
                 },
                 ExchangeDraw { player_id, .. } => {
-                    return (*player_id, *candidate, None);
+                    return Ok((*player_id, *candidate, None));
                 },
                 ExchangeChoice { player_id, no_cards } => {
                     // TODO: Change placeholder
-                    return (*player_id, *candidate, Some(ActionInfo::ExchangeDrawChoice { draw: vec![], relinquish: vec![] }));
+                    return Ok((*player_id, *candidate, Some(ActionInfo::ExchangeDrawChoice { draw: vec![], relinquish: vec![] })));
                 },
                 _ => {
-                    return (candidate.player_id(), *candidate, None);
+                    return Ok((candidate.player_id(), *candidate, None));
                 }
             }
         }
     }
-    panic!("no legit moves found");
+    Err(())
 }
 pub fn game_rnd_constraint_bt_st_g<V, T>(game_no: usize, bool_know_priv_info: bool, min_dead_check: usize, tx: Sender<Stats>)
     where
