@@ -1416,7 +1416,7 @@ pub fn generate_legal_moves_with_card_constraints(new_moves: &mut Vec<ActionObse
                         todo!("Add ExchangeDraw ActionInfo")
                     }
                 },
-                ExchangeChoice { player_id, no_cards } => {
+                ExchangeChoice { player_id, no_cards, relinquish } => {
                     todo!("Add ExchangeChoice ActionInfo")
                 },
                 _ => {
@@ -1449,7 +1449,7 @@ pub fn generate_legal_moves_with_card_constraints(new_moves: &mut Vec<ActionObse
                 ExchangeDraw { player_id, .. } => {
                     return Ok((*player_id, *candidate, None));
                 },
-                ExchangeChoice { player_id, no_cards } => {
+                ExchangeChoice { player_id, .. } => {
                     // TODO: Change placeholder
                     return Ok((*player_id, *candidate, Some(ActionInfo::ExchangeDrawChoice { draw: vec![], relinquish: vec![] })));
                 },

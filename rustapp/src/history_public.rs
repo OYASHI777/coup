@@ -173,7 +173,8 @@ pub enum ActionObservation {
         // cards represents their choice of hand
         // For no_cards == 1, both cards in cards should be the same
         player_id: usize,
-        no_cards: usize,
+        no_cards: usize, // TODO: [FIX] this should be redundant
+        relinquish: [Card; 2], // Assume either all is known or none are known
     },
     // TODO: Add ExchangeChoice Private, and generate possible moves based on history and exchangedraw choice
 }
@@ -1208,12 +1209,34 @@ impl History {
                 changed_vec.push(ActionObservation::Exchange{ player_id: player_id});  
             },
             AOName::ExchangeChoice => {
+                let num_dead_amb: u8 =  self.get_public_card_count(&Card::Ambassador);
+                let num_dead_ass: u8 =  self.get_public_card_count(&Card::Assassin);
+                let num_dead_cpt: u8 =  self.get_public_card_count(&Card::Captain);
+                let num_dead_duk: u8 =  self.get_public_card_count(&Card::Duke);
+                let num_dead_con: u8 =  self.get_public_card_count(&Card::Contessa);
+                let count_card_arr = [num_dead_amb, num_dead_ass, num_dead_cpt, num_dead_duk, num_dead_con];
                 if self.latest_influence()[player_id] == 2 {
-                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 2});
-
+                    for i in 0..5 {
+                        if count_card_arr[i] < 2 {
+                            changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 2, relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(i as u8).unwrap()]});
+                        }
+                        for j in (i + 1)..5 {
+                            if count_card_arr[i] < 3 && count_card_arr[j] < 3 {
+                                changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 2, relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
+                            }
+                        }
+                    }
                 } else if self.latest_influence()[player_id] == 1 {
-                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 1});
-
+                    for i in 0..5 {
+                        if count_card_arr[i] < 2 {
+                            changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 2, relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(i as u8).unwrap()]});
+                        }
+                        for j in (i + 1)..5 {
+                            if count_card_arr[i] < 3 && count_card_arr[j] < 3 {
+                                changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 2, relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
+                            }
+                        }
+                    }
                 } else {
                     debug_assert!(false, "Player with abnormal influence given Exchange Choice [1]")
                 }
@@ -1282,6 +1305,7 @@ impl History {
             _ => panic!("{}", format!("add_move for AOName {:?} not implemented", move_name)),
         }
     }
+    /// This technically does not consider what cards the player can or should have!
     pub fn generate_legal_moves(&self) -> Vec<ActionObservation>{
         // Refer to paths.txt for different cases
         let mut output: Vec<ActionObservation> = Vec::new();
