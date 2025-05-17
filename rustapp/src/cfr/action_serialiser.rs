@@ -39,7 +39,7 @@ impl ActionEmbedding for DefaultEmbedding {
                     _ => panic!("Invalid number of cards"),
                 }
             },
-            ActionObservation::RevealRedraw { player_id, card } => format!("RR{}{}", player_id, card.card_to_string()),
+            ActionObservation::RevealRedraw { player_id, reveal: card, redraw: redraw_card} => format!("RR{}{}{}", player_id, card.card_to_string(), redraw_card.card_to_string()),
             ActionObservation::Exchange { player_id } => format!("EX{}", player_id),
             ActionObservation::ExchangeDraw { player_id , card } => format!("ED{}{}{}", player_id, card[0].card_to_string(), card[1].card_to_string()),
             ActionObservation::ExchangeChoice { player_id , no_cards, .. } => format!("EC{}{}", no_cards, player_id),
