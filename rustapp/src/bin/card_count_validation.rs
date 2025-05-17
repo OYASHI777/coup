@@ -37,14 +37,14 @@ fn main() {
     let min_dead_check: usize = 0;
     let num_threads = 12;
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
-    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraint>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
     // TODO: Make a Lite with Lazy Inferred Constraints
-    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
-    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(1000);
-    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
+    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
+    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(1000);
+    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
     // game_rnd_constraint_bt_bench(100);
     // game_rnd_constraint_brute_bench(10);
     // game_rnd_constraint_pd_mt(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
