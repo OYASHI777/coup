@@ -740,7 +740,7 @@ pub fn game_rnd_constraint_bt_mt<C>(num_threads: usize, game_no: usize, bool_kno
         let thread_bool_know_priv_info = bool_know_priv_info;
         let thread_min_dead_check = min_dead_check;
         let handle = thread::spawn(move || {
-            game_rnd_constraint_bt_st::<C>(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
+            game_rnd_constraint_bt_st_new::<C>(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
             // game_rnd_constraint_bt_st::<V, T>(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
         });
         handles.push(handle);
@@ -1282,7 +1282,7 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
             // TODO: Return Result
-            let (player, action_public, action_info): (usize, ActionObservation, Option<ActionInfo>) = generate_legal_moves(&mut new_moves, &prob, bool_know_priv_info);
+            let (player, action_public, action_info): (usize, ActionObservation, Option<ActionInfo>) = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
             
             hh.push_ao(action_public);
             if let Some(ai) = action_info {
@@ -1301,6 +1301,9 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
                     bit_prob.push_ao(player, &ai);
                 }
             }
+            // TEST
+            // prob.push_ao_public(&action_public);
+            // bit_prob.push_ao_public(&action_public);
             let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
             if total_dead >= min_dead_check {
                 let validated_public_constraints = prob.validated_public_constraints();
@@ -1320,6 +1323,9 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
                 stats.inferred_constraints_correct += pass_inferred_constraints as usize;
                 stats.impossible_constraints_correct += pass_impossible_constraints as usize;
                 stats.total_tries += 1;
+                if !pass_public_constraints {
+                    break;
+                }
                 if bool_test_over_inferred {
                     // what we are testing inferred too many things
                     stats.over_inferred_count += 1;
@@ -1329,17 +1335,17 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
                     // panic!("Inferred to many items!")
                 }
                 if !pass_inferred_constraints {
-                    println!("vali: {:?}", validated_inferred_constraints);
-                    println!("test: {:?}", test_inferred_constraints);
-                    println!("{}", hh.get_replay_history_braindead());
+                    // println!("vali: {:?}", validated_inferred_constraints);
+                    // println!("test: {:?}", test_inferred_constraints);
+                    // println!("{}", hh.get_replay_history_braindead());
                     break;
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     // panic!("Inferred constraints do not match!")
                 }
                 if !pass_impossible_constraints {
-                    println!("vali: {:?}", validated_impossible_constraints);
-                    println!("test: {:?}", test_impossible_constraints);
+                    // println!("vali: {:?}", validated_impossible_constraints);
+                    // println!("test: {:?}", test_impossible_constraints);
                     break;
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
@@ -1362,7 +1368,7 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
         game += 1;
     }
 }
-pub fn generate_legal_moves(new_moves: &mut Vec<ActionObservation>, prob: &BruteCardCountManagerGeneric<CardStateu64>, bool_know_priv_info: bool) -> (usize, ActionObservation, Option<ActionInfo>) {
+pub fn generate_legal_moves_with_card_constraints(new_moves: &mut Vec<ActionObservation>, prob: &BruteCardCountManagerGeneric<CardStateu64>, bool_know_priv_info: bool) -> (usize, ActionObservation, Option<ActionInfo>) {
     // Clone the moves and shuffle them in place
     new_moves.shuffle(&mut thread_rng());
 
@@ -1376,8 +1382,9 @@ pub fn generate_legal_moves(new_moves: &mut Vec<ActionObservation>, prob: &Brute
                         }
                     } else {
                         if prob.player_can_have_cards(candidate.player_id(), candidate.cards()) {
-                            todo!("Make multiple Discard");
-                            return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                            // todo!("Make multiple Discard");
+                            // return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                            return (candidate.player_id(), *candidate, None);
                         }
                     }
                 },
@@ -1416,8 +1423,9 @@ pub fn generate_legal_moves(new_moves: &mut Vec<ActionObservation>, prob: &Brute
                         }
                     } else {
                         if prob.player_can_have_cards(candidate.player_id(), candidate.cards()) {
-                            todo!("Make multiple Discard");
-                            return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                            // todo!("Make multiple Discard");
+                            // return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                            return (candidate.player_id(), *candidate, None);
                         }
                     }
                 },
@@ -1427,12 +1435,11 @@ pub fn generate_legal_moves(new_moves: &mut Vec<ActionObservation>, prob: &Brute
                     }
                 },
                 ExchangeDraw { player_id, card } => {
-                    if prob.player_can_have_cards(6, candidate.cards()) {
-                        return (candidate.player_id(), *candidate, None);
-                    }
+                    return (candidate.player_id(), *candidate, None);
                 },
                 ExchangeChoice { player_id, no_cards } => {
-                    return (candidate.player_id(), *candidate, None);
+                    // TODO: Change placeholder
+                    return (candidate.player_id(), *candidate, Some(ActionInfo::ExchangeDrawChoice { draw: vec![], relinquish: vec![] }));
                 },
                 _ => {
                     return (candidate.player_id(), *candidate, None);

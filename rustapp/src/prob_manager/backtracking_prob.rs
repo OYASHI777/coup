@@ -159,6 +159,8 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
         last_constraint.add_move(player as u8, action_info.clone());
         // shove move_no into CollectiveConstraint
         // post_increment: move_no is now the number of the next move
+        self.constraint_history.push(last_constraint);
+        self.constraint_history_move_no.push(self.move_no);
         self.move_no += 1;
     }
     /// pop latest move

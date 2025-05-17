@@ -144,7 +144,12 @@ where
                 self.update_constraints();
             },
             ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
-                todo!();
+                if draw.is_empty() && relinquish.is_empty() {
+                    self.ambassador(player);
+                    self.update_constraints();
+                } else {
+                    unimplemented!()
+                }
             },
             ActionInfo::Start => {
                 unimplemented!()
