@@ -93,13 +93,13 @@ where
                 self.update_constraints();
             },
             AOName::ExchangeDraw => {
-                self.ambassador(ao.player_id());
-                self.update_constraints();
+                // self.ambassador(ao.player_id());
+                // self.update_constraints();
             },
             AOName::ExchangeChoice => {
                 // TODO: public private split | currently this is commented out because bitprob calculated public on exchangedraw not exchangechoice
-                // self.ambassador(ao.player_id());
-                // self.update_constraints();
+                self.ambassador(ao.player_id());
+                self.update_constraints();
             },
             _ => {
 
