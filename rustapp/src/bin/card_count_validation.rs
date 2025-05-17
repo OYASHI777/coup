@@ -1281,14 +1281,14 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
             // hh.log_state();
             // prob.printlog();
             // bit_prob.printlog();
-            // These are legal from a public sense only, but may be illegal depending on card constraints
+            // These are legal from a public sense only, but may be illegal depending on card 
+            // TODO: [FIX] ExchangeChoice should generate regardless of hand as the card counter can determine it themselves
             new_moves = hh.generate_legal_moves(bool_know_priv_info);
             // TODO: create generate_legal_moves(false) for public and private
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
-            // TODO: Return Result
-            // let (player, action_public, action_info): (usize, ActionObservation, Option<ActionInfo>) = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
+            // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());

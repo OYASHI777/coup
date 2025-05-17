@@ -141,18 +141,16 @@ where
                 self.restrict(*player_id, &current_dead_cards);
                 if *reveal != *redraw {
                     self.restrict(*player_id, &[*redraw]);
-                    // SWAP Reveal <=> Redraw
+                    self.redraw_swap(*player_id, *reveal, *redraw);
                 }
             },
             ActionObservation::ExchangeDraw { player_id, card } => {
                 self.restrict(6, card);
             },
             ActionObservation::ExchangeChoice { player_id, no_cards, hand, relinquish } => {
-                if let ActionObservation::ExchangeDraw { player_id, card } = self.history.last().unwrap() {
-                    todo!();
-                } else {
-                    debug_assert!(false, "ExchangeDraw MUST come before ExchangeChoice")
-                }
+                self.restrict(*player_id, hand);
+                // movements
+                todo!();
             },
             _ => {}
         }
@@ -252,6 +250,24 @@ where
                 }
             }
             i += 1;
+        }
+    }
+    pub fn redraw_swap(&mut self, player_reveal: usize, card_reveal: Card, card_redraw: Card) {
+        debug_assert!(card_reveal != card_redraw, "Ensure redraw_swap used only when redraw and reveal are different!");
+        let temp_states = self.calculated_states.clone();
+        let mut temp_set = AHashSet::with_capacity(self.calculated_states.len());
+        self.calculated_states.clear();
+        let mut player_cards = self.public_constraints[player_reveal].clone();
+        player_cards.push(Card::try_from(player_reveal as u8).unwrap());
+        for state in temp_states.iter() {
+            if state.player_has_cards(player_reveal, &player_cards) {
+                if let Some(new_state) = state.player_swap_cards(player_reveal, 6, card_reveal, card_redraw) {
+                    if !temp_set.contains(&new_state) {
+                        temp_set.insert(new_state);
+                        self.calculated_states.push(new_state);
+                    }
+                }
+            }
         }
     }
     /// This function filters out `self.calculated_states` such that only
