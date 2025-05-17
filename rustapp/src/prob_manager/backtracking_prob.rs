@@ -153,6 +153,44 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
         self.move_no += 1;
     }
     /// Entrypoint for any action done, updates history accordingly
+    /// Assumes knowledge of private information
+    pub fn push_ao_private(&mut self, ao: &ActionObservation){
+        // TODO: might need to seperate exchangedraw and exchangechoice for private!
+        // Handle different move types
+        match ao {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                // Assumes no_cards is either 1 or 2 only
+                let mut last_constraint = self.constraint_history.last().unwrap().clone();
+                let action_info = ActionInfo::Discard { discard: card[0] };
+                last_constraint.add_move(*player_id as u8, action_info);
+                if *no_cards == 2 {
+                    let action_info = ActionInfo::Discard { discard: card[1] };
+                    last_constraint.add_move(*player_id as u8, action_info);
+                }
+                self.constraint_history.push(last_constraint);
+                self.constraint_history_move_no.push(self.move_no);
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                let mut last_constraint = self.constraint_history.last().unwrap().clone();
+                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
+                last_constraint.add_move(*player_id as u8, action_info);
+                // last_constraint.sort_unstable();
+                self.constraint_history.push(last_constraint);
+                self.constraint_history_move_no.push(self.move_no);
+            },
+            ActionObservation::ExchangeDraw { player_id, card } => {
+                todo!("Change the ActionInfo to split Draw and Choice")
+            },
+            ActionObservation::ExchangeChoice { player_id, no_cards, hand, relinquish } => {
+                todo!("Change the ActionInfo to split Draw and Choice")
+            },
+            _ => {},
+        }
+        // shove move_no into CollectiveConstraint
+        // post_increment: move_no is now the number of the next move
+        self.move_no += 1;
+    }
+    /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of both public and private information
     pub fn push_ao(&mut self, player: usize, action_info: &ActionInfo){
         let mut last_constraint = self.constraint_history.last().unwrap().clone();

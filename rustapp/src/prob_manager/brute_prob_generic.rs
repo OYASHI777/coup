@@ -18,6 +18,7 @@ where
     T: CardPermState + Hash + Eq + Copy + Clone + std::fmt::Display + std::fmt::Debug,
 {
     private_player: Option<usize>,
+    history: Vec<ActionObservation>,
     all_states: Vec<T>,
     calculated_states: Vec<T>, // All the states that fulfil current constraints
     public_constraints: Vec<Vec<Card>>,
@@ -32,6 +33,7 @@ where
 {
     /// Constructor
     pub fn new() -> Self {
+        let history = Vec::with_capacity(60);
         let all_states: Vec<T> = T::gen_table_combinations();
         let calculated_states: Vec<T> = all_states.clone().into_iter().collect();
         let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
@@ -42,6 +44,7 @@ where
         let impossible_constraints_2 = [[[false; 5]; 5]; 7];
         let impossible_constraints_3 = [[[false; 5]; 5]; 5];
         Self {
+            history,
             private_player: None,
             all_states,
             calculated_states,
@@ -64,6 +67,7 @@ where
     }
     /// Resets
     pub fn reset(&mut self) {
+        self.history.clear();
         self.private_player = None;
         self.public_constraints = vec![Vec::with_capacity(2); 6];
         self.public_constraints.push(Vec::with_capacity(3));
@@ -118,8 +122,44 @@ where
 
             },
         };
+        self.history.push(ao.clone());
+    }
+    /// Modifies internal state based on latest action done by player
+    pub fn push_ao_private(&mut self, ao: &ActionObservation) {
+        match ao {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                let mut card_restrictions = Vec::with_capacity(2);
+                for i in 0..*no_cards {
+                    card_restrictions.push(card[i]);
+                    self.public_constraints[*player_id].push(card[i]);
+                }
+                self.restrict(*player_id, &card_restrictions);
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                let mut current_dead_cards: Vec<Card> = self.public_constraints[*player_id].clone();
+                current_dead_cards.push(*reveal);
+                self.restrict(*player_id, &current_dead_cards);
+                if *reveal != *redraw {
+                    self.restrict(*player_id, &[*redraw]);
+                    // SWAP Reveal <=> Redraw
+                }
+            },
+            ActionObservation::ExchangeDraw { player_id, card } => {
+                self.restrict(6, card);
+            },
+            ActionObservation::ExchangeChoice { player_id, no_cards, hand, relinquish } => {
+                if let ActionObservation::ExchangeDraw { player_id, card } = self.history.last().unwrap() {
+                    todo!();
+                } else {
+                    debug_assert!(false, "ExchangeDraw MUST come before ExchangeChoice")
+                }
+            },
+            _ => {}
+        }
+        self.history.push(ao.clone());
     }
     pub fn push_ao(&mut self, player: usize, action_info: &ActionInfo) {
+        unimplemented!();
         // TODO: Add DiscardMultiple
         match action_info {
             ActionInfo::Discard { discard } => {

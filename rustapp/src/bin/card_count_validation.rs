@@ -893,7 +893,7 @@ pub fn game_rnd_constraint_st(game_no: usize, bool_know_priv_info: bool, min_dea
             // hh.log_state();
             // prob.printlog();
             // bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -1006,7 +1006,7 @@ pub fn game_rnd_constraint_pd_st(game_no: usize, bool_know_priv_info: bool, min_
             // hh.log_state();
             // prob.printlog();
             // bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -1142,7 +1142,7 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
             // prob.printlog();
             // bit_prob.printlog();
             // These are legal from a public sense only, but may be illegal depending on card constraints
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -1282,14 +1282,15 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
             // prob.printlog();
             // bit_prob.printlog();
             // These are legal from a public sense only, but may be illegal depending on card constraints
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(bool_know_priv_info);
+            // TODO: create generate_legal_moves(false) for public and private
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
             // TODO: Return Result
             // let (player, action_public, action_info): (usize, ActionObservation, Option<ActionInfo>) = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
             let result = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
-            let (player, action_public, action_info) = result.unwrap_or_else(|_| {
+            let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
                 println!("public constraints: {:?}", prob.validated_public_constraints());
@@ -1301,14 +1302,21 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
                 println!("impossible constraints_3: {:?}", prob.validated_impossible_constraints_3());
                 panic!("no legit moves found");
             });
-            hh.push_ao(action_public);
+            hh.push_ao(action_obs);
+            if bool_know_priv_info {
+                prob.push_ao_private(&action_obs);
+                bit_prob.push_ao_private(&action_obs);
+            } else {
+                prob.push_ao_public(&action_obs);
+                bit_prob.push_ao_public(&action_obs);
+            }
             if let Some(ai) = action_info {
                 // TEMP fix for no DiscardMultiple
                 // TODO: Change back to nice API
-                if let ActionObservation::Discard { player_id, card, no_cards } = action_public {
+                if let ActionObservation::Discard { player_id, card, no_cards } = action_obs {
                     if no_cards == 2 { 
-                        prob.push_ao_public(&action_public);
-                        bit_prob.push_ao_public(&action_public);
+                        prob.push_ao_public(&action_obs);
+                        bit_prob.push_ao_public(&action_obs);
                     } else {
                         prob.push_ao(player, &ai);
                         bit_prob.push_ao(player, &ai);
@@ -1416,7 +1424,7 @@ pub fn generate_legal_moves_with_card_constraints(new_moves: &mut Vec<ActionObse
                         todo!("Add ExchangeDraw ActionInfo")
                     }
                 },
-                ExchangeChoice { player_id, no_cards, relinquish } => {
+                ExchangeChoice { player_id, no_cards, hand, relinquish } => {
                     todo!("Add ExchangeChoice ActionInfo")
                 },
                 _ => {
@@ -1563,7 +1571,7 @@ pub fn game_rnd_constraint_bt_st_g<V, T>(game_no: usize, bool_know_priv_info: bo
             // hh.log_state();
             // prob.printlog();
             // bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -1693,7 +1701,7 @@ pub fn game_rnd_constraint(game_no: usize, bool_know_priv_info: bool, print_freq
             hh.log_state();
             prob.printlog();
             bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -1812,7 +1820,7 @@ pub fn game_rnd_constraint_bt_generic_bench<C>(game_no : usize)
         log::trace!("Game Made:");
         while !hh.game_won() {
             
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 if output.name() == AOName::Discard{
@@ -1875,7 +1883,7 @@ pub fn game_rnd_constraint_bt_bench(game_no : usize) {
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
             bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -1941,7 +1949,7 @@ pub fn game_rnd_constraint_brute_bench(game_no : usize) {
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
             bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -2029,7 +2037,7 @@ pub fn game_rnd_constraint_pd(game_no: usize, bool_know_priv_info: bool, print_f
             hh.log_state();
             prob.printlog();
             bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -2166,7 +2174,7 @@ pub fn game_rnd_constraint_debug(game_no: usize, bool_know_priv_info: bool, prin
             hh.log_state();
             prob.printlog();
             bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -2282,7 +2290,7 @@ pub fn game_rnd_constraint_debug_pd(game_no: usize, print_frequency: usize, log_
             hh.log_state();
             // prob.printlog();
             bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -2398,7 +2406,7 @@ pub fn game_rnd_constraint_debug_pd_alone(game_no: usize, print_frequency: usize
             hh.log_state();
             // prob.printlog();
             bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -2489,7 +2497,7 @@ pub fn replay_game_constraint(replay: Vec<ActionObservation>, bool_know_priv_inf
         bit_prob.printlog();
         // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
         // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-        new_moves = hh.generate_legal_moves();
+        new_moves = hh.generate_legal_moves(false);
         log::info!("{}", format!("Legal Moves: {:?}", new_moves));
         log::info!("{}", format!("Legal Moves Retained: {:?}", new_moves));
         if new_moves[0].name() != AOName::CollectiveChallenge {
@@ -2648,7 +2656,7 @@ pub fn replay_game_constraint_pd(replay: Vec<ActionObservation>, bool_know_priv_
         bit_prob.printlog();
         // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
         // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-        new_moves = hh.generate_legal_moves();
+        new_moves = hh.generate_legal_moves(false);
         log::info!("{}", format!("Legal Moves: {:?}", new_moves));
         log::info!("{}", format!("Legal Moves Retained: {:?}", new_moves));
         if new_moves[0].name() != AOName::CollectiveChallenge {
@@ -2813,7 +2821,7 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
         
         // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
         // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-        new_moves = hh.generate_legal_moves();
+        new_moves = hh.generate_legal_moves(false);
         let result = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
         let (_, _, _) = result.unwrap_or_else(|_| {
             println!("{}", hh.get_replay_history_braindead());
@@ -2954,7 +2962,7 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, print_frequency: usiz
             bit_prob.printlog();
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             let test_impossible_constraints = bit_prob.latest_constraint().generate_one_card_impossibilities_player_card_indexing();
             log::info!("Impossible cards before choosing move: {:?}", test_impossible_constraints);
             if new_moves[0].name() != AOName::CollectiveChallenge {
@@ -3163,7 +3171,7 @@ fn test_brute(game_no: usize, bool_know_priv_info: bool, print_frequency: usize,
             hh.log_state();
             prob.printlog();
             test_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
@@ -3270,7 +3278,7 @@ pub fn speed(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, 
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
             bit_prob.printlog();
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(false);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);

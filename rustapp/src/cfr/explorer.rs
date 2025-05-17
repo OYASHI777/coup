@@ -385,7 +385,7 @@ impl <'a> Explorer<'a> {
             // Always false for simulations
             let bool_know_priv_info: bool = false; 
             
-            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves();
+            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves(false);
             for action in possible_outcomes {
                 self.add_node(action, bool_know_priv_info);
                 self.explore_recurse(depth_counter + 1);
@@ -408,7 +408,7 @@ impl <'a> Explorer<'a> {
             // Always false for simulations
             let bool_know_priv_info: bool = false; 
             
-            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves();
+            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves(false);
             for action in possible_outcomes {
                 if action.name() == AOName::ExchangeDraw {
                     if self.prob.player_can_have_cards_constructor(action.player_id(), action.cards()) {
@@ -443,7 +443,7 @@ impl <'a> Explorer<'a> {
         } else {
             // Always false for simulations
             let bool_know_priv_info: bool = false; 
-            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves();
+            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves(false);
             if self.is_chance_node() {
                 if let Some(action) = possible_outcomes.choose(&mut thread_rng()).cloned() {
                     self.add_node(action, bool_know_priv_info);
@@ -475,7 +475,7 @@ impl <'a> Explorer<'a> {
         } else {
             // Always false for simulations
             let bool_know_priv_info: bool = false; 
-            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves();
+            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves(false);
             if self.is_chance_node() {
                 if let Some(action) = possible_outcomes.choose(&mut thread_rng()).cloned() {
                     self.add_node(action, bool_know_priv_info);
@@ -541,7 +541,7 @@ impl <'a> Explorer<'a> {
 
     //         // Always false for simulations
     //         let bool_know_priv_info: bool = false; 
-    //         let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves();
+    //         let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves(false);
     //         // 3 cases
     //         // chance node
     //         // all a is searched 
@@ -687,7 +687,7 @@ impl <'a> Explorer<'a> {
         } else {
             // Always false for simulations
             let bool_know_priv_info: bool = false; 
-            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves();
+            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves(false);
             let path_t: String = self.path.clone();
             // TOCHECK: In cases of collective action next, this makes no sense
             // INITIALISATIONS
