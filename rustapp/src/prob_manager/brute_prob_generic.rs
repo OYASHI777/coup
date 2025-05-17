@@ -129,18 +129,22 @@ where
                 self.update_constraints();
             },
             ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
-                if redraw.is_none() {
-                    self.reveal_redraw(player, *reveal);
-                } else if let Some(redraw_card) = redraw {
-                    let mut current_dead_cards: Vec<Card> = self.public_constraints[player].clone();
-                    current_dead_cards.push(*reveal);
-                    self.restrict(player, &[*reveal]);
-                    if *redraw_card != *reveal {
-                        self.restrict(6, &[*redraw_card]);
-                        // swap them
-                        todo!();
-                    }
+                // if redraw.is_none() {
+                //     self.reveal_redraw(player, *reveal);
+                // } else if let Some(redraw_card) = redraw {
+                //     let mut current_dead_cards: Vec<Card> = self.public_constraints[player].clone();
+                //     current_dead_cards.push(*reveal);
+                //     self.restrict(player, &[*reveal]);
+                //     if *redraw_card != *reveal {
+                //         self.restrict(6, &[*redraw_card]);
+                //         // swap them
+                //         todo!();
+                //     }
+                // }
+                if redraw.is_some() {
+                    panic!("!!!!");
                 }
+                self.reveal_redraw(player, *reveal);
                 self.update_constraints();
             },
             ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
@@ -243,12 +247,6 @@ where
         deduplicated.dedup();
         for card in deduplicated {
             if !self.player_can_have_card_alive(player_id, card) {
-                return false;
-            }
-            if self.public_constraints.iter().map(|v| v.iter().filter(|c| **c == cards[0]).count() as u8).sum::<u8>() +
-            self.inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == cards[0]).count() as u8).sum::<u8>() +
-            cards.iter().filter(|c| **c == card).count() as u8
-            > 3 {
                 return false;
             }
         }
