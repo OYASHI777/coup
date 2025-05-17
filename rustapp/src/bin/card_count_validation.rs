@@ -1390,7 +1390,7 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
         game += 1;
     }
 }
-// TODO: Shift this to be a method in prob!
+// TODO: Shift this to be a method in prob! or at least just to check a new_move!
 pub fn generate_legal_moves_with_card_constraints(new_moves: &mut Vec<ActionObservation>, prob: &BruteCardCountManagerGeneric<CardStateu64>, bool_know_priv_info: bool) -> Result<(usize, ActionObservation, Option<ActionInfo>), ()> {
     // Clone the moves and shuffle them in place
     new_moves.shuffle(&mut thread_rng());
