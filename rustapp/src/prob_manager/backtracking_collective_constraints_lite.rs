@@ -1442,12 +1442,7 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
         }
         impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
         impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
-        let mut start = SignificantAction::start(); 
-        start.add_inferred_constraints(player, cards[0]);
-        start.add_inferred_constraints(player, cards[1]);
-        start.meta_data.impossible_constraints= impossible_constraints.clone();
-        start.meta_data.impossible_constraints_2 = impossible_constraints_2.clone();
-        start.meta_data.impossible_constraints_3 = impossible_constraints_3.clone();
+        let start = SignificantAction::start(); 
         history.push(start);
         // StartInferred takes the inferred information from start, and runs add_inferred_information
         // This seperation prevents handling cases where you add discovered information that is already inside due to add_inferred_information

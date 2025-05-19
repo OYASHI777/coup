@@ -32,7 +32,7 @@ fn main() {
     let game_no = 100000000;
     let log_bool = true;
     let bool_know_priv_info = true;
-    let print_frequency: usize = 100;
+    let print_frequency: usize = 500;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
