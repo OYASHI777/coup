@@ -1396,6 +1396,8 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
         impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
         impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
         let mut impossible_constraints_3 = [[[false; 5]; 5]; 5];
+        impossible_constraints_3[cards[0] as usize][cards[0] as usize][cards[0] as usize] = true;
+        impossible_constraints_3[cards[1] as usize][cards[1] as usize][cards[1] as usize] = true;
         if cards[0] == cards[1] {
             // update impossible_2
             for p in 0..7 {
