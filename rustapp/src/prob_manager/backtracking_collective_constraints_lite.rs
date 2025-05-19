@@ -1393,8 +1393,6 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
         impossible_constraints[player][cards[1] as usize] = false;
         let mut impossible_constraints_2 = [[[false; 5]; 5]; 7];
         impossible_constraints_2[player] = [[true; 5]; 5];
-        impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
-        impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
         let mut impossible_constraints_3 = [[[false; 5]; 5]; 5];
         impossible_constraints_3[cards[0] as usize][cards[0] as usize][cards[0] as usize] = true;
         impossible_constraints_3[cards[1] as usize][cards[1] as usize][cards[1] as usize] = true;
@@ -1410,6 +1408,8 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
                 impossible_constraints_3[c][cards[0] as usize][cards[0] as usize] = true;
             }
         }
+        impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
+        impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
         let mut start = SignificantAction::start(); 
         start.add_inferred_constraints(player, cards[0]);
         start.add_inferred_constraints(player, cards[1]);
