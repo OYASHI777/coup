@@ -1380,7 +1380,9 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
     // TODO: OPTIMIZE, i guess you don't really need history inside here...
     fn game_start_private(player: usize, cards: &[Card; 2]) -> Self {
         let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
-        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
+        let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
+        inferred_constraints[player].push(cards[0]);
+        inferred_constraints[player].push(cards[1]);
         // let revealed_status = vec![Vec::with_capacity(5); 7];
         // TODO: Add inferred_card_count
         let mut history: Vec<SignificantAction> = Vec::with_capacity(50);

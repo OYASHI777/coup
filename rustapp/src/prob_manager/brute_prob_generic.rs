@@ -258,7 +258,7 @@ where
         let mut temp_set = AHashSet::with_capacity(self.calculated_states.len());
         self.calculated_states.clear();
         let mut player_cards = self.public_constraints[player_reveal].clone();
-        player_cards.push(Card::try_from(player_reveal as u8).unwrap());
+        player_cards.push(Card::try_from(card_reveal as u8).unwrap());
         for state in temp_states.iter() {
             if state.player_has_cards(player_reveal, &player_cards) {
                 if let Some(new_state) = state.player_swap_cards(player_reveal, 6, card_reveal, card_redraw) {
