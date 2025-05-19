@@ -77,6 +77,8 @@ where
         self.inferred_constraints = vec![Vec::with_capacity(2); 6];
         self.inferred_constraints.push(Vec::with_capacity(3));
         self.impossible_constraints = [[false; 5]; 7];
+        self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
         self.calculated_states = self.all_states.clone().into_iter().collect();
     }
     /// adds public constraint
