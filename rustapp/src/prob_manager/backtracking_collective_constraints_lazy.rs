@@ -820,8 +820,10 @@ impl BackTrackCollectiveConstraintLazy {
             ActionInfo::ExchangeDrawChoice { .. } => {
                 response = self.recurse_variants_exchange(index_loop, public_constraints, inferred_constraints, player_loop, cards);
             },
-            ActionInfo::Start
-            | ActionInfo::StartInferred => {
+            ActionInfo::StartInferred => {
+                todo!("Copy Lite version");
+            }
+            ActionInfo::Start => {
                 // Managed to reach base
                 log::trace!("possible_to_have_cards_recurse found true at index: {}", index_loop);
                 response = true;

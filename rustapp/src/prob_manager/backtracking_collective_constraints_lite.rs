@@ -452,7 +452,7 @@ impl BackTrackCollectiveConstraintLite {
         // Will temporarily not use memo and generate all group_constraints from start
         // Needed for checks
         log::trace!("After");
-        log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+        log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop]);
         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
         if !self.is_valid_combination(index_loop, inferred_constraints) {
             // early exit before terminal node
@@ -744,8 +744,27 @@ impl BackTrackCollectiveConstraintLite {
             ActionInfo::ExchangeDrawChoice { .. } => {
                 response = self.recurse_variants_exchange(index_loop, public_constraints, inferred_constraints, player_loop, cards);
             },
-            ActionInfo::Start
-            | ActionInfo::StartInferred => {
+            ActionInfo::StartInferred => {
+                let mut buffer: Vec<(usize, Card)> = Vec::with_capacity(3);
+                for player in 0..7 as usize{
+                    for card_start in self.history[index_loop].inferred_constraints()[player].iter() {
+                        if !inferred_constraints[player].contains(card_start) {
+                            inferred_constraints[player].push(*card_start);
+                            buffer.push((player, *card_start));
+                        }
+                    }
+                }
+                response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
+                for (player_remove, card_remove) in buffer.iter() {
+                    if let Some(pos) = inferred_constraints[*player_remove].iter().rposition(|c| *c == *card_remove) {
+                        inferred_constraints[*player_remove].swap_remove(pos);
+                    }
+                }
+                if response {
+                    return true;
+                }
+            },
+            ActionInfo::Start => {
                 // Managed to reach base
                 log::trace!("possible_to_have_cards_recurse found true at index: {}", index_loop);
                 response = true;
@@ -787,7 +806,7 @@ impl BackTrackCollectiveConstraintLite {
         if inferred_constraints[6].len() == 3 && self.history[index_loop].impossible_constraints_3()[inferred_constraints[6][0] as usize][inferred_constraints[6][1] as usize][inferred_constraints[6][2] as usize]{
             return false
         }
-        // =========================================
+        // =================== Required to test inferred at Start! ======================
         for player in 0..7 {
             let mut current_card_counts: [u8; 5] = [0; 5];
             inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);

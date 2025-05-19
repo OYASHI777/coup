@@ -59,11 +59,12 @@ where
     pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
         self.private_player = Some(player);
         self.restrict(player, cards);
-        self.inferred_constraints[player].push(cards[0]);
-        self.inferred_constraints[player].push(cards[1]);
-        self.inferred_constraints[player].sort_unstable();
-        self.set_impossible_constraints();
+        // self.inferred_constraints[player].push(cards[0]);
+        // self.inferred_constraints[player].push(cards[1]);
+        // self.inferred_constraints[player].sort_unstable();
+        self.update_constraints();
         self.set_impossible_constraints_2();
+        self.set_impossible_constraints_3();
     }
     /// Placeholder
     pub fn start_public(&mut self) {
@@ -139,6 +140,7 @@ where
                     self.public_constraints[*player_id].push(card[i]);
                 }
                 self.restrict(*player_id, &card_restrictions);
+                self.update_constraints();
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 let mut current_dead_cards: Vec<Card> = self.public_constraints[*player_id].clone();
@@ -148,14 +150,17 @@ where
                     self.restrict(6, &[*redraw]);
                     self.redraw_swap(*player_id, *reveal, *redraw);
                 }
+                self.update_constraints();
             },
             ActionObservation::ExchangeDraw { player_id, card } => {
                 self.restrict(6, card);
+                self.update_constraints();
             },
             ActionObservation::ExchangeChoice { player_id, no_cards, hand, relinquish } => {
                 self.restrict(*player_id, hand);
                 // movements
                 todo!();
+                self.update_constraints();
             },
             _ => {}
         }
