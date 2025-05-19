@@ -32,10 +32,10 @@ fn main() {
     let game_no = 100000000;
     let log_bool = true;
     let bool_know_priv_info = true;
-    let print_frequency: usize = 10;
+    let print_frequency: usize = 100;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
-    let num_threads = 1;
+    let num_threads = 12;
     // TODO: YOU NEED TO FIND THE SUBTRACT WITH OVERFLOW!!!
     // let replay = vec![Exchange { player_id: 0 }, CollectiveChallenge { participants: [false, true, true, true, true, false], opposing_player_id: 0, final_actioner: 3 }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, Exchange { player_id: 1 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 1, final_actioner: 3 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [true, true, false, false, true, true], opposing_player_id: 2, final_actioner: 5 }, Discard { player_id: 2, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [true, false, true, false, true, true], opposing_player_id: 3, final_actioner: 4 }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [true, false, false, true, false, true], opposing_player_id: 4, final_actioner: 5 }, Discard { player_id: 4, card: [Duke, Duke], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [true, false, false, false, false, false], opposing_player_id: 5, final_actioner: 0 }, CollectiveChallenge { participants: [false, true, true, true, true, true], opposing_player_id: 0, final_actioner: 1 }, RevealRedraw { player_id: 0, reveal: Duke, redraw: Captain }, Discard { player_id: 1, card: [Ambassador, Ambassador], no_cards: 1 }, Income { player_id: 0 }, Income { player_id: 2 }, Steal { player_id: 3, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [false, false, true, false, true, true], opposing_player_id: 3, final_actioner: 2 }, RevealRedraw { player_id: 3, reveal: Captain, redraw: Duke }, Discard { player_id: 2, card: [Ambassador, Ambassador], no_cards: 1 }, Tax { player_id: 4 }, CollectiveChallenge { participants: [false, false, false, true, false, false], opposing_player_id: 4, final_actioner: 3 }, RevealRedraw { player_id: 4, reveal: Duke, redraw: Captain }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, Income { player_id: 5 }, Assassinate { player_id: 0, opposing_player_id: 5 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 0, final_actioner: 4 }, RevealRedraw { player_id: 0, reveal: Assassin, redraw: Duke }, Discard { player_id: 4, card: [Assassin, Assassin], no_cards: 1 }, BlockAssassinate { player_id: 5, opposing_player_id: 0 }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 5, final_actioner: 0 }];
     // let replay = vec![Steal { player_id: 0, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, false, true, true, true], opposing_player_id: 0, final_actioner: 3 }, RevealRedraw { player_id: 0, reveal: Captain, redraw: Ambassador }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 5, opposing_player_id: 0, card: Captain }, CollectiveChallenge { participants: [true, true, false, true, true, false], opposing_player_id: 5, final_actioner: 0 }, RevealRedraw { player_id: 5, reveal: Captain, redraw: Duke }];
@@ -1297,9 +1297,9 @@ pub fn game_rnd_constraint_bt_st_debug<C>(game_no: usize, bool_know_priv_info: b
             // TODO: [FIX] ExchangeChoice should generate regardless of hand as the card counter can determine it themselves
             new_moves = hh.generate_legal_moves(bool_know_priv_info);
             // TODO: create generate_legal_moves(false) for public and private
-            new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-            // new_moves.retain(|m| m.name() != AOName::Exchange);
+            new_moves.retain(|m| m.name() != AOName::Exchange);
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {

@@ -745,15 +745,28 @@ impl BackTrackCollectiveConstraintLite {
                 response = self.recurse_variants_exchange(index_loop, public_constraints, inferred_constraints, player_loop, cards);
             },
             ActionInfo::StartInferred => {
+                // TODO: OPTIMIZE this is only needed if bool_know_priv_info is true
                 let mut buffer: Vec<(usize, Card)> = Vec::with_capacity(3);
-                for player in 0..7 as usize{
+                for player in 0..7 as usize {
+                    let mut card_counts_req = [0u8; 5];
+                    let mut card_counts_cur = [0u8; 5];
                     for card_start in self.history[index_loop].inferred_constraints()[player].iter() {
-                        if !inferred_constraints[player].contains(card_start) {
-                            inferred_constraints[player].push(*card_start);
-                            buffer.push((player, *card_start));
+                        card_counts_req[*card_start as usize] += 1;
+                    }
+                    for card_start in inferred_constraints[player].iter() {
+                        card_counts_cur[*card_start as usize] += 1;
+                    }
+                    for card_num_to_add in 0..5 {
+                        if card_counts_req[card_num_to_add] > card_counts_cur[card_num_to_add] {
+                            for _ in 0..(card_counts_req[card_num_to_add] - card_counts_cur[card_num_to_add]) {
+                                let card_add = Card::try_from(card_num_to_add as u8).unwrap();
+                                inferred_constraints[player].push(card_add);
+                                buffer.push((player, card_add));
+                            }
                         }
                     }
                 }
+                
                 response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
                 for (player_remove, card_remove) in buffer.iter() {
                     if let Some(pos) = inferred_constraints[*player_remove].iter().rposition(|c| *c == *card_remove) {
