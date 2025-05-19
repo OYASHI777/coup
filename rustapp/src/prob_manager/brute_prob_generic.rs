@@ -140,7 +140,7 @@ where
                 current_dead_cards.push(*reveal);
                 self.restrict(*player_id, &current_dead_cards);
                 if *reveal != *redraw {
-                    self.restrict(*player_id, &[*redraw]);
+                    self.restrict(6, &[*redraw]);
                     self.redraw_swap(*player_id, *reveal, *redraw);
                 }
             },
