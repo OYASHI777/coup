@@ -62,6 +62,8 @@ where
         self.inferred_constraints[player].push(cards[0]);
         self.inferred_constraints[player].push(cards[1]);
         self.inferred_constraints[player].sort_unstable();
+        self.set_impossible_constraints();
+        self.set_impossible_constraints_2();
     }
     /// Placeholder
     pub fn start_public(&mut self) {

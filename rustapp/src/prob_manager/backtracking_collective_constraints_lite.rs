@@ -1387,34 +1387,49 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
         // TODO: Add inferred_card_count
         let mut history: Vec<SignificantAction> = Vec::with_capacity(50);
         // Start takes the inferred information discovered via a pathdependent lookback
+        let mut impossible_constraints = [[false; 5]; 7];
+        impossible_constraints[player] = [true; 5];
+        impossible_constraints[player][cards[0] as usize] = false;
+        impossible_constraints[player][cards[1] as usize] = false;
+        let mut impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        impossible_constraints_2[player] = [[true; 5]; 5];
+        impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
+        impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
+        let mut impossible_constraints_3 = [[[false; 5]; 5]; 5];
+        if cards[0] == cards[1] {
+            // update impossible_2
+            for p in 0..7 {
+                impossible_constraints_2[p][cards[0] as usize][cards[0] as usize] = true;
+            }
+            // update impossible_3 where more than 2
+            for c in 0..5 {
+                impossible_constraints_3[cards[0] as usize][cards[0] as usize][c] = true;
+                impossible_constraints_3[cards[0] as usize][c][cards[0] as usize] = true;
+                impossible_constraints_3[c][cards[0] as usize][cards[0] as usize] = true;
+            }
+        }
         let mut start = SignificantAction::start(); 
         start.add_inferred_constraints(player, cards[0]);
         start.add_inferred_constraints(player, cards[1]);
-        start.meta_data.impossible_constraints[player] = [true; 5];
-        start.meta_data.impossible_constraints[player][cards[0] as usize] = false;
-        start.meta_data.impossible_constraints[player][cards[1] as usize] = false;
-        start.meta_data.impossible_constraints_2[player] = [[true; 5]; 5];
-        start.meta_data.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
-        start.meta_data.impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
+        start.meta_data.impossible_constraints= impossible_constraints.clone();
+        start.meta_data.impossible_constraints_2 = impossible_constraints_2.clone();
+        start.meta_data.impossible_constraints_3 = impossible_constraints_3.clone();
         history.push(start);
         // StartInferred takes the inferred information from start, and runs add_inferred_information
         // This seperation prevents handling cases where you add discovered information that is already inside due to add_inferred_information
         let mut start_inferred = SignificantAction::start_inferred(); 
         start_inferred.add_inferred_constraints(player, cards[0]);
         start_inferred.add_inferred_constraints(player, cards[1]);
-        start_inferred.meta_data.impossible_constraints[player] = [true; 5];
-        start_inferred.meta_data.impossible_constraints[player][cards[0] as usize] = false;
-        start_inferred.meta_data.impossible_constraints[player][cards[1] as usize] = false;
-        start_inferred.meta_data.impossible_constraints_2[player] = [[true; 5]; 5];
-        start_inferred.meta_data.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
-        start_inferred.meta_data.impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
+        start_inferred.meta_data.impossible_constraints = impossible_constraints.clone();
+        start_inferred.meta_data.impossible_constraints_2 = impossible_constraints_2.clone();
+        start_inferred.meta_data.impossible_constraints_3 = impossible_constraints_3.clone();
         history.push(start_inferred);
         Self {
             public_constraints,
             inferred_constraints,
-            impossible_constraints: [[false; 5]; 7],
-            impossible_constraints_2: [[[false; 5]; 5]; 7], 
-            impossible_constraints_3: [[[false; 5]; 5]; 5], 
+            impossible_constraints,
+            impossible_constraints_2, 
+            impossible_constraints_3, 
             move_no: 1,
             history,
         }
