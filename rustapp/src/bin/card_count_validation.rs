@@ -41,7 +41,7 @@ fn main() {
     // let replay = vec![Steal { player_id: 0, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, false, true, true, true], opposing_player_id: 0, final_actioner: 3 }, RevealRedraw { player_id: 0, reveal: Captain, redraw: Ambassador }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 5, opposing_player_id: 0, card: Captain }, CollectiveChallenge { participants: [true, true, false, true, true, false], opposing_player_id: 5, final_actioner: 0 }, RevealRedraw { player_id: 5, reveal: Captain, redraw: Duke }];
     // replay_game_constraint_bt::<BackTrackCollectiveConstraintLite>(replay.clone(), false, 0,true);
     // TODO: Add player and cards
-    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, min_dead_check, log_bool);
     // This has the no legit move issue
     // vec![Steal { player_id: 0, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 0, final_actioner: 3 }, RevealRedraw { player_id: 0, reveal: Captain, redraw: Duke }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, BlockSteal { player_id: 1, opposing_player_id: 0, card: Ambassador }, CollectiveChallenge { participants: [true, false, true, false, true, true], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 1, final_actioner: 5 }, RevealRedraw { player_id: 1, reveal: Captain, redraw: Captain }, Discard { player_id: 5, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 2, opposing_player_id: 2, card: Captain }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [false, true, false, true, true, true], opposing_player_id: 2, final_actioner: 3 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 3, final_actioner: 0 }, RevealRedraw { player_id: 3, reveal: Duke, redraw: Captain }, Discard { player_id: 0, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 3, final_actioner: 2 }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 4, final_actioner: 1 }, RevealRedraw { player_id: 4, reveal: Captain, redraw: Contessa }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, false, true, false, true, false], opposing_player_id: 5, final_actioner: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 2, final_actioner: 5 }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, Assassinate { player_id: 0, opposing_player_id: 4 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 0, final_actioner: 5 }, RevealRedraw { player_id: 0, reveal: Assassin, redraw: Ambassador }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, BlockAssassinate { player_id: 4, opposing_player_id: 0 }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 4, final_actioner: 0 }];
@@ -100,7 +100,7 @@ pub fn test_variant_recurse() {
         }
         variants
     }
-    logger(LevelFilter::Trace);
+    logger(LevelFilter::Info);
     let mut test_inferred_constraints: HashSet<Vec<Vec<Card>>> = HashSet::new();
     for player_hand in gen_variants(&vec![Card::Ambassador, Card::Assassin], 2) {
         'outer: for pile_hand in gen_variants(&vec![Card::Ambassador, Card::Assassin, Card::Captain], 3) {
@@ -178,7 +178,11 @@ pub fn test_variant_recurse() {
                         let mut degrees_of_freedom_used: u8 = 0;
                         draw_count.iter().zip(relin_count.iter()).enumerate().for_each(|(c, (d, r))| draw_union_relin_count[c] += *d.max(r));
                         hand_plus_pile_count.iter_mut().enumerate().for_each(|(i, count)| *count = hand_count[i] + pile_count[i]);
-                        hand_plus_pile_count.iter().zip(draw_union_relin_count.iter()).for_each(|(h, d)| degrees_of_freedom_used += (*d > *h) as u8 * (*d - *h));
+                        hand_plus_pile_count.iter().zip(draw_union_relin_count.iter()).for_each(|(h, d)| {
+                            if *d > *h {
+                                degrees_of_freedom_used += *d - *h;
+                            }
+                        });
                         if degrees_of_freedom_used + hand_plus_pile_count.len() as u8 > 5{
                             continue 'inner;
                         }
@@ -187,6 +191,13 @@ pub fn test_variant_recurse() {
                         let relinquish = vec![Card::try_from(k).unwrap(), Card::try_from(l).unwrap()];
                         let exchange_private = PathDependentCollectiveConstraint::return_variants_exchange_private_2(0, &draw, &relinquish,item);
                         log::info!("src ex_p draw: {:?}, relin: {:?} : {:?}", draw, relinquish, exchange_private);
+                        // Length Check
+                        for v in exchange_private.iter() {
+                            if v[0].len() > 2 || v[6].len() > 3 {
+                                log::warn!("FAILED ORIG LEN CHECK");
+                                continue 'inner;
+                            }
+                        }
                         // Test if when all draw != relin, old hand == relinquish
                         // Test can be done via reversing it to verify if given solution is legit
                     }
@@ -1503,6 +1514,10 @@ pub fn generate_legal_moves_with_card_constraints(new_moves: &mut Vec<ActionObse
                     }
                 },
                 ExchangeChoice { player_id, no_cards, hand, relinquish } => {
+                    // custom check needs draw
+                    // Just check if its possible to relinquish those cards
+                    // relinquish has to be in hand + draw
+                    // if there is df, then should also check total cards. 
                     todo!("Add ExchangeChoice ActionInfo")
                     // Consider ExchangeDraw before it, relinquish must be subset of hand + Draw
                     // Consider inferred_constraints

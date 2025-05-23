@@ -3109,15 +3109,23 @@ impl PathDependentCollectiveConstraint {
         // same card stays in pile
         // ensure
         pile_counts.iter().zip(draw_counts.iter().zip(relinquish_counts.iter())).enumerate().for_each(|(c, (p, (d, r)))| {
+            log::trace!("draw_counts: {:?}", draw_counts);
+            log::trace!("relinquish_counts: {:?}", relinquish_counts);
+            log::trace!("pile_counts: {:?}", pile_counts);
             let count_overlap = *d.min(r);
             let count_draw_and_stayed_in_hand = *d - count_overlap;
             let count_relinquish_and_orig_from_hand = *r - count_overlap;
+            log::trace!("count_overlap: {:?}", count_overlap);
+            log::trace!("count_draw_and_stayed_in_hand: {:?}", count_draw_and_stayed_in_hand);
+            log::trace!("count_relinquish_and_orig_from_hand: {:?}", count_relinquish_and_orig_from_hand);
             // overlapped card
             // Card that went from pile to pile
             // for _ in 0..(count_overlap - *p) {
             //     temp[6].push(Card::try_from(c as u8).unwrap());
             // }
-            temp[6].extend(std::iter::repeat(Card::try_from(c as u8).unwrap()).take((count_overlap - *p) as usize));
+            if count_overlap > *p {
+                temp[6].extend(std::iter::repeat(Card::try_from(c as u8).unwrap()).take((count_overlap - *p) as usize));
+            }
             for _ in 0..count_draw_and_stayed_in_hand {
                 // Drawn and stayed in hand
                 if let Some(pos) = temp[player_loop].iter().rposition(|player_card| *player_card as usize == c) {
@@ -3133,7 +3141,10 @@ impl PathDependentCollectiveConstraint {
                 temp[player_loop].push(Card::try_from(c as u8).unwrap());
             }
         });
-        variants.push(temp);
+        // Remove this to check if able to add illegal moves! for simulation
+        if temp[0].len() < 3 && temp[6].len() < 4 {
+            variants.push(temp);
+        }
         variants
     }
     /// Builds possible previous inferred_constraint states
