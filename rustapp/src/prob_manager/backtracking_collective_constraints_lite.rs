@@ -768,9 +768,6 @@ impl BackTrackCollectiveConstraintLite {
                                 if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
                                     inferred_constraints.swap_remove(pos);
                                 }
-                                if response {
-                                    return true
-                                }
                             },
                             1 => {
                                 inferred_constraints[6].push(draw[0]);
@@ -778,15 +775,9 @@ impl BackTrackCollectiveConstraintLite {
                                 if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
                                     inferred_constraints.swap_remove(pos);
                                 }
-                                if response {
-                                    return true
-                                }
                             },
                             2 => {
                                 response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
-                                if response {
-                                    return true
-                                }
                             },
                             _ => debug_assert!(false, "you should not be here!"),
                         }
@@ -809,15 +800,12 @@ impl BackTrackCollectiveConstraintLite {
                                 inferred_constraints.swap_remove(pos);
                             }
                         }
-                        if response {
-                            return true
-                        }
                     }
                 } else {
                     debug_assert!(false, "New API should not have reached here, but should have been skipped!");
                 }
             },
-            ActionInfo::ExchangeChoice { .. } => {
+            ActionInfo::ExchangeChoice { hand, relinquish } => {
                 if let ActionInfo::ExchangeDraw { draw } = self.history[index_loop - 1].action_info() {
                     if draw.is_empty() {
                         response = self.recurse_variants_exchange_public(index_loop, public_constraints, inferred_constraints, player_loop, cards);
@@ -825,7 +813,7 @@ impl BackTrackCollectiveConstraintLite {
                         // Assumes both relinquish cards are known
                         // Assumes hand cards are known (they are alive cards)
                         // Pool to choose from is hand + draw
-                        todo!()
+                        response = self.recurse_variants_exchange_private(index_loop, hand, draw, relinquish, public_constraints, inferred_constraints, player_loop, cards);
                     }
                 }
             },
@@ -1284,6 +1272,29 @@ impl BackTrackCollectiveConstraintLite {
             }
         }
         false
+    }
+    pub fn recurse_variants_exchange_private(&self, index_loop: usize, hand: &Vec<Card>, draw: &Vec<Card>, relinquish: &Vec<Card>, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, player_loop: usize, cards: &[u8; 5]) -> bool {
+        // Move cards such that hand == hand
+        // The rest of the cards can go to pile
+        // if pile doenst have draw add in
+        // if hand doenst have hand add in
+
+        // relinquish cards went from either
+        //      - hand -> pile
+        //      - pile -> pile
+
+        // current pile cards went from either
+        //      - pile -> pile
+        //      - hand -> pile
+
+        // current hand cards went from either
+        //      - pile -> hand
+        //      - hand -> hand
+
+
+        // Ensure pile has draw
+        // Ensure player hand == hand
+        todo!()
     }
     /// Brute force generates everything
     fn generate_impossible_constraints(&mut self, history_index: usize) {
