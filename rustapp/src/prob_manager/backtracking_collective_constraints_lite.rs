@@ -200,12 +200,19 @@ impl BackTrackCollectiveConstraintLite {
                 debug_assert!(false, "You should not be here!");
             },
             ActionInfo::Discard{ discard} => {
-                    self.death(player_id, discard);
+                self.death(player_id, discard);
             },
             ActionInfo::RevealRedraw{ .. } => {},
             ActionInfo::ExchangeDrawChoice{ .. } => {},
-            ActionInfo::ExchangeDraw { draw } => todo!(),
-            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
+            ActionInfo::ExchangeDraw { draw } => {
+                if draw.is_empty() {
+                    // early exit on public info ExchangeDraw
+                    self.history[history_index].meta_data = self.to_meta_data();
+                    log::info!("recalculated_stored_move_initial: {} {:?}", history_index, self.history[history_index].action_info());
+                    return;
+                }
+            },
+            ActionInfo::ExchangeChoice { .. } => {},
         }
         self.generate_impossible_constraints(self.history.len() - 1);
         self.generate_inferred_constraints();
@@ -742,13 +749,24 @@ impl BackTrackCollectiveConstraintLite {
                 }
             },
             ActionInfo::ExchangeDrawChoice { .. } => {
-                response = self.recurse_variants_exchange(index_loop, public_constraints, inferred_constraints, player_loop, cards);
+                unimplemented!("Deprecated!");
+                response = self.recurse_variants_exchange_public(index_loop, public_constraints, inferred_constraints, player_loop, cards);
             },
-            ActionInfo::ExchangeDraw { .. } => {
-                todo!()
+            ActionInfo::ExchangeDraw { draw } => {
+                if !draw.is_empty() {
+                    todo!();
+                } else {
+                    debug_assert!(false, "New API should not have reached here, but should have been skipped!");
+                }
             },
             ActionInfo::ExchangeChoice { .. } => {
-                todo!()
+                if let ActionInfo::ExchangeDraw { draw } = self.history[index_loop - 1].action_info() {
+                    if draw.is_empty() {
+                        response = self.recurse_variants_exchange_public(index_loop, public_constraints, inferred_constraints, player_loop, cards);
+                    } else {
+                        todo!()
+                    }
+                }
             },
             ActionInfo::Start
             | ActionInfo::StartInferred => {
@@ -816,7 +834,7 @@ impl BackTrackCollectiveConstraintLite {
         }
         true
     }
-    pub fn recurse_variants_exchange(&self, index_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, player_loop: usize, cards: &[u8; 5]) -> bool {
+    pub fn recurse_variants_exchange_public(&self, index_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, player_loop: usize, cards: &[u8; 5]) -> bool {
         let player_lives = 2 - self.history[index_loop].public_constraints()[player_loop].len() as u8;
         let mut iter_cards_player = inferred_constraints[player_loop].clone();
         iter_cards_player.sort_unstable();
@@ -849,7 +867,7 @@ impl BackTrackCollectiveConstraintLite {
         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
                 
-        if self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards) {
+        if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
             return true;
         }
         // 1 player_to_pile move, 0 pile_to_player move
@@ -863,7 +881,7 @@ impl BackTrackCollectiveConstraintLite {
         
                     inferred_constraints[player_loop].swap_remove(pos);
                     inferred_constraints[6].push(*card_player);
-                    if self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards) {
+                    if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
                         return true;
                     }
                     inferred_constraints[player_loop].push(*card_player);
@@ -884,7 +902,7 @@ impl BackTrackCollectiveConstraintLite {
         
                     inferred_constraints[6].swap_remove(pos);
                     inferred_constraints[player_loop].push(*card_pile);
-                    if self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards) {
+                    if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
                         return true;
                     }
                     inferred_constraints[6].push(*card_pile);
@@ -916,7 +934,7 @@ impl BackTrackCollectiveConstraintLite {
                     }
                     inferred_constraints[6].push(*card_player);
                     inferred_constraints[player_loop].push(*card_pile);
-                    if self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards) {
+                    if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
                         return true;
                     }
                     if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_pile) {
@@ -946,7 +964,7 @@ impl BackTrackCollectiveConstraintLite {
                 inferred_constraints[player_loop].clear();
                 inferred_constraints[6].push(card_0);
                 inferred_constraints[6].push(card_1);
-                if self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards) {
+                if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
                     return true;
                 }
                 if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == card_0) {
@@ -980,7 +998,7 @@ impl BackTrackCollectiveConstraintLite {
                         }
                         inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_0]);
                         inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_1]);
-                        if self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards) {
+                        if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
                             return true;
                         }
                         if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
@@ -1036,7 +1054,7 @@ impl BackTrackCollectiveConstraintLite {
                             inferred_constraints[6].push(iter_cards_player[index_player_to_pile_0]);
                             inferred_constraints[6].push(iter_cards_player[index_player_to_pile_1]);
                             inferred_constraints[player_loop].push(*card_pile);
-                            if self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards) {
+                            if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
                                 return true;
                             }
                             if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_pile) {
@@ -1098,7 +1116,7 @@ impl BackTrackCollectiveConstraintLite {
                             inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_0]);
                             inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_1]);
                             inferred_constraints[6].push(*card_player);
-                            if self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards) {
+                            if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
                                 return true;
                             }
                             if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_player) {
@@ -1171,7 +1189,7 @@ impl BackTrackCollectiveConstraintLite {
                                 inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_1]);
                                 inferred_constraints[6].push(iter_cards_player[index_player_to_pile_0]);
                                 inferred_constraints[6].push(iter_cards_player[index_player_to_pile_1]);
-                                if self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards) {
+                                if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
                                     return true;
                                 }
                                 if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
@@ -1425,40 +1443,48 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
     }
     /// Adds move that may contain private or public info
     fn add_move(&mut self, player_id: u8, action: ActionInfo) {
-        match action {
-            ActionInfo::Discard { .. } => {
-                let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-                // Pushing before due to recursion mechanic
-                self.history.push(significant_action);
-                self.calculate_stored_move_initial();
-                // Handle inference
-            },
-            ActionInfo::RevealRedraw { .. } => {
-                let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-                self.history.push(significant_action);
-                self.calculate_stored_move_initial();
-                // Handle inference
-            },
-            ActionInfo::ExchangeDrawChoice { .. } => {
-                let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-                // Handle inference
-                // TODO: This is temporary, unsure how might split between public and private
-                // It is possible that we can just use private, since public is just private with empty vec?
-                self.history.push(significant_action);
-                self.calculate_stored_move_initial();
-            },
-            ActionInfo::ExchangeChoice { hand, relinquish } => {
-                todo!();
-            },
-            ActionInfo::ExchangeDraw { draw } => {
-                todo!();
-            }
-            ActionInfo::Start 
-            | ActionInfo::StartInferred => {
-                // TODO: Consider removing Start, so we can eliminate this branch entirely
-                debug_assert!(false, "should not be pushing this!");
-            },
-        }
+        debug_assert!(action != ActionInfo::Start && action != ActionInfo::StartInferred, "should not be pushing this!");
+        // match action {
+        //     ActionInfo::Discard { .. } => {
+        //         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+        //         // Pushing before due to recursion mechanic
+        //         self.history.push(significant_action);
+        //         self.calculate_stored_move_initial();
+        //         // Handle inference
+        //     },
+        //     ActionInfo::RevealRedraw { .. } => {
+        //         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+        //         self.history.push(significant_action);
+        //         self.calculate_stored_move_initial();
+        //         // Handle inference
+        //     },
+        //     ActionInfo::ExchangeDrawChoice { .. } => {
+        //         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+        //         // Handle inference
+        //         // TODO: This is temporary, unsure how might split between public and private
+        //         // It is possible that we can just use private, since public is just private with empty vec?
+        //         self.history.push(significant_action);
+        //         self.calculate_stored_move_initial();
+        //     },
+        //     ActionInfo::ExchangeChoice { hand, relinquish } => {
+        //         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+        //         self.history.push(significant_action);
+        //         self.calculate_stored_move_initial();
+        //     },
+        //     ActionInfo::ExchangeDraw { draw } => {
+        //         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+        //         self.history.push(significant_action);
+        //         self.calculate_stored_move_initial();
+        //     }
+        //     ActionInfo::Start 
+        //     | ActionInfo::StartInferred => {
+        //         // TODO: Consider removing Start, so we can eliminate this branch entirely
+        //         debug_assert!(false, "should not be pushing this!");
+        //     },
+        // }
+        let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+        self.history.push(significant_action);
+        self.calculate_stored_move_initial();
         // post increment
         self.move_no += 1;
     }

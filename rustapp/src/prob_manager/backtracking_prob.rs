@@ -113,24 +113,36 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
                 self.constraint_history.push(last_constraint);
                 self.constraint_history_move_no.push(self.move_no);
             },
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+            ActionObservation::RevealRedraw { player_id, reveal, .. } => {
                 let mut last_constraint = self.constraint_history.last().unwrap().clone();
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
                 log::trace!("Adding move RevealRedraw");
-                last_constraint.add_move(ao.player_id() as u8, action_info);
+                last_constraint.add_move(*player_id as u8, action_info);
                 self.constraint_history.push(last_constraint);
                 self.constraint_history_move_no.push(self.move_no);
             },
-            ActionObservation::ExchangeDraw { player_id, card } => {
+            ActionObservation::ExchangeDraw { player_id, .. } => {
                 // todo!("Change the ActionInfo to split Draw and Choice")
-            },
-            ActionObservation::ExchangeChoice { player_id, no_cards, hand, relinquish } => {
                 let mut last_constraint = self.constraint_history.last().unwrap().clone();
-                let action_info = ActionInfo::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) };
+                let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
                 log::trace!("Adding move ExchangeChoice");
-                last_constraint.add_move(ao.player_id() as u8, action_info);
+                last_constraint.add_move(*player_id as u8, action_info);
                 self.constraint_history.push(last_constraint);
                 self.constraint_history_move_no.push(self.move_no);
+            },
+            ActionObservation::ExchangeChoice { player_id, .. } => {
+                let mut last_constraint = self.constraint_history.last().unwrap().clone();
+                let action_info = ActionInfo::ExchangeChoice { hand: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) };
+                log::trace!("Adding move ExchangeChoice");
+                last_constraint.add_move(*player_id as u8, action_info);
+                self.constraint_history.push(last_constraint);
+                self.constraint_history_move_no.push(self.move_no);
+                // let mut last_constraint = self.constraint_history.last().unwrap().clone();
+                // let action_info = ActionInfo::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) };
+                // log::trace!("Adding move ExchangeChoice");
+                // last_constraint.add_move(ao.player_id() as u8, action_info);
+                // self.constraint_history.push(last_constraint);
+                // self.constraint_history_move_no.push(self.move_no);
             },
             _ => {},
         }

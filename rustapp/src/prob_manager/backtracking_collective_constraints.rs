@@ -6,7 +6,7 @@ use std::{marker::Copy, path::Path};
 
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ActionInfo {
     Start,
     StartInferred,
