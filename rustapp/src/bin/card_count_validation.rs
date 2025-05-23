@@ -41,8 +41,8 @@ fn main() {
     // let replay = vec![Steal { player_id: 0, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, false, true, true, true], opposing_player_id: 0, final_actioner: 3 }, RevealRedraw { player_id: 0, reveal: Captain, redraw: Ambassador }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 5, opposing_player_id: 0, card: Captain }, CollectiveChallenge { participants: [true, true, false, true, true, false], opposing_player_id: 5, final_actioner: 0 }, RevealRedraw { player_id: 5, reveal: Captain, redraw: Duke }];
     // replay_game_constraint_bt::<BackTrackCollectiveConstraintLite>(replay.clone(), false, 0,true);
     // TODO: Add player and cards
-    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
-    game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, min_dead_check, log_bool);
+    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, min_dead_check, log_bool);
     // This has the no legit move issue
     // vec![Steal { player_id: 0, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 0, final_actioner: 3 }, RevealRedraw { player_id: 0, reveal: Captain, redraw: Duke }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, BlockSteal { player_id: 1, opposing_player_id: 0, card: Ambassador }, CollectiveChallenge { participants: [true, false, true, false, true, true], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 1, final_actioner: 5 }, RevealRedraw { player_id: 1, reveal: Captain, redraw: Captain }, Discard { player_id: 5, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 2, opposing_player_id: 2, card: Captain }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [false, true, false, true, true, true], opposing_player_id: 2, final_actioner: 3 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 3, final_actioner: 0 }, RevealRedraw { player_id: 3, reveal: Duke, redraw: Captain }, Discard { player_id: 0, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 3, final_actioner: 2 }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 4, final_actioner: 1 }, RevealRedraw { player_id: 4, reveal: Captain, redraw: Contessa }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, false, true, false, true, false], opposing_player_id: 5, final_actioner: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 2, final_actioner: 5 }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, Assassinate { player_id: 0, opposing_player_id: 4 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 0, final_actioner: 5 }, RevealRedraw { player_id: 0, reveal: Assassin, redraw: Ambassador }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, BlockAssassinate { player_id: 4, opposing_player_id: 0 }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 4, final_actioner: 0 }];
     // new_moves: [Discard { player_id: 4, card: [Ambassador, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Ambassador], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Assassin], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Captain], no_cards: 2 }, Discard { player_id: 4, card: [Captain, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Assassin, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Assassin, Captain], no_cards: 2 }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 2 }]
@@ -77,11 +77,11 @@ fn main() {
     // bt_test::<BackTrackCollectiveConstraintLazy>();
     // bt_test::<BackTrackCollectiveConstraint>();
     // test();
-    // temp();
+    test_variant_recurse();
 }
 use rustapp::prob_manager::path_dependent_collective_constraint::{self, PathDependentCollectiveConstraint};
 // TODO: Move to collective_constraint when finalized
-pub fn temp() {
+pub fn test_variant_recurse() {
     fn gen_variants(
         card_types: &[Card],
         max_cards: usize,
@@ -118,27 +118,90 @@ pub fn temp() {
                 continue 'outer;
             }
         }
-        let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
-        log::info!("src rr unop: {:?}", reveal);
-        let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
-        log::info!("src rr none: {:?}", reveal);
-        let redraw = PathDependentCollectiveConstraint::return_variants_reveal_redraw(Card::Ambassador, Card::Assassin, 0, item);
-        log::info!("src rr draw: {:?}", redraw);
-        let relin = PathDependentCollectiveConstraint::return_variants_reveal_relinquish_opt(Card::Ambassador, 0, item);
-        log::info!("src rr rel: {:?}", relin);
-        let exchange_1 = PathDependentCollectiveConstraint::return_variants_exchange_opt(1, 0, item);
-        log::info!("src ex one: {:?}", exchange_1);
-        let exchange_2 = PathDependentCollectiveConstraint::return_variants_exchange_opt(2, 0, item);
-        log::info!("src ex two: {:?}", exchange_2);
-        if reveal.len() < relin.len() {
-            log::warn!("reveal failed constraint check");
+        // let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none(Card::Ambassador, 0, item);
+        // log::info!("src rr unop: {:?}", reveal);
+        // let reveal = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
+        // log::info!("src rr none: {:?}", reveal);
+        // let redraw = PathDependentCollectiveConstraint::return_variants_reveal_redraw(Card::Ambassador, Card::Assassin, 0, item);
+        // log::info!("src rr draw: {:?}", redraw);
+        // let relin = PathDependentCollectiveConstraint::return_variants_reveal_relinquish_opt(Card::Ambassador, 0, item);
+        // log::info!("src rr rel: {:?}", relin);
+        // let exchange_1 = PathDependentCollectiveConstraint::return_variants_exchange_opt(1, 0, item);
+        // log::info!("src ex one: {:?}", exchange_1);
+        // let exchange_2 = PathDependentCollectiveConstraint::return_variants_exchange_opt(2, 0, item);
+        // log::info!("src ex two: {:?}", exchange_2);
+        let mut hand_count: [u8; 5] = [0; 5];
+        item[0].iter().for_each(|c| hand_count[*c as usize] += 1);
+        let mut pile_count: [u8; 5] = [0; 5];
+        item[6].iter().for_each(|c| pile_count[*c as usize] += 1);
+        for i in 0..5 {
+            for j in i..5 {
+                for k in 0..5 {
+                    'inner: for l in k..5 {
+                        let mut temp_count: [u8; 5] = hand_count.clone();
+                        temp_count[i as usize] += 1;
+                        temp_count[j as usize] += 1;
+                        let mut relin_count: [u8; 5] = [0; 5];
+                        relin_count[k as usize] += 1;
+                        relin_count[l as usize] += 1;
+                        let mut draw_count: [u8; 5] = [0; 5];
+                        draw_count[i as usize] += 1;
+                        draw_count[j as usize] += 1;
+                        // Get union of all 3
+                        let mut union_count_0: u8 = 0;
+                        let mut union_count_1: u8 = 0;
+                        for m in 0..5 {
+                            // relinquish must be in outcome hand + draw
+                            // not exact
+                            // draw + hand + relin at most 4
+                            union_count_0 += hand_count[m].max(draw_count[m]).max(relin_count[m]);
+                            // draw + hand + relin + pile at most 5
+                            let max_union_count = hand_count[m].max(pile_count[m]).max(relin_count[m]).max(pile_count[m]);
+                            // max cards at most 3
+                            if max_union_count > 3 {
+                                continue 'inner;
+                            }
+                            union_count_1 += max_union_count;
+                        }
+                        if union_count_0 > 4 || union_count_1 > 5{
+                            continue 'inner;
+                        }
+                        // Enough space to have received the relinquish
+                        let mut pile_space: u8 = 0;
+                        pile_count.iter().zip(relin_count.iter()).for_each(|(p, r)| pile_space += *p.max(r));
+                        if pile_space > 3 {
+                            continue 'inner;
+                        }
+                        // Total amount in (draw union relinquish) and not in (hand + pile) cannot exceed (5 - hand.len() - pile.len())
+                        let mut draw_union_relin_count: [u8; 5] = [0; 5];
+                        let mut hand_plus_pile_count: [u8; 5] = [0; 5];
+                        let mut degrees_of_freedom_used: u8 = 0;
+                        draw_count.iter().zip(relin_count.iter()).enumerate().for_each(|(c, (d, r))| draw_union_relin_count[c] += *d.max(r));
+                        hand_plus_pile_count.iter_mut().enumerate().for_each(|(i, count)| *count = hand_count[i] + pile_count[i]);
+                        hand_plus_pile_count.iter().zip(draw_union_relin_count.iter()).for_each(|(h, d)| degrees_of_freedom_used += (*d > *h) as u8 * (*d - *h));
+                        if degrees_of_freedom_used + hand_plus_pile_count.len() as u8 > 5{
+                            continue 'inner;
+                        }
+                        // destination hand must be  
+                        let draw = vec![Card::try_from(i).unwrap(), Card::try_from(j).unwrap()];
+                        let relinquish = vec![Card::try_from(k).unwrap(), Card::try_from(l).unwrap()];
+                        let exchange_private = PathDependentCollectiveConstraint::return_variants_exchange_private_2(0, &draw, &relinquish,item);
+                        log::info!("src ex_p draw: {:?}, relin: {:?} : {:?}", draw, relinquish, exchange_private);
+                        // Test if when all draw != relin, old hand == relinquish
+                        // Test can be done via reversing it to verify if given solution is legit
+                    }
+                }
+            }
         }
-        if reveal.len() < redraw.len() {
-            log::warn!("reveal redraw failed constraint check");
-        }
-        if relin.len() < redraw.len() {
-            log::warn!("redraw relin failed constraint check");
-        }
+        // if reveal.len() < relin.len() {
+        //     log::warn!("reveal failed constraint check");
+        // }
+        // if reveal.len() < redraw.len() {
+        //     log::warn!("reveal redraw failed constraint check");
+        // }
+        // if relin.len() < redraw.len() {
+        //     log::warn!("redraw relin failed constraint check");
+        // }
         log::info!("dest: {:?}", item);
 
     }
