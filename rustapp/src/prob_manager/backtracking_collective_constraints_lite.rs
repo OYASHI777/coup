@@ -754,7 +754,65 @@ impl BackTrackCollectiveConstraintLite {
             },
             ActionInfo::ExchangeDraw { draw } => {
                 if !draw.is_empty() {
-                    todo!();
+                    // Assumes draw is always 2 cards
+                    let current_count_0 = inferred_constraints[6].iter().filter(|c| **c == draw[0]).count();
+                    if draw[0] == draw[1] {
+                        match current_count_0 {
+                            0 => {
+                                inferred_constraints[6].push(draw[0]);
+                                inferred_constraints[6].push(draw[0]);
+                                response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
+                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
+                                    inferred_constraints.swap_remove(pos);
+                                }
+                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
+                                    inferred_constraints.swap_remove(pos);
+                                }
+                                if response {
+                                    return true
+                                }
+                            },
+                            1 => {
+                                inferred_constraints[6].push(draw[0]);
+                                response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
+                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
+                                    inferred_constraints.swap_remove(pos);
+                                }
+                                if response {
+                                    return true
+                                }
+                            },
+                            2 => {
+                                response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
+                                if response {
+                                    return true
+                                }
+                            },
+                            _ => debug_assert!(false, "you should not be here!"),
+                        }
+                    } else {
+                        let current_count_1 = inferred_constraints[6].iter().filter(|c| **c == draw[0]).count();
+                        if current_count_0 < 1 {
+                            inferred_constraints[6].push(draw[0]);
+                        }
+                        if current_count_1 < 1 {
+                            inferred_constraints[6].push(draw[1]);
+                        }
+                        response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
+                        if current_count_0 < 1 {
+                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
+                                inferred_constraints.swap_remove(pos);
+                            }
+                        }
+                        if current_count_1 < 1 {
+                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[1]) {
+                                inferred_constraints.swap_remove(pos);
+                            }
+                        }
+                        if response {
+                            return true
+                        }
+                    }
                 } else {
                     debug_assert!(false, "New API should not have reached here, but should have been skipped!");
                 }
@@ -764,6 +822,9 @@ impl BackTrackCollectiveConstraintLite {
                     if draw.is_empty() {
                         response = self.recurse_variants_exchange_public(index_loop, public_constraints, inferred_constraints, player_loop, cards);
                     } else {
+                        // Assumes both relinquish cards are known
+                        // Assumes hand cards are known (they are alive cards)
+                        // Pool to choose from is hand + draw
                         todo!()
                     }
                 }
