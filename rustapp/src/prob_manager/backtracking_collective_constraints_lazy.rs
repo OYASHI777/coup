@@ -267,20 +267,22 @@ impl BackTrackCollectiveConstraintLazy {
         log::trace!("calculate_stored_move_initial: {:?}", action_info);
         match action_info {
             ActionInfo::Start => {
-                // self.regenerate_game_start();
-                debug_assert!(false, "You should not be here!");
-            },
+                        // self.regenerate_game_start();
+                        debug_assert!(false, "You should not be here!");
+                    },
             ActionInfo::StartInferred => {
-                // self.regenerate_game_start();
-                debug_assert!(false, "You should not be here!");
-            },
+                        // self.regenerate_game_start();
+                        debug_assert!(false, "You should not be here!");
+                    },
             ActionInfo::Discard{ discard} => {
-                self.death(player_id, discard);
-            },
+                        self.death(player_id, discard);
+                    },
             ActionInfo::RevealRedraw{ .. } => {
-            },
+                    },
             ActionInfo::ExchangeDrawChoice{ .. } => {
-            },
+                    },
+            ActionInfo::ExchangeDraw { draw } => todo!(),
+            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
         }
         // Lazy evaluation stores nothing but death
         // self.generate_impossible_constraints(self.history.len() - 1);
@@ -566,7 +568,7 @@ impl BackTrackCollectiveConstraintLazy {
                         log::trace!("Before Reveal Redraw");
                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
-                
+        
                         let (mut removed_redraw, mut removed_reveal) = (false, false);
                         if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *redraw_i) {
                             inferred_constraints[player_loop].swap_remove(pos);
@@ -607,7 +609,7 @@ impl BackTrackCollectiveConstraintLazy {
                                 log::trace!("Before Reveal Relinquish");
                                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
                                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
-                
+        
                                 if inferred_constraints[player_loop].is_empty() {
                                     log::trace!("inferred_constraints[player_loop].is_empty(): {:?}", inferred_constraints[player_loop]);
                                     // let mut bool_move_from_pile_to_player = false;
@@ -637,7 +639,7 @@ impl BackTrackCollectiveConstraintLazy {
                                     log::trace!("Before Reveal Relinquish B");
                                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
                                     log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
-                
+        
                                     if inferred_constraints[player_loop].len() < 2 {
                                         let mut bool_move_from_pile_to_player = false;
                                         if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
@@ -645,11 +647,11 @@ impl BackTrackCollectiveConstraintLazy {
                                             bool_move_from_pile_to_player = true;
                                         }
                                         inferred_constraints[player_loop].push(*reveal);
-                                        
+                                
                                         if inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
                                             response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
                                         }
-                                        
+                                
                                         if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
                                             inferred_constraints[player_loop].swap_remove(pos);
                                         }
@@ -665,7 +667,7 @@ impl BackTrackCollectiveConstraintLazy {
                                         log::trace!("Before Reveal Relinquish C");
                                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
                                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
-                
+        
                                         let mut bool_move_from_pile_to_player = false;
                                         let mut bool_move_from_player_to_pile = false;
                                         if let Some(pos) = inferred_constraints[player_loop].iter().position(|c| *c == *card_player) {
@@ -706,12 +708,12 @@ impl BackTrackCollectiveConstraintLazy {
                                     // This state cannot be arrive after the reveal_redraw
                                     return false;
                                 }
- 
+
                                 if inferred_constraints[player_loop].is_empty() {
                                     log::trace!("Before Reveal Redraw None");
                                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
                                     log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
-                
+        
                                     let mut bool_move_from_pile_to_player = false;
                                     if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
                                         inferred_constraints[6].swap_remove(pos);
@@ -739,7 +741,7 @@ impl BackTrackCollectiveConstraintLazy {
                                     log::trace!("Before Reveal Redraw None B");
                                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
                                     log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
-                
+        
                                     // Card Source was not from Pile
                                     let mut bool_move_from_pile_to_player = false;
                                     if *card_player != *reveal || inferred_constraints[6].contains(&reveal) {
@@ -748,9 +750,9 @@ impl BackTrackCollectiveConstraintLazy {
                                             bool_move_from_pile_to_player = true;
                                         }
                                         inferred_constraints[player_loop].push(*reveal);
-                            
+                    
                                         // Probably need push only if certain conditions met
-                                        
+                                
                                         if inferred_constraints[player_loop].len() < 3  
                                         && inferred_constraints[6].len() < 4 
                                         && inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
@@ -772,7 +774,7 @@ impl BackTrackCollectiveConstraintLazy {
                                     log::trace!("Before Reveal Redraw None C");
                                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
                                     log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
-                
+        
                                     // Card Source was from Pile
                                     let mut bool_move_from_pile_to_player_2 = false;
                                     let mut bool_move_from_player_to_pile = false;
@@ -826,6 +828,8 @@ impl BackTrackCollectiveConstraintLazy {
                 log::trace!("possible_to_have_cards_recurse found true at index: {}", index_loop);
                 response = true;
             },
+            ActionInfo::ExchangeDraw { draw } => todo!(),
+            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
         }
         response
     }
@@ -1496,31 +1500,33 @@ impl CoupConstraint for BackTrackCollectiveConstraintLazy {
     fn add_move(&mut self, player_id: u8, action: ActionInfo) {
         match action {
             ActionInfo::Discard { .. } => {
-                let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-                // Pushing before due to recursion mechanic
-                self.history.push(significant_action);
-                self.calculate_stored_move_initial();
-                // Handle inference
-            },
+                        let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+                        // Pushing before due to recursion mechanic
+                        self.history.push(significant_action);
+                        self.calculate_stored_move_initial();
+                        // Handle inference
+                    },
             ActionInfo::RevealRedraw { .. } => {
-                let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-                self.history.push(significant_action);
-                self.calculate_stored_move_initial();
-                // Handle inference
-            },
+                        let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+                        self.history.push(significant_action);
+                        self.calculate_stored_move_initial();
+                        // Handle inference
+                    },
             ActionInfo::ExchangeDrawChoice { .. } => {
-                let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-                // Handle inference
-                // TODO: This is temporary, unsure how might split between public and private
-                // It is possible that we can just use private, since public is just private with empty vec?
-                self.history.push(significant_action);
-                self.calculate_stored_move_initial();
-            },
+                        let significant_action = SignificantAction::initial(self.move_no, player_id, action);
+                        // Handle inference
+                        // TODO: This is temporary, unsure how might split between public and private
+                        // It is possible that we can just use private, since public is just private with empty vec?
+                        self.history.push(significant_action);
+                        self.calculate_stored_move_initial();
+                    },
             ActionInfo::Start 
-            | ActionInfo::StartInferred => {
-                // TODO: Consider removing Start, so we can eliminate this branch entirely
-                debug_assert!(false, "should not be pushing this!");
-            },
+                    | ActionInfo::StartInferred => {
+                        // TODO: Consider removing Start, so we can eliminate this branch entirely
+                        debug_assert!(false, "should not be pushing this!");
+                    },
+            ActionInfo::ExchangeDraw { draw } => todo!(),
+            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
         }
         // post increment
         self.move_no += 1;

@@ -15,27 +15,35 @@ pub enum ActionInfo {
     // redraw: Card taken from pile
     // relinquish: Card left in pile
     RevealRedraw {reveal: Card, redraw: Option<Card>, relinquish: Option<Card>}, // Player | Reveal Card | Redraw Option<Card>
+    ExchangeDraw {draw: Vec<Card>}, // Player | Draw Vec<Card> | Return Vec<Card>
+    ExchangeChoice {hand: Vec<Card>, relinquish: Vec<Card>}, // Player | Draw Vec<Card> | Return Vec<Card>
     ExchangeDrawChoice {draw: Vec<Card>, relinquish: Vec<Card>}, // Player | Draw Vec<Card> | Return Vec<Card>
 }
 
 impl ActionInfo {
     pub fn public(&self) -> Self {
         match self {
-            ActionInfo::Start => {
+            Self::Start => {
                 self.clone()
             },
-            ActionInfo::StartInferred => {
+            Self::StartInferred => {
                 self.clone()
             },
-            ActionInfo::Discard { discard } => {
+            Self::Discard { discard } => {
                 self.clone()
             },
-            ActionInfo::RevealRedraw { reveal: revealed, .. } => {
-                ActionInfo::RevealRedraw { reveal: *revealed, redraw: None, relinquish: None }
+            Self::RevealRedraw { reveal: revealed, .. } => {
+                Self::RevealRedraw { reveal: *revealed, redraw: None, relinquish: None }
             },
-            ActionInfo::ExchangeDrawChoice { draw, .. } => {
-                ActionInfo::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) }
+            Self::ExchangeDrawChoice { draw, .. } => {
+                Self::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) }
             },
+            Self::ExchangeDraw { .. } => {
+                Self::ExchangeDraw { draw: Vec::with_capacity(2) }
+            },
+            Self::ExchangeChoice { .. } => {
+                Self::ExchangeChoice { hand: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) }
+            }
         }
     }
     /// All private information is known
@@ -55,6 +63,12 @@ impl ActionInfo {
             },
             Self::ExchangeDrawChoice {draw, relinquish} => {
                 draw.len() == 2 && relinquish.len() == 2
+            },
+            Self::ExchangeDraw { draw } => {
+                draw.len() == 2
+            },
+            Self::ExchangeChoice { hand, relinquish } => {
+                unimplemented!("This is indeterminate as we need to know if player has 1 life or 2")
             }
         }
     }
@@ -76,6 +90,12 @@ impl ActionInfo {
             Self::ExchangeDrawChoice {draw, relinquish} => {
                 draw.len() > 0 || relinquish.len() > 0
             }
+            Self::ExchangeDraw { draw } => {
+                !draw.is_empty()
+            }
+            Self::ExchangeChoice { hand, relinquish } => {
+                !hand.is_empty() || !relinquish.is_empty()
+            }
         }
     }
     /// No private information is known
@@ -96,25 +116,37 @@ impl ActionInfo {
             Self::ExchangeDrawChoice {draw, relinquish} => {
                 draw.len() == 0 && relinquish.len() == 0
             }
+            Self::ExchangeDraw { draw } => {
+                draw.is_empty()
+            }
+            Self::ExchangeChoice { hand, relinquish } => {
+                hand.is_empty() && relinquish.is_empty()
+            }
         }
     }
     pub fn name(&self) -> ActionInfoName {
         match self {
-            ActionInfo::Start => {
+            Self::Start => {
                 ActionInfoName::Start
             },
-            ActionInfo::StartInferred => {
+            Self::StartInferred => {
                 ActionInfoName::StartInferred
             },
-            ActionInfo::Discard { .. } => {
+            Self::Discard { .. } => {
                 ActionInfoName::Discard
             },
-            ActionInfo::RevealRedraw { .. } => {
+            Self::RevealRedraw { .. } => {
                 ActionInfoName::RevealRedraw
             },
-            ActionInfo::ExchangeDrawChoice { .. } => {
+            Self::ExchangeDrawChoice { .. } => {
                 ActionInfoName::ExchangeDrawChoice
             },
+            Self::ExchangeDraw { .. } => {
+                ActionInfoName::ExchangeDraw
+            },
+            Self::ExchangeChoice { .. } => {
+                ActionInfoName::ExchangeChoice
+            }
         }
     }
 }
@@ -124,6 +156,8 @@ pub enum ActionInfoName {
     StartInferred,
     Discard, // Player | Card
     RevealRedraw, // Player | Reveal Card | Redraw Option<Card>
+    ExchangeDraw, 
+    ExchangeChoice, 
     ExchangeDrawChoice, // Player | Draw Vec<Card> | Return Vec<Card>
 }
 
@@ -450,6 +484,8 @@ impl BackTrackCollectiveConstraint {
                     },
                 }
             },
+            ActionInfo::ExchangeDraw { draw } => todo!(),
+            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
             ActionInfo::ExchangeDrawChoice{ draw, relinquish } => {
                 // TODO: handle the known card case obviously lol
                 self.ambassador_public(player_id);
@@ -506,6 +542,8 @@ impl BackTrackCollectiveConstraint {
                     },
                 }
             },
+            ActionInfo::ExchangeDraw { draw } => todo!(),
+            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
             ActionInfo::ExchangeDrawChoice{ draw, relinquish } => {
                 // TODO: handle the known card case obviously lol
                 self.ambassador_public(player_id);
@@ -1065,6 +1103,8 @@ impl BackTrackCollectiveConstraint {
                                 |ActionInfoName::StartInferred => {
                                     debug_assert!(false, "Should not have Start when index is not 0");
                                 },
+                                ActionInfoName::ExchangeDraw => todo!(),
+                                ActionInfoName::ExchangeChoice => todo!(),
                                 ActionInfoName::Discard => {},
                             }
                         }
@@ -1088,10 +1128,12 @@ impl BackTrackCollectiveConstraint {
             ActionInfo::Start
             | ActionInfo::StartInferred => {
                 panic!("You should not be calling this on Start");
-            }
-            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
+            },
+            ActionInfo::ExchangeDraw { .. }
+            | ActionInfo::ExchangeChoice { .. }
+            | ActionInfo::ExchangeDrawChoice { .. } => {
                 // unimplemented!();
-            }
+            },
         }
         false
     }
@@ -1120,6 +1162,8 @@ impl BackTrackCollectiveConstraint {
                 ActionInfo::ExchangeDrawChoice { .. } => {
                     players_had_revealed_or_discarded[player_i] = false;
                 },
+                ActionInfo::ExchangeDraw { .. } => todo!(),
+                ActionInfo::ExchangeChoice { .. } => todo!(),
                 ActionInfo::Start => {},
                 ActionInfo::StartInferred => {},
             }
@@ -1281,6 +1325,8 @@ impl BackTrackCollectiveConstraint {
                 inferred_constraints[latest_move.player() as usize].extend(relinquish.iter().copied());
                 inferred_constraints[6].extend(draw.iter().copied());
             },
+            ActionInfo::ExchangeDraw { .. } => todo!(),
+            ActionInfo::ExchangeChoice { .. } => todo!(),
             ActionInfo::Start
             | ActionInfo::StartInferred => {},
         }
@@ -1750,6 +1796,8 @@ impl BackTrackCollectiveConstraint {
             ActionInfo::ExchangeDrawChoice { .. } => {
                 response = self.recurse_variants_exchange(index_loop, index_of_interest, player_of_interest, public_constraints, inferred_constraints, player_loop, cards);
             },
+            ActionInfo::ExchangeDraw { .. } => todo!(),
+            ActionInfo::ExchangeChoice { .. } => todo!(),
             ActionInfo::Start
             | ActionInfo::StartInferred => {
                 // Managed to reach base
@@ -2539,6 +2587,8 @@ impl CoupConstraint for BackTrackCollectiveConstraint {
                 self.history.push(significant_action);
                 self.calculate_stored_move_initial();
             },
+            ActionInfo::ExchangeDraw { .. } => todo!(),
+            ActionInfo::ExchangeChoice { .. } => todo!(),
             ActionInfo::Start 
             | ActionInfo::StartInferred => {
                 // TODO: Consider removing Start, so we can eliminate this branch entirely

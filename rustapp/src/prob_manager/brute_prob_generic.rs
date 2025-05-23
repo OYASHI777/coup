@@ -195,6 +195,8 @@ where
                     unimplemented!()
                 }
             },
+            ActionInfo::ExchangeDraw { .. } => todo!(),
+            ActionInfo::ExchangeChoice { .. } => todo!(),
             ActionInfo::Start => {
                 unimplemented!()
             },

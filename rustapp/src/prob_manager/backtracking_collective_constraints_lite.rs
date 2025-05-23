@@ -200,12 +200,12 @@ impl BackTrackCollectiveConstraintLite {
                 debug_assert!(false, "You should not be here!");
             },
             ActionInfo::Discard{ discard} => {
-                self.death(player_id, discard);
+                    self.death(player_id, discard);
             },
-            ActionInfo::RevealRedraw{ .. } => {
-            },
-            ActionInfo::ExchangeDrawChoice{ .. } => {
-            },
+            ActionInfo::RevealRedraw{ .. } => {},
+            ActionInfo::ExchangeDrawChoice{ .. } => {},
+            ActionInfo::ExchangeDraw { draw } => todo!(),
+            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
         }
         self.generate_impossible_constraints(self.history.len() - 1);
         self.generate_inferred_constraints();
@@ -743,6 +743,12 @@ impl BackTrackCollectiveConstraintLite {
             },
             ActionInfo::ExchangeDrawChoice { .. } => {
                 response = self.recurse_variants_exchange(index_loop, public_constraints, inferred_constraints, player_loop, cards);
+            },
+            ActionInfo::ExchangeDraw { .. } => {
+                todo!()
+            },
+            ActionInfo::ExchangeChoice { .. } => {
+                todo!()
             },
             ActionInfo::Start
             | ActionInfo::StartInferred => {
@@ -1441,6 +1447,12 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
                 self.history.push(significant_action);
                 self.calculate_stored_move_initial();
             },
+            ActionInfo::ExchangeChoice { hand, relinquish } => {
+                todo!();
+            },
+            ActionInfo::ExchangeDraw { draw } => {
+                todo!();
+            }
             ActionInfo::Start 
             | ActionInfo::StartInferred => {
                 // TODO: Consider removing Start, so we can eliminate this branch entirely
