@@ -750,7 +750,7 @@ impl BackTrackCollectiveConstraintLite {
             },
             ActionInfo::ExchangeDrawChoice { .. } => {
                 unimplemented!("Deprecated!");
-                response = self.recurse_variants_exchange_public(index_loop, public_constraints, inferred_constraints, player_loop, cards);
+                response = self.recurse_variants_exchange_public(index_loop, player_loop, public_constraints, inferred_constraints, cards);
             },
             ActionInfo::ExchangeDraw { draw } => {
                 if !draw.is_empty() {
@@ -808,12 +808,12 @@ impl BackTrackCollectiveConstraintLite {
             ActionInfo::ExchangeChoice { hand, relinquish } => {
                 if let ActionInfo::ExchangeDraw { draw } = self.history[index_loop - 1].action_info() {
                     if draw.is_empty() {
-                        response = self.recurse_variants_exchange_public(index_loop, public_constraints, inferred_constraints, player_loop, cards);
+                        response = self.recurse_variants_exchange_public(index_loop, player_loop, public_constraints, inferred_constraints, cards);
                     } else {
                         // Assumes both relinquish cards are known
                         // Assumes hand cards are known (they are alive cards)
                         // Pool to choose from is hand + draw
-                        response = self.recurse_variants_exchange_private(index_loop, hand, draw, relinquish, public_constraints, inferred_constraints, player_loop, cards);
+                        response = self.recurse_variants_exchange_private(index_loop, player_loop, hand, draw, relinquish, public_constraints, inferred_constraints, cards);
                     }
                 }
             },
@@ -883,7 +883,7 @@ impl BackTrackCollectiveConstraintLite {
         }
         true
     }
-    pub fn recurse_variants_exchange_public(&self, index_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, player_loop: usize, cards: &[u8; 5]) -> bool {
+    pub fn recurse_variants_exchange_public(&self, index_loop: usize, player_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, cards: &[u8; 5]) -> bool {
         let player_lives = 2 - self.history[index_loop].public_constraints()[player_loop].len() as u8;
         let mut iter_cards_player = inferred_constraints[player_loop].clone();
         iter_cards_player.sort_unstable();
@@ -1273,11 +1273,17 @@ impl BackTrackCollectiveConstraintLite {
         }
         false
     }
-    pub fn recurse_variants_exchange_private(&self, index_loop: usize, hand: &Vec<Card>, draw: &Vec<Card>, relinquish: &Vec<Card>, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, player_loop: usize, cards: &[u8; 5]) -> bool {
+    pub fn recurse_variants_exchange_private(&self, index_loop: usize, player_loop: usize, hand: &Vec<Card>, draw: &Vec<Card>, relinquish: &Vec<Card>, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, cards: &[u8; 5]) -> bool {
         // Move cards such that hand == hand
         // The rest of the cards can go to pile
         // if pile doenst have draw add in
         // if hand doenst have hand add in
+
+        // card can only have changed hands if in
+        //      - hand + draw
+
+        // MAX changing of hands determined by count of cards in
+        //      - hand + draw
 
         // relinquish cards went from either
         //      - hand -> pile
@@ -1291,9 +1297,36 @@ impl BackTrackCollectiveConstraintLite {
         //      - pile -> hand
         //      - hand -> hand
 
+        // current pile cards
+        // if in hand and not in draw
+        //      - either came from hand or is the only card that was always in pile
+        // if in hand and in draw
+        //      - assume came from pile?
+        // if not in hand and not in draw
+        //      - is the only card that was always in pile
+        // if not in hand and in draw
+        //      - either came from draw or is the only card that was always in pile
+        //      - assume came from draw?
+        
+        // current hand cards
+        // if in hand and in draw
+        //      - assume came from hand
+        // if in hand and not in draw
+        //      - came from hand
+        // if not in hand and not in draw
+        //      - illegal return false
+        // if not in hand and in draw
+        //      - came from pile
+
+        // Outer loop over hand cards
+        // inner loop over pile cards
+        for hand_card in inferred_constraints[player_loop].iter() {
+            
+        }
+
+        // Ensure player hand == hand
 
         // Ensure pile has draw
-        // Ensure player hand == hand
         todo!()
     }
     /// Brute force generates everything

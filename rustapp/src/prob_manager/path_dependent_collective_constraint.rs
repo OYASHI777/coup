@@ -2890,6 +2890,155 @@ impl PathDependentCollectiveConstraint {
         }
         variants
     }
+    pub fn return_variants_exchange_private(player_loop: usize, hand: &Vec<Card>, draw: &Vec<Card>, relinquish: &Vec<Card>, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+        // TODO: [REFACTOR] maybe only need draw and relinquish?
+
+        // if relinquish == draw
+        //      - No change,
+        //      - Ensure draw and hand are satisfied
+        // if 1 overlap in reliquish and draw
+        //      
+        // if no overlap in relinquish and draw
+        //      - all of hand -> pile
+        //      - all of draw went to hand
+
+        // Move cards such that hand == hand
+        // The rest of the cards can go to pile
+        // if pile doenst have draw add in
+        // if hand doenst have hand add in
+
+
+        // card can only have changed hands if in
+        //      - hand + draw
+
+        // MAX changing of hands determined by count of cards in
+        //      - hand + draw
+
+        // relinquish cards went from either
+        //      - hand -> pile
+        //      - pile -> pile
+
+        // current pile cards went from either
+        //      - pile -> pile
+        //      - hand -> pile
+
+        // current hand cards went from either
+        //      - pile -> hand
+        //      - hand -> hand
+        
+        // current pile cards
+        // if in hand and not in draw
+        //      - either came from hand or is the only card that was always in pile
+        // if in hand and in draw
+        //      - assume came from pile?
+        // if not in hand and not in draw
+        //      - is the only card that was always in pile
+        // if not in hand and in draw
+        //      - either came from draw or is the only card that was always in pile
+        //      - assume came from draw?
+        
+        // current hand cards
+        // if in hand and in draw
+        //      - assume came from hand
+        // if in hand and not in draw
+        //      - came from hand
+        // if not in hand and not in draw
+        //      - illegal return false
+        // if not in hand and in draw
+        //      - came from pile
+        //      -   
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
+        let mut hand_counts: [u8; 5] = [0; 5];
+        hand.iter().for_each(|c| hand_counts[*c as usize] += 1);
+        let mut draw_counts: [u8; 5] = [0; 5];
+        draw.iter().for_each(|c| draw_counts[*c as usize] += 1);
+        let mut relinquish_counts: [u8; 5] = [0; 5];
+        relinquish.iter().for_each(|c| relinquish_counts[*c as usize] += 1);
+        let mut pile_counts: [u8; 5] = [0; 5];
+        inferred_constraints[6].iter().for_each(|c| pile_counts[*c as usize] += 1);
+        if *relinquish == *draw {
+            let mut temp = inferred_constraints.clone();
+            // Ensures
+            temp[player_loop] = hand.clone();
+            draw_counts.iter().zip(pile_counts.iter()).enumerate().for_each(|(c, (d, p))| {
+                if d > p {
+                    for _ in 0..(*d - *p) {
+                        temp[6].push(Card::try_from(c as u8).unwrap());
+                    }
+                }
+            });
+            variants.push(temp);
+        } else {
+            let mut overlap: u8 = 0;
+            let mut overlap_card: Option<Card> = None;
+            draw_counts.iter().zip(relinquish_counts.iter()).enumerate().for_each(|(c, (d, r))| {
+                let val = *d.min(r);
+                overlap += val;
+                if val > 0 {
+                    overlap_card = Some(Card::try_from(c as u8).unwrap());
+                }
+            });
+            match overlap {
+                1 => {
+                    // TODO: [REFACTOR] I think this case might handle all cases?
+                    // TODO: [REFACTOR] I think don't need hand?
+                    let mut temp = inferred_constraints.clone();
+                    // same card stays in pile
+                    // ensure
+                    pile_counts.iter().zip(draw_counts.iter().zip(relinquish_counts.iter())).enumerate().for_each(|(c, (p, (d, r)))| {
+                        if *d.min(r) > 0 {
+                            // overlapped card
+                            if *p == 0 {
+                                temp[6].push(Card::try_from(c as u8).unwrap());
+                            }
+                        } else {
+                            if *d > 0 {
+                                // Drawn and stayed in hand
+                                if let Some(pos) = temp[player_loop].iter().rposition(|player_card| *player_card as usize == c) {
+                                    temp[player_loop].swap_remove(pos);
+                                }
+                                temp[6].push(Card::try_from(c as u8).unwrap());
+                            }
+                            if *r > 0 {
+                                // Relinquished and originally from hand
+                                if let Some(pos) = temp[6].iter().rposition(|pile_card| *pile_card as usize == c) {
+                                    temp[6].swap_remove(pos);
+                                }
+                                temp[player_loop].push(Card::try_from(c as u8).unwrap());
+                            }
+                        }
+                    });
+                    variants.push(temp);
+                },
+                0 => {
+                    let mut temp = inferred_constraints.clone();
+                    // Player kept all draw cards and relinquished hand
+                    // debug_assert!(relinquish == hand, "impossible case");
+                    for card_draw in draw.iter() {
+                        if let Some(pos) = temp[player_loop].iter().position(|c| *c == *card_draw) {
+                            temp[player_loop].swap_remove(pos);
+                        }
+                    }
+                    temp[player_loop] = relinquish.clone();
+                    for card_relinquish in relinquish.iter() {
+                        if let Some(pos) = temp[6].iter().position(|c| *c == *card_relinquish) {
+                            temp[6].swap_remove(pos);
+                        }
+                    }
+                    temp[6].push(draw[0]);
+                    temp[6].push(draw[1]);
+                    variants.push(temp);
+                },
+                _ => {
+                    debug_assert!(false, "Should not have this case");
+                },
+            }
+        }
+        // Ensure player hand == hand
+
+        // Ensure pile has draw
+        variants
+    }
     /// Builds possible previous inferred_constraint states
     /// All cards have a source
     /// card == reveal in player hand can come from
