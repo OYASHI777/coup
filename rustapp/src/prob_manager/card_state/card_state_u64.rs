@@ -279,4 +279,20 @@ impl CardPermState for CardStateu64 {
 
         results
     }
+    
+    fn player_swap_cards(&self, player_i: usize, player_j: usize, card_i: Card, card_j: Card) -> Option<Self> {
+        let mut new_state = self.clone();
+        let mut player_i_cards = self.get_player_cards_unsorted(player_i);
+        let mut player_j_cards = self.get_player_cards_unsorted(player_j);
+        if let Some(pos_i) = player_i_cards.iter().rposition(|c| *c == card_i) {
+            if let Some(pos_j) = player_j_cards.iter().rposition(|c| *c == card_j) {
+                player_i_cards[pos_i] = card_j;
+                player_j_cards[pos_j] = card_i;
+                new_state.set_player_cards(player_i, &player_i_cards);
+                new_state.set_player_cards(player_j, &player_j_cards);
+                return Some(new_state);
+            }
+        }
+        None
+    }
 }

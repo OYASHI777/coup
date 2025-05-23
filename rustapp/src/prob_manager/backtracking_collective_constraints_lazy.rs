@@ -822,8 +822,10 @@ impl BackTrackCollectiveConstraintLazy {
             ActionInfo::ExchangeDrawChoice { .. } => {
                 response = self.recurse_variants_exchange(index_loop, public_constraints, inferred_constraints, player_loop, cards);
             },
-            ActionInfo::Start
-            | ActionInfo::StartInferred => {
+            ActionInfo::StartInferred => {
+                todo!("Copy Lite version");
+            }
+            ActionInfo::Start => {
                 // Managed to reach base
                 log::trace!("possible_to_have_cards_recurse found true at index: {}", index_loop);
                 response = true;
@@ -1461,6 +1463,7 @@ impl CoupConstraint for BackTrackCollectiveConstraintLazy {
     /// Initialize game start with private information for a particular player
     /// TODO: Consider storing as public_constraints in start_inferred?
     fn game_start_private(player: usize, cards: &[Card; 2]) -> Self {
+        todo!("Update like Lite!");
         let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
         let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
         // let revealed_status = vec![Vec::with_capacity(5); 7];

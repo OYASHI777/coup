@@ -459,7 +459,7 @@ impl BackTrackCollectiveConstraintLite {
         // Will temporarily not use memo and generate all group_constraints from start
         // Needed for checks
         log::trace!("After");
-        log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop].action_info());
+        log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop]);
         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
         if !self.is_valid_combination(index_loop, inferred_constraints) {
             // early exit before terminal node
@@ -817,8 +817,40 @@ impl BackTrackCollectiveConstraintLite {
                     }
                 }
             },
-            ActionInfo::Start
-            | ActionInfo::StartInferred => {
+            ActionInfo::StartInferred => {
+                // TODO: OPTIMIZE this is only needed if bool_know_priv_info is true
+                let mut buffer: Vec<(usize, Card)> = Vec::with_capacity(3);
+                for player in 0..7 as usize {
+                    let mut card_counts_req = [0u8; 5];
+                    let mut card_counts_cur = [0u8; 5];
+                    for card_start in self.history[index_loop].inferred_constraints()[player].iter() {
+                        card_counts_req[*card_start as usize] += 1;
+                    }
+                    for card_start in inferred_constraints[player].iter() {
+                        card_counts_cur[*card_start as usize] += 1;
+                    }
+                    for card_num_to_add in 0..5 {
+                        if card_counts_req[card_num_to_add] > card_counts_cur[card_num_to_add] {
+                            for _ in 0..(card_counts_req[card_num_to_add] - card_counts_cur[card_num_to_add]) {
+                                let card_add = Card::try_from(card_num_to_add as u8).unwrap();
+                                inferred_constraints[player].push(card_add);
+                                buffer.push((player, card_add));
+                            }
+                        }
+                    }
+                }
+                
+                response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
+                for (player_remove, card_remove) in buffer.iter() {
+                    if let Some(pos) = inferred_constraints[*player_remove].iter().rposition(|c| *c == *card_remove) {
+                        inferred_constraints[*player_remove].swap_remove(pos);
+                    }
+                }
+                if response {
+                    return true;
+                }
+            },
+            ActionInfo::Start => {
                 // Managed to reach base
                 log::trace!("possible_to_have_cards_recurse found true at index: {}", index_loop);
                 response = true;
@@ -860,7 +892,7 @@ impl BackTrackCollectiveConstraintLite {
         if inferred_constraints[6].len() == 3 && self.history[index_loop].impossible_constraints_3()[inferred_constraints[6][0] as usize][inferred_constraints[6][1] as usize][inferred_constraints[6][2] as usize]{
             return false
         }
-        // =========================================
+        // =================== Required to test inferred at Start! ======================
         for player in 0..7 {
             let mut current_card_counts: [u8; 5] = [0; 5];
             inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
@@ -1509,39 +1541,53 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
     // TODO: OPTIMIZE, i guess you don't really need history inside here...
     fn game_start_private(player: usize, cards: &[Card; 2]) -> Self {
         let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
-        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
+        let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
+        inferred_constraints[player].push(cards[0]);
+        inferred_constraints[player].push(cards[1]);
         // let revealed_status = vec![Vec::with_capacity(5); 7];
         // TODO: Add inferred_card_count
         let mut history: Vec<SignificantAction> = Vec::with_capacity(50);
         // Start takes the inferred information discovered via a pathdependent lookback
-        let mut start = SignificantAction::start(); 
-        start.add_inferred_constraints(player, cards[0]);
-        start.add_inferred_constraints(player, cards[1]);
-        start.meta_data.impossible_constraints[player] = [true; 5];
-        start.meta_data.impossible_constraints[player][cards[0] as usize] = false;
-        start.meta_data.impossible_constraints[player][cards[1] as usize] = false;
-        start.meta_data.impossible_constraints_2[player] = [[true; 5]; 5];
-        start.meta_data.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
-        start.meta_data.impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
+        let mut impossible_constraints = [[false; 5]; 7];
+        impossible_constraints[player] = [true; 5];
+        impossible_constraints[player][cards[0] as usize] = false;
+        impossible_constraints[player][cards[1] as usize] = false;
+        let mut impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        impossible_constraints_2[player] = [[true; 5]; 5];
+        let mut impossible_constraints_3 = [[[false; 5]; 5]; 5];
+        impossible_constraints_3[cards[0] as usize][cards[0] as usize][cards[0] as usize] = true;
+        impossible_constraints_3[cards[1] as usize][cards[1] as usize][cards[1] as usize] = true;
+        if cards[0] == cards[1] {
+            // update impossible_2
+            for p in 0..7 {
+                impossible_constraints_2[p][cards[0] as usize][cards[0] as usize] = true;
+            }
+            // update impossible_3 where more than 2
+            for c in 0..5 {
+                impossible_constraints_3[cards[0] as usize][cards[0] as usize][c] = true;
+                impossible_constraints_3[cards[0] as usize][c][cards[0] as usize] = true;
+                impossible_constraints_3[c][cards[0] as usize][cards[0] as usize] = true;
+            }
+        }
+        impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
+        impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
+        let start = SignificantAction::start(); 
         history.push(start);
         // StartInferred takes the inferred information from start, and runs add_inferred_information
         // This seperation prevents handling cases where you add discovered information that is already inside due to add_inferred_information
         let mut start_inferred = SignificantAction::start_inferred(); 
         start_inferred.add_inferred_constraints(player, cards[0]);
         start_inferred.add_inferred_constraints(player, cards[1]);
-        start_inferred.meta_data.impossible_constraints[player] = [true; 5];
-        start_inferred.meta_data.impossible_constraints[player][cards[0] as usize] = false;
-        start_inferred.meta_data.impossible_constraints[player][cards[1] as usize] = false;
-        start_inferred.meta_data.impossible_constraints_2[player] = [[true; 5]; 5];
-        start_inferred.meta_data.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
-        start_inferred.meta_data.impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
+        start_inferred.meta_data.impossible_constraints = impossible_constraints.clone();
+        start_inferred.meta_data.impossible_constraints_2 = impossible_constraints_2.clone();
+        start_inferred.meta_data.impossible_constraints_3 = impossible_constraints_3.clone();
         history.push(start_inferred);
         Self {
             public_constraints,
             inferred_constraints,
-            impossible_constraints: [[false; 5]; 7],
-            impossible_constraints_2: [[[false; 5]; 5]; 7], 
-            impossible_constraints_3: [[[false; 5]; 5]; 5], 
+            impossible_constraints,
+            impossible_constraints_2, 
+            impossible_constraints_3, 
             move_no: 1,
             history,
         }

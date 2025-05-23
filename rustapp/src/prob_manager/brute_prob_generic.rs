@@ -59,8 +59,12 @@ where
     pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
         self.private_player = Some(player);
         self.restrict(player, cards);
-        self.inferred_constraints[player].push(cards[0]);
-        self.inferred_constraints[player].push(cards[1]);
+        // self.inferred_constraints[player].push(cards[0]);
+        // self.inferred_constraints[player].push(cards[1]);
+        // self.inferred_constraints[player].sort_unstable();
+        self.update_constraints();
+        self.set_impossible_constraints_2();
+        self.set_impossible_constraints_3();
     }
     /// Placeholder
     pub fn start_public(&mut self) {
@@ -74,6 +78,8 @@ where
         self.inferred_constraints = vec![Vec::with_capacity(2); 6];
         self.inferred_constraints.push(Vec::with_capacity(3));
         self.impossible_constraints = [[false; 5]; 7];
+        self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
         self.calculated_states = self.all_states.clone().into_iter().collect();
     }
     /// adds public constraint
@@ -134,25 +140,27 @@ where
                     self.public_constraints[*player_id].push(card[i]);
                 }
                 self.restrict(*player_id, &card_restrictions);
+                self.update_constraints();
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 let mut current_dead_cards: Vec<Card> = self.public_constraints[*player_id].clone();
                 current_dead_cards.push(*reveal);
                 self.restrict(*player_id, &current_dead_cards);
                 if *reveal != *redraw {
-                    self.restrict(*player_id, &[*redraw]);
-                    // SWAP Reveal <=> Redraw
+                    self.restrict(6, &[*redraw]);
+                    self.redraw_swap(*player_id, *reveal, *redraw);
                 }
+                self.update_constraints();
             },
             ActionObservation::ExchangeDraw { player_id, card } => {
                 self.restrict(6, card);
+                self.update_constraints();
             },
             ActionObservation::ExchangeChoice { player_id, no_cards, hand, relinquish } => {
-                if let ActionObservation::ExchangeDraw { player_id, card } = self.history.last().unwrap() {
-                    todo!();
-                } else {
-                    debug_assert!(false, "ExchangeDraw MUST come before ExchangeChoice")
-                }
+                self.restrict(*player_id, hand);
+                // movements
+                todo!();
+                self.update_constraints();
             },
             _ => {}
         }
@@ -254,6 +262,24 @@ where
                 }
             }
             i += 1;
+        }
+    }
+    pub fn redraw_swap(&mut self, player_reveal: usize, card_reveal: Card, card_redraw: Card) {
+        debug_assert!(card_reveal != card_redraw, "Ensure redraw_swap used only when redraw and reveal are different!");
+        let temp_states = self.calculated_states.clone();
+        let mut temp_set = AHashSet::with_capacity(self.calculated_states.len());
+        self.calculated_states.clear();
+        let mut player_cards = self.public_constraints[player_reveal].clone();
+        player_cards.push(Card::try_from(card_reveal as u8).unwrap());
+        for state in temp_states.iter() {
+            if state.player_has_cards(player_reveal, &player_cards) {
+                if let Some(new_state) = state.player_swap_cards(player_reveal, 6, card_reveal, card_redraw) {
+                    if !temp_set.contains(&new_state) {
+                        temp_set.insert(new_state);
+                        self.calculated_states.push(new_state);
+                    }
+                }
+            }
         }
     }
     /// This function filters out `self.calculated_states` such that only

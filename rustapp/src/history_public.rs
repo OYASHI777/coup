@@ -1385,6 +1385,7 @@ impl History {
         }
     }
     /// This technically does not consider what cards the player can or should have!
+    /// Generates legal moves for the purpose of search
     pub fn generate_legal_moves(&self, bool_know_priv_info: bool) -> Vec<ActionObservation>{
         // Refer to paths.txt for different cases
         let mut output: Vec<ActionObservation> = Vec::new();
