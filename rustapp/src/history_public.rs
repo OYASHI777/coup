@@ -1235,55 +1235,71 @@ impl History {
                 let num_dead_con: u8 =  self.get_public_card_count(&Card::Contessa);
                 let count_card_arr = [num_dead_amb, num_dead_ass, num_dead_cpt, num_dead_duk, num_dead_con];
                 if bool_know_priv_info {
-                    if self.latest_influence()[player_id] == 2 {
-                        for i_p in 0..5 {
-                            let mut total_counts: [u8; 5] = [0; 5];
-                            total_counts[i_p] += 1;
-                            if total_counts[i_p] + count_card_arr[i_p] < 3 {
-                                for j_p in i_p..5 {
-                                    total_counts[j_p] += 1;
-                                    if total_counts[j_p] + count_card_arr[j_p] < 3 {
-                                        for i in 0..5 {
-                                            total_counts[i] += 1;
-                                            if total_counts[i] + count_card_arr[i] < 3 {
-                                                for j in i..5 {
-                                                    total_counts[j] += 1;
-                                                    if total_counts[j] + count_card_arr[j] < 3 {
-                                                        changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 2, hand: [Card::try_from(i_p as u8).unwrap(), Card::try_from(j_p as u8).unwrap()], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
-                                                    }
-                                                    total_counts[j] -= 1;
-                                                }
-                                            }
-                                            total_counts[i] -= 1;
-                                        }
-                                    }
-                                    total_counts[j_p] -= 1;
+                    // Let hand be determined externally so hand here is a default value
+                    let mut total_counts: [u8; 5] = [0; 5];
+                    let no_cards_choice = self.latest_influence()[player_id] as usize;
+                    for i in 0..5 {
+                        total_counts[i] += 1;
+                        if total_counts[i] + count_card_arr[i] < 3 {
+                            for j in i..5 {
+                                total_counts[j] += 1;
+                                if total_counts[j] + count_card_arr[j] < 3 {
+                                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: no_cards_choice, hand: [Card::Ambassador, Card::Ambassador], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
                                 }
+                                total_counts[j] -= 1;
                             }
                         }
-                    } else {
-                        debug_assert!(self.latest_influence()[player_id] == 1, "influence should be either 1 or 2");
-                        for i_p in 0..5 {
-                            let mut total_counts: [u8; 5] = [0; 5];
-                            total_counts[i_p] += 1;
-                            if total_counts[i_p] + count_card_arr[i_p] < 3 {
-                                for i in 0..5 {
-                                    total_counts[i] += 1;
-                                    if total_counts[i] + count_card_arr[i] < 3 {
-                                        for j in i..5 {
-                                            total_counts[j] += 1;
-                                            if total_counts[j] + count_card_arr[j] < 3 {
-                                                changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 1, hand: [Card::try_from(i_p as u8).unwrap(), Card::try_from(i_p as u8).unwrap()], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
-                                            }
-                                            total_counts[j] -= 1;
-                                        }
-                                    }
-                                    total_counts[i] -= 1;
-                                }
-                            }
-                        }
-
+                        total_counts[i] -= 1;
                     }
+                    // if self.latest_influence()[player_id] == 2 {
+                    //     for i_p in 0..5 {
+                    //         let mut total_counts: [u8; 5] = [0; 5];
+                    //         total_counts[i_p] += 1;
+                    //         if total_counts[i_p] + count_card_arr[i_p] < 3 {
+                    //             for j_p in i_p..5 {
+                    //                 total_counts[j_p] += 1;
+                    //                 if total_counts[j_p] + count_card_arr[j_p] < 3 {
+                    //                     for i in 0..5 {
+                    //                         total_counts[i] += 1;
+                    //                         if total_counts[i] + count_card_arr[i] < 3 {
+                    //                             for j in i..5 {
+                    //                                 total_counts[j] += 1;
+                    //                                 if total_counts[j] + count_card_arr[j] < 3 {
+                    //                                     changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 2, hand: [Card::try_from(i_p as u8).unwrap(), Card::try_from(j_p as u8).unwrap()], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
+                    //                                 }
+                    //                                 total_counts[j] -= 1;
+                    //                             }
+                    //                         }
+                    //                         total_counts[i] -= 1;
+                    //                     }
+                    //                 }
+                    //                 total_counts[j_p] -= 1;
+                    //             }
+                    //         }
+                    //     }
+                    // } else {
+                    //     debug_assert!(self.latest_influence()[player_id] == 1, "influence should be either 1 or 2");
+                    //     for i_p in 0..5 {
+                    //         let mut total_counts: [u8; 5] = [0; 5];
+                    //         total_counts[i_p] += 1;
+                    //         if total_counts[i_p] + count_card_arr[i_p] < 3 {
+                    //             for i in 0..5 {
+                    //                 total_counts[i] += 1;
+                    //                 if total_counts[i] + count_card_arr[i] < 3 {
+                    //                     for j in i..5 {
+                    //                         total_counts[j] += 1;
+                    //                         if total_counts[j] + count_card_arr[j] < 3 {
+                    //                             changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 1, hand: [Card::try_from(i_p as u8).unwrap(), Card::try_from(i_p as u8).unwrap()], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
+                    //                         }
+                    //                         total_counts[j] -= 1;
+                    //                     }
+                    //                 }
+                    //                 total_counts[i] -= 1;
+                    //             }
+                    //         }
+                    //     }
+
+                    // }
                 } else {
                     // for i in 0..5 {
                     //     if count_card_arr[i] < 2 {
