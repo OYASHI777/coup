@@ -3109,6 +3109,10 @@ impl PathDependentCollectiveConstraint {
         // same card stays in pile
         // ensure
         pile_counts.iter().zip(draw_counts.iter().zip(relinquish_counts.iter())).enumerate().for_each(|(c, (p, (d, r)))| {
+            log::trace!("card_num: {:?}", c);
+            log::trace!("pile_count: {:?}", p);
+            log::trace!("draw_count: {:?}", d);
+            log::trace!("relin_count: {:?}", r);
             log::trace!("draw_counts: {:?}", draw_counts);
             log::trace!("relinquish_counts: {:?}", relinquish_counts);
             log::trace!("pile_counts: {:?}", pile_counts);
@@ -3123,9 +3127,6 @@ impl PathDependentCollectiveConstraint {
             // for _ in 0..(count_overlap - *p) {
             //     temp[6].push(Card::try_from(c as u8).unwrap());
             // }
-            if count_overlap > *p {
-                temp[6].extend(std::iter::repeat(Card::try_from(c as u8).unwrap()).take((count_overlap - *p) as usize));
-            }
             for _ in 0..count_draw_and_stayed_in_hand {
                 // Drawn and stayed in hand
                 if let Some(pos) = temp[player_loop].iter().rposition(|player_card| *player_card as usize == c) {
@@ -3140,7 +3141,44 @@ impl PathDependentCollectiveConstraint {
                 }
                 temp[player_loop].push(Card::try_from(c as u8).unwrap());
             }
+            let curr_pile_count = temp[6].iter().filter(|x| **x as usize == c).count() as u8;
+            let required_count = count_overlap + count_draw_and_stayed_in_hand;
+            if required_count > curr_pile_count {
+                log::trace!("total_count > curr_pile_count");
+                temp[6].extend(std::iter::repeat(Card::try_from(c as u8).unwrap()).take((required_count - curr_pile_count) as usize));
+                log::trace!("temp after: {:?}", temp);
+            }
         });
+        // Remove this to check if able to add illegal moves! for simulation
+        if temp[0].len() < 3 && temp[6].len() < 4 {
+            variants.push(temp);
+        }
+        variants
+    }
+    pub fn return_variants_exchange_private_3(player_loop: usize, draw: &Vec<Card>, relinquish: &Vec<Card>, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+        // TODO: [REFACTOR] maybe only need draw and relinquish?
+        // TODO: [REFACTOR] I think this case might handle all cases?
+        // TODO: [REFACTOR] I think don't need hand?
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(1);
+        let mut temp = inferred_constraints.clone();
+        // same card stays in pile
+        // ensure
+        if let Some(pos) = temp[6].iter().position(|c| *c == relinquish[0]) {
+            temp[6].swap_remove(pos);
+        }
+        temp[player_loop].push(relinquish[0]);
+        if let Some(pos) = temp[6].iter().position(|c| *c == relinquish[1]) {
+            temp[6].swap_remove(pos);
+        }
+        temp[player_loop].push(relinquish[1]);
+        if let Some(pos) = temp[player_loop].iter().position(|c| *c == draw[0]) {
+            temp[player_loop].swap_remove(pos);
+        }
+        temp[6].push(draw[0]);
+        if let Some(pos) = temp[player_loop].iter().position(|c| *c == draw[1]) {
+            temp[player_loop].swap_remove(pos);
+        }
+        temp[6].push(draw[1]);
         // Remove this to check if able to add illegal moves! for simulation
         if temp[0].len() < 3 && temp[6].len() < 4 {
             variants.push(temp);
