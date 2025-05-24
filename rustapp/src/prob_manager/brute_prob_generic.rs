@@ -320,6 +320,10 @@ where
         }
         self.calculated_states.iter().any(|state| state.player_has_cards(player_id, cards))
     }
+    /// Checks if player can have cards if they also draw a set of cards
+    pub fn player_can_have_cards_after_draw(&self, player_id: usize, cards: &[Card], draw: &[Card]) -> bool {
+        false
+    }
     /// For each player (0..6), determine which cards they **must** have in *every* possible state.
     /// Returns a `Vec<Vec<char>>` of length 7, where `result[player_id]` is a sorted list
     /// (with multiplicities) of all cards that player *always* holds in all current `calculated_states`.

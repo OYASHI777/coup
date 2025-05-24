@@ -5,6 +5,8 @@ pub trait CardPermState: Sized {
     fn gen_table_combinations() -> Vec<Self>;
     /// Returns true if a player has all of the cards
     fn player_has_cards(&self, player_id: usize, cards: &[Card]) -> bool;
+    /// Returns true if a player has all of the cards, if hand includes draw too
+    fn player_has_cards_after_draw(&self, player_id: usize, cards: &[Card], draw: &[Card]) -> bool;
     // Returns the total number of particular card a player has
     fn player_card_count(&self, player_id: usize, card: Card) -> u8;
     // Returns the total number all cards a player has

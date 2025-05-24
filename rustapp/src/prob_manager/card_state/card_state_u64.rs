@@ -168,6 +168,19 @@ impl CardPermState for CardStateu64 {
         }
         true
     }
+    fn player_has_cards_after_draw(&self, player_id: usize, cards: &[Card], draw: &[Card]) -> bool {
+        let mut player_cards: Vec<Card> = self.get_player_cards_unsorted(player_id);
+        player_cards.extend_from_slice(draw);
+        // Check if all needed cards exist in extracted_cards
+        for needed in cards {
+            if let Some(pos) = player_cards.iter().position(|&c| c == *needed) {
+                player_cards.remove(pos);
+            } else {
+                return false;
+            }
+        }
+        true
+    }
     fn player_card_count(&self, player_id: usize, card: Card) -> u8 {
         let cards = self.get_player_cards_unsorted(player_id);
         let mut counter = 0;
