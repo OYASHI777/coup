@@ -157,6 +157,11 @@ where
                 self.update_constraints();
             },
             ActionObservation::ExchangeChoice { player_id, no_cards, hand, relinquish } => {
+                if let Some(ActionObservation::ExchangeDraw { card: draw, .. }) = self.history.last() {
+
+                } else {
+                    debug_assert!(false, "Some shit is wrong man");
+                }
                 self.restrict(*player_id, hand);
                 // movements
                 todo!();
@@ -295,6 +300,23 @@ where
             )
         });
         self.print_legal_states();
+    }
+    /// Emulates the ExchangeChoice swap
+    pub fn exchange_choice_swap(&mut self, player_exchange: usize, draw: &[Card], relinquish: &[Card]) {
+        log::info!("Brute Prob: exchange_choice_swap Ran: player: {}, draw: {:?}, relinquish: {:?}", player_exchange, draw, relinquish);
+        self.print_legal_states();
+        let temp_states = self.calculated_states.clone();
+        let mut temp_set = AHashSet::with_capacity(self.calculated_states.len());
+        self.calculated_states.clear();
+        for state in temp_states.iter() {
+            if let Some(new_state) = state.player_swap_cards_draw_relinquish(player_exchange, 6, draw, relinquish) {
+                if !temp_set.contains(&new_state) {
+                    temp_set.insert(new_state);
+                    self.calculated_states.push(new_state);
+                }
+            }
+        }
+
     }
     /// This function returns true if a player can have a particular card
     pub fn player_can_have_card(&self, player_id: usize, card: Card) -> bool {

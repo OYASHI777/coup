@@ -20,4 +20,7 @@ pub trait CardPermState: Sized {
     /// RevealRedraw: Swaps reveal card with redraw card
     /// Returns a new state if possible
     fn player_swap_cards(&self, player_i: usize, player_j: usize, card_i: Card, card_j: Card) -> Option<Self>;
+    /// ExchangeChoice: Swaps cards given draw and relinquish
+    fn player_swap_cards_draw_relinquish(&self, player_drawing: usize, player_drawn: usize, draw: &[Card], relinquish: &[Card]) -> Option<Self>;
+    
 }

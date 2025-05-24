@@ -46,7 +46,7 @@ impl CardStateu64 {
         debug_assert!(player_id < 7, "Invalid player ID");
         let shift = player_id * 6;
 
-        let mut player_cards = vec![];
+        let mut player_cards = Vec::with_capacity(4); // 4 reqquired for the ExchangeChoice
         if player_id < 6 {
             let mask = 0b111111;
             let player_bits = (self.0 >> shift) & mask;
@@ -306,6 +306,36 @@ impl CardPermState for CardStateu64 {
                 return Some(new_state);
             }
         }
+        None
+    }
+    fn player_swap_cards_draw_relinquish(&self, player_drawing: usize, player_drawn: usize, draw: &[Card], relinquish: &[Card]) -> Option<Self> {
+        let mut new_state = self.clone();
+        let mut player_drawing_cards = self.get_player_cards_unsorted(player_drawing);
+        let mut player_drawn_cards = self.get_player_cards_unsorted(player_drawn);
+        if let Some(pos) = player_drawn_cards.iter().position(|c| *c == relinquish[0]) {
+            player_drawn_cards.swap_remove(pos);
+        }
+        player_drawing_cards.push(relinquish[0]);
+        if let Some(pos) = player_drawn_cards.iter().position(|c| *c == relinquish[1]) {
+            player_drawn_cards.swap_remove(pos);
+        }
+        player_drawing_cards.push(relinquish[1]);
+        if let Some(pos) = player_drawing_cards.iter().position(|c| *c == draw[0]) {
+            player_drawing_cards.swap_remove(pos);
+        }
+        player_drawn_cards.push(draw[0]);
+        if let Some(pos) = player_drawing_cards.iter().position(|c| *c == draw[1]) {
+            player_drawing_cards.swap_remove(pos);
+        }
+        player_drawn_cards.push(draw[1]);
+        // Remove this to check if able to add illegal moves! for simulation
+        if player_drawing_cards.len() < 3 && player_drawn_cards.len() < 4 {
+            player_drawing_cards.sort_unstable();
+            player_drawn_cards.sort_unstable();
+            new_state.set_player_cards(player_drawing, &player_drawing_cards);
+            new_state.set_player_cards(player_drawn, &player_drawn_cards);
+            return Some(new_state);
+        } 
         None
     }
 }

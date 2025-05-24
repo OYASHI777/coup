@@ -3180,7 +3180,7 @@ impl PathDependentCollectiveConstraint {
         }
         temp[6].push(draw[1]);
         // Remove this to check if able to add illegal moves! for simulation
-        if temp[0].len() < 3 && temp[6].len() < 4 {
+        if temp[player_loop].len() < 3 && temp[6].len() < 4 {
             // Consider that Vec for players should have capacity 4 for this to work!
             variants.push(temp);
         } else {

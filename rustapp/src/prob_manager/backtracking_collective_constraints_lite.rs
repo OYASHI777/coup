@@ -1328,7 +1328,7 @@ impl BackTrackCollectiveConstraintLite {
         }
         inferred_constraints[6].push(draw[1]);
         // Remove this to check if able to add illegal moves! for simulation
-        if inferred_constraints[0].len() < 3 && inferred_constraints[6].len() < 4 &&  self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
+        if inferred_constraints[player_loop].len() < 3 && inferred_constraints[6].len() < 4 &&  self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints, cards) {
             return true;
         }
         if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[1]) {
