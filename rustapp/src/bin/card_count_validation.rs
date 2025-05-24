@@ -1391,7 +1391,7 @@ pub fn game_rnd_constraint_bt_st_debug<C>(game_no: usize, bool_know_priv_info: b
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             new_moves.retain(|m| m.name() != AOName::Exchange);
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
-            let result = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
+            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, bool_know_priv_info);
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
@@ -2928,7 +2928,7 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
         // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
         // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
         new_moves = hh.generate_legal_moves(false);
-        let result = generate_legal_moves_with_card_constraints(&mut new_moves, &prob, bool_know_priv_info);
+        let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, bool_know_priv_info);
         let (_, _, _) = result.unwrap_or_else(|_| {
             println!("{}", hh.get_replay_history_braindead());
             println!("new_moves: {:?}", new_moves);
