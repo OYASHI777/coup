@@ -776,7 +776,8 @@ impl BackTrackCollectiveConstraintLite {
                                     inferred_constraints[6].swap_remove(pos);
                                 }
                             },
-                            2 => {
+                            2
+                            |3 => {
                                 response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
                             },
                             _ => debug_assert!(false, "you should not be here!"),
