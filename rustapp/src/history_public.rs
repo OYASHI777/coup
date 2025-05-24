@@ -698,8 +698,9 @@ impl History {
         }
         self.pop();
     }
-    pub fn add_moves(&self, changed_vec: &mut Vec<ActionObservation>, player_id: usize, move_name: AOName, bool_know_priv_info: bool) {
+    pub fn add_moves(&self, changed_vec: &mut Vec<ActionObservation>, player_id: usize, move_name: AOName, private_player: Option<usize>) {
         // Adds possible move for a particular AOName that are allowed by influence and coins
+        let bool_know_priv_info = if let Some(player) = private_player { player == player_id} else {false};
         let mut id: usize = (player_id + 1) % 6;
         match move_name {
             AOName::Income => {
@@ -1386,16 +1387,17 @@ impl History {
     }
     /// This technically does not consider what cards the player can or should have!
     /// Generates legal moves for the purpose of search
-    pub fn generate_legal_moves(&self, bool_know_priv_info: bool) -> Vec<ActionObservation>{
+    pub fn generate_legal_moves(&self, private_player: Option<usize>) -> Vec<ActionObservation>{
         // Refer to paths.txt for different cases
+        let bool_know_priv_info = private_player.is_some();
         let mut output: Vec<ActionObservation> = Vec::new();
         if self.store_len == 0 {
-            self.add_moves(&mut output, self.current_player_turn, AOName::Income, bool_know_priv_info);
-            self.add_moves(&mut output, self.current_player_turn, AOName::ForeignAid, bool_know_priv_info);
-            self.add_moves(&mut output, self.current_player_turn, AOName::Tax, bool_know_priv_info);
-            self.add_moves(&mut output, self.current_player_turn, AOName::Exchange, bool_know_priv_info);
-            self.add_moves(&mut output, self.current_player_turn, AOName::Steal, bool_know_priv_info);
-            self.add_moves(&mut output, self.current_player_turn, AOName::Assassinate, bool_know_priv_info);
+            self.add_moves(&mut output, self.current_player_turn, AOName::Income, private_player);
+            self.add_moves(&mut output, self.current_player_turn, AOName::ForeignAid, private_player);
+            self.add_moves(&mut output, self.current_player_turn, AOName::Tax, private_player);
+            self.add_moves(&mut output, self.current_player_turn, AOName::Exchange, private_player);
+            self.add_moves(&mut output, self.current_player_turn, AOName::Steal, private_player);
+            self.add_moves(&mut output, self.current_player_turn, AOName::Assassinate, private_player);
             return output;
         }
         
@@ -1409,21 +1411,21 @@ impl History {
                 // Case Checked
                 let next_player_id: usize = self.next_player(self.current_player_turn);
                 if self.latest_coins()[next_player_id] >= 10 {
-                    self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                    self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                 } else {
-                    self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                    self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                 }
             },
             AOName::ForeignAid => {
                 // Case Checked
                 let last_player: usize = self.store[self.store_len - 1].player_id();
-                self.add_moves(&mut output, last_player, AOName::CollectiveBlock, bool_know_priv_info);
+                self.add_moves(&mut output, last_player, AOName::CollectiveBlock, private_player);
             },
             AOName::Tax
             | AOName::Steal
@@ -1431,7 +1433,7 @@ impl History {
             | AOName::Assassinate => {
                 // Case Checked
                 let last_player: usize = self.store[self.store_len - 1].player_id();
-                self.add_moves(&mut output, last_player, AOName::CollectiveChallenge, bool_know_priv_info);
+                self.add_moves(&mut output, last_player, AOName::CollectiveChallenge, private_player);
             },
             AOName::BlockSteal => {
                 if self.store[self.store_len - 1].player_id() == self.store[self.store_len - 1].opposing_player_id() {
@@ -1439,21 +1441,21 @@ impl History {
                     // Case C6 & C1
                     let next_player_id: usize = self.next_player(self.current_player_turn);
                     if self.latest_coins()[next_player_id] >= 10 {
-                        self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                        self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                     } else {
-                        self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                        self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                     }
                 } else {
                     // If player did not pass on the block
                     // C2 C3 C4 C7 C8 C9 => CollectiveChallenge
                     let victim_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].opposing_player_id();
-                    self.add_moves(&mut output, victim_id, AOName::CollectiveChallenge, bool_know_priv_info);
+                    self.add_moves(&mut output, victim_id, AOName::CollectiveChallenge, private_player);
                 }
             },
             AOName::BlockAssassinate => {
@@ -1462,17 +1464,17 @@ impl History {
                 if self.store[self.store_len - 1].player_id() == self.store[self.store_len - 1].opposing_player_id() {
                     // If player passed on the block
                     // Case B1 B8
-                    self.add_moves(&mut output, victim_id, AOName::Discard, bool_know_priv_info);
+                    self.add_moves(&mut output, victim_id, AOName::Discard, private_player);
                 } else {
                     // If player blocks
                     // B2 B3 B4 B5 B9 B10 B11 B12 => CollectiveChallenge
-                    self.add_moves(&mut output, victim_id, AOName::CollectiveChallenge, bool_know_priv_info);
+                    self.add_moves(&mut output, victim_id, AOName::CollectiveChallenge, private_player);
                 }
             },
             AOName::Coup => {
                 //Case Checked
                 let opposing_player_id: usize = self.store[self.store_len - 1].opposing_player_id(); 
-                self.add_moves(&mut output, opposing_player_id, AOName::Discard, bool_know_priv_info);
+                self.add_moves(&mut output, opposing_player_id, AOName::Discard, private_player);
             },
             AOName::CollectiveChallenge => {
                 // Case Checked
@@ -1489,33 +1491,33 @@ impl History {
                     self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Tax {
                         let next_player_id: usize = self.next_player(self.current_player_turn);
                         if self.latest_coins()[next_player_id] >= 10 {
-                            self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                            self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                         } else {
-                            self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                            self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                         }
                     } else if self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::Steal {
                         // In Cases: C1 C2 C3 C4 => BlockSteal
                         let victim_id: usize = self.store[self.store_len - 2].opposing_player_id();
-                        self.add_moves(&mut output, victim_id, AOName::BlockSteal, bool_know_priv_info);
+                        self.add_moves(&mut output, victim_id, AOName::BlockSteal, private_player);
                     } else if self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::Assassinate {
                         // In Cases: B1 B2 B3 B4 B5 => BlockAssassinate
                         let victim_id: usize = self.store[self.store_len - 2].opposing_player_id();
-                        self.add_moves(&mut output, victim_id, AOName::BlockAssassinate, bool_know_priv_info);
+                        self.add_moves(&mut output, victim_id, AOName::BlockAssassinate, private_player);
                     } else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Exchange {
                         // In Cases: A1 => ExchangeDraw
                         let exchanger_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-                        self.add_moves(&mut output, exchanger_id, AOName::ExchangeDraw, bool_know_priv_info);
+                        self.add_moves(&mut output, exchanger_id, AOName::ExchangeDraw, private_player);
                     }
                 } else {
                     // Success Case
                     let challenged_id: usize = self.store[self.store_len - 1].opposing_player_id();
-                    self.add_moves(&mut output, challenged_id, AOName::RevealRedraw, bool_know_priv_info);
+                    self.add_moves(&mut output, challenged_id, AOName::RevealRedraw, private_player);
                 }
             },
             AOName::CollectiveBlock => {
@@ -1527,19 +1529,19 @@ impl History {
                     // Nobody Blocks
                     let next_player_id: usize = self.next_player(self.current_player_turn);
                     if self.latest_coins()[next_player_id] >= 10 {
-                        self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                        self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                     } else {
-                        self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                        self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                     }
                 } else {
                     // Case FA2 FA3 FA4 Challenge the duke
-                    self.add_moves(&mut output, blocker_id, AOName::CollectiveChallenge, bool_know_priv_info);
+                    self.add_moves(&mut output, blocker_id, AOName::CollectiveChallenge, private_player);
                 }
             },
             AOName::Discard => {
@@ -1557,35 +1559,35 @@ impl History {
                     // In Cases D2 D3 => Next Turn
                     let next_player_id: usize = self.next_player(self.current_player_turn);
                     if self.latest_coins()[next_player_id] >= 10 {
-                        self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                        self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                     } else {
-                        self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                        self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                        self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                        self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                     }
                 } else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Exchange {
                     if self.store[self.store_len - 2].name() == AOName::RevealRedraw {
                         // A3 => Exchange Choice
                         let exchange_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].player_id();
-                        self.add_moves(&mut output, exchange_id, AOName::ExchangeDraw, bool_know_priv_info);
+                        self.add_moves(&mut output, exchange_id, AOName::ExchangeDraw, private_player);
                     } else if self.store[self.store_len - 2].name() == AOName::CollectiveChallenge {
                         // A2 => Next Turn
                         debug_assert!(self.store[self.store_len - 2].opposing_player_id() != self.store[self.store_len - 2].final_actioner(), "Bad AOResult in generate_legal_moves Discard Ambassador");
                         let next_player_id: usize = self.next_player(self.current_player_turn);
                         if self.latest_coins()[next_player_id] >= 10 {
-                            self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                            self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                         } else {
-                            self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                            self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                         }
                     } else {
                         debug_assert!(false, "unintended state reached in generate_legal_moves Discard Ambassador");
@@ -1595,34 +1597,34 @@ impl History {
                         // B8 B9 B9 B10 B11 B12 => Block Assassinate
                         let blocker_id: usize = self.store[self.store_len - 4].opposing_player_id();
                         if self.latest_influence()[blocker_id] > 0 {
-                            self.add_moves(&mut output, blocker_id, AOName::BlockAssassinate, bool_know_priv_info);
+                            self.add_moves(&mut output, blocker_id, AOName::BlockAssassinate, private_player);
                         } else {
                             let next_player_id: usize = self.next_player(self.current_player_turn);
                             if self.latest_coins()[next_player_id] >= 10 {
-                                self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                                self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                             } else {
-                                self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                                self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                             }
                         }
                     } else {
                         // Every other Assassinate option => Next Turn
                         let next_player_id: usize = self.next_player(self.current_player_turn);
                         if self.latest_coins()[next_player_id] >= 10 {
-                            self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                            self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                         } else {
-                            self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                            self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                         }
                     }
                 } else if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::Steal {
@@ -1630,35 +1632,35 @@ impl History {
                        // In Cases: C6 C7 C8 C9 | => BlockSteal
                         let blocker_id: usize = self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].opposing_player_id();
                         if self.latest_influence()[blocker_id] > 0 {
-                            self.add_moves(&mut output, blocker_id, AOName::BlockSteal, bool_know_priv_info);
+                            self.add_moves(&mut output, blocker_id, AOName::BlockSteal, private_player);
                         } else {
                             // blocker is dead
                             let next_player_id: usize = self.next_player(self.current_player_turn);
                             if self.latest_coins()[next_player_id] >= 10 {
-                                self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                                self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                             } else {
-                                self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                                self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                                self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                                self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                             }
                         }
                     } else {
                         // Every other Steal option => Next Turn
                         let next_player_id: usize = self.next_player(self.current_player_turn);
                         if self.latest_coins()[next_player_id] >= 10 {
-                            self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                            self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                         } else {
-                            self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                            self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                            self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                            self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                         }
                     }
                 } else {
@@ -1672,26 +1674,26 @@ impl History {
                 // Challenge failed, initiator of challenge loses and discards
                 //temp eventually all -2
                 let discard_id: usize = self.store[self.store_len - 2].player_id();
-                self.add_moves(&mut output, discard_id, AOName::Discard, bool_know_priv_info);
+                self.add_moves(&mut output, discard_id, AOName::Discard, private_player);
             },
             AOName::ExchangeDraw => {
                 // ID from ExchangeDraw
                 let exchange_id: usize = self.store[self.store_len - 1].player_id();
-                self.add_moves(&mut output, exchange_id, AOName::ExchangeChoice, bool_know_priv_info);
+                self.add_moves(&mut output, exchange_id, AOName::ExchangeChoice, private_player);
             }
             AOName::ExchangeChoice => {
                 // Case Checked
                 let next_player_id: usize = self.next_player(self.current_player_turn);
                 if self.latest_coins()[next_player_id] >= 10 {
-                    self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                    self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                 } else {
-                    self.add_moves(&mut output, next_player_id, AOName::Income, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::ForeignAid, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::Tax, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::Exchange, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::Steal, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::Assassinate, bool_know_priv_info);
-                    self.add_moves(&mut output, next_player_id, AOName::Coup, bool_know_priv_info);
+                    self.add_moves(&mut output, next_player_id, AOName::Income, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::ForeignAid, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::Tax, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::Exchange, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::Steal, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::Assassinate, private_player);
+                    self.add_moves(&mut output, next_player_id, AOName::Coup, private_player);
                 }
             },
             _ => {}

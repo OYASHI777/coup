@@ -1062,7 +1062,7 @@ pub fn test_shuffle(iterations: usize){
     // let limit: usize = 200;
         while !hh.game_won() {
             
-            new_moves = hh.generate_legal_moves(false);
+            new_moves = hh.generate_legal_moves(None);
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 hh.push_ao(output);
@@ -1152,7 +1152,7 @@ pub fn test_reach() {
 //     // Mid game can be like microseconds
     
 //     log::trace!("Start");
-//     new_moves = hh.generate_legal_moves(false);
+//     new_moves = hh.generate_legal_moves(None);
 //     let mut prob = NaiveProb::new();
     
 //     if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
@@ -1199,7 +1199,7 @@ pub fn test_reach() {
 //         // let limit: usize = 200;
 //         while !hh.game_won() {
             
-//             new_moves = hh.generate_legal_moves(false);
+//             new_moves = hh.generate_legal_moves(None);
             
 //             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
 //                 hh.push_ao(output);
@@ -1286,7 +1286,7 @@ pub fn test_reach() {
 //         let limit = rng.gen_range(0..150);
 //         while !hh.game_won() {
             
-//             new_moves = hh.generate_legal_moves(false);
+//             new_moves = hh.generate_legal_moves(None);
             
 //             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
 //                 hh.push_ao(output);
@@ -1344,7 +1344,7 @@ pub fn game_rnd(game_no: usize, log_bool: bool){
             prob.printlog();
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-            new_moves = hh.generate_legal_moves(false);
+            new_moves = hh.generate_legal_moves(None);
             if new_moves[0].name() != AOName::CollectiveChallenge {
     
                 log::info!("{}", format!("Legal Moves: {:?}", new_moves));
@@ -1449,7 +1449,7 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
             prob.printlog();
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-            new_moves = hh.generate_legal_moves(false);
+            new_moves = hh.generate_legal_moves(None);
             if new_moves[0].name() != AOName::CollectiveChallenge {
                 log::info!("{}", format!("Legal Moves: {:?}", new_moves));
             } else {
@@ -1762,7 +1762,7 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
 
         while !hh.game_won() {
 
-            new_moves = hh.generate_legal_moves(false);
+            new_moves = hh.generate_legal_moves(None);
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 if output.name() == AOName::Discard{
@@ -2077,7 +2077,7 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
 
         while !hh.game_won() {
 
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(None);
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 prob.printlog();
@@ -2373,7 +2373,7 @@ pub fn test_impossible_state(game_no: usize, log_bool: bool){
             prob.printlog();
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-            new_moves = hh.generate_legal_moves();
+            new_moves = hh.generate_legal_moves(None);
             if new_moves[0].name() != AOName::CollectiveChallenge {
     
                 log::info!("{}", format!("Legal Moves: {:?}", new_moves));
