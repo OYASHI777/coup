@@ -1310,7 +1310,7 @@ impl BackTrackCollectiveConstraint {
     pub fn impossible_to_have_cards(&self, index: usize, player_of_interest: usize, cards: &[u8; 5]) -> bool {
         log::trace!("impossible_to_have_cards index: {}, player_of_interest: {}, cards: {:?}", index, player_of_interest, cards);
         debug_assert!(player_of_interest != 6 && cards.iter().sum::<u8>() <= 2 || player_of_interest == 6 && cards.iter().sum::<u8>() <= 3, "cards too long!");
-        let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(3), Vec::with_capacity(4), ];
+        let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(4); 7];
         let mut inferred_constraints: Vec<Vec<Card>> = public_constraints.clone();
         let latest_move = self.history.last().unwrap(); 
         match latest_move.action_info() {
