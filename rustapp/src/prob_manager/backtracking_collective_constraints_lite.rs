@@ -763,17 +763,17 @@ impl BackTrackCollectiveConstraintLite {
                                 inferred_constraints[6].push(draw[0]);
                                 response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
                                 if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
-                                    inferred_constraints.swap_remove(pos);
+                                    inferred_constraints[6].swap_remove(pos);
                                 }
                                 if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
-                                    inferred_constraints.swap_remove(pos);
+                                    inferred_constraints[6].swap_remove(pos);
                                 }
                             },
                             1 => {
                                 inferred_constraints[6].push(draw[0]);
                                 response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
                                 if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
-                                    inferred_constraints.swap_remove(pos);
+                                    inferred_constraints[6].swap_remove(pos);
                                 }
                             },
                             2 => {
@@ -792,12 +792,12 @@ impl BackTrackCollectiveConstraintLite {
                         response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
                         if current_count_0 < 1 {
                             if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
-                                inferred_constraints.swap_remove(pos);
+                                inferred_constraints[6].swap_remove(pos);
                             }
                         }
                         if current_count_1 < 1 {
                             if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[1]) {
-                                inferred_constraints.swap_remove(pos);
+                                inferred_constraints[6].swap_remove(pos);
                             }
                         }
                     }
