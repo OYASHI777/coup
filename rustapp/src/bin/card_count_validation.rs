@@ -1525,7 +1525,7 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
                     }
                 },
                 ExchangeDraw { player_id, card } => {
-                    if prob.player_can_have_cards(6, candidate.cards()) {
+                    if prob.player_can_have_cards(6, card) {
                         return Ok((*player_id, *candidate, Some(ActionInfo::ExchangeDraw { draw: card.to_vec() })));
                     } else {
                         return Err(());

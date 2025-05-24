@@ -329,19 +329,24 @@ where
     /// Does not care about alive or dead status
     pub fn player_can_have_cards(&self, player_id: usize, cards: &[Card]) -> bool {
         // Check in paralle if any state satisfies the requirement
-        let mut deduplicated = cards.to_vec();
-        deduplicated.sort_unstable();
-        deduplicated.dedup();
-        for card in deduplicated {
-            if !self.player_can_have_card_alive(player_id, card) {
-                return false;
-            }
-        }
+        // let mut deduplicated = cards.to_vec();
+        // deduplicated.sort_unstable();
+        // deduplicated.dedup();
+        // for card in deduplicated {
+        //     if !self.player_can_have_card_alive(player_id, card) {
+        //         return false;
+        //     }
+        // }
         self.calculated_states.iter().any(|state| state.player_has_cards(player_id, cards))
     }
     /// Checks if player can have cards if they also draw a set of cards
     pub fn player_can_have_cards_after_draw(&self, player_id: usize, cards: &[Card], draw: &[Card]) -> bool {
-        false
+        let mut cards_count = [0usize; 5];
+        cards.iter().for_each(|c| cards_count[*c as usize] += 1);
+        draw.iter().for_each(|c| if cards_count[*c as usize] > 0 {cards_count[*c as usize] -= 1});
+        let mut check_cards = Vec::with_capacity(2);
+        cards_count.iter().enumerate().for_each(|(card_num, count)| check_cards.extend(std::iter::repeat(Card::try_from(card_num as u8).unwrap()).take(*count)));
+        self.player_can_have_cards(player_id, &check_cards)
     }
     /// For each player (0..6), determine which cards they **must** have in *every* possible state.
     /// Returns a `Vec<Vec<char>>` of length 7, where `result[player_id]` is a sorted list
