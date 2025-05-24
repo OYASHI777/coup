@@ -346,7 +346,11 @@ where
         draw.iter().for_each(|c| if cards_count[*c as usize] > 0 {cards_count[*c as usize] -= 1});
         let mut check_cards = Vec::with_capacity(2);
         cards_count.iter().enumerate().for_each(|(card_num, count)| check_cards.extend(std::iter::repeat(Card::try_from(card_num as u8).unwrap()).take(*count)));
-        self.player_can_have_cards(player_id, &check_cards)
+        if check_cards.is_empty() {
+            true
+        } else {
+            self.player_can_have_cards(player_id, &check_cards)
+        }
     }
     /// For each player (0..6), determine which cards they **must** have in *every* possible state.
     /// Returns a `Vec<Vec<char>>` of length 7, where `result[player_id]` is a sorted list

@@ -1527,8 +1527,6 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
                 ExchangeDraw { player_id, card } => {
                     if prob.player_can_have_cards(6, card) {
                         return Ok((*player_id, *candidate, Some(ActionInfo::ExchangeDraw { draw: card.to_vec() })));
-                    } else {
-                        return Err(());
                     }
                 },
                 ExchangeChoice { player_id, no_cards, hand, relinquish } => {
@@ -1538,7 +1536,6 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
                             return Ok((*player_id, *candidate, Some(ActionInfo::ExchangeChoice { hand: vec![], relinquish: relinquish.to_vec() })));
                         }
                     } 
-                    return Err(());
                 },
                 _ => {
                     return Ok((candidate.player_id(), *candidate, None));
