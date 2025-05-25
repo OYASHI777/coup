@@ -306,7 +306,7 @@ where
         let mut temp_set = AHashSet::with_capacity(self.calculated_states.len());
         self.calculated_states.clear();
         for state in temp_states.iter() {
-            if let Some(new_state) = state.player_swap_cards_draw_relinquish(player_exchange, 6, draw, relinquish) {
+            if let Some(new_state) = state.player_swap_cards_draw_relinquish(player_exchange, 6, &self.public_constraints[player_exchange], &vec![], draw, relinquish) {
                 if !temp_set.contains(&new_state) {
                     temp_set.insert(new_state);
                     self.calculated_states.push(new_state);

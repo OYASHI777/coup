@@ -308,26 +308,54 @@ impl CardPermState for CardStateu64 {
         }
         None
     }
-    fn player_swap_cards_draw_relinquish(&self, player_drawing: usize, player_drawn: usize, draw: &[Card], relinquish: &[Card]) -> Option<Self> {
+    fn player_swap_cards_draw_relinquish(&self, player_drawing: usize, player_drawn: usize, player_drawing_dead_cards: &[Card], player_drawn_dead_cards: &[Card], draw: &[Card], relinquish: &[Card]) -> Option<Self> {
         let mut new_state = self.clone();
         let mut player_drawing_cards = self.get_player_cards_unsorted(player_drawing);
         let mut player_drawn_cards = self.get_player_cards_unsorted(player_drawn);
-        if let Some(pos) = player_drawn_cards.iter().position(|c| *c == relinquish[0]) {
+        for dead_card in player_drawing_dead_cards.iter() {
+            if let Some(pos) = player_drawing_cards.iter().rposition(|c| *c == *dead_card) {
+                player_drawing_cards.swap_remove(pos);
+            } else {
+                return None;
+            }
+        }
+        for dead_card in player_drawn_dead_cards.iter() {
+            if let Some(pos) = player_drawn_cards.iter().rposition(|c| *c == *dead_card) {
+                player_drawn_cards.swap_remove(pos);
+            } else {
+                return None;
+            }
+        }
+        if let Some(pos) = player_drawn_cards.iter().position(|c| *c == draw[0]) {
             player_drawn_cards.swap_remove(pos);
+        } else {
+            return None;
         }
-        player_drawing_cards.push(relinquish[0]);
-        if let Some(pos) = player_drawn_cards.iter().position(|c| *c == relinquish[1]) {
+        player_drawing_cards.push(draw[0]);
+        if let Some(pos) = player_drawn_cards.iter().position(|c| *c == draw[1]) {
             player_drawn_cards.swap_remove(pos);
+        } else {
+            return None;
         }
-        player_drawing_cards.push(relinquish[1]);
-        if let Some(pos) = player_drawing_cards.iter().position(|c| *c == draw[0]) {
+        player_drawing_cards.push(draw[1]);
+        if let Some(pos) = player_drawing_cards.iter().position(|c| *c == relinquish[0]) {
             player_drawing_cards.swap_remove(pos);
+        } else {
+            return None;
         }
-        player_drawn_cards.push(draw[0]);
-        if let Some(pos) = player_drawing_cards.iter().position(|c| *c == draw[1]) {
+        player_drawn_cards.push(relinquish[0]);
+        if let Some(pos) = player_drawing_cards.iter().position(|c| *c == relinquish[1]) {
             player_drawing_cards.swap_remove(pos);
+        } else {
+            return None;
         }
-        player_drawn_cards.push(draw[1]);
+        player_drawn_cards.push(relinquish[1]);
+        for dead_card in player_drawing_dead_cards.iter() {
+            player_drawing_cards.push(*dead_card);
+        }
+        for dead_card in player_drawn_dead_cards.iter() {
+            player_drawn_cards.push(*dead_card);
+        }
         // Remove this to check if able to add illegal moves! for simulation
         if player_drawing_cards.len() < 3 && player_drawn_cards.len() < 4 {
             player_drawing_cards.sort_unstable();
