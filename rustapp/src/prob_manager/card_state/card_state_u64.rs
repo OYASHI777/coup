@@ -160,8 +160,8 @@ impl CardPermState for CardStateu64 {
         let mut player_cards: Vec<Card> = self.get_player_cards_unsorted(player_id);
         // Check if all needed cards exist in extracted_cards
         for needed in cards {
-            if let Some(pos) = player_cards.iter().position(|&c| c == *needed) {
-                player_cards.remove(pos);
+            if let Some(pos) = player_cards.iter().rposition(|&c| c == *needed) {
+                player_cards.swap_remove(pos);
             } else {
                 return false;
             }
@@ -173,8 +173,8 @@ impl CardPermState for CardStateu64 {
         player_cards.extend_from_slice(draw);
         // Check if all needed cards exist in extracted_cards
         for needed in cards {
-            if let Some(pos) = player_cards.iter().position(|&c| c == *needed) {
-                player_cards.remove(pos);
+            if let Some(pos) = player_cards.iter().rposition(|&c| c == *needed) {
+                player_cards.swap_remove(pos);
             } else {
                 return false;
             }

@@ -783,11 +783,11 @@ impl BackTrackCollectiveConstraintLite {
                             _ => debug_assert!(false, "you should not be here!"),
                         }
                     } else {
-                        let current_count_1 = inferred_constraints[6].iter().filter(|c| **c == draw[0]).count();
+                        let bool_contains_card_1 = inferred_constraints[6].contains(&draw[1]);
                         if current_count_0 < 1 {
                             inferred_constraints[6].push(draw[0]);
                         }
-                        if current_count_1 < 1 {
+                        if !bool_contains_card_1 {
                             inferred_constraints[6].push(draw[1]);
                         }
                         response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints, cards);
@@ -796,7 +796,7 @@ impl BackTrackCollectiveConstraintLite {
                                 inferred_constraints[6].swap_remove(pos);
                             }
                         }
-                        if current_count_1 < 1 {
+                        if !bool_contains_card_1 {
                             if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[1]) {
                                 inferred_constraints[6].swap_remove(pos);
                             }
