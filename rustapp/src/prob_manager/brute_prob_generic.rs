@@ -69,6 +69,10 @@ where
     /// Placeholder
     pub fn start_public(&mut self) {
     }
+    /// total number of possible states
+    pub fn len(&self) -> usize {
+        self.calculated_states.len()
+    }
     /// Resets
     pub fn reset(&mut self) {
         self.history.clear();
@@ -340,10 +344,11 @@ where
         self.calculated_states.iter().any(|state| state.player_has_cards(player_id, cards))
     }
     /// Checks if player can have cards if they also draw a set of cards
-    pub fn player_can_have_cards_after_draw(&self, player_id: usize, cards: &[Card], draw: &[Card]) -> bool {
+    pub fn player_can_have_cards_after_draw(&self, player_id: usize, dead_cards: &[Card], cards: &[Card], draw: &[Card]) -> bool {
         let mut cards_count = [0usize; 5];
         cards.iter().for_each(|c| cards_count[*c as usize] += 1);
         draw.iter().for_each(|c| if cards_count[*c as usize] > 0 {cards_count[*c as usize] -= 1});
+        dead_cards.iter().for_each(|c| cards_count[*c as usize] += 1);
         let mut check_cards = Vec::with_capacity(2);
         cards_count.iter().enumerate().for_each(|(card_num, count)| check_cards.extend(std::iter::repeat(Card::try_from(card_num as u8).unwrap()).take(*count)));
         if check_cards.is_empty() {

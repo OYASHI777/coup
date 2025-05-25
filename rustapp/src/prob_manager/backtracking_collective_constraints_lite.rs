@@ -458,6 +458,7 @@ impl BackTrackCollectiveConstraintLite {
     pub fn possible_to_have_cards_recurse(&self, index_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, cards: &[u8; 5]) -> bool {
         // Will temporarily not use memo and generate all group_constraints from start
         // Needed for checks
+        // TODO: [REFACTOR] remove cards
         log::trace!("After");
         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop]);
         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
@@ -1307,6 +1308,7 @@ impl BackTrackCollectiveConstraintLite {
         false
     }
     pub fn recurse_variants_exchange_private(&self, index_loop: usize, player_loop: usize, draw: &Vec<Card>, relinquish: &Vec<Card>, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>, cards: &[u8; 5]) -> bool {
+        log::trace!("In recurse_variants_exchange_private!");
         let (mut bool_rm_pile_rel_0, mut bool_rm_pile_rel_1, mut bool_rm_player_draw_0, mut bool_rm_player_draw_1) = (false, false, false, false);
         if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == relinquish[0]) {
             inferred_constraints[6].swap_remove(pos);

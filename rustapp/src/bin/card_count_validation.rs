@@ -42,7 +42,7 @@ fn main() {
     // replay_game_constraint_bt::<BackTrackCollectiveConstraintLite>(replay.clone(), false, 0,true);
     // TODO: Add player and cards
     game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
-    // game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, min_dead_check, log_bool);
+    game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
     // This has the no legit move issue
     // vec![Steal { player_id: 0, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 0, final_actioner: 3 }, RevealRedraw { player_id: 0, reveal: Captain, redraw: Duke }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, BlockSteal { player_id: 1, opposing_player_id: 0, card: Ambassador }, CollectiveChallenge { participants: [true, false, true, false, true, true], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 1, final_actioner: 5 }, RevealRedraw { player_id: 1, reveal: Captain, redraw: Captain }, Discard { player_id: 5, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 2, opposing_player_id: 2, card: Captain }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [false, true, false, true, true, true], opposing_player_id: 2, final_actioner: 3 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 3, final_actioner: 0 }, RevealRedraw { player_id: 3, reveal: Duke, redraw: Captain }, Discard { player_id: 0, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 3, final_actioner: 2 }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 4, final_actioner: 1 }, RevealRedraw { player_id: 4, reveal: Captain, redraw: Contessa }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, false, true, false, true, false], opposing_player_id: 5, final_actioner: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 2, final_actioner: 5 }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, Assassinate { player_id: 0, opposing_player_id: 4 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 0, final_actioner: 5 }, RevealRedraw { player_id: 0, reveal: Assassin, redraw: Ambassador }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, BlockAssassinate { player_id: 4, opposing_player_id: 0 }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 4, final_actioner: 0 }];
     // new_moves: [Discard { player_id: 4, card: [Ambassador, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Ambassador], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Assassin], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Captain], no_cards: 2 }, Discard { player_id: 4, card: [Captain, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Assassin, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Assassin, Captain], no_cards: 2 }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 2 }]
@@ -1202,17 +1202,11 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
     let mut bit_prob: BackTrackCardCountManager<C> = BackTrackCardCountManager::new();
-    let mut public_constraints_correct: usize = 0;
-    let mut inferred_constraints_correct: usize = 0;
-    let mut impossible_constraints_correct: usize = 0;
-    let mut over_inferred_count: usize = 0;
-    let mut total_tries: usize = 0;
     while game < game_no {
         let mut stats = Stats::new();
         let mut hh = History::new(0);
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
-        let mut rng = thread_rng();
         // let private_player: usize = rng.gen_range(0..6);
         let private_player: usize = 0;
         if bool_know_priv_info {
@@ -1344,7 +1338,7 @@ pub fn game_rnd_constraint_bt_st_new<C>(game_no: usize, bool_know_priv_info: boo
         game += 1;
     }
 }
-pub fn game_rnd_constraint_bt_st_debug<C>(game_no: usize, bool_know_priv_info: bool, min_dead_check: usize, log_bool: bool)
+pub fn game_rnd_constraint_bt_st_debug<C>(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, min_dead_check: usize, log_bool: bool)
     where
         C: CoupConstraint + CoupConstraintAnalysis,
 {
@@ -1352,27 +1346,24 @@ pub fn game_rnd_constraint_bt_st_debug<C>(game_no: usize, bool_know_priv_info: b
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
     let mut bit_prob: BackTrackCardCountManager<C> = BackTrackCardCountManager::new();
-    let mut public_constraints_correct: usize = 0;
-    let mut inferred_constraints_correct: usize = 0;
-    let mut impossible_constraints_correct: usize = 0;
-    let mut over_inferred_count: usize = 0;
-    let mut total_tries: usize = 0;
     while game < game_no {
+        if game % print_frequency == 0 {
+            println!("Debug Checked game: {game}");
+        }
         let mut stats = Stats::new();
         let mut hh = History::new(0);
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
-        let mut rng = thread_rng();
         // let private_player: usize = rng.gen_range(0..6);
         let private_player: usize = 0;
         let mut rng = thread_rng();
         let card_0: u8 = rng.gen_range(0..5);
         let card_1: u8 = rng.gen_range(0..5);
         let starting_hand = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
-           
         if bool_know_priv_info {
             // Choose random player
             // Initialize for that player
+            // TODO: Fill those up
             prob.start_private(private_player, &starting_hand);
             bit_prob.start_private(private_player, &starting_hand);
         } else {
@@ -1380,16 +1371,16 @@ pub fn game_rnd_constraint_bt_st_debug<C>(game_no: usize, bool_know_priv_info: b
             bit_prob.start_public();
         }
         while !hh.game_won() {
-            hh.log_state();
-            prob.printlog();
-            bit_prob.printlog();
+            // hh.log_state();
+            // prob.printlog();
+            // bit_prob.printlog();
             // These are legal from a public sense only, but may be illegal depending on card 
             // TODO: [FIX] ExchangeChoice should generate regardless of hand as the card counter can determine it themselves
             new_moves = hh.generate_legal_moves(Some(private_player));
             // TODO: create generate_legal_moves(None) for public and private
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-            new_moves.retain(|m| m.name() != AOName::Exchange);
+            // new_moves.retain(|m| m.name() != AOName::Exchange);
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, Some(private_player));
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
@@ -1454,7 +1445,10 @@ pub fn game_rnd_constraint_bt_st_debug<C>(game_no: usize, bool_know_priv_info: b
                 }
                 if bool_test_over_inferred {
                     // what we are testing inferred too many things
-                    stats.over_inferred_count += 1;
+                    println!("Found problematic game, please hold...");
+                    let replay = hh.get_history(hh.store_len());
+                    replay_game_constraint_bt::<C>(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
+                    panic!("Inferred constraints do not match!");
                     break;
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
@@ -1464,6 +1458,7 @@ pub fn game_rnd_constraint_bt_st_debug<C>(game_no: usize, bool_know_priv_info: b
                     // println!("vali: {:?}", validated_inferred_constraints);
                     // println!("test: {:?}", test_inferred_constraints);
                     // println!("{}", hh.get_replay_history_braindead());
+                    println!("Found problematic game, please hold...");
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint_bt::<C>(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
                     panic!("Inferred constraints do not match!");
@@ -1472,6 +1467,7 @@ pub fn game_rnd_constraint_bt_st_debug<C>(game_no: usize, bool_know_priv_info: b
                 if !pass_impossible_constraints {
                     // println!("vali: {:?}", validated_impossible_constraints);
                     // println!("test: {:?}", test_impossible_constraints);
+                    println!("Found problematic game, please hold...");
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint_bt::<C>(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
                     panic!("Impossible Constraints Failed!");
@@ -1560,7 +1556,8 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
                     // TODO: [REFACTOR] need what was drawn and hand!
                     if private_player.is_some() && *player_id == private_player.unwrap() {
                         if let ExchangeDraw { card: draw, .. } = history.latest_move() {
-                            if prob.player_can_have_cards_after_draw(*player_id, relinquish, draw) {
+                            let player_dead_cards = &prob.validated_public_constraints()[*player_id];
+                            if prob.player_can_have_cards_after_draw(*player_id, player_dead_cards, relinquish, draw) {
                                 return Ok((*player_id, *candidate, Some(ActionInfo::ExchangeChoice { hand: vec![], relinquish: relinquish.to_vec() })));
                             }
                         } 
@@ -3009,6 +3006,7 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
                     "FAILED"
                 },
             });
+            log::info!("prob_states_count: {:?}", prob.len());
             log::info!("validated_impossible_constraints: {:?}", validated_impossible_constraints);
             log::info!("test_impossible_constraints: {:?}", test_impossible_constraints);
             log::info!("validated_impossible_constraints_2: {:?}", validated_impossible_constraints_2);
