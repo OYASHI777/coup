@@ -1241,10 +1241,10 @@ impl History {
                     let no_cards_choice = self.latest_influence()[player_id] as usize;
                     for i in 0..5 {
                         total_counts[i] += 1;
-                        if total_counts[i] + count_card_arr[i] < 3 {
+                        if total_counts[i] + count_card_arr[i] < 4 {
                             for j in i..5 {
                                 total_counts[j] += 1;
-                                if total_counts[j] + count_card_arr[j] < 3 {
+                                if total_counts[j] + count_card_arr[j] < 4 {
                                     changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: no_cards_choice, hand: [Card::Ambassador, Card::Ambassador], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
                                 }
                                 total_counts[j] -= 1;
