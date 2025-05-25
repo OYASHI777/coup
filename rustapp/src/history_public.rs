@@ -1389,7 +1389,6 @@ impl History {
     /// Generates legal moves for the purpose of search
     pub fn generate_legal_moves(&self, private_player: Option<usize>) -> Vec<ActionObservation>{
         // Refer to paths.txt for different cases
-        let bool_know_priv_info = private_player.is_some();
         let mut output: Vec<ActionObservation> = Vec::new();
         if self.store_len == 0 {
             self.add_moves(&mut output, self.current_player_turn, AOName::Income, private_player);
