@@ -173,7 +173,6 @@ pub enum ActionObservation {
         // cards represents their choice of hand
         // For no_cards == 1, both cards in cards should be the same
         player_id: usize,
-        no_cards: usize, // TODO: [REFACTOR] remove no_cards
         relinquish: [Card; 2], // Assume either all is known or none are known
     },
     // TODO: Add ExchangeChoice Private, and generate possible moves based on history and exchangedraw choice
@@ -269,6 +268,7 @@ impl ActionObservation {
         match self {
             ActionObservation::Discard { card, .. } => card, 
             ActionObservation::ExchangeDraw { card, .. } => card, 
+            ActionObservation::ExchangeChoice { relinquish, .. } => relinquish, 
             // Include other cases if there are more variants holding a result field
             _ => panic!("This ActionObservation variant does not contain a result"),
         }
@@ -277,7 +277,7 @@ impl ActionObservation {
         match self {
             ActionObservation::Discard { no_cards, .. } => *no_cards, 
             // ActionObservation::ExchangeDraw { no_cards, .. } => *no_cards, 
-            ActionObservation::ExchangeChoice { no_cards, .. } => *no_cards, 
+            // ActionObservation::ExchangeChoice { no_cards, .. } => *no_cards, 
             _ => panic!("This ActionObservation variant does not contain an no_discard"),
         }
     }
@@ -1244,7 +1244,7 @@ impl History {
                             for j in i..5 {
                                 total_counts[j] += 1;
                                 if total_counts[j] + count_card_arr[j] < 4 {
-                                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: no_cards_choice, relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
+                                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
                                 }
                                 total_counts[j] -= 1;
                             }
@@ -1312,7 +1312,7 @@ impl History {
                     //     }
                     // }
                     // Assumes hand and relinquish are unknown, so placeholder Ambassadors are left there
-                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: self.latest_influence()[player_id] as usize, relinquish: [Card::Ambassador, Card::Ambassador]});
+                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, relinquish: [Card::Ambassador, Card::Ambassador]});
                 }
             },
             AOName::ExchangeDraw => {
