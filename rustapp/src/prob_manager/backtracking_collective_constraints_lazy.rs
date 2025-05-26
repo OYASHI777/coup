@@ -282,7 +282,7 @@ impl BackTrackCollectiveConstraintLazy {
             ActionInfo::ExchangeDrawChoice{ .. } => {
                     },
             ActionInfo::ExchangeDraw { draw } => todo!(),
-            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
+            ActionInfo::ExchangeChoice { relinquish } => todo!(),
         }
         // Lazy evaluation stores nothing but death
         // self.generate_impossible_constraints(self.history.len() - 1);
@@ -831,7 +831,7 @@ impl BackTrackCollectiveConstraintLazy {
                 response = true;
             },
             ActionInfo::ExchangeDraw { draw } => todo!(),
-            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
+            ActionInfo::ExchangeChoice { relinquish } => todo!(),
         }
         response
     }
@@ -1529,7 +1529,7 @@ impl CoupConstraint for BackTrackCollectiveConstraintLazy {
                         debug_assert!(false, "should not be pushing this!");
                     },
             ActionInfo::ExchangeDraw { draw } => todo!(),
-            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
+            ActionInfo::ExchangeChoice { relinquish } => todo!(),
         }
         // post increment
         self.move_no += 1;

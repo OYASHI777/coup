@@ -4,7 +4,6 @@ use ahash::AHashSet;
 use crossbeam::channel::after;
 use std::{marker::Copy, path::Path};
 
-// TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ActionInfo {
@@ -16,7 +15,7 @@ pub enum ActionInfo {
     // relinquish: Card left in pile
     RevealRedraw {reveal: Card, redraw: Option<Card>, relinquish: Option<Card>}, // Player | Reveal Card | Redraw Option<Card>
     ExchangeDraw {draw: Vec<Card>}, // Player | Draw Vec<Card> | Return Vec<Card>
-    ExchangeChoice {hand: Vec<Card>, relinquish: Vec<Card>}, // Player | Draw Vec<Card> | Return Vec<Card>
+    ExchangeChoice {relinquish: Vec<Card>}, // Player | Draw Vec<Card> | Return Vec<Card>
     ExchangeDrawChoice {draw: Vec<Card>, relinquish: Vec<Card>}, // Player | Draw Vec<Card> | Return Vec<Card>
 }
 
@@ -42,7 +41,7 @@ impl ActionInfo {
                 Self::ExchangeDraw { draw: Vec::with_capacity(2) }
             },
             Self::ExchangeChoice { .. } => {
-                Self::ExchangeChoice { hand: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) }
+                Self::ExchangeChoice { relinquish: Vec::with_capacity(2) }
             }
         }
     }
@@ -67,7 +66,7 @@ impl ActionInfo {
             Self::ExchangeDraw { draw } => {
                 draw.len() == 2
             },
-            Self::ExchangeChoice { hand, relinquish } => {
+            Self::ExchangeChoice { relinquish } => {
                 unimplemented!("This is indeterminate as we need to know if player has 1 life or 2")
             }
         }
@@ -93,8 +92,8 @@ impl ActionInfo {
             Self::ExchangeDraw { draw } => {
                 !draw.is_empty()
             }
-            Self::ExchangeChoice { hand, relinquish } => {
-                !hand.is_empty() || !relinquish.is_empty()
+            Self::ExchangeChoice { relinquish } => {
+                !relinquish.is_empty()
             }
         }
     }
@@ -119,8 +118,8 @@ impl ActionInfo {
             Self::ExchangeDraw { draw } => {
                 draw.is_empty()
             }
-            Self::ExchangeChoice { hand, relinquish } => {
-                hand.is_empty() && relinquish.is_empty()
+            Self::ExchangeChoice { relinquish } => {
+                relinquish.is_empty()
             }
         }
     }
@@ -485,7 +484,7 @@ impl BackTrackCollectiveConstraint {
                 }
             },
             ActionInfo::ExchangeDraw { draw } => todo!(),
-            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
+            ActionInfo::ExchangeChoice { relinquish } => todo!(),
             ActionInfo::ExchangeDrawChoice{ draw, relinquish } => {
                 // TODO: handle the known card case obviously lol
                 self.ambassador_public(player_id);
@@ -543,7 +542,7 @@ impl BackTrackCollectiveConstraint {
                 }
             },
             ActionInfo::ExchangeDraw { draw } => todo!(),
-            ActionInfo::ExchangeChoice { hand, relinquish } => todo!(),
+            ActionInfo::ExchangeChoice { relinquish } => todo!(),
             ActionInfo::ExchangeDrawChoice{ draw, relinquish } => {
                 // TODO: handle the known card case obviously lol
                 self.ambassador_public(player_id);

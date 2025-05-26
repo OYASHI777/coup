@@ -1558,7 +1558,7 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
                         if let ExchangeDraw { card: draw, .. } = history.latest_move() {
                             let player_dead_cards = &prob.validated_public_constraints()[*player_id];
                             if prob.player_can_have_cards_after_draw(*player_id, player_dead_cards, relinquish, draw) {
-                                return Ok((*player_id, *candidate, Some(ActionInfo::ExchangeChoice { hand: vec![], relinquish: relinquish.to_vec() })));
+                                return Ok((*player_id, *candidate, Some(ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() })));
                             }
                         } 
                     } else {

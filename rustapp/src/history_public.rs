@@ -173,7 +173,7 @@ pub enum ActionObservation {
         // cards represents their choice of hand
         // For no_cards == 1, both cards in cards should be the same
         player_id: usize,
-        no_cards: usize, 
+        no_cards: usize, // TODO: [REFACTOR] remove no_cards
         hand: [Card; 2],
         relinquish: [Card; 2], // Assume either all is known or none are known
     },

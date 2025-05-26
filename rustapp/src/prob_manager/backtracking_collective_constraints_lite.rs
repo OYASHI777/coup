@@ -797,7 +797,7 @@ impl BackTrackCollectiveConstraintLite {
                     debug_assert!(false, "New API should not have reached here, but should have been skipped!");
                 }
             },
-            ActionInfo::ExchangeChoice { hand, relinquish } => {
+            ActionInfo::ExchangeChoice { relinquish } => {
                 if let ActionInfo::ExchangeDraw { draw } = self.history[index_loop - 1].action_info() {
                     if draw.is_empty() {
                         response = self.recurse_variants_exchange_public(index_loop, player_loop, public_constraints, inferred_constraints);
