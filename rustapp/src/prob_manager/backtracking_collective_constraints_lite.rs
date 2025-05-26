@@ -347,7 +347,6 @@ impl BackTrackCollectiveConstraintLite {
     #[inline]
     /// Return true if inferred player constraint contains a particular card 
     pub fn inferred_player_constraint_contains(&self, player_id: usize, card: Card) -> bool {
-        // [COMBINE SJ] rewrite
         self.inferred_constraints[player_id].contains(&card)
     }
     /// Used for when move is added to history and not for recalculation
@@ -368,23 +367,12 @@ impl BackTrackCollectiveConstraintLite {
             self.inferred_constraints[player_id].swap_remove(pos);
         }
     }   
-    /// Function to call for move RevealRedraw
-    pub fn reveal_redraw(&mut self, history_index: usize, player_id: usize, card: Card) {
-        // TODO: Custom impossible swaps and generation
-    }
-    /// Used for when move is added to history and not for recalculation
-    pub fn reveal_redraw_initial(&mut self, player_id: usize, card: Card) {
-        // Consider moving the impossible states around?
-        // self.update_past_move_hidden_info();
-        // TODO: Custom impossible swaps and generation
-    }
     /// Function to call when the card revealed and the redrawn card is the same card
     pub fn reveal_redraw_same(&mut self, player_id: usize, card: Card) {
         if !self.inferred_constraints[player_id].contains(&card) {
             log::trace!("reveal_redraw_same player_id: {}, card: {:?}", player_id, card);
             self.inferred_constraints[player_id].push(card);
         }
-        // TODO: Custom impossible swaps and generation
     }
     /// Function to call when both the card revealed and redrawn are known and not the same
     pub fn reveal_redraw_diff(&mut self, player_id: usize, reveal: Card, redraw: Card) {
@@ -396,7 +384,6 @@ impl BackTrackCollectiveConstraintLite {
         }
         self.inferred_constraints[player_id].push(redraw);
         self.inferred_constraints[6].push(reveal);
-        // TODO: Custom impossible swaps and generation
     }
     /// Function to call when both the card revealed is left in the pile
     /// Assumes redraw is None
@@ -415,40 +402,20 @@ impl BackTrackCollectiveConstraintLite {
         let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(4); 7];
         let mut inferred_constraints: Vec<Vec<Card>> = public_constraints.clone();
         let latest_move = self.history.last().unwrap(); 
-        // match latest_move.action_info() {
-        //     ActionInfo::Discard { discard } => {
-        //         inferred_constraints[latest_move.player() as usize].push(*discard);
-        //     },
-        //     ActionInfo::RevealRedraw { reveal, redraw, .. } => {
-        //         inferred_constraints[latest_move.player() as usize].push(*reveal);
-        //         redraw.map(|pile_original_card| inferred_constraints[6].push(pile_original_card));
-        //     },
-        //     ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
-        //         inferred_constraints[latest_move.player() as usize].extend(relinquish.iter().copied());
-        //         inferred_constraints[6].extend(draw.iter().copied());
-        //     },
-        //     ActionInfo::Start
-        //     | ActionInfo::StartInferred => {},
-        // }
         for (card_num, card_count) in cards.iter().enumerate() {
             for _ in 0..*card_count {
                 inferred_constraints[player_of_interest].push(Card::try_from(card_num as u8).unwrap());
             }
         }
-        // Do an unwrap_or false
         !self.possible_to_have_cards_recurse(index_lookback, &mut public_constraints, &mut inferred_constraints)
-        // !self.possible_to_have_cards_recurse(index_lookback - 1, index, player_of_interest, &mut public_constraints, &mut inferred_constraints, cards)
     }
     /// returns false if possible
-    /// TODO: Consider passing in array to count inferred_so_far
     /// Traces the game tree in reverse (from latest move to earliest move) by backtracking
     /// Tracks possible paths known cards could have come from in the past
     /// If a state is found to satisfy cards at the index_of_interest return Some(true)
     /// If no state is every found return Some(false) or None
     /// Assume cards should be sorted before use
     pub fn possible_to_have_cards_recurse(&self, index_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
-        // Will temporarily not use memo and generate all group_constraints from start
-        // Needed for checks
         log::trace!("After");
         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop]);
         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
@@ -471,7 +438,6 @@ impl BackTrackCollectiveConstraintLite {
                     removed_discard = true;
                 }
                 inferred_constraints[player_loop].push(*discard);
-                // recurse
                 response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
                 if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *discard) {
                     inferred_constraints[player_loop].swap_remove(pos);
@@ -600,7 +566,6 @@ impl BackTrackCollectiveConstraintLite {
                                             bool_move_from_pile_to_player = true;
                                         }
                                         inferred_constraints[player_loop].push(*reveal);
-                                        // TODO: Recurse here in other version
                                         response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
 
                                         if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
@@ -676,8 +641,6 @@ impl BackTrackCollectiveConstraintLite {
                                         if inferred_constraints[player_loop].len() < 3  
                                         && inferred_constraints[6].len() < 4 
                                         && inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
-                                            // TODO: Recurse here in other version
-                                            // variants.push(temp);
                                             response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
                                         }
 
@@ -713,8 +676,6 @@ impl BackTrackCollectiveConstraintLite {
                                     if inferred_constraints[player_loop].len() < 3  
                                     && inferred_constraints[6].len() < 4 
                                     && inferred_constraints.iter().map(|v| v.iter().filter(|c| **c == *reveal).count() as u8).sum::<u8>() < 4{
-                                        // TODO: Recurse here in other version
-                                        // variants.push(temp);
                                         response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
                                     }
 
@@ -919,21 +880,6 @@ impl BackTrackCollectiveConstraintLite {
         let mut pile_count = [0u8; 5];
         inferred_constraints[player_loop].iter().for_each(|c| player_count[*c as usize] += 1);
         inferred_constraints[6].iter().for_each(|c| pile_count[*c as usize] += 1);
-        // let mut redraw_count = [0u8; 5];
-        // let mut relinquish_count = [0u8; 5];
-        // redraw.iter().for_each(|c| redraw_count[*c as usize] += 1);
-        // relinquish.iter().for_each(|c| relinquish_count[*c as usize] += 1);
-
-        
-        // Can maybe consider all possible unique moves characterized by player_to_pile and pile_to_player
-        // redraw_count and relinquish_count define the degree of freedom for both of those
-        // the possible choices that can be player_to_pile depend on whats in player_hand
-        // 2 AMB -> up to 2 AMB from player_to_pile
-        // 1 AMB -> 1 AMB from player_to_pile
-        // So I guess can loop through all possible version of player_to_pile and pile_to_player
-        // player_count
-        // 0 moves, 1 moves, 2 moves
-        // NOTE AMB player to pile and AMB pile to player cancel out so no intersection of player and pile ish
 
         // 0 player_to_pile move, 0 pile_to_player move
         log::trace!("Before Exchange Same");
@@ -1510,7 +1456,6 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
         let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
         let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
         // let revealed_status = vec![Vec::with_capacity(5); 7];
-        // TODO: Add inferred_card_count
         let mut history: Vec<SignificantAction> = Vec::with_capacity(50);
         // Start takes the inferred information discovered via a pathdependent lookback
         history.push(SignificantAction::start());
@@ -1533,8 +1478,6 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
         let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
         inferred_constraints[player].push(cards[0]);
         inferred_constraints[player].push(cards[1]);
-        // let revealed_status = vec![Vec::with_capacity(5); 7];
-        // TODO: Add inferred_card_count
         let mut history: Vec<SignificantAction> = Vec::with_capacity(50);
         // Start takes the inferred information discovered via a pathdependent lookback
         let mut impossible_constraints = [[false; 5]; 7];
@@ -1584,44 +1527,6 @@ impl CoupConstraint for BackTrackCollectiveConstraintLite {
     /// Adds move that may contain private or public info
     fn add_move(&mut self, player_id: u8, action: ActionInfo) {
         debug_assert!(action != ActionInfo::Start && action != ActionInfo::StartInferred, "should not be pushing this!");
-        // match action {
-        //     ActionInfo::Discard { .. } => {
-        //         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-        //         // Pushing before due to recursion mechanic
-        //         self.history.push(significant_action);
-        //         self.calculate_stored_move_initial();
-        //         // Handle inference
-        //     },
-        //     ActionInfo::RevealRedraw { .. } => {
-        //         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-        //         self.history.push(significant_action);
-        //         self.calculate_stored_move_initial();
-        //         // Handle inference
-        //     },
-        //     ActionInfo::ExchangeDrawChoice { .. } => {
-        //         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-        //         // Handle inference
-        //         // TODO: This is temporary, unsure how might split between public and private
-        //         // It is possible that we can just use private, since public is just private with empty vec?
-        //         self.history.push(significant_action);
-        //         self.calculate_stored_move_initial();
-        //     },
-        //     ActionInfo::ExchangeChoice { hand, relinquish } => {
-        //         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-        //         self.history.push(significant_action);
-        //         self.calculate_stored_move_initial();
-        //     },
-        //     ActionInfo::ExchangeDraw { draw } => {
-        //         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
-        //         self.history.push(significant_action);
-        //         self.calculate_stored_move_initial();
-        //     }
-        //     ActionInfo::Start 
-        //     | ActionInfo::StartInferred => {
-        //         // TODO: Consider removing Start, so we can eliminate this branch entirely
-        //         debug_assert!(false, "should not be pushing this!");
-        //     },
-        // }
         let significant_action = SignificantAction::initial(self.move_no, player_id, action);
         self.history.push(significant_action);
         self.calculate_stored_move_initial();

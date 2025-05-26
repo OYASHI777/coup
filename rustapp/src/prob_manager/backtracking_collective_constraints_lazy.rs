@@ -5,7 +5,6 @@ use ahash::AHashSet;
 use crossbeam::channel::after;
 use std::{marker::Copy, path::Path};
 
-// TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 #[derive(Clone, Debug)]
 pub struct SignificantAction {
     move_no: usize, // move_no is seperate from the game move number
