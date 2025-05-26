@@ -1552,8 +1552,7 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
                         return Ok((*player_id, *candidate, None));
                     }
                 },
-                ExchangeChoice { player_id, no_cards, hand, relinquish } => {
-                    // TODO: [REFACTOR] need what was drawn and hand!
+                ExchangeChoice { player_id, no_cards, relinquish } => {
                     if private_player.is_some() && *player_id == private_player.unwrap() {
                         if let ExchangeDraw { card: draw, .. } = history.latest_move() {
                             let player_dead_cards = &prob.validated_public_constraints()[*player_id];

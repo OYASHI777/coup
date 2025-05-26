@@ -174,7 +174,6 @@ pub enum ActionObservation {
         // For no_cards == 1, both cards in cards should be the same
         player_id: usize,
         no_cards: usize, // TODO: [REFACTOR] remove no_cards
-        hand: [Card; 2],
         relinquish: [Card; 2], // Assume either all is known or none are known
     },
     // TODO: Add ExchangeChoice Private, and generate possible moves based on history and exchangedraw choice
@@ -1245,7 +1244,7 @@ impl History {
                             for j in i..5 {
                                 total_counts[j] += 1;
                                 if total_counts[j] + count_card_arr[j] < 4 {
-                                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: no_cards_choice, hand: [Card::Ambassador, Card::Ambassador], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
+                                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: no_cards_choice, relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
                                 }
                                 total_counts[j] -= 1;
                             }
@@ -1313,7 +1312,7 @@ impl History {
                     //     }
                     // }
                     // Assumes hand and relinquish are unknown, so placeholder Ambassadors are left there
-                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: self.latest_influence()[player_id] as usize, hand: [Card::Ambassador, Card::Ambassador], relinquish: [Card::Ambassador, Card::Ambassador]});
+                    changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: self.latest_influence()[player_id] as usize, relinquish: [Card::Ambassador, Card::Ambassador]});
                 }
             },
             AOName::ExchangeDraw => {

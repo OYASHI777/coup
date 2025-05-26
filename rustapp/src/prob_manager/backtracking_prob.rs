@@ -234,7 +234,7 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
                 self.constraint_history.push(last_constraint);
                 self.constraint_history_move_no.push(self.move_no);
             },
-            ActionObservation::ExchangeChoice { player_id, no_cards, hand, relinquish } => {
+            ActionObservation::ExchangeChoice { player_id, no_cards, relinquish } => {
                 let mut last_constraint = self.constraint_history.last().unwrap().clone();
                 let action_info = ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() };
                 last_constraint.add_move(*player_id as u8, action_info);

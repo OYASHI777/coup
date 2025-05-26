@@ -160,7 +160,7 @@ where
                 self.restrict(6, card);
                 self.update_constraints();
             },
-            ActionObservation::ExchangeChoice { player_id, no_cards, hand, relinquish } => {
+            ActionObservation::ExchangeChoice { player_id, no_cards, relinquish } => {
                 if let Some(ActionObservation::ExchangeDraw { card: draw, .. }) = self.history.last().cloned() {
                     self.exchange_choice_swap(*player_id, &draw, relinquish);
                 } else {
