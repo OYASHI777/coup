@@ -77,7 +77,6 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of public information but not private information
     pub fn push_ao_public(&mut self, ao: &ActionObservation){
-        // TODO: might need to seperate exchangedraw and exchangechoice for private!
         // Handle different move types
         match ao {
             ActionObservation::Discard { player_id, card, no_cards } => {
@@ -125,7 +124,6 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of private information
     pub fn push_ao_private(&mut self, ao: &ActionObservation){
-        // TODO: might need to seperate exchangedraw and exchangechoice for private!
         // Handle different move types
         match ao {
             ActionObservation::Discard { player_id, card, no_cards } => {
