@@ -31,7 +31,7 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";
 fn main() {
     let game_no = 100000000;
     let log_bool = true;
-    let bool_know_priv_info = false;
+    let bool_know_priv_info = true;
     let print_frequency: usize = 500;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
