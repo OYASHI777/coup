@@ -839,7 +839,6 @@ pub fn game_rnd_constraint_bt_mt<C>(num_threads: usize, game_no: usize, bool_kno
         let thread_min_dead_check = min_dead_check;
         let handle = thread::spawn(move || {
             game_rnd_constraint_bt_st_new::<C>(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
-            // game_rnd_constraint_bt_st::<V, T>(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
         });
         handles.push(handle);
     }

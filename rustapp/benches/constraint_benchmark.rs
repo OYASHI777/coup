@@ -119,7 +119,7 @@ fn test1() -> (CollectiveConstraint, usize, Card) {
 
     // log::info!(" === Test 8 === ");
     // colcon.printlog();
-    let dead_hm = colcon.dead_card_count();
+    // let dead_hm = colcon.dead_card_count();
     // log::trace!("dead_card_count: {:?}", dead_hm);
     return (colcon, 2, Card::Ambassador)
 
