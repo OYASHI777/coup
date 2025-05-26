@@ -15,15 +15,10 @@ pub struct BackTrackCardCountManager<C>
     where
         C: CoupConstraint,
 {
-    // a vec of constraints to push and pop
-    // dead cards to push or pop
-    // Will not locally store game history, jsut the constraint history
     private_player: Option<usize>,
-    constraint_history: Vec<C>, // I think None is stored if there are no changes
+    constraint_history: Vec<C>, 
     constraint_history_move_no: Vec<usize>, // TODO: determine if more optimal to put in constraint_history
     move_no: usize,
-    // The shared LRU cache is maintained here and passed to each constraint.
-    // cache: Rc<RefCell<LruCache<ConstraintKey, ActionMetaData>>>,
 }
 impl<C: CoupConstraint> BackTrackCardCountManager<C> {
     /// Constructor
@@ -39,19 +34,6 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
             move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
         }
     }
-    // /// Constructor
-    // pub fn new() -> Self {
-    //     let mut constraint_history = Vec::with_capacity(120);
-    //     constraint_history.push(C::game_start());
-    //     let mut constraint_history_move_no = Vec::with_capacity(120);
-    //     constraint_history_move_no.push(0);
-    //     Self {
-    //         private_player: None,
-    //         constraint_history,
-    //         constraint_history_move_no,
-    //         move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
-    //     }
-    // }
     /// Adding private player starting hand
     pub fn start_public(&mut self) {
         self.constraint_history.push(C::game_start_public());
@@ -61,7 +43,6 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
     /// Adding private player starting hand
     pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
         self.private_player = Some(player);
-        // TODO: Add cards
         self.constraint_history.push(C::game_start_private(player, cards));
         self.constraint_history_move_no.push(0);
         self.move_no = 1;
@@ -70,9 +51,7 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
     pub fn reset(&mut self) {
         self.private_player = None;
         self.constraint_history.clear();
-        // self.constraint_history.push(C::game_start());
         self.constraint_history_move_no.clear();
-        // self.constraint_history_move_no.push(0);
         self.move_no = 1;
     }
     /// Logs the constraint's log
@@ -122,7 +101,6 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
                 self.constraint_history_move_no.push(self.move_no);
             },
             ActionObservation::ExchangeDraw { player_id, .. } => {
-                // todo!("Change the ActionInfo to split Draw and Choice")
                 let mut last_constraint = self.constraint_history.last().unwrap().clone();
                 let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
                 log::trace!("Adding move ExchangeChoice");
@@ -137,69 +115,12 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
                 last_constraint.add_move(*player_id as u8, action_info);
                 self.constraint_history.push(last_constraint);
                 self.constraint_history_move_no.push(self.move_no);
-                // let mut last_constraint = self.constraint_history.last().unwrap().clone();
-                // let action_info = ActionInfo::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) };
-                // log::trace!("Adding move ExchangeChoice");
-                // last_constraint.add_move(ao.player_id() as u8, action_info);
-                // self.constraint_history.push(last_constraint);
-                // self.constraint_history_move_no.push(self.move_no);
             },
             _ => {},
         }
         // shove move_no into CollectiveConstraint
         // post_increment: move_no is now the number of the next move
         self.move_no += 1;
-        // let ao_name = ao.name();
-        // if ao_name == AOName::Discard {
-        //     match ao.no_cards() {
-        //         1 => {
-        //             let temp_card = ao.cards().first().unwrap();
-        //             // unwrap is fine as the vec should never be size 0
-        //             let mut last_constraint = self.constraint_history.last().unwrap().clone();
-        //             let action_info = ActionInfo::Discard { discard: *temp_card };
-        //             log::trace!("Adding move discard 1");
-        //             last_constraint.add_move(ao.player_id() as u8, action_info);
-        //             // last_constraint.sort_unstable();
-        //             self.constraint_history.push(last_constraint);
-        //             self.constraint_history_move_no.push(self.move_no);
-                    
-        //         },
-        //         2 => {
-        //             let temp_cards = ao.cards();
-        //             let mut last_constraint = self.constraint_history.last().unwrap().clone();
-        //             let action_info = ActionInfo::Discard { discard: temp_cards[0] };
-        //             log::trace!("Adding move discard 2");
-        //             last_constraint.add_move(ao.player_id() as u8, action_info);
-        //             let action_info = ActionInfo::Discard { discard: temp_cards[1] };
-        //             log::trace!("Adding move discard 2");
-        //             last_constraint.add_move(ao.player_id() as u8, action_info);
-        //             // last_constraint.sort_unstable();
-        //             self.constraint_history.push(last_constraint);
-        //             self.constraint_history_move_no.push(self.move_no);
-        //         },
-        //         _ => {
-        //             debug_assert!(false,"Unexpected no_cards case");
-        //         }
-        //     }
-        // } else if ao_name == AOName::RevealRedraw{
-        //     let mut last_constraint = self.constraint_history.last().unwrap().clone();
-        //     let action_info = ActionInfo::RevealRedraw { reveal: ao.card(), redraw: None, relinquish: None };
-        //     log::trace!("Adding move RevealRedraw");
-        //     last_constraint.add_move(ao.player_id() as u8, action_info);
-        //     // last_constraint.sort_unstable();
-        //     self.constraint_history.push(last_constraint);
-        //     self.constraint_history_move_no.push(self.move_no);
-        // } else if ao_name == AOName::ExchangeChoice {
-        //     let mut last_constraint = self.constraint_history.last().unwrap().clone();
-        //     let action_info = ActionInfo::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) };
-        //     log::trace!("Adding move ExchangeChoice");
-        //     last_constraint.add_move(ao.player_id() as u8, action_info);
-        //     self.constraint_history.push(last_constraint);
-        //     self.constraint_history_move_no.push(self.move_no);
-        // }
-        // // shove move_no into CollectiveConstraint
-        // // post_increment: move_no is now the number of the next move
-        // self.move_no += 1;
     }
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of private information
