@@ -5,7 +5,6 @@ use ahash::AHashSet;
 use crossbeam::channel::after;
 use std::{marker::Copy, path::Path};
 
-// TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 #[derive(Clone, Debug)]
 pub struct SignificantAction {
     move_no: usize, // move_no is seperate from the game move number
@@ -408,14 +407,6 @@ impl BackTrackCollectiveConstraintLite {
         }
         self.inferred_constraints[6].push(relinquish);
     }
-    /// Function to call for move Ambassador, without considering private information seen by the player who used Ambassador
-    pub fn ambassador_public(&mut self, player_id: usize) {
-
-    }
-    /// Function to call for move Ambassador, when considering private information seen by the player who used Ambassador
-    pub fn ambassador_private(&mut self, player_id: usize) {
-        todo!()
-    }
     /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards at start of turn
     /// Assuming we won't be using this for ambassador?
     pub fn impossible_to_have_cards_general(&self, index_lookback: usize, player_of_interest: usize, cards: &[u8; 5]) -> bool {
@@ -458,7 +449,6 @@ impl BackTrackCollectiveConstraintLite {
     pub fn possible_to_have_cards_recurse(&self, index_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
         // Will temporarily not use memo and generate all group_constraints from start
         // Needed for checks
-        // TODO: [REFACTOR] remove cards
         log::trace!("After");
         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.history[index_loop].player(), self.history[index_loop]);
         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.history[index_loop].public_constraints(), inferred_constraints);
