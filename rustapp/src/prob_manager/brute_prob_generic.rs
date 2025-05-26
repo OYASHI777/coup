@@ -172,56 +172,10 @@ where
         }
         self.history.push(ao.clone());
     }
-    pub fn push_ao(&mut self, player: usize, action_info: &ActionInfo) {
-        unimplemented!();
-        // TODO: Add DiscardMultiple
-        match action_info {
-            ActionInfo::Discard { discard } => {
-                self.public_constraints[player].push(*discard);
-                let current_dead_cards: Vec<Card> = self.public_constraints[player].clone();
-                self.restrict(player, &current_dead_cards);
-                self.update_constraints();
-            },
-            ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
-                // if redraw.is_none() {
-                //     self.reveal_redraw(player, *reveal);
-                // } else if let Some(redraw_card) = redraw {
-                //     let mut current_dead_cards: Vec<Card> = self.public_constraints[player].clone();
-                //     current_dead_cards.push(*reveal);
-                //     self.restrict(player, &[*reveal]);
-                //     if *redraw_card != *reveal {
-                //         self.restrict(6, &[*redraw_card]);
-                //         // swap them
-                //         todo!();
-                //     }
-                // }
-                if redraw.is_some() {
-                    panic!("!!!!");
-                }
-                self.reveal_redraw(player, *reveal);
-                self.update_constraints();
-            },
-            ActionInfo::ExchangeDrawChoice { draw, relinquish } => {
-                if draw.is_empty() && relinquish.is_empty() {
-                    self.ambassador(player);
-                    self.update_constraints();
-                } else {
-                    unimplemented!()
-                }
-            },
-            ActionInfo::ExchangeDraw { .. } => todo!(),
-            ActionInfo::ExchangeChoice { .. } => todo!(),
-            ActionInfo::Start => {
-                unimplemented!()
-            },
-            ActionInfo::StartInferred => {
-                unimplemented!()
-            },
-        };
-    }
     /// Unsupported, as information is loss after pushing and cannot be reverted
     pub fn pop(&mut self) {
-        panic!("No pops! This goes in one direction only!")
+        panic!("No pops! This goes in one direction only!");
+        todo!("Add pops???");
     }
     /// Use Rayon to parallelize the process of running `mix_one_char` on
     /// each state in `self.calculated_states`, collecting all results
