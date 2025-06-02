@@ -8,6 +8,111 @@
 use crate::history_public::{Card, AOName, ActionObservation};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName, BacktrackMetaData};
 use super::coup_const::MAX_GAME_LENGTH;
+
+#[derive(Clone, Debug)]
+pub struct SignificantAction {
+    player: u8,
+    action_info: ActionInfo,
+    meta_data: BacktrackMetaData,
+}
+
+impl SignificantAction {
+    pub fn new(player: u8, action_info: ActionInfo, meta_data: BacktrackMetaData) -> Self {
+        Self{
+            player,
+            action_info,
+            meta_data,
+        }
+    }
+    pub fn name(&self) -> ActionInfoName {
+        self.action_info.name()
+    }
+    pub fn player(&self) -> u8 {
+        self.player
+    }
+    pub fn action_info(&self) -> &ActionInfo {
+        &self.action_info
+    }
+    pub fn action_info_mut(&mut self) -> &mut ActionInfo {
+        &mut self.action_info
+    }
+    pub fn meta_data(&self) -> &BacktrackMetaData {
+        &self.meta_data
+    }
+    pub fn public_constraints(&self) -> &Vec<Vec<Card>> {
+        self.meta_data.public_constraints()
+    }
+    pub fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
+        self.meta_data.inferred_constraints()
+    }
+    pub fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
+        self.meta_data.set_inferred_constraints(inferred_constraints)
+    }
+    pub fn impossible_constraints(&self) -> &[[bool; 5]; 7] {
+        self.meta_data.impossible_constraints()
+    }
+    pub fn impossible_constraints_2(&self) -> &[[[bool; 5]; 5]; 7] {
+        self.meta_data.impossible_constraints_2()
+    }
+    pub fn impossible_constraints_3(&self) -> &[[[bool; 5]; 5]; 5] {
+        self.meta_data.impossible_constraints_3()
+    }
+    pub fn set_impossible_constraints(&mut self, impossible_constraints: &[[bool; 5]; 7]) {
+        self.meta_data.set_impossible_constraints(impossible_constraints);
+    }
+    pub fn add_inferred_constraints(&mut self, player_id: usize, card: Card)  {
+        self.meta_data.inferred_constraints[player_id].push(card);
+        debug_assert!(player_id < 6 
+            && self.meta_data.inferred_constraints[player_id].len() < 3 
+            || player_id == 6 
+            && self.meta_data.inferred_constraints[player_id].len() < 4, 
+            "bad push");
+    }
+    pub fn check_add_inferred_constraints(&mut self, player_id: usize, card: Card) -> bool {
+        if !self.meta_data.inferred_constraints[player_id].contains(&card) {
+            self.meta_data.inferred_constraints[player_id].push(card);
+            debug_assert!(player_id < 6 
+                && self.meta_data.inferred_constraints[player_id].len() < 3 
+                || player_id == 6 
+                && self.meta_data.inferred_constraints[player_id].len() < 4, 
+                "bad push");
+            return true;
+        }
+        false
+    }
+    pub fn player_cards_known<T>(&self, player_id: T) -> usize 
+    where
+        T: Into<usize> + Copy,
+    {
+        self.meta_data.player_cards_known(player_id)
+    }
+    pub fn player_has_public_constraint<T>(&self, player_id: T, card: Card) -> bool 
+    where
+        T: Into<usize> + Copy,
+    {   
+        self.meta_data.player_has_public_constraint(player_id, card)
+    }
+    pub fn player_has_inferred_constraint<T>(&self, player_id: T, card: Card) -> bool 
+    where
+        T: Into<usize> + Copy,
+        {   
+            self.meta_data.player_has_inferred_constraint(player_id, card)
+        }
+    pub fn player_constraints_all_full<T>(&self, player_id: T, card: Card) -> bool 
+    where
+        T: Into<usize> + Copy,
+    {
+        self.meta_data.player_constraints_all_full(player_id, card)
+    }
+    pub fn known_card_count(&self, card: Card) -> u8 {
+        self.meta_data.inferred_constraints().iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>()
+        + self.meta_data.public_constraints().iter().map(|v| v.iter().filter(|c| **c == card).count() as u8).sum::<u8>()
+    }
+    pub fn action_info_str(&self) -> String {
+        format!("Player: {} {:?} public_constraints: {:?}, inferred_constraints: {:?}, impossible_constraints: {:?}", self.player, self.action_info, self.public_constraints(), self.inferred_constraints(), self.impossible_constraints())
+    }
+}
+
 // TODO: Store also a version of constraint_history but split by players
 // TODO: Improve analysis interface when using the manager... using last_constraint then the analysis is very clunky
 // So it is easier to know the first time a player does something
@@ -15,10 +120,8 @@ use super::coup_const::MAX_GAME_LENGTH;
 pub struct BackTrackCardCountManager 
 {
     private_player: Option<usize>,
-    constraint_history: Vec<BacktrackMetaData>, 
+    constraint_history: Vec<SignificantAction>, 
     move_no_history: Vec<usize>, // TODO: determine if more optimal to put in constraint_history
-    player_history: Vec<u8>,
-    action_history: Vec<ActionInfo>,
     move_no: usize,
 }
 impl BackTrackCardCountManager {
@@ -34,17 +137,13 @@ impl BackTrackCardCountManager {
             private_player: None,
             constraint_history,
             move_no_history,
-            player_history,
-            action_history,
             move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
         }
     }
     /// Adding private player starting hand
     pub fn start_public(&mut self) {
         let start_public = BacktrackMetaData::start_public();
-        self.constraint_history.push(start_public);
-        self.player_history.push(7); // basically None
-        self.action_history.push(ActionInfo::StartInferred);
+        self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_public));
         self.move_no_history.push(0);
         self.move_no = 1;
     }
@@ -52,9 +151,7 @@ impl BackTrackCardCountManager {
     pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
         self.private_player = Some(player);
         let start_private = BacktrackMetaData::start_private(player, cards);
-        self.constraint_history.push(start_private);
-        self.player_history.push(7); // basically None
-        self.action_history.push(ActionInfo::StartInferred);
+        self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_private));
         self.move_no_history.push(0);
         self.move_no = 1;
     }
@@ -63,8 +160,6 @@ impl BackTrackCardCountManager {
         self.private_player = None;
         self.constraint_history.clear();
         self.move_no_history.clear();
-        self.player_history.clear();
-        self.action_history.clear();
         self.move_no = 1;
     }
     /// Logs the constraint's log
@@ -188,8 +283,6 @@ impl BackTrackCardCountManager {
             if self.move_no_history.last() == Some(&self.move_no) {
                 self.constraint_history.pop();
                 self.move_no_history.pop();
-                self.player_history.pop();
-                self.action_history.pop();
             }
         }
     }
