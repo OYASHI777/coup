@@ -31,23 +31,21 @@ fn main() {
     let game_no = 100000000;
     let log_bool = true;
     let bool_know_priv_info = true;
-    let print_frequency: usize = 100;
+    let print_frequency: usize = 500;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
-    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
+    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check);
     // game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
-    // This has the no legit move issue
-    // vec![Steal { player_id: 0, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 0, final_actioner: 3 }, RevealRedraw { player_id: 0, reveal: Captain, redraw: Duke }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, BlockSteal { player_id: 1, opposing_player_id: 0, card: Ambassador }, CollectiveChallenge { participants: [true, false, true, false, true, true], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 1, final_actioner: 5 }, RevealRedraw { player_id: 1, reveal: Captain, redraw: Captain }, Discard { player_id: 5, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 2, opposing_player_id: 2, card: Captain }, ForeignAid { player_id: 2 }, CollectiveBlock { participants: [false, true, false, true, true, true], opposing_player_id: 2, final_actioner: 3 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 3, final_actioner: 0 }, RevealRedraw { player_id: 3, reveal: Duke, redraw: Captain }, Discard { player_id: 0, card: [Duke, Duke], no_cards: 1 }, Steal { player_id: 3, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 3, final_actioner: 2 }, Discard { player_id: 3, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, false, true], opposing_player_id: 4, final_actioner: 1 }, RevealRedraw { player_id: 4, reveal: Captain, redraw: Contessa }, Discard { player_id: 1, card: [Contessa, Contessa], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, false, true, false, true, false], opposing_player_id: 5, final_actioner: 2 }, CollectiveChallenge { participants: [true, false, false, false, false, true], opposing_player_id: 2, final_actioner: 5 }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, Assassinate { player_id: 0, opposing_player_id: 4 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 0, final_actioner: 5 }, RevealRedraw { player_id: 0, reveal: Assassin, redraw: Ambassador }, Discard { player_id: 5, card: [Duke, Duke], no_cards: 1 }, BlockAssassinate { player_id: 4, opposing_player_id: 0 }, CollectiveChallenge { participants: [true, false, false, false, false, false], opposing_player_id: 4, final_actioner: 0 }];
-    // new_moves: [Discard { player_id: 4, card: [Ambassador, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Ambassador], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Assassin], no_cards: 2 }, Discard { player_id: 4, card: [Ambassador, Captain], no_cards: 2 }, Discard { player_id: 4, card: [Captain, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Assassin, Duke], no_cards: 2 }, Discard { player_id: 4, card: [Assassin, Captain], no_cards: 2 }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 2 }]
     
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
     // TODO: Make a Lite with Lazy Inferred Constraints
     // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
-    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(1000);
+    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(10000, bool_know_priv_info);
+    game_rnd_constraint_bt_bench(10000, bool_know_priv_info);
+    game_rnd_constraint_bt_bench_control(10000, bool_know_priv_info);
     // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
-    // game_rnd_constraint_bt_bench(100);
     // game_rnd_constraint_brute_bench(10);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
     // speed(game_no, bool_know_priv_info, 10, log_bool);
@@ -1403,7 +1401,7 @@ pub fn game_rnd_constraint_bt_st_g<V, T>(game_no: usize, bool_know_priv_info: bo
         game += 1;
     }
 }
-pub fn game_rnd_constraint_bt_generic_bench<C>(game_no : usize) 
+pub fn game_rnd_constraint_bt_generic_bench<C>(game_no : usize, bool_know_priv_info: bool) 
     where
         C: CoupConstraint + CoupConstraintAnalysis,
 {
@@ -1416,7 +1414,19 @@ pub fn game_rnd_constraint_bt_generic_bench<C>(game_no : usize)
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
         // if game % (game_no / 10) == 0 {
-        log::trace!("Game Made:");
+        let private_player: usize = 0;
+        if bool_know_priv_info {
+            // Choose random player
+            // Initialize for that player
+            let mut rng = thread_rng();
+            let card_0: u8 = rng.gen_range(0..5);
+            let card_1: u8 = rng.gen_range(0..5);
+            let cards = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
+            // TODO: Fill those up
+            bit_prob.start_private(private_player, &cards);
+        } else {
+            bit_prob.start_public();
+        }
         while !hh.game_won() {
             
             new_moves = hh.generate_legal_moves(None);
@@ -1466,9 +1476,9 @@ pub fn game_rnd_constraint_bt_generic_bench<C>(game_no : usize)
     println!("Nodes Processed: {}", actions_processed);
     println!("Estimated Time per nodes: {} micro seconds", process_per_action_us);
 }
-pub fn game_rnd_constraint_bt_bench(game_no : usize) {
+pub fn game_rnd_constraint_bt_bench(game_no : usize, bool_know_priv_info: bool) {
     let mut game: usize = 0;
-    let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager::new();
     let mut actions_processed: u128 = 0;
     let mut start_time = Instant::now();
     while game < game_no {
@@ -1476,16 +1486,25 @@ pub fn game_rnd_constraint_bt_bench(game_no : usize) {
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
         // if game % (game_no / 10) == 0 {
-        log::trace!("Game Made:");
+        let private_player: usize = 0;
+        if bool_know_priv_info {
+            // Choose random player
+            // Initialize for that player
+            let mut rng = thread_rng();
+            let card_0: u8 = rng.gen_range(0..5);
+            let card_1: u8 = rng.gen_range(0..5);
+            let cards = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
+            // TODO: Fill those up
+            bit_prob.start_private(private_player, &cards);
+        } else {
+            bit_prob.start_public();
+        }
         while !hh.game_won() {
             
             // log::info!("{}", format!("Step : {:?}",step));
             hh.log_state();
             bit_prob.printlog();
             new_moves = hh.generate_legal_moves(None);
-            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
-            // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-            new_moves.retain(|m| m.name() != AOName::Exchange);
             
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 if output.name() == AOName::Discard{
@@ -1528,6 +1547,78 @@ pub fn game_rnd_constraint_bt_bench(game_no : usize) {
     }
     let elapsed_time = start_time.elapsed();
     let process_per_action_us = elapsed_time.as_micros() as f64 / actions_processed as f64;
+    println!("Benchmark for: {}", "backtracking_prob_2");
+    println!("Games Ran: {}", game_no);
+    println!("Nodes Processed: {}", actions_processed);
+    println!("Estimated Time per nodes: {} micro seconds", process_per_action_us);
+}
+pub fn game_rnd_constraint_bt_bench_control(game_no : usize, bool_know_priv_info: bool) {
+    let mut game: usize = 0;
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager::new();
+    let mut actions_processed: u128 = 0;
+    let mut start_time = Instant::now();
+    while game < game_no {
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        // if game % (game_no / 10) == 0 {
+        let private_player: usize = 0;
+        if bool_know_priv_info {
+            // Choose random player
+            // Initialize for that player
+            let mut rng = thread_rng();
+            let card_0: u8 = rng.gen_range(0..5);
+            let card_1: u8 = rng.gen_range(0..5);
+            let cards = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
+            // TODO: Fill those up
+            bit_prob.start_private(private_player, &cards);
+        } else {
+            bit_prob.start_public();
+        }
+        while !hh.game_won() {
+            
+            // log::info!("{}", format!("Step : {:?}",step));
+            hh.log_state();
+            bit_prob.printlog();
+            new_moves = hh.generate_legal_moves(None);
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                if output.name() == AOName::Discard{
+                    let true_legality = true;
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::RevealRedraw {
+                    let true_legality: bool = true;
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::ExchangeDraw {
+                    let true_legality: bool = true;
+                    if !true_legality {
+                        break    
+                    }
+                } 
+                hh.push_ao(output);
+                bit_prob.push_ao_public(&output);
+                actions_processed += 1;
+
+            } else {
+                log::trace!("Pushed bad move somewhere earlier!");
+                break;
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            log::info!("");
+        }
+        bit_prob.reset();
+        game += 1;
+    }
+    let elapsed_time = start_time.elapsed();
+    let process_per_action_us = elapsed_time.as_micros() as f64 / actions_processed as f64;
+    println!("Benchmark for: {}", "control");
     println!("Games Ran: {}", game_no);
     println!("Nodes Processed: {}", actions_processed);
     println!("Estimated Time per nodes: {} micro seconds", process_per_action_us);
