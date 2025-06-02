@@ -179,7 +179,7 @@ impl SignificantAction {
         }
     }
     pub fn start() -> Self {
-        let meta_data: BacktrackMetaData = BacktrackMetaData::start();
+        let meta_data: BacktrackMetaData = BacktrackMetaData::start_public();
         Self {
             move_no: 0,
             player: 77,
@@ -188,7 +188,7 @@ impl SignificantAction {
         }
     }
     pub fn start_inferred() -> Self {
-        let meta_data: BacktrackMetaData = BacktrackMetaData::start();
+        let meta_data: BacktrackMetaData = BacktrackMetaData::start_public();
         Self {
             move_no: 0,
             player: 77,
@@ -306,9 +306,9 @@ pub struct BacktrackMetaData {
 
 impl BacktrackMetaData {
     pub fn initial() -> Self {
-        Self::start()
+        Self::start_public()
     }
-    pub fn start() -> Self {
+    pub fn start_public() -> Self {
         let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
         let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
         let impossible_constraints: [[bool; 5]; 7] = [[false; 5]; 7];
@@ -320,6 +320,46 @@ impl BacktrackMetaData {
             impossible_constraints,
             impossible_constraints_2,
             impossible_constraints_3,
+        }
+    }
+    pub fn start_private(player: usize, cards: &[Card; 2]) -> Self {
+        debug_assert!(cards.len() < 3, "player has too many cards!");
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::new()]; 
+        let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
+        inferred_constraints[player].push(cards[0]);
+        inferred_constraints[player].push(cards[1]);
+        // Start takes the inferred information discovered via a pathdependent lookback
+        let mut impossible_constraints = [[false; 5]; 7];
+        impossible_constraints[player] = [true; 5];
+        impossible_constraints[player][cards[0] as usize] = false;
+        impossible_constraints[player][cards[1] as usize] = false;
+        let mut impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        impossible_constraints_2[player] = [[true; 5]; 5];
+        let mut impossible_constraints_3 = [[[false; 5]; 5]; 5];
+        impossible_constraints_3[cards[0] as usize][cards[0] as usize][cards[0] as usize] = true;
+        impossible_constraints_3[cards[1] as usize][cards[1] as usize][cards[1] as usize] = true;
+        if cards[0] == cards[1] {
+            // update impossible_2
+            for p in 0..7 {
+                impossible_constraints_2[p][cards[0] as usize][cards[0] as usize] = true;
+            }
+            // update impossible_3 where more than 2
+            for c in 0..5 {
+                impossible_constraints_3[cards[0] as usize][cards[0] as usize][c] = true;
+                impossible_constraints_3[cards[0] as usize][c][cards[0] as usize] = true;
+                impossible_constraints_3[c][cards[0] as usize][cards[0] as usize] = true;
+            }
+        }
+        impossible_constraints_2[player][cards[0] as usize][cards[1] as usize] = false;
+        impossible_constraints_2[player][cards[1] as usize][cards[0] as usize] = false;
+        // StartInferred takes the inferred information from start, and runs add_inferred_information
+        // This seperation prevents handling cases where you add discovered information that is already inside due to add_inferred_information
+        Self {
+            public_constraints,
+            inferred_constraints,
+            impossible_constraints,
+            impossible_constraints_2, 
+            impossible_constraints_3, 
         }
     }
     pub fn public_constraints(&self) -> &Vec<Vec<Card>> {

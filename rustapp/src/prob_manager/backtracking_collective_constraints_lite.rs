@@ -24,7 +24,7 @@ impl SignificantAction {
         }
     }
     pub fn start() -> Self {
-        let meta_data: BacktrackMetaData = BacktrackMetaData::start();
+        let meta_data: BacktrackMetaData = BacktrackMetaData::start_public();
         Self {
             move_no: 0,
             player: 77,
@@ -33,7 +33,7 @@ impl SignificantAction {
         }
     }
     pub fn start_inferred() -> Self {
-        let meta_data: BacktrackMetaData = BacktrackMetaData::start();
+        let meta_data: BacktrackMetaData = BacktrackMetaData::start_public();
         Self {
             move_no: 0,
             player: 77,
