@@ -362,14 +362,34 @@ impl BacktrackMetaData {
             impossible_constraints_3, 
         }
     }
+    pub fn clone_public(&self) -> Self {
+        let public_constraints: Vec<Vec<Card>> = self.public_constraints.clone(); 
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 
+        let impossible_constraints: [[bool; 5]; 7] = [[false; 5]; 7];
+        let impossible_constraints_2: [[[bool; 5]; 5]; 7] = [[[false; 5]; 5]; 7];
+        let impossible_constraints_3: [[[bool; 5]; 5]; 5] = [[[false; 5]; 5]; 5];
+        Self {
+            public_constraints,
+            inferred_constraints,
+            impossible_constraints,
+            impossible_constraints_2,
+            impossible_constraints_3,
+        }
+    }
     pub fn public_constraints(&self) -> &Vec<Vec<Card>> {
         &self.public_constraints
+    }
+    pub fn public_constraints_mut(&mut self) -> &mut Vec<Vec<Card>> {
+        &mut self.public_constraints
     }
     pub fn sort_public_constraints(&mut self) {
         self.public_constraints.iter_mut().for_each(|v| v.sort_unstable());
     }
     pub fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
         &self.inferred_constraints
+    }   
+    pub fn inferred_constraints_mut(&mut self) -> &mut Vec<Vec<Card>> {
+        &mut self.inferred_constraints
     }   
     pub fn sort_inferred_constraints(&mut self) {
         self.inferred_constraints.iter_mut().for_each(|v| v.sort_unstable());
@@ -380,11 +400,20 @@ impl BacktrackMetaData {
     pub fn impossible_constraints(&self) -> &[[bool; 5]; 7] {
         &self.impossible_constraints
     }   
+    pub fn impossible_constraints_mut(&mut self) -> &mut [[bool; 5]; 7] {
+        &mut self.impossible_constraints
+    }   
     pub fn impossible_constraints_2(&self) -> &[[[bool; 5]; 5]; 7] {
         &self.impossible_constraints_2
     }   
+    pub fn impossible_constraints_2_mut(&mut self) -> &mut[[[bool; 5]; 5]; 7] {
+        &mut self.impossible_constraints_2
+    }   
     pub fn impossible_constraints_3(&self) -> &[[[bool; 5]; 5]; 5] {
         &self.impossible_constraints_3
+    }   
+    pub fn impossible_constraints_3_mut(&mut self) -> &mut [[[bool; 5]; 5]; 5] {
+        &mut self.impossible_constraints_3
     }   
     /// Changes stored impossible_constraints
     pub fn set_impossible_constraints(&mut self, impossible_constraints: &[[bool; 5]; 7]) {
