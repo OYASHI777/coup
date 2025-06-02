@@ -261,28 +261,28 @@ impl BackTrackCardCountManager {
         // Should never pop() to 0
         self.constraint_history.last_mut().unwrap()
     }
-    // pub fn add_move(&mut self, player_id: u8, action_info: ActionInfo) {
-    //     let significant_action = SignificantAction::new(player_id, action_info, BacktrackMetaData::initial());
-    //     self.
-    // }
+    /// Updated for discard
+    pub fn add_move_discard(&mut self, player_id: usize, cards: &[Card; 2], no_cards: usize) {
+        // Assumes no_cards is either 1 or 2 only
+        let action_info = ActionInfo::Discard { discard: cards[0] };
+        let mut significant_action = SignificantAction::new(player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+        significant_action.meta_data.public_constraints[player_id].push(cards[0]);
+        self.constraint_history.push(significant_action);
+        if no_cards == 2 {
+            let action_info = ActionInfo::Discard { discard: cards[1] };
+            let mut significant_action = SignificantAction::new(player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+            significant_action.meta_data.public_constraints[player_id].push(cards[1]);
+            self.constraint_history.push(significant_action);
+        }
+        self.move_no_history.push(self.move_no);
+    }
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of public information but not private information
     pub fn push_ao_public(&mut self, ao: &ActionObservation){
         // Handle different move types
         match ao {
             ActionObservation::Discard { player_id, card, no_cards } => {
-                // Assumes no_cards is either 1 or 2 only
-                let action_info = ActionInfo::Discard { discard: card[0] };
-                let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
-                significant_action.meta_data.public_constraints[*player_id].push(card[0]);
-                self.constraint_history.push(significant_action);
-                if *no_cards == 2 {
-                    let action_info = ActionInfo::Discard { discard: card[1] };
-                    let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
-                    significant_action.meta_data.public_constraints[*player_id].push(card[1]);
-                    self.constraint_history.push(significant_action);
-                }
-                self.move_no_history.push(self.move_no);
+                self.add_move_discard(*player_id, card, *no_cards);
                 self.generate_impossible_constraints();
                 self.generate_inferred_constraints();
             },
@@ -324,18 +324,7 @@ impl BackTrackCardCountManager {
         // Handle different move types
         match ao {
             ActionObservation::Discard { player_id, card, no_cards } => {
-                // Assumes no_cards is either 1 or 2 only
-                let action_info = ActionInfo::Discard { discard: card[0] };
-                let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
-                significant_action.meta_data.public_constraints[*player_id].push(card[0]);
-                self.constraint_history.push(significant_action);
-                if *no_cards == 2 {
-                    let action_info = ActionInfo::Discard { discard: card[1] };
-                    let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
-                    significant_action.meta_data.public_constraints[*player_id].push(card[1]);
-                    self.constraint_history.push(significant_action);
-                }
-                self.move_no_history.push(self.move_no);
+                self.add_move_discard(*player_id, card, *no_cards);
             },
             ActionObservation::RevealRedraw { player_id, reveal, .. } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
@@ -371,18 +360,7 @@ impl BackTrackCardCountManager {
         // Handle different move types
         match ao {
             ActionObservation::Discard { player_id, card, no_cards } => {
-                // Assumes no_cards is either 1 or 2 only
-                let action_info = ActionInfo::Discard { discard: card[0] };
-                let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
-                significant_action.meta_data.public_constraints[*player_id].push(card[0]);
-                self.constraint_history.push(significant_action);
-                if *no_cards == 2 {
-                    let action_info = ActionInfo::Discard { discard: card[1] };
-                    let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
-                    significant_action.meta_data.public_constraints[*player_id].push(card[1]);
-                    self.constraint_history.push(significant_action);
-                }
-                self.move_no_history.push(self.move_no);
+                self.add_move_discard(*player_id, card, *no_cards);
                 self.generate_impossible_constraints();
                 self.generate_inferred_constraints();
             },
@@ -425,18 +403,7 @@ impl BackTrackCardCountManager {
         // Handle different move types
         match ao {
             ActionObservation::Discard { player_id, card, no_cards } => {
-                // Assumes no_cards is either 1 or 2 only
-                let action_info = ActionInfo::Discard { discard: card[0] };
-                let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
-                significant_action.meta_data.public_constraints[*player_id].push(card[0]);
-                self.constraint_history.push(significant_action);
-                if *no_cards == 2 {
-                    let action_info = ActionInfo::Discard { discard: card[1] };
-                    let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
-                    significant_action.meta_data.public_constraints[*player_id].push(card[1]);
-                    self.constraint_history.push(significant_action);
-                }
-                self.move_no_history.push(self.move_no);
+                self.add_move_discard(*player_id, card, *no_cards);
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
