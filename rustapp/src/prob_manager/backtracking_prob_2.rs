@@ -284,6 +284,7 @@ impl BackTrackCardCountManager {
     }
     /// Update for added move
     pub fn add_move_clone_all(&mut self, player_id: usize, action_info: ActionInfo) {
+        // We clone all to preserve impossible_constraint in this case!
         let significant_action = SignificantAction::new(player_id as u8, action_info, self.constraint_history.last().unwrap().clone_meta_data());
         self.constraint_history.push(significant_action);
         self.move_no_history.push(self.move_no);
@@ -307,11 +308,8 @@ impl BackTrackCardCountManager {
             },
             ActionObservation::ExchangeDraw { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
-                // We clone all to preserve impossible_constraint in this case!
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_meta_data());
-                log::trace!("Adding move ExchangeChoice");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                log::trace!("Adding move ExchangeDraw");
+                self.add_move_clone_all(*player_id, action_info);
             },
             ActionObservation::ExchangeChoice { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
@@ -341,11 +339,8 @@ impl BackTrackCardCountManager {
             },
             ActionObservation::ExchangeDraw { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
-                // We clone all to preserve impossible_constraint in this case!
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_meta_data());
-                log::trace!("Adding move ExchangeChoice");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                log::trace!("Adding move ExchangeDraw");
+                self.add_move_clone_all(*player_id, action_info);
             },
             ActionObservation::ExchangeChoice { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
