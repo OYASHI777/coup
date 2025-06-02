@@ -8,6 +8,8 @@
 use crate::history_public::{Card, AOName, ActionObservation};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName, BacktrackMetaData};
 use super::coup_const::MAX_GAME_LENGTH;
+// TODO: Shift this here!
+use super::backtracking_prob::CoupConstraintAnalysis;
 
 #[derive(Clone, Debug)]
 pub struct SignificantAction {
@@ -126,6 +128,9 @@ impl SignificantAction {
     pub fn clone_public_meta_data(&self) -> BacktrackMetaData {
         self.meta_data.clone_public()
     }
+    pub fn clone_meta_data(&self) -> BacktrackMetaData {
+        self.meta_data.clone()
+    }
     pub fn printlog(&self) {
         log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints()));
         log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints()));
@@ -213,7 +218,9 @@ impl BackTrackCardCountManager {
     /// Adding private player starting hand
     pub fn start_public(&mut self) {
         let start_public = BacktrackMetaData::start_public();
+        self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, start_public.clone()));
         self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_public));
+        self.move_no_history.push(0);
         self.move_no_history.push(0);
         self.move_no = 1;
     }
@@ -221,7 +228,9 @@ impl BackTrackCardCountManager {
     pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
         self.private_player = Some(player);
         let start_private = BacktrackMetaData::start_private(player, cards);
+        self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, BacktrackMetaData::start_public()));
         self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_private));
+        self.move_no_history.push(0);
         self.move_no_history.push(0);
         self.move_no = 1;
     }
@@ -259,7 +268,55 @@ impl BackTrackCardCountManager {
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of public information but not private information
     pub fn push_ao_public(&mut self, ao: &ActionObservation){
-        self.push_ao_public_lazy(ao);
+        // Handle different move types
+        match ao {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                // Assumes no_cards is either 1 or 2 only
+                let action_info = ActionInfo::Discard { discard: card[0] };
+                let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+                significant_action.meta_data.public_constraints[*player_id].push(card[0]);
+                self.constraint_history.push(significant_action);
+                if *no_cards == 2 {
+                    let action_info = ActionInfo::Discard { discard: card[1] };
+                    let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+                    significant_action.meta_data.public_constraints[*player_id].push(card[1]);
+                    self.constraint_history.push(significant_action);
+                }
+                self.move_no_history.push(self.move_no);
+                self.generate_impossible_constraints();
+                self.generate_inferred_constraints();
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, .. } => {
+                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
+                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+                log::trace!("Adding move RevealRedraw");
+                self.constraint_history.push(significant_action);
+                self.move_no_history.push(self.move_no);
+                self.generate_impossible_constraints();
+                self.generate_inferred_constraints();
+            },
+            ActionObservation::ExchangeDraw { player_id, .. } => {
+                let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
+                // We clone all to preserve impossible_constraint in this case!
+                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_meta_data());
+                log::trace!("Adding move ExchangeChoice");
+                self.constraint_history.push(significant_action);
+                self.move_no_history.push(self.move_no);
+            },
+            ActionObservation::ExchangeChoice { player_id, .. } => {
+                let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
+                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+                log::trace!("Adding move ExchangeChoice");
+                self.constraint_history.push(significant_action);
+                self.move_no_history.push(self.move_no);
+                self.generate_impossible_constraints();
+                self.generate_inferred_constraints();
+            },
+            _ => {},
+        }
+        // shove move_no into CollectiveConstraint
+        // post_increment: move_no is now the number of the next move
+        self.move_no += 1;
     }
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of public information but not private information
@@ -279,7 +336,6 @@ impl BackTrackCardCountManager {
                     self.constraint_history.push(significant_action);
                 }
                 self.move_no_history.push(self.move_no);
-                todo!("Calculation!")
             },
             ActionObservation::RevealRedraw { player_id, reveal, .. } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
@@ -287,15 +343,14 @@ impl BackTrackCardCountManager {
                 log::trace!("Adding move RevealRedraw");
                 self.constraint_history.push(significant_action);
                 self.move_no_history.push(self.move_no);
-                todo!("Calculation!")
             },
             ActionObservation::ExchangeDraw { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+                // We clone all to preserve impossible_constraint in this case!
+                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_meta_data());
                 log::trace!("Adding move ExchangeChoice");
                 self.constraint_history.push(significant_action);
                 self.move_no_history.push(self.move_no);
-                todo!("Calculation!")
             },
             ActionObservation::ExchangeChoice { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
@@ -303,7 +358,6 @@ impl BackTrackCardCountManager {
                 log::trace!("Adding move ExchangeChoice");
                 self.constraint_history.push(significant_action);
                 self.move_no_history.push(self.move_no);
-                todo!("Calculation!")
             },
             _ => {},
         }
@@ -314,7 +368,56 @@ impl BackTrackCardCountManager {
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of private information
     pub fn push_ao_private(&mut self, ao: &ActionObservation){
-        self.push_ao_private_lazy(ao);
+        // Handle different move types
+        match ao {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                // Assumes no_cards is either 1 or 2 only
+                let action_info = ActionInfo::Discard { discard: card[0] };
+                let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+                significant_action.meta_data.public_constraints[*player_id].push(card[0]);
+                self.constraint_history.push(significant_action);
+                if *no_cards == 2 {
+                    let action_info = ActionInfo::Discard { discard: card[1] };
+                    let mut significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+                    significant_action.meta_data.public_constraints[*player_id].push(card[1]);
+                    self.constraint_history.push(significant_action);
+                }
+                self.move_no_history.push(self.move_no);
+                self.generate_impossible_constraints();
+                self.generate_inferred_constraints();
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
+                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+                log::trace!("Adding move RevealRedraw");
+                self.constraint_history.push(significant_action);
+                self.move_no_history.push(self.move_no);
+                self.generate_impossible_constraints();
+                self.generate_inferred_constraints();
+            },
+            ActionObservation::ExchangeDraw { player_id, card } => {
+                let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
+                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+                log::trace!("Adding move ExchangeChoice");
+                self.constraint_history.push(significant_action);
+                self.move_no_history.push(self.move_no);
+                self.generate_impossible_constraints();
+                self.generate_inferred_constraints();
+            },
+            ActionObservation::ExchangeChoice { player_id, relinquish } => {
+                let action_info = ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() };
+                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+                log::trace!("Adding move ExchangeChoice");
+                self.constraint_history.push(significant_action);
+                self.move_no_history.push(self.move_no);
+                self.generate_impossible_constraints();
+                self.generate_inferred_constraints();
+            },
+            _ => {},
+        }
+        // shove move_no into CollectiveConstraint
+        // post_increment: move_no is now the number of the next move
+        self.move_no += 1;
     }
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of private information
@@ -334,7 +437,6 @@ impl BackTrackCardCountManager {
                     self.constraint_history.push(significant_action);
                 }
                 self.move_no_history.push(self.move_no);
-                todo!("Calculation!")
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
@@ -342,7 +444,6 @@ impl BackTrackCardCountManager {
                 log::trace!("Adding move RevealRedraw");
                 self.constraint_history.push(significant_action);
                 self.move_no_history.push(self.move_no);
-                todo!("Calculation!")
             },
             ActionObservation::ExchangeDraw { player_id, card } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
@@ -350,7 +451,6 @@ impl BackTrackCardCountManager {
                 log::trace!("Adding move ExchangeChoice");
                 self.constraint_history.push(significant_action);
                 self.move_no_history.push(self.move_no);
-                todo!("Calculation!")
             },
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
                 let action_info = ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() };
@@ -358,7 +458,6 @@ impl BackTrackCardCountManager {
                 log::trace!("Adding move ExchangeChoice");
                 self.constraint_history.push(significant_action);
                 self.move_no_history.push(self.move_no);
-                todo!("Calculation!")
             },
             _ => {},
         }
@@ -433,6 +532,81 @@ impl BackTrackCardCountManager {
                 }
             }
         }
+    }
+    /// Generates based on impossible_constraints
+    fn generate_inferred_constraints(&mut self) {
+        self.latest_constraint_mut().inferred_constraints_mut().iter_mut().for_each(|v| v.clear());
+        for player in 0..6 {
+            if self.latest_constraint_mut().public_constraints()[player].len() == 0 {
+                if self.latest_constraint_mut().impossible_constraints_mut()[player].iter().map(|b| !*b as u8).sum::<u8>() == 1 {
+                    if let Some(card_num) = self.latest_constraint_mut().impossible_constraints_mut()[player].iter().position(|b| !*b) {
+                        self.latest_constraint_mut().inferred_constraints_mut()[player].push(Card::try_from(card_num as u8).unwrap());
+                        self.latest_constraint_mut().inferred_constraints_mut()[player].push(Card::try_from(card_num as u8).unwrap());
+                        continue;
+                    }
+                }
+                // if 1 card not impossible and all the rest impossible
+                let mut must_have_card: [u8; 5] = [3; 5];
+                'outer: for card_num_a in 0..5 {
+                    for card_num_b in card_num_a..5 {
+                        // AA AB BB
+                        // means nothing, I need to check if all have A or all have B
+                        // need count lol
+                        if self.latest_constraint_mut().impossible_constraints_2_mut()[player][card_num_a][card_num_b] {
+                            continue;
+                        }
+                        let mut next = [0u8; 5];
+                        next[card_num_a] += 1;
+                        next[card_num_b] += 1;
+                        must_have_card.iter_mut().zip(next.iter()).for_each(|(m, n)| *m = (*m).min(*n));
+                        if must_have_card == [0; 5] {
+                            break 'outer;
+                        }
+                    }
+                }
+                for (card_num, card_count) in must_have_card.iter().enumerate() {
+                    for _ in 0..*card_count {
+                        self.latest_constraint_mut().inferred_constraints_mut()[player].push(Card::try_from(card_num as u8).unwrap());
+                    }
+                } 
+            } else if self.latest_constraint_mut().public_constraints()[player].len() == 1 {
+                if self.latest_constraint_mut().impossible_constraints_mut()[player].iter().map(|b| !*b as u8).sum::<u8>() == 1 {
+                    if let Some(card_num) = self.latest_constraint_mut().impossible_constraints_mut()[player].iter().position(|b| !*b) {
+                        self.latest_constraint_mut().inferred_constraints_mut()[player].push(Card::try_from(card_num as u8).unwrap());
+                        continue;
+                    }
+                }
+            }
+        }
+        let mut must_have_card: [u8; 5] = [3; 5];
+        'outer: for card_num_a in 0..5 {
+            for card_num_b in card_num_a..5 {
+                for card_num_c in card_num_b..5 {
+                    // AA AB BB
+                    // means nothing, I need to check if all have A or all have B
+                    // need count lol
+                    if self.latest_constraint_mut().impossible_constraints_3_mut()[card_num_a][card_num_b][card_num_c] {
+                        continue;
+                    }
+                    let mut next = [0u8; 5];
+                    next[card_num_a] += 1;
+                    next[card_num_b] += 1;
+                    next[card_num_c] += 1;
+                    must_have_card.iter_mut().zip(next.iter()).for_each(|(m, n)| *m = (*m).min(*n));
+                    if must_have_card == [0; 5] {
+                        return
+                        // break 'outer;
+                    }
+                }
+            }
+        }
+        for (card_num, card_count) in must_have_card.iter().enumerate() {
+            for _ in 0..*card_count {
+                log::trace!("generate_inferred_constraints must_have_card: {:?}", must_have_card);
+                log::trace!("generate_inferred_constraints pushing: {:?}", Card::try_from(card_num as u8).unwrap());
+                self.latest_constraint_mut().inferred_constraints_mut()[6].push(Card::try_from(card_num as u8).unwrap());
+            }
+        } 
     }
     /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards at start of turn
     /// Assuming we won't be using this for ambassador?
@@ -1377,23 +1551,23 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
     }
 }
 
-pub trait CoupConstraintAnalysis {
-    /// Returns reference to latest Public Constraints
-    fn public_constraints(&self) -> &Vec<Vec<Card>>;
-    /// Returns reference to latest sorted Public Constraints
-    fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>>;
-    /// Returns reference to latest Inferred Constraints
-    fn inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
-    /// Returns reference to latest sorted Inferred Constraints
-    fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
-    /// Returns reference to array[player][card] storing whether a player can have a card alive
-    fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7];
-    /// Returns reference to array[player][card_i][card_j] storing whether a player can have a card_i and card_j alive
-    fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7];
-    /// Returns reference to array[card_i][card_j][card_k] storing whether pile can have card_i, card_j, and card_k
-    fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5];
-    /// Returns true if player can have a particular card alive
-    fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool;
-    /// Returns true if player can have a collection of cards alive
-    fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool;
-} 
+// pub trait CoupConstraintAnalysis {
+//     /// Returns reference to latest Public Constraints
+//     fn public_constraints(&self) -> &Vec<Vec<Card>>;
+//     /// Returns reference to latest sorted Public Constraints
+//     fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>>;
+//     /// Returns reference to latest Inferred Constraints
+//     fn inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
+//     /// Returns reference to latest sorted Inferred Constraints
+//     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
+//     /// Returns reference to array[player][card] storing whether a player can have a card alive
+//     fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7];
+//     /// Returns reference to array[player][card_i][card_j] storing whether a player can have a card_i and card_j alive
+//     fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7];
+//     /// Returns reference to array[card_i][card_j][card_k] storing whether pile can have card_i, card_j, and card_k
+//     fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5];
+//     /// Returns true if player can have a particular card alive
+//     fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool;
+//     /// Returns true if player can have a collection of cards alive
+//     fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool;
+// } 
