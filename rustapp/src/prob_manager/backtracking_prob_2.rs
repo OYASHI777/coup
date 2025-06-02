@@ -533,7 +533,7 @@ impl BackTrackCardCountManager {
             }
         }
         let mut must_have_card: [u8; 5] = [3; 5];
-        'outer: for card_num_a in 0..5 {
+        for card_num_a in 0..5 {
             for card_num_b in card_num_a..5 {
                 for card_num_c in card_num_b..5 {
                     // AA AB BB
