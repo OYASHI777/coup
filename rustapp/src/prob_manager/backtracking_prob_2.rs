@@ -15,7 +15,7 @@ pub struct SignificantAction {
     action_info: ActionInfo,
     meta_data: BacktrackMetaData,
 }
-
+// TODO: Implement analysis for SignificantAction
 impl SignificantAction {
     pub fn new(player: u8, action_info: ActionInfo, meta_data: BacktrackMetaData) -> Self {
         Self{
@@ -112,7 +112,61 @@ impl SignificantAction {
         format!("Player: {} {:?} public_constraints: {:?}, inferred_constraints: {:?}, impossible_constraints: {:?}", self.player, self.action_info, self.public_constraints(), self.inferred_constraints(), self.impossible_constraints())
     }
 }
+impl CoupConstraintAnalysis for BackTrackCardCountManager
+{
+    fn public_constraints(&self) -> &Vec<Vec<Card>> {
+        self.meta_data.public_constraints()
+    }
 
+    fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.meta_data.sort_public_constraints();
+        self.meta_data.public_constraints()
+    }
+
+    fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.meta_data.inferred_constraints()
+    }
+
+    fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.meta_data.sort_inferred_constraints();
+        self.meta_data.sorted_inferred_constraints()
+    }
+
+    fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7] {
+        self.meta_data.impossible_constraints()
+    }
+
+    fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7] {
+        self.meta_data.impossible_constraints_2()
+    }
+
+    fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5] {
+        self.meta_data.impossible_constraints_3()
+    }
+
+    fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool {
+        !self.meta_data.impossible_constraints()[player as usize][card as usize]
+    }
+
+    fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool {
+        if player < 6 {
+            if cards.len() == 2 {
+                return !self.meta_data.impossible_constraints_2()[player as usize][cards[0] as usize][cards[1] as usize]
+            } else if cards.len() == 1 {
+                return self.player_can_have_card_alive(player, cards[0])
+            }
+        } else if player == 6 {
+            if cards.len() == 1 {
+                return self.player_can_have_card_alive(player, cards[0])
+            } else if cards.len() == 2 {
+                return !self.meta_data.impossible_constraints_2()[player as usize][cards[0] as usize][cards[1] as usize]
+            } else if cards.len() == 3 {
+                return !self.meta_data.impossible_constraints_3()[cards[0] as usize][cards[1] as usize][cards[2] as usize]
+            }
+        }
+        false
+    }
+}
 // TODO: Store also a version of constraint_history but split by players
 // TODO: Improve analysis interface when using the manager... using last_constraint then the analysis is very clunky
 // So it is easier to know the first time a player does something
@@ -174,11 +228,11 @@ impl BackTrackCardCountManager {
         }
     }
     /// Gets the Latest Constraint
-    pub fn latest_constraint(&self) -> &C {
+    pub fn latest_constraint(&self) -> &SignificantAction {
         // Should never pop() to 0
         self.constraint_history.last().unwrap()
     }
-    pub fn latest_constraint_mut(&mut self) -> &mut C {
+    pub fn latest_constraint_mut(&mut self) -> &mut SignificantAction {
         // Should never pop() to 0
         self.constraint_history.last_mut().unwrap()
     }
@@ -326,37 +380,6 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
     fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool {
         self.latest_constraint().player_can_have_cards_alive(player, cards)
     }
-}
-
-impl CoupConstraint for BackTrackCardCountManager {
-    fn game_start_public() -> Self {
-        todo!("Get from collective constraint");
-    }
-    fn game_start_private(player: usize, cards: &[Card; 2]) -> Self{
-        todo!("Get from collective constraint");
-    }
-
-    fn add_move(&mut self, player_id: u8, action: ActionInfo) {
-        todo!("Get from collective constraint");
-    }
-
-    fn printlog(&self){
-        todo!("Get from collective constraint");
-    };
-}
-
-/// A trait providing the interface for a constraint
-pub trait CoupConstraint: Clone {
-    /// Initializes the state at beginning of the game
-    fn game_start_public() -> Self;
-    /// Initializes the state at beginning of the game
-    fn game_start_private(player: usize, cards: &[Card; 2]) -> Self;
-
-    /// Records a public move into the constraint.
-    fn add_move(&mut self, player_id: u8, action: ActionInfo);
-
-    /// Emit debug info about the constraint.
-    fn printlog(&self);
 }
 
 pub trait CoupConstraintAnalysis {

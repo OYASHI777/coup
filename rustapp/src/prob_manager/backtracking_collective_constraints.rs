@@ -365,9 +365,15 @@ impl BacktrackMetaData {
     pub fn public_constraints(&self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }
+    pub fn sort_public_constraints(&mut self) {
+        self.public_constraints.iter_mut().for_each(|v| v.sort_unstable());
+    }
     pub fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
         &self.inferred_constraints
     }   
+    pub fn sort_inferred_constraints(&mut self) {
+        self.inferred_constraints.iter_mut().for_each(|v| v.sort_unstable());
+    }
     pub fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
         self.inferred_constraints = inferred_constraints.clone();
     }   
