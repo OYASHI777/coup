@@ -15,19 +15,17 @@ pub mod prob_manager {
     pub mod backtracking_collective_constraints_lazy;
     pub mod backtracking_collective_constraints_lite;
     pub mod brute_prob_generic;
-    pub mod brute_prob;
     pub mod card_state;
     pub mod collective_constraint;
     pub mod compressed_group_constraint;
     pub mod constraint;
     mod coup_const;
-    pub mod loader;
     pub mod naive_prob;
     pub mod naive_sampler;
     pub mod path_dependent_collective_constraint;
     pub mod path_dependent_prob;
     pub mod permutation_generator;
-    pub mod prob_state_old;
+    pub mod recursion_fn;
 }
 pub mod history_public;
 pub mod string_utils;

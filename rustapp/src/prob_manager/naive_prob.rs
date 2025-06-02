@@ -20,7 +20,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
 use serde_json;
-use super::loader::{load_initial_hashmap, save_bson_hashmap};
 use rand::prelude::SliceRandom;
 use std::sync::Mutex;
 use core::sync::atomic::AtomicBool;
@@ -119,45 +118,6 @@ impl<'a> NaiveProb<'a> {
     pub fn prev_index(&self) -> usize {
         self.dist_from_last[self.dist_from_last.len() - 1]
     }
-    // pub fn sort_and_serialize_hashmap<K, V>(&self, hashmap: &HashMap<K, V>) -> String
-    // where
-    //     K: Serialize + Ord + std::hash::Hash,
-    //     V: Serialize,
-    // {   // Serializes Hashmap
-    //     let mut sorted_map: HashMap<&K, &V> = hashmap.iter().collect();
-    //     let mut sorted_pairs: Vec<(&K, &V)> = sorted_map.drain().collect();
-    //     sorted_pairs.sort_by_key(|&(k, _)| k);
-    //     serde_json::to_string(&sorted_pairs).unwrap()
-    // }
-    // pub fn make_key_belief(&self) -> String {
-    //     // Makes key to store the belief probabilities based on constraints
-    //     let latest_constraint: CollectiveConstraint = self.constraint_history[self.constraint_history.len() - self.prev_index()].clone().unwrap();
-    //     let public_constraint_key: String = self.sort_and_serialize_hashmap(&latest_constraint.pc_hm);
-    //     let joint_constraint_key: String = self.sort_and_serialize_hashmap(&latest_constraint.jc_hm);
-    //     let group_constraint_key: String = self.sort_and_serialize_hashmap(&latest_constraint.gc_hm);
-    //     let big_key: String = format!("{}_{}_{}", public_constraint_key, joint_constraint_key, group_constraint_key);
-    //     big_key
-    // }
-    // pub fn key_in_bson_hashmap(&mut self, key: String) -> bool {
-    //     if self.belief_hm.contains_key(&key){
-    //         true
-    //     } else {
-    //         false
-    //     }
-    // }
-    // pub fn add_to_hashmap(&mut self, key: String, belief_vec: Vec<f64>){
-    //     self.belief_hm.entry(key).or_insert(belief_vec);
-    // }
-    // pub fn load_bson_hashmap(&mut self){
-    //     self.belief_hm = load_initial_hashmap("naive_belief_prob_hashmap.bson");
-    //     log::trace!("{}", format!("Loaded up with len: {:?}", self.belief_hm.len()));
-    // }
-    // pub fn save_bson_hashmap(&mut self){
-    //     match save_bson_hashmap(&self.belief_hm, "naive_belief_prob_hashmap.bson"){
-    //         Ok(_) => log::info!("Saved HashMap of len: {}", self.belief_hm.len()),
-    //         Err(_) => log::info!("Failed to save HashMap"),
-    //     }
-    // }
     pub fn latest_constraint_is_empty(&self) -> bool {
         if self.constraint_history.len() == 0 {
             true
