@@ -282,6 +282,12 @@ impl BackTrackCardCountManager {
         self.constraint_history.push(significant_action);
         self.move_no_history.push(self.move_no);
     }
+    /// Update for added move
+    pub fn add_move_clone_all(&mut self, player_id: usize, action_info: ActionInfo) {
+        let significant_action = SignificantAction::new(player_id as u8, action_info, self.constraint_history.last().unwrap().clone_meta_data());
+        self.constraint_history.push(significant_action);
+        self.move_no_history.push(self.move_no);
+    }
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of public information but not private information
     pub fn push_ao_public(&mut self, ao: &ActionObservation){
@@ -309,10 +315,8 @@ impl BackTrackCardCountManager {
             },
             ActionObservation::ExchangeChoice { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
                 log::trace!("Adding move ExchangeChoice");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                self.add_move_clone_public(*player_id, action_info);
                 self.generate_impossible_constraints();
                 self.generate_inferred_constraints();
             },
@@ -345,10 +349,8 @@ impl BackTrackCardCountManager {
             },
             ActionObservation::ExchangeChoice { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
                 log::trace!("Adding move ExchangeChoice");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                self.add_move_clone_public(*player_id, action_info);
             },
             _ => {},
         }
@@ -375,19 +377,15 @@ impl BackTrackCardCountManager {
             },
             ActionObservation::ExchangeDraw { player_id, card } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
                 log::trace!("Adding move ExchangeChoice");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                self.add_move_clone_public(*player_id, action_info);
                 self.generate_impossible_constraints();
                 self.generate_inferred_constraints();
             },
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
                 let action_info = ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
                 log::trace!("Adding move ExchangeChoice");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                self.add_move_clone_public(*player_id, action_info);
                 self.generate_impossible_constraints();
                 self.generate_inferred_constraints();
             },
@@ -412,17 +410,13 @@ impl BackTrackCardCountManager {
             },
             ActionObservation::ExchangeDraw { player_id, card } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
                 log::trace!("Adding move ExchangeChoice");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                self.add_move_clone_public(*player_id, action_info);
             },
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
                 let action_info = ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
                 log::trace!("Adding move ExchangeChoice");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                self.add_move_clone_public(*player_id, action_info);
             },
             _ => {},
         }
