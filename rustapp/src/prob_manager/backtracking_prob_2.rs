@@ -276,6 +276,12 @@ impl BackTrackCardCountManager {
         }
         self.move_no_history.push(self.move_no);
     }
+    /// Update for added move
+    pub fn add_move_clone_public(&mut self, player_id: usize, action_info: ActionInfo) {
+        let significant_action = SignificantAction::new(player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
+        self.constraint_history.push(significant_action);
+        self.move_no_history.push(self.move_no);
+    }
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of public information but not private information
     pub fn push_ao_public(&mut self, ao: &ActionObservation){
@@ -288,10 +294,8 @@ impl BackTrackCardCountManager {
             },
             ActionObservation::RevealRedraw { player_id, reveal, .. } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
                 log::trace!("Adding move RevealRedraw");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                self.add_move_clone_public(*player_id, action_info);
                 self.generate_impossible_constraints();
                 self.generate_inferred_constraints();
             },
@@ -328,10 +332,8 @@ impl BackTrackCardCountManager {
             },
             ActionObservation::RevealRedraw { player_id, reveal, .. } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
                 log::trace!("Adding move RevealRedraw");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                self.add_move_clone_public(*player_id, action_info);
             },
             ActionObservation::ExchangeDraw { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
@@ -366,10 +368,8 @@ impl BackTrackCardCountManager {
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
                 log::trace!("Adding move RevealRedraw");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                self.add_move_clone_public(*player_id, action_info);
                 self.generate_impossible_constraints();
                 self.generate_inferred_constraints();
             },
@@ -407,10 +407,8 @@ impl BackTrackCardCountManager {
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
-                let significant_action = SignificantAction::new(*player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
                 log::trace!("Adding move RevealRedraw");
-                self.constraint_history.push(significant_action);
-                self.move_no_history.push(self.move_no);
+                self.add_move_clone_public(*player_id, action_info);
             },
             ActionObservation::ExchangeDraw { player_id, card } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
