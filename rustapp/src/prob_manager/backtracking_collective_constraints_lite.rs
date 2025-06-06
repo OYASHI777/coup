@@ -1578,7 +1578,7 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLite {
         !self.impossible_constraints[player][card as usize]
     }
     fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool{
-        unimplemented!()
+        self.player_can_have_card_alive(player, card)
     }
     
     fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool{
@@ -1600,6 +1600,6 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLite {
         false
     }
     fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool{
-        unimplemented!()
+        self.player_can_have_cards_alive(player, cards)
     }
 }
