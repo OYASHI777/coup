@@ -991,17 +991,16 @@ impl BackTrackCardCountManager {
                 return false
             }
         }
-        // This Check is guaranteed and so commented out for now
-        // for player in 0..6 {
-        //     if public_constraints[player].len() + inferred_constraints[player].len() > 2 {
-        //         log::trace!("is_valid_combination player {} has too many cards", player);
-        //         return false
-        //     }
-        // }
-        // if public_constraints[6].len() + inferred_constraints[6].len() > 3 {
-        //     log::trace!("is_valid_combination pile has too many cards");
-        //     return false
-        // }
+        for player in 0..6 {
+            if public_constraints[player].len() + inferred_constraints[player].len() > 2 {
+                log::trace!("is_valid_combination player {} has too many cards", player);
+                return false
+            }
+        }
+        if public_constraints[6].len() + inferred_constraints[6].len() > 3 {
+            log::trace!("is_valid_combination pile has too many cards");
+            return false
+        }
         for player in 0..7 {
             if inferred_constraints[player].len() == 1 && self.constraint_history[index_loop].impossible_constraints()[player][inferred_constraints[player][0] as usize]{
                 return false
@@ -1014,7 +1013,24 @@ impl BackTrackCardCountManager {
             return false
         }
         // =================== Required to test inferred at Start! ======================
-        for player in 0..7 {
+        if let ActionInfo::StartInferred{ .. } = self.constraint_history[index_loop].action_info() {
+            for player in 0..6 {
+                let mut current_card_counts: [u8; 5] = [0; 5];
+                inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
+                
+                let mut required_card_counts: [u8; 5] = [0; 5];
+                self.constraint_history[index_loop].inferred_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
+                self.constraint_history[index_loop].public_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
+    
+                let mut total_count : u8 = 0;
+                current_card_counts.iter().zip(required_card_counts.iter()).for_each(|(cur, req)| total_count += *cur.max(req));
+                let fulfilled = total_count <= 2;
+                if !fulfilled {
+                    log::trace!("is_valid_combination player {} failed to fulfil previous state!", player);
+                    return false
+                }
+            }
+            let player = 6;
             let mut current_card_counts: [u8; 5] = [0; 5];
             inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
             
@@ -1024,11 +1040,7 @@ impl BackTrackCardCountManager {
 
             let mut total_count : u8 = 0;
             current_card_counts.iter().zip(required_card_counts.iter()).for_each(|(cur, req)| total_count += *cur.max(req));
-            let fulfilled = if player == 6 {
-                total_count <= 3
-            } else {
-                total_count <= 2
-            };
+            let fulfilled = total_count <= 3;
             if !fulfilled {
                 log::trace!("is_valid_combination player {} failed to fulfil previous state!", player);
                 return false
