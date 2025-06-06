@@ -488,7 +488,7 @@ impl BackTrackCardCountManager {
         }
     }
     /// Generates based on impossible_constraints
-    fn generate_inferred_constraints(&mut self) {
+    pub fn generate_inferred_constraints(&mut self) {
         self.latest_constraint_mut().inferred_constraints_mut().iter_mut().for_each(|v| v.clear());
         for player in 0..6 {
             if self.latest_constraint_mut().public_constraints()[player].len() == 0 {
