@@ -12,7 +12,7 @@ use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName, Bac
 use super::coup_const::MAX_GAME_LENGTH;
 // TODO: Shift this here!
 // use super::backtracking_prob::CoupConstraintAnalysis;
-use crate::traits::prob_manager::coup_analysis::CoupConstraintAnalysis;
+use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 
 #[derive(Clone, Debug)]
 pub struct SignificantAction {
@@ -139,7 +139,7 @@ impl SignificantAction {
         log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints()));
     }
 }
-impl CoupConstraintAnalysis for SignificantAction
+impl CoupPossibilityAnalysis for SignificantAction
 {
     fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.meta_data.public_constraints()
@@ -1538,7 +1538,7 @@ impl BackTrackCardCountManager {
 }
 
 
-impl CoupConstraintAnalysis for BackTrackCardCountManager
+impl CoupPossibilityAnalysis for BackTrackCardCountManager
 {
     fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.latest_constraint_mut().public_constraints()

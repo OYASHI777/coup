@@ -7,7 +7,7 @@
 use std::hash::Hash;
 use std::fmt::{Debug, Display};
 use crate::history_public::{Card, AOName, ActionObservation};
-use crate::traits::prob_manager::coup_analysis::CoupConstraintAnalysis;
+use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 use crate::traits::prob_manager::card_state::CardPermState;
 use crate::prob_manager::coup_const::MAX_PERM_STATES;
 use ahash::AHashSet;
@@ -648,7 +648,7 @@ where
     }
 }
 
-impl<T> CoupConstraintAnalysis for BruteCardCountManagerGeneric<T> 
+impl<T> CoupPossibilityAnalysis for BruteCardCountManagerGeneric<T> 
 where
     T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
 {

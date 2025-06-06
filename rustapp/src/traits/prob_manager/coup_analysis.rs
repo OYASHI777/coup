@@ -1,5 +1,5 @@
 use crate::history_public::{ActionObservation, Card};
-pub trait CoupConstraintAnalysis {
+pub trait CoupPossibilityAnalysis {
     /// Returns reference to latest Public Constraints
     fn public_constraints(&mut self) -> &Vec<Vec<Card>>;
     /// Returns reference to latest sorted Public Constraints

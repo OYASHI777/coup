@@ -1,5 +1,5 @@
 use crate::history_public::{AOName, ActionObservation, Card};
-use crate::traits::prob_manager::coup_analysis::CoupConstraintAnalysis;
+use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 use super::{backtracking_prob::CoupConstraint, collective_constraint::CompressedCollectiveConstraint, compressed_group_constraint::CompressedGroupConstraint};
 use ahash::AHashSet;
 use crossbeam::channel::after;
@@ -2681,7 +2681,7 @@ impl CoupConstraint for BackTrackCollectiveConstraint {
     
 
 }
-impl CoupConstraintAnalysis for BackTrackCollectiveConstraint {
+impl CoupPossibilityAnalysis for BackTrackCollectiveConstraint {
     fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }

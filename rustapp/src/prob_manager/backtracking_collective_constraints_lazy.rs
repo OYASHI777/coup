@@ -1,5 +1,5 @@
 use crate::history_public::{AOName, ActionObservation, Card};
-use crate::traits::prob_manager::coup_analysis::CoupConstraintAnalysis;
+use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 use super::{backtracking_prob::CoupConstraint, collective_constraint::CompressedCollectiveConstraint, compressed_group_constraint::CompressedGroupConstraint};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
 use std::{marker::Copy, path::Path};
@@ -1541,7 +1541,7 @@ impl CoupConstraint for BackTrackCollectiveConstraintLazy {
     }
     
 }
-impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLazy {
+impl CoupPossibilityAnalysis for BackTrackCollectiveConstraintLazy {
     fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }

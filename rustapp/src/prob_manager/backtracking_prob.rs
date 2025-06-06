@@ -5,7 +5,7 @@
 // Tried instead to save into hashmap and store in bson
 
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
-use crate::traits::prob_manager::coup_analysis::CoupConstraintAnalysis;
+use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 use crate::history_public::{Card, AOName, ActionObservation};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
 // TODO: Store also a version of constraint_history but split by players
@@ -189,9 +189,9 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
 }
 
 
-impl<C> CoupConstraintAnalysis for BackTrackCardCountManager<C>
+impl<C> CoupPossibilityAnalysis for BackTrackCardCountManager<C>
 where
-    C: CoupConstraint + CoupConstraintAnalysis,
+    C: CoupConstraint + CoupPossibilityAnalysis,
 {
     fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.latest_constraint_mut().public_constraints()

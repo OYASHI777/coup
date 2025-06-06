@@ -11,7 +11,7 @@ use rustapp::prob_manager::card_state::card_state_u64::{self, CardStateu64};
 use rustapp::prob_manager::compressed_group_constraint::{CompressedGroupConstraint};
 use rustapp::prob_manager::collective_constraint::{CompressedCollectiveConstraint};
 use rustapp::prob_manager::path_dependent_prob::PathDependentCardCountManager;
-use rustapp::traits::prob_manager::coup_analysis::CoupConstraintAnalysis;
+use rustapp::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
@@ -78,7 +78,7 @@ pub fn test_variant_recurse() {
 }
 pub fn bt_test<C>() 
     where
-        C: CoupConstraint + CoupConstraintAnalysis,
+        C: CoupConstraint + CoupPossibilityAnalysis,
 {
     // let rr_0 = vec![Steal { player_id: 0, opposing_player_id: 3, amount: 2 }, CollectiveChallenge { participants: [false, true, true, true, false, true], opposing_player_id: 0, final_actioner: 1 }, Discard { player_id: 0, card: [Assassin, Assassin], no_cards: 1 }, ForeignAid { player_id: 1 }, CollectiveBlock { participants: [true, false, true, true, true, false], opposing_player_id: 1, final_actioner: 0 }, CollectiveChallenge { participants: [false, false, true, false, false, true], opposing_player_id: 0, final_actioner: 5 }, Discard { player_id: 0, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 2, final_actioner: 4 }, RevealRedraw { player_id: 2, reveal: Captain }, Discard { player_id: 4, card: [Ambassador, Ambassador], no_cards: 1 }, BlockSteal { player_id: 4, opposing_player_id: 4, card: Captain }, Steal { player_id: 3, opposing_player_id: 4, amount: 0 }, CollectiveChallenge { participants: [false, false, false, false, true, false], opposing_player_id: 3, final_actioner: 4 }, Discard { player_id: 3, card: [Assassin, Assassin], no_cards: 1 }, Steal { player_id: 4, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [false, false, true, true, false, true], opposing_player_id: 4, final_actioner: 3 }, RevealRedraw { player_id: 4, reveal: Captain }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, BlockSteal { player_id: 2, opposing_player_id: 4, card: Ambassador }, CollectiveChallenge { participants: [false, true, false, false, true, true], opposing_player_id: 2, final_actioner: 4 }, Discard { player_id: 2, card: [Assassin, Assassin], no_cards: 1 }, ForeignAid { player_id: 5 }, CollectiveBlock { participants: [false, false, false, false, true, false], opposing_player_id: 5, final_actioner: 4 }, CollectiveChallenge { participants: [false, true, false, false, false, true], opposing_player_id: 4, final_actioner: 1 }, RevealRedraw { player_id: 4, reveal: Duke }, Discard { player_id: 1, card: [Ambassador, Ambassador], no_cards: 1 }, Assassinate { player_id: 1, opposing_player_id: 5 }, CollectiveChallenge { participants: [false, false, false, false, true, false], opposing_player_id: 1, final_actioner: 4 }, Discard { player_id: 1, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [false, false, false, false, true, true], opposing_player_id: 2, final_actioner: 4 }, Discard { player_id: 2, card: [Contessa, Contessa], no_cards: 1 }, Income { player_id: 4 }, Steal { player_id: 5, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [false, false, false, false, true, false], opposing_player_id: 5, final_actioner: 4 }, RevealRedraw { player_id: 5, reveal: Captain }];
     // let rr_imp_0 = vec![ForeignAid { player_id: 0 }, CollectiveBlock { participants: [false, false, true, true, true, false], opposing_player_id: 0, final_actioner: 4 }, CollectiveChallenge { participants: [false, true, false, false, false, false], opposing_player_id: 4, final_actioner: 1 }, Discard { player_id: 4, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 2, amount: 2 }, CollectiveChallenge { participants: [true, false, false, false, true, false], opposing_player_id: 1, final_actioner: 0 }, RevealRedraw { player_id: 1, reveal: Captain }, Discard { player_id: 0, card: [Assassin, Assassin], no_cards: 1 }, BlockSteal { player_id: 2, opposing_player_id: 1, card: Captain }, CollectiveChallenge { participants: [true, false, false, true, true, true], opposing_player_id: 2, final_actioner: 0 }, RevealRedraw { player_id: 2, reveal: Captain }, Discard { player_id: 0, card: [Ambassador, Ambassador], no_cards: 1 }, Steal { player_id: 2, opposing_player_id: 5, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, true], opposing_player_id: 2, final_actioner: 5 }, RevealRedraw { player_id: 2, reveal: Captain }, Discard { player_id: 5, card: [Ambassador, Ambassador], no_cards: 1 }, BlockSteal { player_id: 5, opposing_player_id: 5, card: Captain }, Steal { player_id: 3, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [false, true, true, false, true, true], opposing_player_id: 3, final_actioner: 2 }, Discard { player_id: 3, card: [Contessa, Contessa], no_cards: 1 }, Income { player_id: 4 }, Steal { player_id: 5, opposing_player_id: 1, amount: 2 }, CollectiveChallenge { participants: [false, false, false, true, true, false], opposing_player_id: 5, final_actioner: 3 }, Discard { player_id: 5, card: [Contessa, Contessa], no_cards: 1 }, Steal { player_id: 1, opposing_player_id: 4, amount: 2 }, CollectiveChallenge { participants: [false, false, true, true, true, false], opposing_player_id: 1, final_actioner: 2 }, Discard { player_id: 1, card: [Assassin, Assassin], no_cards: 1 }, Assassinate { player_id: 2, opposing_player_id: 4 }, CollectiveChallenge { participants: [false, true, false, true, true, false], opposing_player_id: 2, final_actioner: 3 }, Discard { player_id: 2, card: [Captain, Captain], no_cards: 1 }, Income { player_id: 3 }, Assassinate { player_id: 4, opposing_player_id: 2 }, CollectiveChallenge { participants: [false, true, true, true, false, false], opposing_player_id: 4, final_actioner: 2 }, Discard { player_id: 4, card: [Captain, Captain], no_cards: 1 }];
@@ -509,7 +509,7 @@ impl Stats {
 }
 pub fn game_rnd_constraint_bt_mt<C>(num_threads: usize, game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: bool, print_frequency: usize, min_dead_check: usize, bool_lazy: bool)
     where
-        C: CoupConstraint + CoupConstraintAnalysis,
+        C: CoupConstraint + CoupPossibilityAnalysis,
 {
     let replay_file = Arc::new(Mutex::new(
         OpenOptions::new()
@@ -589,8 +589,8 @@ pub fn game_rnd_constraint_bt_mt<C>(num_threads: usize, game_no: usize, bool_kno
 }
 pub fn game_rnd_constraint_bt_mt_g<V, T>(num_threads: usize, game_no: usize, bool_know_priv_info: bool, print_frequency: usize, min_dead_check: usize)
     where
-        V: CoupConstraint + CoupConstraintAnalysis,
-        T: CoupConstraint + CoupConstraintAnalysis,
+        V: CoupConstraint + CoupPossibilityAnalysis,
+        T: CoupConstraint + CoupPossibilityAnalysis,
 {
     let replay_file = Arc::new(Mutex::new(
         OpenOptions::new()
@@ -665,7 +665,7 @@ pub fn game_rnd_constraint_bt_mt_g<V, T>(num_threads: usize, game_no: usize, boo
 }
 pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, min_dead_check: usize, tx: Sender<Stats>)
     where
-        C: CoupConstraint + CoupConstraintAnalysis,
+        C: CoupConstraint + CoupPossibilityAnalysis,
 {
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
@@ -1755,8 +1755,8 @@ pub fn retain_legal_moves_with_card_constraints(history: &History, new_moves: &m
 // }
 pub fn game_rnd_constraint_bt_st_g<V, T>(game_no: usize, bool_know_priv_info: bool, min_dead_check: usize, tx: Sender<Stats>)
     where
-        V: CoupConstraint + CoupConstraintAnalysis,
-        T: CoupConstraint + CoupConstraintAnalysis,
+        V: CoupConstraint + CoupPossibilityAnalysis,
+        T: CoupConstraint + CoupPossibilityAnalysis,
 {
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
@@ -1880,7 +1880,7 @@ pub fn game_rnd_constraint_bt_st_g<V, T>(game_no: usize, bool_know_priv_info: bo
 }
 pub fn game_rnd_constraint_bt_generic_bench<C>(game_no : usize, bool_know_priv_info: bool) 
     where
-        C: CoupConstraint + CoupConstraintAnalysis,
+        C: CoupConstraint + CoupPossibilityAnalysis,
 {
     let mut game: usize = 0;
     let mut bit_prob: BackTrackCardCountManager<C> = BackTrackCardCountManager::new();
