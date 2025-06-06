@@ -26,13 +26,15 @@ where
     impossible_constraints: [[bool; 5]; 7],
     impossible_constraints_2: [[[bool; 5]; 5]; 7],
     impossible_constraints_3: [[[bool; 5]; 5]; 5],
+    auto_calculate_impossible_constraints_2: bool,
+    auto_calculate_impossible_constraints_3: bool,
 }
 impl<T> BruteCardCountManagerGeneric<T> 
 where
     T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
 {
     /// Constructor
-    pub fn new() -> Self {
+    pub fn new(auto_calc_2: bool, auto_calc_3: bool) -> Self {
         let history = Vec::with_capacity(60);
         let all_states: Vec<T> = T::gen_table_combinations();
         let calculated_states: Vec<T> = all_states.clone().into_iter().collect();
@@ -53,6 +55,8 @@ where
             impossible_constraints,
             impossible_constraints_2,
             impossible_constraints_3,
+            auto_calculate_impossible_constraints_2: auto_calc_2,
+            auto_calculate_impossible_constraints_3: auto_calc_3,
         }
     }
     /// Adding private player starting hand
@@ -600,7 +604,12 @@ where
         for vec in self.inferred_constraints.iter_mut() {
             vec.sort_unstable();
         }
-
+        if self.auto_calculate_impossible_constraints_2 {
+            self.set_impossible_constraints_2();
+        }
+        if self.auto_calculate_impossible_constraints_3 {
+            self.set_impossible_constraints_3();
+        }
     }
     /// Returns all the dead cards for each player that we are certain they have
     /// Assumes calculates states align with latest constraints
@@ -640,32 +649,37 @@ impl<T> CoupConstraintAnalysis for BruteCardCountManagerGeneric<T>
 where
     T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
 {
+    /// Returns all the dead cards for each player that we are certain they have
+    /// Assumes calculates states align with latest constraints
     fn public_constraints(&self) -> &Vec<Vec<Card>> {
-        todo!()
+        &self.public_constraints
     }
 
     fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>> {
-        todo!()
+        // Sorted in update_constraints
+        &self.public_constraints
     }
-
+    /// Returns all the dead cards for each player that we are certain they have
+    /// Assumes calculates states align with latest constraints
     fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
-        todo!()
+        &self.inferred_constraints
     }
 
     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
-        todo!()
+        // Sorted in update_constraints
+        &self.inferred_constraints
     }
 
     fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7] {
-        todo!()
+        &self.impossible_constraints
     }
 
     fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7] {
-        todo!()
+        &self.impossible_constraints_2
     }
 
     fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5] {
-        todo!()
+        &self.impossible_constraints_3
     }
 
     fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool {

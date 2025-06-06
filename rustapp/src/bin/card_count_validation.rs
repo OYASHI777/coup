@@ -657,7 +657,7 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
 {
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
-    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
+    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(false, false);
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
     let mut bit_prob: BackTrackCardCountManager<C> = BackTrackCardCountManager::new();
@@ -801,7 +801,7 @@ pub fn game_rnd_constraint_bt2_st(game_no: usize, bool_know_priv_info: bool, boo
 {
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
-    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
+    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(false, false);
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
@@ -947,7 +947,7 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
 {
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
-    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
+    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(false, false);
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
@@ -1090,7 +1090,7 @@ pub fn game_rnd_constraint_bt_st_debug<C>(game_no: usize, bool_know_priv_info: b
 {
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
-    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
+    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(false, false);
     let mut bit_prob: BackTrackCardCountManager<C> = BackTrackCardCountManager::new();
     while game < game_no {
         if game % print_frequency == 0 {
@@ -1859,7 +1859,7 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
     }
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
-    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
+    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(true, true);
     let mut bit_prob: BackTrackCardCountManager<C> = BackTrackCardCountManager::new();
     if log_bool {
         clear_log().expect("failed to clear log");
@@ -1909,8 +1909,8 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
             let validated_public_constraints = prob.validated_public_constraints();
             let validated_inferred_constraints = prob.validated_inferred_constraints();
             let validated_impossible_constraints = prob.validated_impossible_constraints();
-            prob.set_impossible_constraints_2();
-            prob.set_impossible_constraints_3();
+            // prob.set_impossible_constraints_2();
+            // prob.set_impossible_constraints_3();
             let validated_impossible_constraints_2 = prob.validated_impossible_constraints_2();
             let validated_impossible_constraints_3 = prob.validated_impossible_constraints_3();
             let test_public_constraints = bit_prob.sorted_public_constraints().clone();
