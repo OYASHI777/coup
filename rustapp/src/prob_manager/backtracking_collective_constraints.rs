@@ -362,6 +362,7 @@ impl BacktrackMetaData {
             impossible_constraints_3, 
         }
     }
+    /// Clones meta_data but only with public data copied
     pub fn clone_public(&self) -> Self {
         let public_constraints: Vec<Vec<Card>> = self.public_constraints.clone(); 
         let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(2),Vec::with_capacity(3)]; 

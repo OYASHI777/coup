@@ -1013,39 +1013,41 @@ impl BackTrackCardCountManager {
             return false
         }
         // =================== Required to test inferred at Start! ======================
-        if let ActionInfo::StartInferred{ .. } = self.constraint_history[index_loop].action_info() {
-            for player in 0..6 {
-                let mut current_card_counts: [u8; 5] = [0; 5];
-                inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
+        // This is Implemented in recursion
+        // But this is the general form that can be used to check any particular state
+        // if let ActionInfo::StartInferred{ .. } = self.constraint_history[index_loop].action_info() {
+        //     for player in 0..6 {
+        //         let mut current_card_counts: [u8; 5] = [0; 5];
+        //         inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
                 
-                let mut required_card_counts: [u8; 5] = [0; 5];
-                self.constraint_history[index_loop].inferred_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
-                self.constraint_history[index_loop].public_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
+        //         let mut required_card_counts: [u8; 5] = [0; 5];
+        //         self.constraint_history[index_loop].inferred_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
+        //         self.constraint_history[index_loop].public_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
     
-                let mut total_count : u8 = 0;
-                current_card_counts.iter().zip(required_card_counts.iter()).for_each(|(cur, req)| total_count += *cur.max(req));
-                let fulfilled = total_count <= 2;
-                if !fulfilled {
-                    log::trace!("is_valid_combination player {} failed to fulfil previous state!", player);
-                    return false
-                }
-            }
-            let player = 6;
-            let mut current_card_counts: [u8; 5] = [0; 5];
-            inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
+        //         let mut total_count : u8 = 0;
+        //         current_card_counts.iter().zip(required_card_counts.iter()).for_each(|(cur, req)| total_count += *cur.max(req));
+        //         let fulfilled = total_count <= 2;
+        //         if !fulfilled {
+        //             log::trace!("is_valid_combination player {} failed to fulfil previous state!", player);
+        //             return false
+        //         }
+        //     }
+        //     let player = 6;
+        //     let mut current_card_counts: [u8; 5] = [0; 5];
+        //     inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
             
-            let mut required_card_counts: [u8; 5] = [0; 5];
-            self.constraint_history[index_loop].inferred_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
-            self.constraint_history[index_loop].public_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
+        //     let mut required_card_counts: [u8; 5] = [0; 5];
+        //     self.constraint_history[index_loop].inferred_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
+        //     self.constraint_history[index_loop].public_constraints()[player].iter().for_each(|c| required_card_counts[*c as usize] += 1);
 
-            let mut total_count : u8 = 0;
-            current_card_counts.iter().zip(required_card_counts.iter()).for_each(|(cur, req)| total_count += *cur.max(req));
-            let fulfilled = total_count <= 3;
-            if !fulfilled {
-                log::trace!("is_valid_combination player {} failed to fulfil previous state!", player);
-                return false
-            }
-        }
+        //     let mut total_count : u8 = 0;
+        //     current_card_counts.iter().zip(required_card_counts.iter()).for_each(|(cur, req)| total_count += *cur.max(req));
+        //     let fulfilled = total_count <= 3;
+        //     if !fulfilled {
+        //         log::trace!("is_valid_combination player {} failed to fulfil previous state!", player);
+        //         return false
+        //     }
+        // }
         true
     }
     pub fn recurse_variants_exchange_public(&self, index_loop: usize, player_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {

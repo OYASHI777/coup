@@ -30,13 +30,14 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";
 fn main() {
     let game_no = 100000000;
     let log_bool = true;
-    let bool_know_priv_info = false;
+    let bool_know_priv_info = true;
+    let bool_skip_exchange = false;
+    let bool_lazy =  false;
     let print_frequency: usize = 100;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
-    let bool_lazy =  true;
-    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, print_frequency, min_dead_check, bool_lazy);
+    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
     // game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
     
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
@@ -492,7 +493,7 @@ impl Stats {
         println!("Bad Moves Pushed: {}/{}", self.pushed_bad_move, self.games);
     }
 }
-pub fn game_rnd_constraint_bt_mt<C>(num_threads: usize, game_no: usize, bool_know_priv_info: bool, print_frequency: usize, min_dead_check: usize, bool_lazy: bool)
+pub fn game_rnd_constraint_bt_mt<C>(num_threads: usize, game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: bool, print_frequency: usize, min_dead_check: usize, bool_lazy: bool)
     where
         C: CoupConstraint + CoupConstraintAnalysis,
 {
@@ -518,9 +519,9 @@ pub fn game_rnd_constraint_bt_mt<C>(num_threads: usize, game_no: usize, bool_kno
         let handle = thread::spawn(move || {
             // game_rnd_constraint_bt_st::<C>(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
             if bool_lazy {
-                game_rnd_constraint_bt2_st_lazy(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
+                game_rnd_constraint_bt2_st_lazy(thread_games, thread_bool_know_priv_info, bool_skip_exchange, thread_min_dead_check, thread_tx);
             } else {
-                game_rnd_constraint_bt2_st(thread_games, thread_bool_know_priv_info, thread_min_dead_check, thread_tx);
+                game_rnd_constraint_bt2_st(thread_games, thread_bool_know_priv_info, bool_skip_exchange, thread_min_dead_check, thread_tx);
             }
         });
         handles.push(handle);
@@ -794,7 +795,7 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
         game += 1;
     }
 }
-pub fn game_rnd_constraint_bt2_st(game_no: usize, bool_know_priv_info: bool, min_dead_check: usize, tx: Sender<Stats>)
+pub fn game_rnd_constraint_bt2_st(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: bool, min_dead_check: usize, tx: Sender<Stats>)
 {
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
@@ -834,7 +835,9 @@ pub fn game_rnd_constraint_bt2_st(game_no: usize, bool_know_priv_info: bool, min
             // TODO: create generate_legal_moves(None) for public and private
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-            // new_moves.retain(|m| m.name() != AOName::Exchange);
+            if bool_skip_exchange {
+                new_moves.retain(|m| m.name() != AOName::Exchange);
+            }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, Some(private_player));
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
@@ -938,7 +941,7 @@ pub fn game_rnd_constraint_bt2_st(game_no: usize, bool_know_priv_info: bool, min
         game += 1;
     }
 }
-pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool, min_dead_check: usize, tx: Sender<Stats>)
+pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: bool, min_dead_check: usize, tx: Sender<Stats>)
 {
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
@@ -979,7 +982,9 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
             // TODO: create generate_legal_moves(None) for public and private
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-            // new_moves.retain(|m| m.name() != AOName::Exchange);
+            if bool_skip_exchange {
+                new_moves.retain(|m| m.name() != AOName::Exchange);
+            }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, Some(private_player));
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
