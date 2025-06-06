@@ -32,7 +32,7 @@ fn main() {
     let log_bool = true;
     let bool_know_priv_info = true;
     let bool_skip_exchange = false;
-    let bool_lazy =  true;
+    let bool_lazy =  false;
     let print_frequency: usize = 100;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
@@ -45,9 +45,9 @@ fn main() {
     // TODO: Make a Lite with Lazy Inferred Constraints
     // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
     game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(10000, bool_know_priv_info);
-    game_rnd_constraint_bt_bench(10000, bool_know_priv_info);
-    game_rnd_constraint_bt_bench_lazy(10000, bool_know_priv_info);
-    game_rnd_constraint_bt_bench_control(10000, bool_know_priv_info);
+    game_rnd_constraint_bt_bench(100000, bool_know_priv_info);
+    game_rnd_constraint_bt_bench_lazy(100000, bool_know_priv_info);
+    // game_rnd_constraint_bt_bench_control(10000, bool_know_priv_info);
     // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
     // game_rnd_constraint_brute_bench(10);
     // test_brute(game_no, bool_know_priv_info, print_frequency, log_bool);
