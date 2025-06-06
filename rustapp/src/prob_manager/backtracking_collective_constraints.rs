@@ -2682,7 +2682,7 @@ impl CoupConstraint for BackTrackCollectiveConstraint {
 
 }
 impl CoupConstraintAnalysis for BackTrackCollectiveConstraint {
-    fn public_constraints(&self) -> &Vec<Vec<Card>> {
+    fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }
 
@@ -2712,14 +2712,14 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraint {
         &self.impossible_constraints_3
     }
     
-    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool{
+    fn player_can_have_card_alive(&mut self, player: usize, card: Card) -> bool{
         !self.impossible_constraints[player][card as usize]
     }
-    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool{
+    fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool{
         self.player_can_have_card_alive(player, card)
     }
     
-    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool{
+    fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool{
         if player < 6 {
             if cards.len() == 2 {
                 return !self.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize]
@@ -2737,10 +2737,10 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraint {
         }
         false
     }
-    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool{
+    fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool{
         self.player_can_have_cards_alive(player, cards)
     }
-    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         match action_observation {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 if *no_cards == 1 {
@@ -2755,7 +2755,7 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraint {
             _ => true,
         }
     }
-    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_private(&mut self, action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
 }

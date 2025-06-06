@@ -141,7 +141,7 @@ impl SignificantAction {
 }
 impl CoupConstraintAnalysis for SignificantAction
 {
-    fn public_constraints(&self) -> &Vec<Vec<Card>> {
+    fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.meta_data.public_constraints()
     }
 
@@ -170,15 +170,15 @@ impl CoupConstraintAnalysis for SignificantAction
         self.meta_data.impossible_constraints_3()
     }
 
-    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool {
+    fn player_can_have_card_alive(&mut self, player: usize, card: Card) -> bool {
         !self.meta_data.impossible_constraints()[player][card as usize]
     }
     
-    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool {
+    fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool {
         unimplemented!()
     }
 
-    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool {
+    fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool {
         if player < 6 {
             if cards.len() == 2 {
                 return !self.meta_data.impossible_constraints_2()[player][cards[0] as usize][cards[1] as usize]
@@ -196,15 +196,15 @@ impl CoupConstraintAnalysis for SignificantAction
         }
         false
     }
-    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
+    fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool {
         unimplemented!()
     }
     
-    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
     
-    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_private(&mut self, action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
 }
@@ -1539,8 +1539,8 @@ impl BackTrackCardCountManager {
 
 impl CoupConstraintAnalysis for BackTrackCardCountManager
 {
-    fn public_constraints(&self) -> &Vec<Vec<Card>> {
-        self.latest_constraint().public_constraints()
+    fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.latest_constraint_mut().public_constraints()
     }
 
     fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>> {
@@ -1567,20 +1567,20 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
         self.latest_constraint_mut().player_impossible_constraints_triple()
     }
 
-    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool {
-        self.latest_constraint().player_can_have_card_alive(player, card)
+    fn player_can_have_card_alive(&mut self, player: usize, card: Card) -> bool {
+        self.latest_constraint_mut().player_can_have_card_alive(player, card)
     }
     
-    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool {
+    fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool {
         let mut cards = [0u8; 5];
         cards[card as usize] += 1;
         !self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards)
     }
 
-    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool {
-        self.latest_constraint().player_can_have_cards_alive(player, cards)
+    fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool {
+        self.latest_constraint_mut().player_can_have_cards_alive(player, cards)
     }
-    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
+    fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool {
         // TODO: [OPTIMIZE] check if latest state is updated! 
         let mut cards_input = [0u8; 5];
         for card in cards.iter() {
@@ -1588,7 +1588,7 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
         }
         !self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards_input)
     }
-    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         match action_observation {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 if *no_cards == 1 {
@@ -1603,7 +1603,7 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
             _ => true,
         }
     }
-    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_private(&mut self, action_observation: &ActionObservation) -> bool {
         match action_observation {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 if *no_cards == 1 {

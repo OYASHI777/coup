@@ -193,8 +193,8 @@ impl<C> CoupConstraintAnalysis for BackTrackCardCountManager<C>
 where
     C: CoupConstraint + CoupConstraintAnalysis,
 {
-    fn public_constraints(&self) -> &Vec<Vec<Card>> {
-        self.latest_constraint().public_constraints()
+    fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
+        self.latest_constraint_mut().public_constraints()
     }
 
     fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>> {
@@ -221,27 +221,27 @@ where
         self.latest_constraint_mut().player_impossible_constraints_triple()
     }
 
-    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool {
-        self.latest_constraint().player_can_have_card_alive(player, card)
+    fn player_can_have_card_alive(&mut self, player: usize, card: Card) -> bool {
+        self.latest_constraint_mut().player_can_have_card_alive(player, card)
     }
 
-    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool {
-        self.latest_constraint().player_can_have_card_alive_lazy(player, card)
+    fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool {
+        self.latest_constraint_mut().player_can_have_card_alive_lazy(player, card)
     }
 
-    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool {
-        self.latest_constraint().player_can_have_cards_alive(player, cards)
+    fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool {
+        self.latest_constraint_mut().player_can_have_cards_alive(player, cards)
     }
 
-    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
-        self.latest_constraint().player_can_have_cards_alive_lazy(player, cards)
+    fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool {
+        self.latest_constraint_mut().player_can_have_cards_alive_lazy(player, cards)
     }
     
-    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
     
-    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_private(&mut self, action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
 }

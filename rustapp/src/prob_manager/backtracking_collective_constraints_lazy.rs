@@ -1542,7 +1542,7 @@ impl CoupConstraint for BackTrackCollectiveConstraintLazy {
     
 }
 impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLazy {
-    fn public_constraints(&self) -> &Vec<Vec<Card>> {
+    fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }
 
@@ -1579,26 +1579,26 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLazy {
         &self.impossible_constraints_3
     }
     
-    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool{
+    fn player_can_have_card_alive(&mut self, player: usize, card: Card) -> bool{
         let mut cards = [0; 5];
         cards[card as usize] = 1;
         !self.impossible_to_have_cards_general(self.history.len() - 1, player, &cards)
     }
-    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool{
+    fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool{
         self.player_can_have_card_alive(player, card)
     }
     // TODO: Change Vec<> to a Slice
-    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool{
+    fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool{
         let mut cards_input = [0; 5];
         for card in cards.iter() {
             cards_input[*card as usize] += 1;
         }
         !self.impossible_to_have_cards_general(self.history.len() - 1, player, &cards_input)
     }
-    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool{
+    fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool{
         self.player_can_have_cards_alive(player, cards)
     }
-    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         match action_observation {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 if *no_cards == 1 {
@@ -1613,7 +1613,7 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLazy {
             _ => true,
         }
     }
-    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_private(&mut self, action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
 }

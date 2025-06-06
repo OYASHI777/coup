@@ -1,7 +1,7 @@
 use crate::history_public::{ActionObservation, Card};
 pub trait CoupConstraintAnalysis {
     /// Returns reference to latest Public Constraints
-    fn public_constraints(&self) -> &Vec<Vec<Card>>;
+    fn public_constraints(&mut self) -> &Vec<Vec<Card>>;
     /// Returns reference to latest sorted Public Constraints
     fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>>;
     /// Returns reference to latest Inferred Constraints
@@ -15,17 +15,17 @@ pub trait CoupConstraintAnalysis {
     /// Returns reference to array[card_i][card_j][card_k] storing whether pile can have card_i, card_j, and card_k
     fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5];
     /// Returns true if player can have a particular card alive
-    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool;
+    fn player_can_have_card_alive(&mut self, player: usize, card: Card) -> bool;
     /// Returns true if player can have a particular card alive | evaluates lazily
-    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool;
+    fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool;
     /// Returns true if player can have a collection of cards alive
-    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool;
+    fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool;
     /// Returns true if player can have a collection of cards alive | evaluates lazily
-    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool;
+    fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool;
     /// Returns true if move is legal considering only public information
     /// Assumes the player can make a turn and does not check if it is the player's turn
-    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool;
+    fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool;
     /// Returns true if move is legal considering public and private information
     /// Assumes the player can make a turn and does not check if it is the player's turn
-    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool;
+    fn is_legal_move_private(&mut self, action_observation: &ActionObservation) -> bool;
 } 

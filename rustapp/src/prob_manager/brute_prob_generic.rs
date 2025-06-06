@@ -28,6 +28,8 @@ where
     impossible_constraints_3: [[[bool; 5]; 5]; 5],
     auto_calculate_impossible_constraints_2: bool,
     auto_calculate_impossible_constraints_3: bool,
+    impossible_constraints_2_is_updated: bool,
+    impossible_constraints_3_is_updated: bool,
 }
 impl<T> BruteCardCountManagerGeneric<T> 
 where
@@ -57,6 +59,8 @@ where
             impossible_constraints_3,
             auto_calculate_impossible_constraints_2: auto_calc_2,
             auto_calculate_impossible_constraints_3: auto_calc_3,
+            impossible_constraints_2_is_updated: auto_calc_2,
+            impossible_constraints_3_is_updated: auto_calc_3,
         }
     }
     /// Adding private player starting hand
@@ -409,7 +413,6 @@ where
         self.impossible_constraints = result;
     }
     pub fn set_impossible_constraints_2(&mut self) {
-
         // Early return if we have no states; then every card is impossible in all states
         // or every card is possible—depending on your game logic. Usually, with zero states,
         // "cannot have" is trivially true for all. But check game logic as needed.
@@ -456,6 +459,7 @@ where
                 }
             }
         }
+        self.impossible_constraints_2_is_updated = true;
     }
     pub fn set_impossible_constraints_3(&mut self) {
 
@@ -505,6 +509,7 @@ where
                 }
             }
         }
+        self.impossible_constraints_3_is_updated = true;
     }
     /// Returns a 7x5 boolean array `[ [bool; 5]; 7 ]`.
     ///
@@ -589,6 +594,7 @@ where
     /// Returns all the dead cards for each player that we are certain they have
     /// Assumes calculates states align with latest constraints
     pub fn update_constraints(&mut self) {
+        // Setting to false if no need for auto calculation
         self.inferred_constraints = self.must_have_cards();
         self.set_impossible_constraints();
         for (player, cards) in self.public_constraints.iter().enumerate() {
@@ -604,6 +610,8 @@ where
         for vec in self.inferred_constraints.iter_mut() {
             vec.sort_unstable();
         }
+        self.impossible_constraints_2_is_updated = self.auto_calculate_impossible_constraints_2;
+        self.impossible_constraints_3_is_updated = self.auto_calculate_impossible_constraints_3;
         if self.auto_calculate_impossible_constraints_2 {
             self.set_impossible_constraints_2();
         }
@@ -651,7 +659,7 @@ where
 {
     /// Returns all the dead cards for each player that we are certain they have
     /// Assumes calculates states align with latest constraints
-    fn public_constraints(&self) -> &Vec<Vec<Card>> {
+    fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }
 
@@ -675,34 +683,64 @@ where
     }
 
     fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7] {
+        if !self.impossible_constraints_2_is_updated {
+            self.set_impossible_constraints_2();
+        }
         &self.impossible_constraints_2
     }
-
+    
     fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5] {
+        if !self.impossible_constraints_3_is_updated {
+            self.set_impossible_constraints_3();
+        }
         &self.impossible_constraints_3
     }
 
-    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool {
+    fn player_can_have_card_alive(&mut self, player: usize, card: Card) -> bool {
+        !self.impossible_constraints[player][card as usize]
+    }
+
+    fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool {
+        !self.impossible_constraints[player][card as usize]
+    }
+
+    fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool {
+        if player < 6 {
+            if cards.len() == 2 {
+                if !self.impossible_constraints_2_is_updated {
+                    self.set_impossible_constraints_2();
+                }
+                return !self.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize]
+            } else if cards.len() == 1 {
+                return self.player_can_have_card_alive(player, cards[0])
+            }
+        } else if player == 6 {
+            if cards.len() == 1 {
+                return self.player_can_have_card_alive(player, cards[0])
+            } else if cards.len() == 2 {
+                if !self.impossible_constraints_2_is_updated {
+                    self.set_impossible_constraints_2();
+                }
+                return !self.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize]
+            } else if cards.len() == 3 {
+                if !self.impossible_constraints_3_is_updated {
+                    self.set_impossible_constraints_3();
+                }
+                return !self.impossible_constraints_3[cards[0] as usize][cards[1] as usize][cards[2] as usize]
+            }
+        }
+        false
+    }
+
+    fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool {
         todo!()
     }
 
-    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool {
+    fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         todo!()
     }
 
-    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool {
-        todo!()
-    }
-
-    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
-        todo!()
-    }
-
-    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
-        todo!()
-    }
-
-    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_private(&mut self, action_observation: &ActionObservation) -> bool {
         todo!()
     }
 }
