@@ -11,7 +11,7 @@ pub mod cfr {
 }
 pub mod prob_manager {
     pub mod backtracking_prob;
-    pub mod backtracking_prob_2;
+    pub mod backtracking_prob_hybrid;
     pub mod backtracking_collective_constraints;
     pub mod backtracking_collective_constraints_lazy;
     pub mod backtracking_collective_constraints_lite;

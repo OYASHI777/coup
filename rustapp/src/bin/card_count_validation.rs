@@ -32,12 +32,12 @@ fn main() {
     let log_bool = true;
     let bool_know_priv_info = true;
     let bool_skip_exchange = false;
-    let bool_lazy =  false;
+    let bool_lazy =  true;
     let print_frequency: usize = 100;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
-    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
+    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
     // game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
     
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
@@ -803,7 +803,7 @@ pub fn game_rnd_constraint_bt2_st(game_no: usize, bool_know_priv_info: bool, boo
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
-    let mut bit_prob: rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager::new();
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     while game < game_no {
         let mut stats = Stats::new();
         let mut hh = History::new(0);
@@ -949,7 +949,7 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
-    let mut bit_prob: rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager::new();
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     while game < game_no {
         let mut stats = Stats::new();
         let mut hh = History::new(0);
@@ -1628,7 +1628,7 @@ pub fn game_rnd_constraint_bt_generic_bench<C>(game_no : usize, bool_know_priv_i
 }
 pub fn game_rnd_constraint_bt_bench(game_no : usize, bool_know_priv_info: bool) {
     let mut game: usize = 0;
-    let mut bit_prob: rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager::new();
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     let mut actions_processed: u128 = 0;
     let mut start_time = Instant::now();
     while game < game_no {
@@ -1704,7 +1704,7 @@ pub fn game_rnd_constraint_bt_bench(game_no : usize, bool_know_priv_info: bool) 
 }
 pub fn game_rnd_constraint_bt_bench_lazy(game_no : usize, bool_know_priv_info: bool) {
     let mut game: usize = 0;
-    let mut bit_prob: rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager::new();
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     let mut actions_processed: u128 = 0;
     let mut start_time = Instant::now();
     while game < game_no {
@@ -1780,7 +1780,7 @@ pub fn game_rnd_constraint_bt_bench_lazy(game_no : usize, bool_know_priv_info: b
 }
 pub fn game_rnd_constraint_bt_bench_control(game_no : usize, bool_know_priv_info: bool) {
     let mut game: usize = 0;
-    let mut bit_prob: rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager::new();
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     let mut actions_processed: u128 = 0;
     let mut start_time = Instant::now();
     while game < game_no {
