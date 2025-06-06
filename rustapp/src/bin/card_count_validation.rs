@@ -33,7 +33,7 @@ fn main() {
     let log_bool = true;
     let bool_know_priv_info = true;
     let bool_skip_exchange = false;
-    let bool_lazy =  false;
+    let bool_lazy =  true;
     let print_frequency: usize = 100;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
