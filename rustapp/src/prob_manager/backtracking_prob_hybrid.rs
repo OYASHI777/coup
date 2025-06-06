@@ -1618,12 +1618,8 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
                 }
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
-                if *reveal == *redraw {
-                    return true
-                } else {
-                    self.player_can_have_card_alive_lazy(*player_id, *reveal)
-                    && self.player_can_have_card_alive_lazy(6, *redraw)
-                }
+                self.player_can_have_card_alive_lazy(*player_id, *reveal)
+                && (*reveal == *redraw || self.player_can_have_card_alive_lazy(6, *redraw))
             },
             ActionObservation::ExchangeDraw { card, .. } => {
                 self.player_can_have_cards_alive_lazy(6, card)

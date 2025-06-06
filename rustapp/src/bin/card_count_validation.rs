@@ -32,13 +32,13 @@ fn main() {
     let game_no = 100000000;
     let log_bool = true;
     let bool_know_priv_info = true;
-    let bool_skip_exchange = true;
+    let bool_skip_exchange = false;
     let bool_lazy =  false;
     let print_frequency: usize = 100;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
-    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
+    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
     game_rnd_constraint_bt_st_debug(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
     
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
@@ -1432,6 +1432,13 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
                 if !pass_public_constraints {
                     break;
                 }
+                if prob.len() == 0 {
+                    println!("Found problematic game, please hold...");
+                    let replay = hh.get_history(hh.store_len());
+                    replay_game_constraint_bt(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
+                    panic!("Illegal move played somewhere above!");
+                    break;
+                }
                 if bool_test_over_inferred {
                     // what we are testing inferred too many things
                     println!("Found problematic game, please hold...");
@@ -1521,13 +1528,12 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
                 },
                 RevealRedraw { player_id, reveal: reveal_card , redraw: redraw_card} => {
                     if private_player.is_some() && *player_id == private_player.unwrap() {
-                        if *reveal_card == *redraw_card {
-                            return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: Some(*redraw_card), relinquish: None } )));
-                        } else {
-                            if prob.player_can_have_card_alive(*player_id, *reveal_card) {
-                                if prob.player_can_have_card_alive(6, *redraw_card) {
-                                    return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: Some(*redraw_card), relinquish: None } )));
-                                }
+                        if prob.player_can_have_card_alive(*player_id, *reveal_card) {
+                            if *reveal_card == *redraw_card {
+                                return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: Some(*redraw_card), relinquish: None } )));
+                            }
+                            if prob.player_can_have_card_alive(6, *redraw_card) {
+                                return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: Some(*redraw_card), relinquish: None } )));
                             }
                         }
                     } else {
@@ -1635,15 +1641,8 @@ pub fn retain_legal_moves_with_card_constraints(history: &History, new_moves: &m
             },
             RevealRedraw { player_id, reveal: reveal_card , redraw: redraw_card} => {
                 if Some(*player_id) == private_player {
-                    if *reveal_card == *redraw_card {
-                        return true
-                    } else {
-                        if prob.player_can_have_card_alive(*player_id, *reveal_card) {
-                            if prob.player_can_have_card_alive(6, *redraw_card) {
-                                return true
-                            }
-                        }
-                    }
+                    return prob.player_can_have_card_alive(*player_id, *reveal_card) 
+                    && (*reveal_card == *redraw_card || prob.player_can_have_card_alive(6, *redraw_card))
                 } else {
                     if prob.player_can_have_card_alive(*player_id, *reveal_card) {
                         return true
