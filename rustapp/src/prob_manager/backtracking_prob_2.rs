@@ -991,16 +991,17 @@ impl BackTrackCardCountManager {
                 return false
             }
         }
-        for player in 0..6 {
-            if public_constraints[player].len() + inferred_constraints[player].len() > 2 {
-                log::trace!("is_valid_combination player {} has too many cards", player);
-                return false
-            }
-        }
-        if public_constraints[6].len() + inferred_constraints[6].len() > 3 {
-            log::trace!("is_valid_combination pile has too many cards");
-            return false
-        }
+        // This Check is guaranteed and so commented out for now
+        // for player in 0..6 {
+        //     if public_constraints[player].len() + inferred_constraints[player].len() > 2 {
+        //         log::trace!("is_valid_combination player {} has too many cards", player);
+        //         return false
+        //     }
+        // }
+        // if public_constraints[6].len() + inferred_constraints[6].len() > 3 {
+        //     log::trace!("is_valid_combination pile has too many cards");
+        //     return false
+        // }
         for player in 0..7 {
             if inferred_constraints[player].len() == 1 && self.constraint_history[index_loop].impossible_constraints()[player][inferred_constraints[player][0] as usize]{
                 return false
