@@ -968,8 +968,12 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
         let mut hh = History::new(0);
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
-        // let private_player: usize = rng.gen_range(0..6);
-        let private_player: usize = 0;
+        let mut rng = thread_rng();
+        let private_player: Option<usize> = if bool_know_priv_info {
+            Some(rng.gen_range(0..6))
+        } else {
+            None
+        };
         if bool_know_priv_info {
             // Choose random player
             // Initialize for that player
@@ -978,8 +982,8 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
             let card_1: u8 = rng.gen_range(0..5);
             let cards = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
             // TODO: Fill those up
-            prob.start_private(private_player, &cards);
-            bit_prob.start_private(private_player, &cards);
+            prob.start_private(private_player.unwrap(), &cards);
+            bit_prob.start_private(private_player.unwrap(), &cards);
         } else {
             prob.start_public();
             bit_prob.start_public();
@@ -991,7 +995,7 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
             // bit_prob.printlog();
             // These are legal from a public sense only, but may be illegal depending on card 
             // TODO: [FIX] ExchangeChoice should generate regardless of hand as the card counter can determine it themselves
-            new_moves = hh.generate_legal_moves(Some(private_player));
+            new_moves = hh.generate_legal_moves(private_player);
             // TODO: create generate_legal_moves(None) for public and private
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
@@ -999,7 +1003,7 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
                 new_moves.retain(|m| m.name() != AOName::Exchange);
             }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
-            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, Some(private_player));
+            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, private_player);
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
@@ -1014,7 +1018,7 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
                 panic!("no legit moves found");
             });
             hh.push_ao(action_obs);
-            if bool_know_priv_info && action_obs.player_id() == private_player {
+            if bool_know_priv_info && Some(action_obs.player_id()) == private_player {
                 prob.push_ao_private(&action_obs);
                 bit_prob.push_ao_private(&action_obs);
             } else {
@@ -1125,7 +1129,11 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
         let mut rng = thread_rng();
-        let private_player: usize = rng.gen_range(0..6);
+        let private_player: Option<usize> = if bool_know_priv_info {
+            Some(rng.gen_range(0..6))
+        } else {
+            None
+        };
         // let private_player: usize = 0;
         let skip_prob: f32 = 0.8;
         if bool_know_priv_info {
@@ -1136,8 +1144,8 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
             let card_1: u8 = rng.gen_range(0..5);
             let cards = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
             // TODO: Fill those up
-            prob.start_private(private_player, &cards);
-            bit_prob.start_private(private_player, &cards);
+            prob.start_private(private_player.unwrap(), &cards);
+            bit_prob.start_private(private_player.unwrap(), &cards);
         } else {
             prob.start_public();
             bit_prob.start_public();
@@ -1149,15 +1157,17 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
             // bit_prob.printlog();
             // These are legal from a public sense only, but may be illegal depending on card 
             // TODO: [FIX] ExchangeChoice should generate regardless of hand as the card counter can determine it themselves
-            new_moves = hh.generate_legal_moves(Some(private_player));
+            new_moves = hh.generate_legal_moves(private_player);
             // TODO: create generate_legal_moves(None) for public and private
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             if bool_skip_exchange {
                 new_moves.retain(|m| m.name() != AOName::Exchange);
             }
+            let moves_check = new_moves.clone();
+            retain_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, private_player);
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
-            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, Some(private_player));
+            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, private_player);
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
@@ -1174,7 +1184,7 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
             hh.push_ao(action_obs);
             let mut rng = thread_rng();
             let num: f32 = rng.gen_range(0.0..=1.0);
-            if bool_know_priv_info && action_obs.player_id() == private_player {
+            if bool_know_priv_info && Some(action_obs.player_id()) == private_player {
                 prob.push_ao_private(&action_obs);
                 bit_prob.push_ao_private_lazy(&action_obs);
                 if num < skip_prob {
@@ -1529,6 +1539,82 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
         // }
     // }
     Err(())
+}
+pub fn retain_legal_moves_with_card_constraints(history: &History, new_moves: &mut Vec<ActionObservation>, prob: &BruteCardCountManagerGeneric<CardStateu64>, private_player: Option<usize>) {
+    // Clone the moves and shuffle them in place
+    // This assumes all moves are by the same player
+    // In the case of Challenge, it does not matter
+    pub fn is_legal(history: &History, ao: &ActionObservation, prob: &BruteCardCountManagerGeneric<CardStateu64>, private_player: Option<usize>) -> bool {
+        match ao {
+            Discard { player_id, card, no_cards } => {
+                if private_player.is_some() && *player_id == private_player.unwrap() {
+                    if *no_cards == 1 {
+                        if prob.player_can_have_card_alive(*player_id, card[0]) {
+                            return true
+                        }
+                    } else {
+                        if prob.player_can_have_cards(*player_id, ao.cards()) {
+                            // todo!("Make multiple Discard");
+                            // return (*player_id, *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                            return true
+                        }
+                    }
+                } else {
+                    if *no_cards == 1 {
+                        if prob.player_can_have_card_alive(*player_id, card[0]) {
+                            return true
+                        }
+                    } else {
+                        if prob.player_can_have_cards(*player_id, ao.cards()) {
+                            // todo!("Make multiple Discard");
+                            // return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                            return true
+                        }
+                        log::info!("prob.player_can_have_cards({}, {:?}) = false", *player_id, ao.cards());
+                    }
+                }
+            },
+            RevealRedraw { player_id, reveal: reveal_card , redraw: redraw_card} => {
+                if private_player.is_some() && *player_id == private_player.unwrap() {
+                    if prob.player_can_have_card_alive(*player_id, *reveal_card) {
+                        if prob.player_can_have_card_alive(6, *redraw_card) {
+                            return true
+                        }
+                    }
+                } else {
+                    if prob.player_can_have_card_alive(*player_id, *reveal_card) {
+                        return true
+                    }
+                }
+            },
+            ExchangeDraw { player_id, card } => {
+                if private_player.is_some() && *player_id == private_player.unwrap() {
+                    if prob.player_can_have_cards(6, card) {
+                        return true;
+                    }
+                } else {
+                    return true;
+                }
+            },
+            ExchangeChoice { player_id, relinquish } => {
+                if private_player.is_some() && *player_id == private_player.unwrap() {
+                    if let ExchangeDraw { card: draw, .. } = history.latest_move() {
+                        let player_dead_cards = &prob.validated_public_constraints()[*player_id];
+                        if prob.player_can_have_cards_after_draw(*player_id, player_dead_cards, relinquish, draw) {
+                            return true
+                        }
+                    } 
+                } else {
+                    return true
+                }
+            },
+            _ => {
+                return true
+            }
+        }
+        false
+    }
+    new_moves.retain(|ao| is_legal(history, ao, prob, private_player));
 }
 // pub fn generate_legal_moves_with_card_constraints_g<C: CoupConstraint + CoupConstraintAnalysis>(new_moves: &mut Vec<ActionObservation>, prob: &BackTrackCardCountManager<C>, bool_know_priv_info: bool) -> Result<(usize, ActionObservation, Option<ActionInfo>), ()> {
 //     // Clone the moves and shuffle them in place
