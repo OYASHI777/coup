@@ -1563,7 +1563,7 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
     fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool {
         let mut cards = [0u8; 5];
         cards[card as usize] += 1;
-        self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards)
+        !self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards)
     }
 
     fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool {
@@ -1574,7 +1574,7 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
         for card in cards.iter() {
             cards_input[*card as usize] += 1;
         }
-        self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards_input)
+        !self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards_input)
     }
 }
 
