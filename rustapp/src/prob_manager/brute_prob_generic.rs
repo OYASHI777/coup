@@ -733,7 +733,32 @@ where
     }
 
     fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool {
-        todo!()
+        if player < 6 {
+            if cards.len() == 2 {
+                if !self.impossible_constraints_2_is_updated {
+                    self.set_impossible_constraints_2();
+                }
+                return !self.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize]
+            } else if cards.len() == 1 {
+                return self.player_can_have_card_alive(player, cards[0])
+            }
+        } else if player == 6 {
+            if cards.len() == 1 {
+                return self.player_can_have_card_alive(player, cards[0])
+            } else if cards.len() == 2 {
+                // TODO: [OPTIMIZE] add function to evaluate only 1 card combination...
+                if !self.impossible_constraints_2_is_updated {
+                    self.set_impossible_constraints_2();
+                }
+                return !self.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize]
+            } else if cards.len() == 3 {
+                if !self.impossible_constraints_3_is_updated {
+                    self.set_impossible_constraints_3();
+                }
+                return !self.impossible_constraints_3[cards[0] as usize][cards[1] as usize][cards[2] as usize]
+            }
+        }
+        false
     }
 
     fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
