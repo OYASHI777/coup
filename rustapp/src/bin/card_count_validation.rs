@@ -707,7 +707,7 @@ pub fn game_rnd_constraint_bt_st<C>(game_no: usize, bool_know_priv_info: bool, m
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
-            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, Some(private_player));
+            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, Some(private_player));
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
@@ -853,7 +853,7 @@ pub fn game_rnd_constraint_bt2_st(game_no: usize, bool_know_priv_info: bool, boo
                 new_moves.retain(|m| m.name() != AOName::Exchange);
             }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
-            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, Some(private_player));
+            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, Some(private_player));
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
@@ -1003,7 +1003,7 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
                 new_moves.retain(|m| m.name() != AOName::Exchange);
             }
             let mut check_moves_prob = new_moves.clone();
-            retain_legal_moves_with_card_constraints(&hh, &mut check_moves_prob, &prob, private_player);
+            retain_legal_moves_with_card_constraints(&hh, &mut check_moves_prob, &mut prob, private_player);
             let mut check_moves_bit_prob = new_moves.clone();
             check_moves_bit_prob.retain(|ao| {
                 if Some(ao.player_id()) == private_player {
@@ -1029,7 +1029,7 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
                 panic!();
             }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
-            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, private_player);
+            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, private_player);
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
@@ -1199,7 +1199,7 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
                 new_moves.retain(|m| m.name() != AOName::Exchange);
             }
             let mut check_moves_prob = new_moves.clone();
-            retain_legal_moves_with_card_constraints(&hh, &mut check_moves_prob, &prob, private_player);
+            retain_legal_moves_with_card_constraints(&hh, &mut check_moves_prob, &mut prob, private_player);
             let mut check_moves_bit_prob = new_moves.clone();
             check_moves_bit_prob.retain(|ao| {
                 if Some(ao.player_id()) == private_player {
@@ -1224,7 +1224,7 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
                 panic!();
             }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
-            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, private_player);
+            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, private_player);
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
@@ -1371,7 +1371,7 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
             // new_moves.retain(|m| m.name() != AOName::Exchange);
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
-            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, Some(private_player));
+            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, Some(private_player));
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
@@ -1490,7 +1490,7 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
     }
 }
 // TODO: Shift this to be a method in prob! or at least just to check a new_move!
-pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: &mut Vec<ActionObservation>, prob: &BruteCardCountManagerGeneric<CardStateu64>, private_player: Option<usize>) -> Result<(usize, ActionObservation, Option<ActionInfo>), ()> {
+pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: &mut Vec<ActionObservation>, prob: &mut BruteCardCountManagerGeneric<CardStateu64>, private_player: Option<usize>) -> Result<(usize, ActionObservation, Option<ActionInfo>), ()> {
     // Clone the moves and shuffle them in place
     new_moves.shuffle(&mut thread_rng());
     // This assumes all moves are by the same player
@@ -1605,11 +1605,11 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
     // }
     Err(())
 }
-pub fn retain_legal_moves_with_card_constraints(history: &History, new_moves: &mut Vec<ActionObservation>, prob: &BruteCardCountManagerGeneric<CardStateu64>, private_player: Option<usize>) {
+pub fn retain_legal_moves_with_card_constraints(history: &History, new_moves: &mut Vec<ActionObservation>, prob: &mut BruteCardCountManagerGeneric<CardStateu64>, private_player: Option<usize>) {
     // Clone the moves and shuffle them in place
     // This assumes all moves are by the same player
     // In the case of Challenge, it does not matter
-    pub fn is_legal(history: &History, ao: &ActionObservation, prob: &BruteCardCountManagerGeneric<CardStateu64>, private_player: Option<usize>) -> bool {
+    pub fn is_legal(history: &History, ao: &ActionObservation, prob: &mut BruteCardCountManagerGeneric<CardStateu64>, private_player: Option<usize>) -> bool {
         match ao {
             Discard { player_id, card, no_cards } => {
                 if private_player.is_some() && *player_id == private_player.unwrap() {
@@ -2205,7 +2205,7 @@ pub fn replay_game_constraint_bt(replay: Vec<ActionObservation>, bool_know_priv_
         // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
         // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
         new_moves = hh.generate_legal_moves(None);
-        let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, None);
+        let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, None);
         let (_, _, _) = result.unwrap_or_else(|_| {
             println!("{}", hh.get_replay_history_braindead());
             println!("new_moves: {:?}", new_moves);

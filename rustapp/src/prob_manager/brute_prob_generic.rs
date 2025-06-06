@@ -286,11 +286,6 @@ where
         self.calculated_states.iter().
         any(|state| state.player_has_cards(player_id, &[card]))
     }
-    /// This function returns true if a player can have a particular card
-    /// Does care about alive or dead status
-    pub fn player_can_have_card_alive(&self, player_id: usize, card: Card) -> bool {
-        !self.impossible_constraints[player_id][card as usize]
-    }
     /// This function returns true if a player can have all of these cards
     /// Does not care about alive or dead status
     pub fn player_can_have_cards(&self, player_id: usize, cards: &[Card]) -> bool {
