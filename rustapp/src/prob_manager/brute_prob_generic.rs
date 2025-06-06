@@ -797,30 +797,31 @@ where
                 self.player_can_have_cards_alive_lazy(6, card)
             },
             ActionObservation::ExchangeChoice { player_id, relinquish } =>  {
-                // let mut required = [0u8; 5];
-                // relinquish.iter().for_each(|c| required[*c as usize] += 1); 
-                // if let ActionObservation::ExchangeDraw { card: draw, .. } = self.history[self.history.len() - 1] {
-                //     draw.iter().for_each(|c| if required[*c as usize] > 0 { required[*c as usize] -= 1 } );
-                // }
-                // let total_cards = required.iter().sum::<u8>();
-                // if total_cards == 0 {
-                //     true
-                // } else if total_cards > 2{
-                //     false
-                // } else {
-                //     // if updated {..} just check the state
-                //     let mut cards = Vec::with_capacity(2);
-                //     for c in 0..5 {
-                //         for _ in 0..required[c] {
-                //             cards.push(Card::try_from(c as u8).unwrap());
-                //         }
-                //     }
-                //     self.player_can_have_cards_alive_lazy(*player_id, &cards)
-                // }
-                if let ActionObservation::ExchangeDraw { card: draw, .. } = &self.history[self.history.len() - 1] {
-                    return self.player_can_have_cards_after_draw(*player_id, &self.public_constraints[*player_id], relinquish, draw)
+                let player_dead = self.public_constraints()[*player_id].len() as u8;
+                let mut required = [0u8; 5];
+                relinquish.iter().for_each(|c| required[*c as usize] += 1); 
+                if let ActionObservation::ExchangeDraw { card: draw, .. } = self.history[self.history.len() - 1] {
+                    draw.iter().for_each(|c| if required[*c as usize] > 0 { required[*c as usize] -= 1 } );
                 }
-                false
+                let total_cards = required.iter().sum::<u8>();
+                if total_cards == 0 {
+                    true
+                } else if total_cards + player_dead > 2 {
+                    false
+                } else {
+                    // if updated {..} just check the state
+                    let mut cards = Vec::with_capacity(2);
+                    for c in 0..5 {
+                        for _ in 0..required[c] {
+                            cards.push(Card::try_from(c as u8).unwrap());
+                        }
+                    }
+                    self.player_can_have_cards_alive_lazy(*player_id, &cards)
+                }
+                // if let ActionObservation::ExchangeDraw { card: draw, .. } = &self.history[self.history.len() - 1] {
+                //     return self.player_can_have_cards_after_draw(*player_id, &self.public_constraints[*player_id], relinquish, draw)
+                // }
+                // false
             },
             _ => true,
         }

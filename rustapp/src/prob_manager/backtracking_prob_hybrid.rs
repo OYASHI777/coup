@@ -1639,7 +1639,7 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
                 // println!("total_cards: {:?}", total_cards);
                 if total_cards == 0 {
                     true
-                } else if total_cards + player_dead > 2{
+                } else if total_cards + player_dead > 2 {
                     false
                 } else {
                     // if updated {..} just check the state
