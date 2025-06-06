@@ -1,5 +1,5 @@
 # Use minimal rust base image
-FROM rust:1.75
+FROM rust:1.87
 
 RUN apt-get update && apt-get install -y \
   git \
