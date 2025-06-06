@@ -953,6 +953,7 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
         let mut new_moves: Vec<ActionObservation>;
         // let private_player: usize = rng.gen_range(0..6);
         let private_player: usize = 0;
+        let skip_prob: f32 = 0.5;
         if bool_know_priv_info {
             // Choose random player
             // Initialize for that player
@@ -995,9 +996,14 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
                 panic!("no legit moves found");
             });
             hh.push_ao(action_obs);
+            let mut rng = thread_rng();
+            let num: f32 = rng.gen_range(0.0..=1.0);
             if bool_know_priv_info && action_obs.player_id() == private_player {
                 prob.push_ao_private(&action_obs);
                 bit_prob.push_ao_private_lazy(&action_obs);
+                if num < skip_prob {
+                    continue;
+                }
                 match action_obs {
                     ActionObservation::Discard { .. }
                     | ActionObservation::RevealRedraw { .. }
@@ -1011,6 +1017,9 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
             } else {
                 prob.push_ao_public(&action_obs);
                 bit_prob.push_ao_public_lazy(&action_obs);
+                if num < skip_prob {
+                    continue;
+                }
                 match action_obs {
                     ActionObservation::Discard { .. }
                     | ActionObservation::RevealRedraw { .. }
