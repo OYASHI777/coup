@@ -30,15 +30,15 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";
 fn main() {
     let game_no = 100000000;
     let log_bool = true;
-    let bool_know_priv_info = true;
+    let bool_know_priv_info = false;
     let bool_skip_exchange = false;
-    let bool_lazy =  false;
+    let bool_lazy =  true;
     let print_frequency: usize = 100;
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
     game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
-    // game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
+    game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
     
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
@@ -1009,48 +1009,15 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
                 if num < skip_prob {
                     continue;
                 }
-                match action_obs {
-                    ActionObservation::Discard { .. }
-                    | ActionObservation::RevealRedraw { .. }
-                    | ActionObservation::ExchangeDraw { .. }
-                    | ActionObservation::ExchangeChoice { .. }=> {
-                        bit_prob.generate_impossible_constraints();
-                        bit_prob.generate_inferred_constraints();
-                    }
-                    _ => {}
-                }
             } else {
                 prob.push_ao_public(&action_obs);
                 bit_prob.push_ao_public_lazy(&action_obs);
                 if num < skip_prob {
                     continue;
                 }
-                match action_obs {
-                    ActionObservation::Discard { .. }
-                    | ActionObservation::RevealRedraw { .. }
-                    | ActionObservation::ExchangeChoice { .. }=> {
-                        bit_prob.generate_impossible_constraints();
-                        bit_prob.generate_inferred_constraints();
-                    }
-                    _ => {}
-                }
             }
-            // if let Some(ai) = action_info {
-            //     // TEMP fix for no DiscardMultiple
-            //     // TODO: Change back to nice API
-            //     if let ActionObservation::Discard { player_id, card, no_cards } = action_obs {
-            //         if no_cards == 2 { 
-            //             prob.push_ao_public(&action_obs);
-            //             bit_prob.push_ao_public(&action_obs);
-            //         } else {
-            //             prob.push_ao(player, &ai);
-            //             bit_prob.push_ao(player, &ai);
-            //         }
-            //     } else {
-            //         prob.push_ao(player, &ai);
-            //         bit_prob.push_ao(player, &ai);
-            //     }
-            // }
+            bit_prob.generate_impossible_constraints();
+            bit_prob.generate_inferred_constraints();
             let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
             if total_dead >= min_dead_check {
                 let validated_public_constraints = prob.validated_public_constraints();

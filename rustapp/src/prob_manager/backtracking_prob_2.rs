@@ -922,7 +922,11 @@ impl BackTrackCardCountManager {
                         }
                     }
                 } else {
-                    debug_assert!(false, "New API should not have reached here, but should have been skipped!");
+                    // [REQUIRED FOR LAZY EVAL] Although ExchangeChoice skips over this
+                    // When we use lazy evaluation on previous moves, 
+                    // ExchangeDraw inferred impossibilities cannot just clone from the previous move
+                    // We will need this to evaluate ExchangeDraw inference
+                    response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
                 }
             },
             ActionInfo::ExchangeChoice { relinquish } => {
