@@ -458,10 +458,10 @@ impl BackTrackCardCountManager {
         // TODO: [OPTIMIZE] consider total dead cards inferred etc...
         let mut cards: [u8; 5] = [0; 5];
         for player_of_interest in 0..7 {
-            // if self.latest_constraint_mut().public_constraints()[player_of_interest].len() == 2 {
-            //     self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest] = [true; 5];
-            //     continue;
-            // }
+            if self.latest_constraint_mut().public_constraints()[player_of_interest].len() == 2 {
+                self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest] = [true; 5];
+                continue;
+            }
             for card in 0..5 {
                 cards[card] = 1;
                 log::trace!("generate_impossible_constraints 1 card : {:?}", card);
@@ -470,10 +470,10 @@ impl BackTrackCardCountManager {
             }
         }
         for player_of_interest in 0..7 {
-            // if self.latest_constraint_mut().public_constraints()[player_of_interest].len() > 0 {
-            //     self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest] = [[true; 5]; 5];
-            //     continue;
-            // }
+            if self.latest_constraint_mut().public_constraints()[player_of_interest].len() > 0 {
+                self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest] = [[true; 5]; 5];
+                continue;
+            }
             for card_a in 0..5 {
                 if self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest][card_a] {
                     self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest][card_a] = [true; 5];
@@ -485,14 +485,12 @@ impl BackTrackCardCountManager {
                     continue;
                 }
                 for card_b in card_a..5 {
-                    // if self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest][card_b] {
-                    //     continue;
-                    // }
+                    if self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest][card_b] {
+                        continue;
+                    }
                     cards[card_a] += 1;
                     cards[card_b] += 1;
                     log::trace!("generate_impossible_constraints 2 card : {:?}, {:?}", card_a, card_b);
-                    // let output = self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest][card_b] 
-                    // || self.impossible_to_have_cards_general(history_index, player_of_interest, &cards);
                     let output = self.impossible_to_have_cards_general(history_index, player_of_interest, &cards);
                     // OPTIMIZE lmao...
                     self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest][card_a][card_b] = output;
@@ -503,30 +501,28 @@ impl BackTrackCardCountManager {
             }
         }
         for card_a in 0..5 {
-            // if self.latest_constraint_mut().impossible_constraints_mut()[6][card_a] {
-            //     self.latest_constraint_mut().impossible_constraints_3_mut()[card_a] = [[true; 5]; 5];
-            //     for i in 0..5 {
-            //         for j in 0..5 {
-            //             self.latest_constraint_mut().impossible_constraints_3_mut()[i][j][card_a] = true;
-            //             self.latest_constraint_mut().impossible_constraints_3_mut()[i][card_a][j] = true;
-            //         }
-            //     }
-            //     continue;
-            // }
+            if self.latest_constraint_mut().impossible_constraints_mut()[6][card_a] {
+                self.latest_constraint_mut().impossible_constraints_3_mut()[card_a] = [[true; 5]; 5];
+                for i in 0..5 {
+                    for j in 0..5 {
+                        self.latest_constraint_mut().impossible_constraints_3_mut()[i][j][card_a] = true;
+                        self.latest_constraint_mut().impossible_constraints_3_mut()[i][card_a][j] = true;
+                    }
+                }
+                continue;
+            }
             for card_b in card_a..5 {
-                // if self.latest_constraint_mut().impossible_constraints_mut()[6][card_b] {
-                //     continue;
-                // }
+                if self.latest_constraint_mut().impossible_constraints_mut()[6][card_b] {
+                    continue;
+                }
                 for card_c in card_b..5 {
-                    // if self.latest_constraint_mut().impossible_constraints_mut()[6][card_c] {
-                    //     continue;
-                    // }
+                    if self.latest_constraint_mut().impossible_constraints_mut()[6][card_c] {
+                        continue;
+                    }
                     cards[card_a] += 1;
                     cards[card_b] += 1;
                     cards[card_c] += 1;
                     log::trace!("generate_impossible_constraints 3 card : {:?}, {:?}, {:?}", card_a, card_b, card_c);
-                    // let output = self.latest_constraint_mut().impossible_constraints_mut()[6][card_c] 
-                    // || self.impossible_to_have_cards_general(history_index, 6, &cards);
                     let output = self.impossible_to_have_cards_general(history_index, 6, &cards);
                     // OPTIMIZE lmao...
                     self.latest_constraint_mut().impossible_constraints_3_mut()[card_a][card_b][card_c] = output;
