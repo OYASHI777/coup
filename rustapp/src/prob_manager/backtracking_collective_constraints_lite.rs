@@ -1,8 +1,7 @@
-use crate::history_public::{AOName, ActionObservation, Card};
-use super::{backtracking_prob::{CoupConstraint, CoupConstraintAnalysis}, collective_constraint::CompressedCollectiveConstraint, compressed_group_constraint::CompressedGroupConstraint};
+use crate::history_public::{ActionObservation, Card};
+use crate::traits::prob_manager::coup_analysis::CoupConstraintAnalysis;
+use super::{backtracking_prob::CoupConstraint, collective_constraint::CompressedCollectiveConstraint, compressed_group_constraint::CompressedGroupConstraint};
 use super::backtracking_collective_constraints::{BacktrackMetaData, ActionInfo, ActionInfoName};
-use ahash::AHashSet;
-use crossbeam::channel::after;
 use std::{marker::Copy, path::Path};
 
 #[derive(Clone, Debug)]

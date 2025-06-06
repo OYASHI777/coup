@@ -1,3 +1,9 @@
+pub mod traits {
+    pub mod prob_manager {
+        pub mod card_state;
+        pub mod coup_analysis;
+    }
+}
 pub mod cfr {
     pub mod explorer;
     mod best_response_policy;
@@ -16,7 +22,9 @@ pub mod prob_manager {
     pub mod backtracking_collective_constraints_lazy;
     pub mod backtracking_collective_constraints_lite;
     pub mod brute_prob_generic;
-    pub mod card_state;
+    pub mod card_state {
+        pub mod card_state_u64;
+    }
     pub mod collective_constraint;
     pub mod compressed_group_constraint;
     pub mod constraint;

@@ -1,9 +1,9 @@
-use std::{hash::Hasher, process::Output};
+use std::{hash::Hasher};
 
 use crate::history_public::Card;
 use crate::prob_manager::permutation_generator::gen_table_combinations;
 
-use super::CardPermState;
+use crate::traits::prob_manager::card_state::CardPermState;
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct CardStateu64(u64);
 impl std::hash::Hash for CardStateu64 {

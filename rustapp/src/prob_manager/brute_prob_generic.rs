@@ -5,17 +5,17 @@
 // Tried instead to save into hashmap and store in bson
 
 use std::hash::Hash;
+use std::fmt::{Debug, Display};
 use crate::history_public::{Card, AOName, ActionObservation};
+use crate::traits::prob_manager::coup_analysis::CoupConstraintAnalysis;
+use crate::traits::prob_manager::card_state::CardPermState;
 use crate::prob_manager::coup_const::MAX_PERM_STATES;
-use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
-use super::card_state::CardPermState;
-// use core::hash::Hasher;
 use ahash::AHashSet;
 /// Struct that card count manually, by simulating movement of cards (as chars) for all possible permutations
 
 pub struct BruteCardCountManagerGeneric<T: CardPermState> 
 where
-    T: CardPermState + Hash + Eq + Copy + Clone + std::fmt::Display + std::fmt::Debug,
+    T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
 {
     private_player: Option<usize>,
     history: Vec<ActionObservation>,
@@ -29,7 +29,7 @@ where
 }
 impl<T> BruteCardCountManagerGeneric<T> 
 where
-    T: CardPermState + Hash + Eq + Copy + Clone + std::fmt::Display + std::fmt::Debug,
+    T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
 {
     /// Constructor
     pub fn new() -> Self {
@@ -633,5 +633,62 @@ where
             }
         }
         output
+    }
+}
+
+impl<T> CoupConstraintAnalysis for BruteCardCountManagerGeneric<T> 
+where
+    T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
+{
+    fn public_constraints(&self) -> &Vec<Vec<Card>> {
+        todo!()
+    }
+
+    fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>> {
+        todo!()
+    }
+
+    fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        todo!()
+    }
+
+    fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
+        todo!()
+    }
+
+    fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7] {
+        todo!()
+    }
+
+    fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7] {
+        todo!()
+    }
+
+    fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5] {
+        todo!()
+    }
+
+    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool {
+        todo!()
+    }
+
+    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool {
+        todo!()
+    }
+
+    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool {
+        todo!()
+    }
+
+    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
+        todo!()
+    }
+
+    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
+        todo!()
+    }
+
+    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
+        todo!()
     }
 }

@@ -11,7 +11,8 @@ use crate::history_public::{Card, ActionObservation};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName, BacktrackMetaData};
 use super::coup_const::MAX_GAME_LENGTH;
 // TODO: Shift this here!
-use super::backtracking_prob::CoupConstraintAnalysis;
+// use super::backtracking_prob::CoupConstraintAnalysis;
+use crate::traits::prob_manager::coup_analysis::CoupConstraintAnalysis;
 
 #[derive(Clone, Debug)]
 pub struct SignificantAction {
