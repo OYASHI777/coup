@@ -5,7 +5,7 @@
 // Tried instead to save into hashmap and store in bson
 
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
-use crate::history_public::{Card, AOName, ActionObservation};
+use crate::history_public::{Card, ActionObservation};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName, BacktrackMetaData};
 use super::coup_const::MAX_GAME_LENGTH;
 // TODO: Shift this here!
@@ -211,10 +211,8 @@ pub struct BackTrackCardCountManager
 impl BackTrackCardCountManager {
     /// Constructor
     pub fn new() -> Self {
-        let mut constraint_history = Vec::with_capacity(MAX_GAME_LENGTH);
-        // constraint_history.push(C::game_start());
-        let mut move_no_history = Vec::with_capacity(MAX_GAME_LENGTH);
-        // move_no_history.push(0);
+        let constraint_history = Vec::with_capacity(MAX_GAME_LENGTH);
+        let move_no_history = Vec::with_capacity(MAX_GAME_LENGTH);
         Self {
             private_player: None,
             constraint_history,
@@ -1062,6 +1060,7 @@ impl BackTrackCardCountManager {
         // }
         true
     }
+    /// Recursion case for exchange with no private information
     pub fn recurse_variants_exchange_public(&self, index_loop: usize, player_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
         let player_lives = 2 - self.constraint_history[index_loop].public_constraints()[player_loop].len() as u8;
         let mut iter_cards_player = inferred_constraints[player_loop].clone();
@@ -1437,6 +1436,7 @@ impl BackTrackCardCountManager {
         }
         false
     }
+    /// Recursion case for exchange with private information
     pub fn recurse_variants_exchange_private(&self, index_loop: usize, player_loop: usize, draw: &Vec<Card>, relinquish: &Vec<Card>, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
         log::trace!("In recurse_variants_exchange_private!");
         let (mut bool_rm_pile_rel_0, mut bool_rm_pile_rel_1, mut bool_rm_player_draw_0, mut bool_rm_player_draw_1) = (false, false, false, false);
@@ -1561,7 +1561,11 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
 //     /// Returns reference to array[card_i][card_j][card_k] storing whether pile can have card_i, card_j, and card_k
 //     fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5];
 //     /// Returns true if player can have a particular card alive
-//     fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool;
+//     fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool;
+//     /// Returns true if player can have a particular card alive | evaluates lazily
+//     fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool;
 //     /// Returns true if player can have a collection of cards alive
-//     fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool;
+//     fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool;
+//     /// Returns true if player can have a collection of cards alive | evaluates lazily
+//     fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool;
 // } 

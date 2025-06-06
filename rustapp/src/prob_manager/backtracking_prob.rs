@@ -23,10 +23,8 @@ pub struct BackTrackCardCountManager<C>
 impl<C: CoupConstraint> BackTrackCardCountManager<C> {
     /// Constructor
     pub fn new() -> Self {
-        let mut constraint_history = Vec::with_capacity(120);
-        // constraint_history.push(C::game_start());
-        let mut constraint_history_move_no = Vec::with_capacity(120);
-        // constraint_history_move_no.push(0);
+        let constraint_history = Vec::with_capacity(120);
+        let constraint_history_move_no = Vec::with_capacity(120);
         Self {
             private_player: None,
             constraint_history,
@@ -270,10 +268,10 @@ pub trait CoupConstraintAnalysis {
     fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5];
     /// Returns true if player can have a particular card alive
     fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool;
-    /// Returns true if player can have a particular card alive
+    /// Returns true if player can have a particular card alive | evaluates lazily
     fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool;
     /// Returns true if player can have a collection of cards alive
     fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool;
-    /// Returns true if player can have a collection of cards alive
+    /// Returns true if player can have a collection of cards alive | evaluates lazily
     fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool;
 } 
