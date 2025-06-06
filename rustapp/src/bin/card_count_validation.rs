@@ -1660,20 +1660,20 @@ pub fn game_rnd_constraint_bt_bench(game_no : usize, bool_know_priv_info: bool) 
                 if output.name() == AOName::Discard{
                     let true_legality = if output.no_cards() == 1 {
                         // let start_time = Instant::now();
-                        !bit_prob.player_impossible_constraints()[output.player_id()][output.cards()[0] as usize]
+                        bit_prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
                     } else {
-                        !bit_prob.player_impossible_constraints_paired()[output.player_id()][output.cards()[0] as usize][output.cards()[1] as usize]
+                        bit_prob.player_can_have_cards_alive(output.player_id(), output.cards())
                     };
                     if !true_legality{
                         break    
                     } 
                 } else if output.name() == AOName::RevealRedraw {
-                    let true_legality: bool = !bit_prob.player_impossible_constraints()[output.player_id()][output.card() as usize];
+                    let true_legality: bool = bit_prob.player_can_have_card_alive(output.player_id(), output.card());
                     if !true_legality{
                         break    
                     } 
                 } else if output.name() == AOName::ExchangeDraw {
-                    let true_legality: bool = !bit_prob.player_impossible_constraints_paired()[output.player_id()][output.cards()[0] as usize][output.cards()[1] as usize];
+                    let true_legality: bool = bit_prob.player_can_have_cards_alive(output.player_id(), output.cards());
                     if !true_legality {
                         break    
                     }
