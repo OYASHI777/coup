@@ -37,8 +37,8 @@ fn main() {
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
-    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
-    game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
+    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
+    // game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
     
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
@@ -46,6 +46,7 @@ fn main() {
     // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
     game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(10000, bool_know_priv_info);
     game_rnd_constraint_bt_bench(10000, bool_know_priv_info);
+    game_rnd_constraint_bt_bench_lazy(10000, bool_know_priv_info);
     game_rnd_constraint_bt_bench_control(10000, bool_know_priv_info);
     // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
     // game_rnd_constraint_brute_bench(10);
@@ -1460,15 +1461,15 @@ pub fn game_rnd_constraint_bt_st_g<V, T>(game_no: usize, bool_know_priv_info: bo
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 if output.name() == AOName::Discard{
                     let true_legality = if output.no_cards() == 1 {
-                        prob.player_can_have_card_alive(output.player_id() as u8, output.cards()[0])
+                        prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
                     } else {
-                        prob.player_can_have_cards_alive(output.player_id() as u8, &output.cards().to_vec())
+                        prob.player_can_have_cards_alive(output.player_id(), &output.cards().to_vec())
                     };
                     if !true_legality{
                         break    
                     } 
                 } else if output.name() == AOName::RevealRedraw {
-                    let true_legality: bool = prob.player_can_have_card_alive(output.player_id() as u8, output.card());
+                    let true_legality: bool = prob.player_can_have_card_alive(output.player_id(), output.card());
                     if !true_legality{
                         break    
                     } 
@@ -1583,15 +1584,15 @@ pub fn game_rnd_constraint_bt_generic_bench<C>(game_no : usize, bool_know_priv_i
             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
                 if output.name() == AOName::Discard{
                     let true_legality = if output.no_cards() == 1 {
-                        bit_prob.player_can_have_card_alive(output.player_id() as u8, output.cards()[0])
+                        bit_prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
                     } else {
-                        bit_prob.player_can_have_cards_alive(output.player_id() as u8, &output.cards().to_vec())
+                        bit_prob.player_can_have_cards_alive(output.player_id(), &output.cards().to_vec())
                     };
                     if !true_legality{
                         break    
                     } 
                 } else if output.name() == AOName::RevealRedraw {
-                    let true_legality: bool = bit_prob.player_can_have_card_alive(output.player_id() as u8, output.card());
+                    let true_legality: bool = bit_prob.player_can_have_card_alive(output.player_id(), output.card());
                     if !true_legality{
                         break    
                     } 
@@ -1679,6 +1680,82 @@ pub fn game_rnd_constraint_bt_bench(game_no : usize, bool_know_priv_info: bool) 
                 } 
                 hh.push_ao(output);
                 bit_prob.push_ao_public(&output);
+                actions_processed += 1;
+
+            } else {
+                log::trace!("Pushed bad move somewhere earlier!");
+                break;
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            log::info!("");
+        }
+        bit_prob.reset();
+        game += 1;
+    }
+    let elapsed_time = start_time.elapsed();
+    let process_per_action_us = elapsed_time.as_micros() as f64 / actions_processed as f64;
+    println!("Benchmark for: {}", "backtracking_prob_2");
+    println!("Games Ran: {}", game_no);
+    println!("Nodes Processed: {}", actions_processed);
+    println!("Estimated Time per nodes: {} micro seconds", process_per_action_us);
+}
+pub fn game_rnd_constraint_bt_bench_lazy(game_no : usize, bool_know_priv_info: bool) {
+    let mut game: usize = 0;
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_2::BackTrackCardCountManager::new();
+    let mut actions_processed: u128 = 0;
+    let mut start_time = Instant::now();
+    while game < game_no {
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        // if game % (game_no / 10) == 0 {
+        let private_player: usize = 0;
+        if bool_know_priv_info {
+            // Choose random player
+            // Initialize for that player
+            let mut rng = thread_rng();
+            let card_0: u8 = rng.gen_range(0..5);
+            let card_1: u8 = rng.gen_range(0..5);
+            let cards = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
+            // TODO: Fill those up
+            bit_prob.start_private(private_player, &cards);
+        } else {
+            bit_prob.start_public();
+        }
+        while !hh.game_won() {
+            
+            // log::info!("{}", format!("Step : {:?}",step));
+            hh.log_state();
+            bit_prob.printlog();
+            new_moves = hh.generate_legal_moves(None);
+            
+            if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
+                if output.name() == AOName::Discard{
+                    let true_legality = if output.no_cards() == 1 {
+                        // let start_time = Instant::now();
+                        bit_prob.player_can_have_card_alive_lazy(output.player_id(), output.cards()[0])
+                    } else {
+                        bit_prob.player_can_have_cards_alive_lazy(output.player_id(), output.cards())
+                    };
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::RevealRedraw {
+                    let true_legality: bool = bit_prob.player_can_have_card_alive_lazy(output.player_id(), output.card());
+                    if !true_legality{
+                        break    
+                    } 
+                } else if output.name() == AOName::ExchangeDraw {
+                    let true_legality: bool = bit_prob.player_can_have_cards_alive_lazy(output.player_id(), output.cards());
+                    if !true_legality {
+                        break    
+                    }
+                } 
+                hh.push_ao(output);
+                bit_prob.push_ao_public_lazy(&output);
                 actions_processed += 1;
 
             } else {

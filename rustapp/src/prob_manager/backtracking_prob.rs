@@ -222,12 +222,20 @@ where
         self.latest_constraint_mut().player_impossible_constraints_triple()
     }
 
-    fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool {
+    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool {
         self.latest_constraint().player_can_have_card_alive(player, card)
     }
 
-    fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool {
+    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool {
+        self.latest_constraint().player_can_have_card_alive_lazy(player, card)
+    }
+
+    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool {
         self.latest_constraint().player_can_have_cards_alive(player, cards)
+    }
+
+    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
+        self.latest_constraint().player_can_have_cards_alive_lazy(player, cards)
     }
 }
 
@@ -261,7 +269,11 @@ pub trait CoupConstraintAnalysis {
     /// Returns reference to array[card_i][card_j][card_k] storing whether pile can have card_i, card_j, and card_k
     fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5];
     /// Returns true if player can have a particular card alive
-    fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool;
+    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool;
+    /// Returns true if player can have a particular card alive
+    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool;
     /// Returns true if player can have a collection of cards alive
-    fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool;
+    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool;
+    /// Returns true if player can have a collection of cards alive
+    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool;
 } 

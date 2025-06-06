@@ -167,14 +167,18 @@ impl CoupConstraintAnalysis for SignificantAction
         self.meta_data.impossible_constraints_3()
     }
 
-    fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool {
-        !self.meta_data.impossible_constraints()[player as usize][card as usize]
+    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool {
+        !self.meta_data.impossible_constraints()[player][card as usize]
+    }
+    
+    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool {
+        unimplemented!()
     }
 
-    fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool {
+    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool {
         if player < 6 {
             if cards.len() == 2 {
-                return !self.meta_data.impossible_constraints_2()[player as usize][cards[0] as usize][cards[1] as usize]
+                return !self.meta_data.impossible_constraints_2()[player][cards[0] as usize][cards[1] as usize]
             } else if cards.len() == 1 {
                 return self.player_can_have_card_alive(player, cards[0])
             }
@@ -182,12 +186,15 @@ impl CoupConstraintAnalysis for SignificantAction
             if cards.len() == 1 {
                 return self.player_can_have_card_alive(player, cards[0])
             } else if cards.len() == 2 {
-                return !self.meta_data.impossible_constraints_2()[player as usize][cards[0] as usize][cards[1] as usize]
+                return !self.meta_data.impossible_constraints_2()[player][cards[0] as usize][cards[1] as usize]
             } else if cards.len() == 3 {
                 return !self.meta_data.impossible_constraints_3()[cards[0] as usize][cards[1] as usize][cards[2] as usize]
             }
         }
         false
+    }
+    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
+        unimplemented!()
     }
 }
 // TODO: Store also a version of constraint_history but split by players
@@ -1516,12 +1523,25 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
         self.latest_constraint_mut().player_impossible_constraints_triple()
     }
 
-    fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool {
+    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool {
         self.latest_constraint().player_can_have_card_alive(player, card)
     }
+    
+    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool {
+        let mut cards = [0u8; 5];
+        cards[card as usize] += 1;
+        self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards)
+    }
 
-    fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool {
+    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool {
         self.latest_constraint().player_can_have_cards_alive(player, cards)
+    }
+    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
+        let mut cards_input = [0u8; 5];
+        for card in cards.iter() {
+            cards_input[*card as usize] += 1;
+        }
+        self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards_input)
     }
 }
 

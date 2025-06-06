@@ -1580,17 +1580,29 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLazy {
         &self.impossible_constraints_3
     }
     
-    fn player_can_have_card_alive(&self, player: u8, card: Card) -> bool{
+    fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool{
         let mut cards = [0; 5];
         cards[card as usize] = 1;
-        !self.impossible_to_have_cards_general(self.history.len() - 1, player as usize, &cards)
+        !self.impossible_to_have_cards_general(self.history.len() - 1, player, &cards)
+    }
+    fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool{
+        let mut cards = [0; 5];
+        cards[card as usize] = 1;
+        !self.impossible_to_have_cards_general(self.history.len() - 1, player, &cards)
     }
     // TODO: Change Vec<> to a Slice
-    fn player_can_have_cards_alive(&self, player: u8, cards: &Vec<Card>) -> bool{
+    fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool{
         let mut cards_input = [0; 5];
         for card in cards.iter() {
             cards_input[*card as usize] += 1;
         }
-        !self.impossible_to_have_cards_general(self.history.len() - 1, player as usize, &cards_input)
+        !self.impossible_to_have_cards_general(self.history.len() - 1, player, &cards_input)
+    }
+    fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool{
+        let mut cards_input = [0; 5];
+        for card in cards.iter() {
+            cards_input[*card as usize] += 1;
+        }
+        !self.impossible_to_have_cards_general(self.history.len() - 1, player, &cards_input)
     }
 }
