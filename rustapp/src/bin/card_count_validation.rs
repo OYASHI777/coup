@@ -1002,6 +1002,21 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
             if bool_skip_exchange {
                 new_moves.retain(|m| m.name() != AOName::Exchange);
             }
+            let mut check_moves_prob = new_moves.clone();
+            retain_legal_moves_with_card_constraints(&hh, &mut check_moves_prob, &prob, private_player);
+            let mut check_moves_bit_prob = new_moves.clone();
+            check_moves_bit_prob.retain(|ao| {
+                if Some(ao.player_id()) == private_player {
+                    bit_prob.is_legal_move_private(ao)
+                } else {
+                    bit_prob.is_legal_move_public(ao)
+                }
+            });
+            if check_moves_prob.len() != check_moves_bit_prob.len() {
+                println!("check_moves_prob: {:?}", check_moves_prob);
+                println!("check_moves_bit_prob: {:?}", check_moves_bit_prob);
+                panic!();
+            }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, private_player);
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
@@ -1164,21 +1179,44 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
             if bool_skip_exchange {
                 new_moves.retain(|m| m.name() != AOName::Exchange);
             }
-            let moves_check = new_moves.clone();
-            retain_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, private_player);
+            let mut check_moves_prob = new_moves.clone();
+            retain_legal_moves_with_card_constraints(&hh, &mut check_moves_prob, &prob, private_player);
+            let mut check_moves_bit_prob = new_moves.clone();
+            check_moves_bit_prob.retain(|ao| {
+                if Some(ao.player_id()) == private_player {
+                    bit_prob.is_legal_move_private(ao)
+                } else {
+                    bit_prob.is_legal_move_public(ao)
+                }
+            });
+            if check_moves_prob.len() != check_moves_bit_prob.len() {
+                println!("{}", hh.get_replay_history_braindead());
+                println!("new_moves: {:?}", new_moves);
+                println!("public constraints: {:?}", prob.sorted_public_constraints().clone());
+                println!("inferred constraints: {:?}", prob.sorted_inferred_constraints().clone());
+                prob.set_impossible_constraints();
+                println!("impossible constraints: {:?}", prob.player_impossible_constraints());
+                prob.set_impossible_constraints_2();
+                println!("impossible constraints_2: {:?}", prob.player_impossible_constraints_paired());
+                prob.set_impossible_constraints_3();
+                println!("impossible constraints_3: {:?}", prob.player_impossible_constraints_triple());
+                println!("check_moves_prob: {:?}", check_moves_prob);
+                println!("check_moves_bit_prob: {:?}", check_moves_bit_prob);
+                panic!();
+            }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, private_player);
             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
-                println!("public constraints: {:?}", prob.validated_public_constraints());
-                println!("inferred constraints: {:?}", prob.validated_inferred_constraints());
+                println!("public constraints: {:?}", prob.sorted_public_constraints().clone());
+                println!("inferred constraints: {:?}", prob.sorted_inferred_constraints().clone());
                 prob.set_impossible_constraints();
-                println!("impossible constraints: {:?}", prob.validated_impossible_constraints());
+                println!("impossible constraints: {:?}", prob.player_impossible_constraints());
                 prob.set_impossible_constraints_2();
-                println!("impossible constraints_2: {:?}", prob.validated_impossible_constraints_2());
+                println!("impossible constraints_2: {:?}", prob.player_impossible_constraints_paired());
                 prob.set_impossible_constraints_3();
-                println!("impossible constraints_3: {:?}", prob.validated_impossible_constraints_3());
+                println!("impossible constraints_3: {:?}", prob.player_impossible_constraints_triple());
                 panic!("no legit moves found");
             });
             hh.push_ao(action_obs);
@@ -1466,9 +1504,13 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
                 },
                 RevealRedraw { player_id, reveal: reveal_card , redraw: redraw_card} => {
                     if private_player.is_some() && *player_id == private_player.unwrap() {
-                        if prob.player_can_have_card_alive(*player_id, *reveal_card) {
-                            if prob.player_can_have_card_alive(6, *redraw_card) {
-                                return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: Some(*redraw_card), relinquish: None } )));
+                        if *reveal_card == *redraw_card {
+                            return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: Some(*redraw_card), relinquish: None } )));
+                        } else {
+                            if prob.player_can_have_card_alive(*player_id, *reveal_card) {
+                                if prob.player_can_have_card_alive(6, *redraw_card) {
+                                    return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: Some(*redraw_card), relinquish: None } )));
+                                }
                             }
                         }
                     } else {
@@ -1575,10 +1617,14 @@ pub fn retain_legal_moves_with_card_constraints(history: &History, new_moves: &m
                 }
             },
             RevealRedraw { player_id, reveal: reveal_card , redraw: redraw_card} => {
-                if private_player.is_some() && *player_id == private_player.unwrap() {
-                    if prob.player_can_have_card_alive(*player_id, *reveal_card) {
-                        if prob.player_can_have_card_alive(6, *redraw_card) {
-                            return true
+                if Some(*player_id) == private_player {
+                    if *reveal_card == *redraw_card {
+                        return true
+                    } else {
+                        if prob.player_can_have_card_alive(*player_id, *reveal_card) {
+                            if prob.player_can_have_card_alive(6, *redraw_card) {
+                                return true
+                            }
                         }
                     }
                 } else {
@@ -1588,7 +1634,7 @@ pub fn retain_legal_moves_with_card_constraints(history: &History, new_moves: &m
                 }
             },
             ExchangeDraw { player_id, card } => {
-                if private_player.is_some() && *player_id == private_player.unwrap() {
+                if Some(*player_id) == private_player {
                     if prob.player_can_have_cards(6, card) {
                         return true;
                     }
