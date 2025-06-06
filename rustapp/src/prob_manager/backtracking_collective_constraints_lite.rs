@@ -1602,4 +1602,22 @@ impl CoupConstraintAnalysis for BackTrackCollectiveConstraintLite {
     fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool{
         self.player_can_have_cards_alive(player, cards)
     }
+    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
+        match action_observation {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                if *no_cards == 1 {
+                    self.player_can_have_card_alive_lazy(*player_id, card[0])
+                } else {
+                    self.player_can_have_cards_alive_lazy(*player_id, card)
+                }
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                self.player_can_have_card_alive_lazy(*player_id, *reveal)
+            },
+            _ => true,
+        }
+    }
+    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
+        unimplemented!()
+    }
 }

@@ -4,6 +4,8 @@
 // This is too long
 // Tried instead to save into hashmap and store in bson
 
+use std::hint::unreachable_unchecked;
+
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 use crate::history_public::{Card, ActionObservation};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName, BacktrackMetaData};
@@ -194,6 +196,14 @@ impl CoupConstraintAnalysis for SignificantAction
         false
     }
     fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
+        unimplemented!()
+    }
+    
+    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
+        unimplemented!()
+    }
+    
+    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
 }
@@ -1570,11 +1580,67 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
         self.latest_constraint().player_can_have_cards_alive(player, cards)
     }
     fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
+        // TODO: [OPTIMIZE] check if latest state is updated! 
         let mut cards_input = [0u8; 5];
         for card in cards.iter() {
             cards_input[*card as usize] += 1;
         }
         !self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards_input)
+    }
+    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
+        match action_observation {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                if *no_cards == 1 {
+                    self.player_can_have_card_alive_lazy(*player_id, card[0])
+                } else {
+                    self.player_can_have_cards_alive_lazy(*player_id, card)
+                }
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                self.player_can_have_card_alive_lazy(*player_id, *reveal)
+            },
+            _ => true,
+        }
+    }
+    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
+        match action_observation {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                if *no_cards == 1 {
+                    self.player_can_have_card_alive_lazy(*player_id, card[0])
+                } else {
+                    self.player_can_have_cards_alive_lazy(*player_id, card)
+                }
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                self.player_can_have_card_alive_lazy(*player_id, *reveal)
+            },
+            ActionObservation::ExchangeDraw { card, .. } => {
+                self.player_can_have_cards_alive_lazy(6, card)
+            },
+            ActionObservation::ExchangeChoice { player_id, relinquish } => {
+                let mut required = [0u8; 5];
+                relinquish.iter().for_each(|c| required[*c as usize] += 1); 
+                if let ActionInfo::ExchangeDraw { draw } = self.constraint_history[self.constraint_history.len() - 1].action_info() {
+                    draw.iter().for_each(|c| if required[*c as usize] > 1 { required[*c as usize] -= 1 } );
+                }
+                let total_cards = required.iter().sum::<u8>();
+                if total_cards == 0 {
+                    true
+                } else if total_cards > 2{
+                    false
+                } else {
+                    // if updated {..} just check the state
+                    let mut cards = Vec::with_capacity(2);
+                    for c in 0..5 {
+                        for _ in 0..required[c] {
+                            cards.push(Card::try_from(c as u8).unwrap());
+                        }
+                    }
+                    self.player_can_have_cards_alive_lazy(*player_id, &cards)
+                }
+            },
+            _ => true,
+        }
     }
 }
 

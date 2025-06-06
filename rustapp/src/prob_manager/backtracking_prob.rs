@@ -235,6 +235,14 @@ where
     fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool {
         self.latest_constraint().player_can_have_cards_alive_lazy(player, cards)
     }
+    
+    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool {
+        unimplemented!()
+    }
+    
+    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool {
+        unimplemented!()
+    }
 }
 
 /// A trait providing the interface for a constraint
@@ -274,4 +282,10 @@ pub trait CoupConstraintAnalysis {
     fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool;
     /// Returns true if player can have a collection of cards alive | evaluates lazily
     fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool;
+    /// Returns true if move is legal considering only public information
+    /// Assumes the player can make a turn and does not check if it is the player's turn
+    fn is_legal_move_public(&self, action_observation: &ActionObservation) -> bool;
+    /// Returns true if move is legal considering public and private information
+    /// Assumes the player can make a turn and does not check if it is the player's turn
+    fn is_legal_move_private(&self, action_observation: &ActionObservation) -> bool;
 } 
