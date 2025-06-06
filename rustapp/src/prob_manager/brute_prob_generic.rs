@@ -787,7 +787,12 @@ where
                 }
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
-                self.player_can_have_card_alive_lazy(*player_id, *reveal)
+                if *reveal == *redraw {
+                    true
+                } else {
+                    self.player_can_have_card_alive_lazy(*player_id, *reveal)
+                    && self.player_can_have_card_alive_lazy(6, *redraw)
+                }
             },
             ActionObservation::ExchangeDraw { card, .. } => {
                 self.player_can_have_cards_alive_lazy(6, card)
@@ -796,7 +801,7 @@ where
                 // let mut required = [0u8; 5];
                 // relinquish.iter().for_each(|c| required[*c as usize] += 1); 
                 // if let ActionObservation::ExchangeDraw { card: draw, .. } = self.history[self.history.len() - 1] {
-                //     draw.iter().for_each(|c| if required[*c as usize] > 1 { required[*c as usize] -= 1 } );
+                //     draw.iter().for_each(|c| if required[*c as usize] > 0 { required[*c as usize] -= 1 } );
                 // }
                 // let total_cards = required.iter().sum::<u8>();
                 // if total_cards == 0 {

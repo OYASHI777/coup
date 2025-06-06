@@ -380,8 +380,12 @@ impl BackTrackCardCountManager {
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
                 log::trace!("Adding move RevealRedraw");
-                self.add_move_clone_public(*player_id, action_info);
-                self.generate_all_constraints();
+                if *reveal == *redraw {
+                    self.add_move_clone_all(*player_id, action_info);
+                } else {
+                    self.add_move_clone_public(*player_id, action_info);
+                    self.generate_all_constraints();
+                }
             },
             ActionObservation::ExchangeDraw { player_id, card } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
@@ -1613,21 +1617,32 @@ impl CoupConstraintAnalysis for BackTrackCardCountManager
                 }
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
-                self.player_can_have_card_alive_lazy(*player_id, *reveal)
+                if *reveal == *redraw {
+                    return true
+                } else {
+                    self.player_can_have_card_alive_lazy(*player_id, *reveal)
+                    && self.player_can_have_card_alive_lazy(6, *redraw)
+                }
             },
             ActionObservation::ExchangeDraw { card, .. } => {
                 self.player_can_have_cards_alive_lazy(6, card)
             },
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
+                let player_dead = self.public_constraints()[*player_id].len() as u8;
                 let mut required = [0u8; 5];
                 relinquish.iter().for_each(|c| required[*c as usize] += 1); 
+                // println!("relinquish: {:?}", relinquish);
+                // println!("required: {:?}", required);
                 if let ActionInfo::ExchangeDraw { draw } = self.constraint_history[self.constraint_history.len() - 1].action_info() {
-                    draw.iter().for_each(|c| if required[*c as usize] > 1 { required[*c as usize] -= 1 } );
-                }
+                    // println!("draw: {:?}", draw);
+                    draw.iter().for_each(|c| if required[*c as usize] > 0 { required[*c as usize] -= 1 } );
+                } 
+                // println!("required: {:?}", required);
                 let total_cards = required.iter().sum::<u8>();
+                // println!("total_cards: {:?}", total_cards);
                 if total_cards == 0 {
                     true
-                } else if total_cards > 2{
+                } else if total_cards + player_dead > 2{
                     false
                 } else {
                     // if updated {..} just check the state
