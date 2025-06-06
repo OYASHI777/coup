@@ -296,15 +296,13 @@ impl BackTrackCardCountManager {
         match ao {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 self.add_move_discard(*player_id, card, *no_cards);
-                self.generate_impossible_constraints();
-                self.generate_inferred_constraints();
+                self.generate_all_constraints();
             },
             ActionObservation::RevealRedraw { player_id, reveal, .. } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
                 log::trace!("Adding move RevealRedraw");
                 self.add_move_clone_public(*player_id, action_info);
-                self.generate_impossible_constraints();
-                self.generate_inferred_constraints();
+                self.generate_all_constraints();
             },
             ActionObservation::ExchangeDraw { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
@@ -315,8 +313,7 @@ impl BackTrackCardCountManager {
                 let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
                 log::trace!("Adding move ExchangeChoice");
                 self.add_move_clone_public(*player_id, action_info);
-                self.generate_impossible_constraints();
-                self.generate_inferred_constraints();
+                self.generate_all_constraints();
             },
             _ => {},
         }
@@ -324,6 +321,8 @@ impl BackTrackCardCountManager {
         // post_increment: move_no is now the number of the next move
         self.move_no += 1;
     }
+    // TODO: [OPTIMIZE] Add checks for if previous move has been calculated properly
+    // TODO: [OPTIMIZE] Consider Add clones for impossible states based on public constraints?
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of public information but not private information
     pub fn push_ao_public_lazy(&mut self, ao: &ActionObservation){
@@ -360,29 +359,25 @@ impl BackTrackCardCountManager {
         match ao {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 self.add_move_discard(*player_id, card, *no_cards);
-                self.generate_impossible_constraints();
-                self.generate_inferred_constraints();
+                self.generate_all_constraints();
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
                 log::trace!("Adding move RevealRedraw");
                 self.add_move_clone_public(*player_id, action_info);
-                self.generate_impossible_constraints();
-                self.generate_inferred_constraints();
+                self.generate_all_constraints();
             },
             ActionObservation::ExchangeDraw { player_id, card } => {
                 let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
                 log::trace!("Adding move ExchangeChoice");
                 self.add_move_clone_public(*player_id, action_info);
-                self.generate_impossible_constraints();
-                self.generate_inferred_constraints();
+                self.generate_all_constraints();
             },
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
                 let action_info = ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() };
                 log::trace!("Adding move ExchangeChoice");
                 self.add_move_clone_public(*player_id, action_info);
-                self.generate_impossible_constraints();
-                self.generate_inferred_constraints();
+                self.generate_all_constraints();
             },
             _ => {},
         }
@@ -428,6 +423,12 @@ impl BackTrackCardCountManager {
                 self.move_no_history.pop();
             }
         }
+    }
+    // TODO: [OPTIMIZE] Add support for if constraint has been generated already!
+    /// Generates all possible constraints
+    pub fn generate_all_constraints(&mut self) {
+        self.generate_impossible_constraints();
+        self.generate_inferred_constraints();
     }
     /// Does Backtracking to calculate impossibilities
     pub fn generate_impossible_constraints(&mut self) {

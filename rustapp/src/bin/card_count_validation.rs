@@ -30,7 +30,7 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";
 fn main() {
     let game_no = 100000000;
     let log_bool = true;
-    let bool_know_priv_info = false;
+    let bool_know_priv_info = true;
     let bool_skip_exchange = false;
     let bool_lazy =  true;
     let print_frequency: usize = 100;
@@ -954,9 +954,10 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
         let mut hh = History::new(0);
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
-        // let private_player: usize = rng.gen_range(0..6);
-        let private_player: usize = 0;
-        let skip_prob: f32 = 0.5;
+        let mut rng = thread_rng();
+        let private_player: usize = rng.gen_range(0..6);
+        // let private_player: usize = 0;
+        let skip_prob: f32 = 0.8;
         if bool_know_priv_info {
             // Choose random player
             // Initialize for that player
@@ -1016,8 +1017,7 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
                     continue;
                 }
             }
-            bit_prob.generate_impossible_constraints();
-            bit_prob.generate_inferred_constraints();
+            bit_prob.generate_all_constraints();
             let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
             if total_dead >= min_dead_check {
                 let validated_public_constraints = prob.validated_public_constraints();
