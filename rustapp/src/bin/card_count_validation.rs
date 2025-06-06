@@ -38,16 +38,16 @@ fn main() {
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
-    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
-    // game_rnd_constraint_bt_st_debug::<BackTrackCollectiveConstraintLite>(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
+    // game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
+    game_rnd_constraint_bt_st_debug(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
     
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
     // game_rnd_constraint_bt_bench(100);
     // TODO: Make a Lite with Lazy Inferred Constraints
     // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraint>(1000);
-    game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(10000, bool_know_priv_info);
-    game_rnd_constraint_bt_bench(100000, bool_know_priv_info);
-    game_rnd_constraint_bt_bench_lazy(100000, bool_know_priv_info);
+    // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLite>(10000, bool_know_priv_info);
+    // game_rnd_constraint_bt_bench(100000, bool_know_priv_info);
+    // game_rnd_constraint_bt_bench_lazy(100000, bool_know_priv_info);
     // game_rnd_constraint_bt_bench_control(10000, bool_know_priv_info);
     // game_rnd_constraint_bt_generic_bench::<BackTrackCollectiveConstraintLazy>(1000);
     // game_rnd_constraint_brute_bench(10);
@@ -1067,6 +1067,7 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
             //         bit_prob.push_ao(player, &ai);
             //     }
             // }
+            // TODO: Add test for if player is alive they cannot be all impossible
             let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
             if total_dead >= min_dead_check {
                 let validated_public_constraints = prob.sorted_public_constraints().clone();
@@ -1102,8 +1103,10 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
                 if bool_test_over_inferred {
                     // what we are testing inferred too many things
                     stats.over_inferred_count += 1;
+                    println!("public: {:?}", validated_public_constraints);
                     println!("vali: {:?}", validated_inferred_constraints);
                     println!("test: {:?}", test_inferred_constraints);
+                    println!("test im 2: {:?}", test_impossible_constraints_2);
                     println!("{}", hh.get_replay_history_braindead());
                     panic!();
                     break;
@@ -1326,159 +1329,159 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
         game += 1;
     }
 }
-// pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, min_dead_check: usize, log_bool: bool)
-// {
-//     let mut game: usize = 0;
-//     let mut max_steps: usize = 0;
-//     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(false, false);
-//     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
-//     while game < game_no {
-//         if game % print_frequency == 0 {
-//             println!("Debug Checked game: {game}");
-//         }
-//         let mut stats = Stats::new();
-//         let mut hh = History::new(0);
-//         let mut step: usize = 0;
-//         let mut new_moves: Vec<ActionObservation>;
-//         // let private_player: usize = rng.gen_range(0..6);
-//         let private_player: usize = 0;
-//         let mut rng = thread_rng();
-//         let card_0: u8 = rng.gen_range(0..5);
-//         let card_1: u8 = rng.gen_range(0..5);
-//         let starting_hand = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
-//         if bool_know_priv_info {
-//             // Choose random player
-//             // Initialize for that player
-//             // TODO: Fill those up
-//             prob.start_private(private_player, &starting_hand);
-//             bit_prob.start_private(private_player, &starting_hand);
-//         } else {
-//             prob.start_public();
-//             bit_prob.start_public();
-//         }
-//         while !hh.game_won() {
-//             // hh.log_state();
-//             // prob.printlog();
-//             // bit_prob.printlog();
-//             // These are legal from a public sense only, but may be illegal depending on card 
-//             // TODO: [FIX] ExchangeChoice should generate regardless of hand as the card counter can determine it themselves
-//             new_moves = hh.generate_legal_moves(Some(private_player));
-//             // TODO: create generate_legal_moves(None) for public and private
-//             // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
-//             // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
-//             // new_moves.retain(|m| m.name() != AOName::Exchange);
-//             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
-//             let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, Some(private_player));
-//             let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
-//                 println!("{}", hh.get_replay_history_braindead());
-//                 println!("new_moves: {:?}", new_moves);
-//                 println!("public constraints: {:?}", prob.validated_public_constraints());
-//                 println!("inferred constraints: {:?}", prob.validated_inferred_constraints());
-//                 prob.set_impossible_constraints();
-//                 println!("impossible constraints: {:?}", prob.validated_impossible_constraints());
-//                 prob.set_impossible_constraints_2();
-//                 println!("impossible constraints_2: {:?}", prob.validated_impossible_constraints_2());
-//                 prob.set_impossible_constraints_3();
-//                 println!("impossible constraints_3: {:?}", prob.validated_impossible_constraints_3());
-//                 panic!("no legit moves found");
-//             });
-//             log::info!("{}", format!("Player: {} Choice: {:?}", player, action_obs));
-//             hh.push_ao(action_obs);
-//             if bool_know_priv_info && action_obs.player_id() == private_player {
-//                 prob.push_ao_private(&action_obs);
-//                 bit_prob.push_ao_private(&action_obs);
-//             } else {
-//                 prob.push_ao_public(&action_obs);
-//                 bit_prob.push_ao_public(&action_obs);
-//             }
-//             // if let Some(ai) = action_info {
-//             //     // TEMP fix for no DiscardMultiple
-//             //     // TODO: Change back to nice API
-//             //     if let ActionObservation::Discard { player_id, card, no_cards } = action_obs {
-//             //         if no_cards == 2 { 
-//             //             prob.push_ao_public(&action_obs);
-//             //             bit_prob.push_ao_public(&action_obs);
-//             //         } else {
-//             //             prob.push_ao(player, &ai);
-//             //             bit_prob.push_ao(player, &ai);
-//             //         }
-//             //     } else {
-//             //         prob.push_ao(player, &ai);
-//             //         bit_prob.push_ao(player, &ai);
-//             //     }
-//             // }
-//             let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
-//             if total_dead >= min_dead_check {
-//                 let validated_public_constraints = prob.validated_public_constraints();
-//                 let validated_inferred_constraints = prob.validated_inferred_constraints();
-//                 let validated_impossible_constraints = prob.validated_impossible_constraints();
-//                 let test_public_constraints = bit_prob.sorted_public_constraints().clone();
-//                 let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
-//                 let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
-//                 let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
-//                 let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
-//                 let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
-//                 let bool_test_over_inferred: bool = validated_inferred_constraints.iter().zip(test_inferred_constraints.iter()).any(|(val, test)| {
-//                     test.iter().any(|item| !val.contains(item)) || test.len() > val.len()
-//                 });
-//                 // let pass_brute_prob_validity = prob.validate();
-//                 stats.public_constraints_correct += pass_public_constraints as usize;
-//                 stats.inferred_constraints_correct += pass_inferred_constraints as usize;
-//                 stats.impossible_constraints_correct += pass_impossible_constraints as usize;
-//                 stats.total_tries += 1;
-//                 if !pass_public_constraints {
-//                     break;
-//                 }
-//                 if bool_test_over_inferred {
-//                     // what we are testing inferred too many things
-//                     println!("Found problematic game, please hold...");
-//                     let replay = hh.get_history(hh.store_len());
-//                     replay_game_constraint_bt::<C>(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
-//                     panic!("Inferred constraints do not match!");
-//                     break;
-//                     // let replay = hh.get_history(hh.store_len());
-//                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
-//                     // panic!("Inferred to many items!")
-//                 }
-//                 if !pass_inferred_constraints {
-//                     // println!("vali: {:?}", validated_inferred_constraints);
-//                     // println!("test: {:?}", test_inferred_constraints);
-//                     // println!("{}", hh.get_replay_history_braindead());
-//                     println!("Found problematic game, please hold...");
-//                     let replay = hh.get_history(hh.store_len());
-//                     replay_game_constraint_bt::<C>(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
-//                     panic!("Inferred constraints do not match!");
-//                     break;
-//                 }
-//                 if !pass_impossible_constraints {
-//                     // println!("vali: {:?}", validated_impossible_constraints);
-//                     // println!("test: {:?}", test_impossible_constraints);
-//                     println!("Found problematic game, please hold...");
-//                     let replay = hh.get_history(hh.store_len());
-//                     replay_game_constraint_bt::<C>(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
-//                     panic!("Impossible Constraints Failed!");
+pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, min_dead_check: usize, log_bool: bool)
+{
+    let mut game: usize = 0;
+    let mut max_steps: usize = 0;
+    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(false, false);
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
+    while game < game_no {
+        if game % print_frequency == 0 {
+            println!("Debug Checked game: {game}");
+        }
+        let mut stats = Stats::new();
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        // let private_player: usize = rng.gen_range(0..6);
+        let private_player: usize = 0;
+        let mut rng = thread_rng();
+        let card_0: u8 = rng.gen_range(0..5);
+        let card_1: u8 = rng.gen_range(0..5);
+        let starting_hand = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
+        if bool_know_priv_info {
+            // Choose random player
+            // Initialize for that player
+            // TODO: Fill those up
+            prob.start_private(private_player, &starting_hand);
+            bit_prob.start_private(private_player, &starting_hand);
+        } else {
+            prob.start_public();
+            bit_prob.start_public();
+        }
+        while !hh.game_won() {
+            // hh.log_state();
+            // prob.printlog();
+            // bit_prob.printlog();
+            // These are legal from a public sense only, but may be illegal depending on card 
+            // TODO: [FIX] ExchangeChoice should generate regardless of hand as the card counter can determine it themselves
+            new_moves = hh.generate_legal_moves(Some(private_player));
+            // TODO: create generate_legal_moves(None) for public and private
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw && m.name() != AOName::Exchange);
+            // new_moves.retain(|m| m.name() != AOName::RevealRedraw);
+            // new_moves.retain(|m| m.name() != AOName::Exchange);
+            // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
+            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &prob, Some(private_player));
+            let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
+                println!("{}", hh.get_replay_history_braindead());
+                println!("new_moves: {:?}", new_moves);
+                println!("public constraints: {:?}", prob.validated_public_constraints());
+                println!("inferred constraints: {:?}", prob.validated_inferred_constraints());
+                prob.set_impossible_constraints();
+                println!("impossible constraints: {:?}", prob.validated_impossible_constraints());
+                prob.set_impossible_constraints_2();
+                println!("impossible constraints_2: {:?}", prob.validated_impossible_constraints_2());
+                prob.set_impossible_constraints_3();
+                println!("impossible constraints_3: {:?}", prob.validated_impossible_constraints_3());
+                panic!("no legit moves found");
+            });
+            log::info!("{}", format!("Player: {} Choice: {:?}", player, action_obs));
+            hh.push_ao(action_obs);
+            if bool_know_priv_info && action_obs.player_id() == private_player {
+                prob.push_ao_private(&action_obs);
+                bit_prob.push_ao_private(&action_obs);
+            } else {
+                prob.push_ao_public(&action_obs);
+                bit_prob.push_ao_public(&action_obs);
+            }
+            // if let Some(ai) = action_info {
+            //     // TEMP fix for no DiscardMultiple
+            //     // TODO: Change back to nice API
+            //     if let ActionObservation::Discard { player_id, card, no_cards } = action_obs {
+            //         if no_cards == 2 { 
+            //             prob.push_ao_public(&action_obs);
+            //             bit_prob.push_ao_public(&action_obs);
+            //         } else {
+            //             prob.push_ao(player, &ai);
+            //             bit_prob.push_ao(player, &ai);
+            //         }
+            //     } else {
+            //         prob.push_ao(player, &ai);
+            //         bit_prob.push_ao(player, &ai);
+            //     }
+            // }
+            let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
+            if total_dead >= min_dead_check {
+                let validated_public_constraints = prob.validated_public_constraints();
+                let validated_inferred_constraints = prob.validated_inferred_constraints();
+                let validated_impossible_constraints = prob.validated_impossible_constraints();
+                let test_public_constraints = bit_prob.sorted_public_constraints().clone();
+                let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
+                let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
+                let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
+                let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
+                let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
+                let bool_test_over_inferred: bool = validated_inferred_constraints.iter().zip(test_inferred_constraints.iter()).any(|(val, test)| {
+                    test.iter().any(|item| !val.contains(item)) || test.len() > val.len()
+                });
+                // let pass_brute_prob_validity = prob.validate();
+                stats.public_constraints_correct += pass_public_constraints as usize;
+                stats.inferred_constraints_correct += pass_inferred_constraints as usize;
+                stats.impossible_constraints_correct += pass_impossible_constraints as usize;
+                stats.total_tries += 1;
+                if !pass_public_constraints {
+                    break;
+                }
+                if bool_test_over_inferred {
+                    // what we are testing inferred too many things
+                    println!("Found problematic game, please hold...");
+                    let replay = hh.get_history(hh.store_len());
+                    replay_game_constraint_bt(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
+                    panic!("Inferred constraints do not match!");
+                    break;
+                    // let replay = hh.get_history(hh.store_len());
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // panic!("Inferred to many items!")
+                }
+                if !pass_inferred_constraints {
+                    // println!("vali: {:?}", validated_inferred_constraints);
+                    // println!("test: {:?}", test_inferred_constraints);
+                    // println!("{}", hh.get_replay_history_braindead());
+                    println!("Found problematic game, please hold...");
+                    let replay = hh.get_history(hh.store_len());
+                    replay_game_constraint_bt(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
+                    panic!("Inferred constraints do not match!");
+                    break;
+                }
+                if !pass_impossible_constraints {
+                    // println!("vali: {:?}", validated_impossible_constraints);
+                    // println!("test: {:?}", test_impossible_constraints);
+                    println!("Found problematic game, please hold...");
+                    let replay = hh.get_history(hh.store_len());
+                    replay_game_constraint_bt(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
+                    panic!("Impossible Constraints Failed!");
                     
-//                     break;
-//                     // let replay = hh.get_history(hh.store_len());
-//                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
-//                 }
-//             }
-//             step += 1;
-//             if step > 1000 {
-//                 break;
-//             }
-//             log::info!("");
-//         }
-//         if step > max_steps {
-//             max_steps = step;
-//         }
-//         stats.replay_string = hh.get_replay_history_braindead();
-//         stats.games += 1;
-//         prob.reset();
-//         bit_prob.reset();
-//         game += 1;
-//     }
-// }
+                    break;
+                    // let replay = hh.get_history(hh.store_len());
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                }
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            log::info!("");
+        }
+        if step > max_steps {
+            max_steps = step;
+        }
+        stats.replay_string = hh.get_replay_history_braindead();
+        stats.games += 1;
+        prob.reset();
+        bit_prob.reset();
+        game += 1;
+    }
+}
 // TODO: Shift this to be a method in prob! or at least just to check a new_move!
 pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: &mut Vec<ActionObservation>, prob: &BruteCardCountManagerGeneric<CardStateu64>, private_player: Option<usize>) -> Result<(usize, ActionObservation, Option<ActionInfo>), ()> {
     // Clone the moves and shuffle them in place
@@ -2174,9 +2177,7 @@ pub fn game_rnd_constraint_bt_bench_control(game_no : usize, bool_know_priv_info
     println!("Nodes Processed: {}", actions_processed);
     println!("Estimated Time per nodes: {} micro seconds", process_per_action_us);
 }
-pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_priv_info: bool, private_player: usize, starting_hand: &[Card; 2], log_bool: bool)
-    where
-        C: CoupConstraint + CoupConstraintAnalysis,
+pub fn replay_game_constraint_bt(replay: Vec<ActionObservation>, bool_know_priv_info: bool, private_player: usize, starting_hand: &[Card; 2], log_bool: bool)
 {
     if log_bool{
         logger(LOG_LEVEL);
@@ -2184,7 +2185,7 @@ pub fn replay_game_constraint_bt<C>(replay: Vec<ActionObservation>, bool_know_pr
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(true, true);
-    let mut bit_prob: BackTrackCardCountManager<C> = BackTrackCardCountManager::new();
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     if log_bool {
         clear_log().expect("failed to clear log");
     }

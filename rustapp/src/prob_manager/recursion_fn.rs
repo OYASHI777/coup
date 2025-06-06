@@ -9,6 +9,22 @@ use itertools::Itertools;
 pub struct RecursionTest;
 
 impl RecursionTest {
+    pub fn return_variants_reveal_redraw(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::new();
+        let mut temp = inferred_constraints.clone();
+        if let Some(pos) = temp[player_loop].iter().position(|c| *c == redraw) {
+            temp[player_loop].swap_remove(pos);
+        } 
+        temp[6].push(redraw);
+        if let Some(pos) = temp[6].iter().position(|c| *c == reveal) {
+            temp[6].swap_remove(pos);
+        } 
+        temp[player_loop].push(reveal);
+        if temp[6].len() < 4 && temp[player_loop].len() < 3 {
+            variants.push(temp);
+        }
+        return variants
+    }
     pub fn return_variants_reveal_redraw_none(reveal: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
         if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5 
@@ -749,8 +765,10 @@ impl RecursionTest {
             }
             // let reveal = Self::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
             // log::info!("src rr none: {:?}", reveal);
-            // let redraw = Self::return_variants_reveal_redraw(Card::Ambassador, Card::Assassin, 0, item);
-            // log::info!("src rr draw: {:?}", redraw);
+            let redraw = Self::return_variants_reveal_redraw(Card::Ambassador, Card::Assassin, 0, item);
+            log::info!("src rr draw: {:?}", redraw);
+            let redraw = Self::return_variants_reveal_redraw(Card::Ambassador, Card::Ambassador, 0, item);
+            log::info!("src rr same: {:?}", redraw);
             // let relin = Self::return_variants_reveal_relinquish_opt(Card::Ambassador, 0, item);
             // log::info!("src rr rel: {:?}", relin);
             // let exchange_1 = Self::return_variants_exchange_opt(1, 0, item);
@@ -758,94 +776,97 @@ impl RecursionTest {
             // let exchange_2 = Self::return_variants_exchange_opt(2, 0, item);
             // log::info!("src ex two: {:?}", exchange_2);
             // WRite a test for all cases, generate some start state, go fwd, then go bwd, then check if bwd generated item includes start state
-            let mut hand_count: [u8; 5] = [0; 5];
-            item[0].iter().for_each(|c| hand_count[*c as usize] += 1);
-            let mut pile_count: [u8; 5] = [0; 5];
-            item[6].iter().for_each(|c| pile_count[*c as usize] += 1);
-            let mut symmetric_key: [u8; 10] = [0; 10];
-            let mut temp = hand_count.clone();
-            temp.sort_unstable();
-            temp.iter().enumerate().for_each(|(i, c)| symmetric_key[i] = *c);
-            let mut temp = pile_count.clone();
-            temp.sort_unstable();
-            temp.iter().enumerate().for_each(|(i, c)| symmetric_key[i+5] = *c);
-            if symmetric_keys.contains(&symmetric_key) {
-                // Avoiding symmetric cases
-                continue 'outer;
-            }
-            symmetric_keys.insert(symmetric_key);
-            let mut hand_and_pile_count = hand_count.clone();
-            hand_and_pile_count.iter_mut().zip(pile_count.iter()).for_each(|(hp, p)| *hp += *p);
-            for i in 0..5 {
-                for j in i..5 {
-                    for k in 0..5 {
-                        'inner: for l in k..5 {
-                            let mut temp_count: [u8; 5] = hand_count.clone();
-                            temp_count[i as usize] += 1;
-                            temp_count[j as usize] += 1;
-                            let mut relin_count: [u8; 5] = [0; 5];
-                            relin_count[k as usize] += 1;
-                            relin_count[l as usize] += 1;
-                            let mut draw_count: [u8; 5] = [0; 5];
-                            draw_count[i as usize] += 1;
-                            draw_count[j as usize] += 1;
-                            // Get union of all 3
-                            let mut union_count_0: u8 = 0;
-                            let mut union_count_1: u8 = 0;
-                            for m in 0..5 {
-                                // relinquish must be in outcome hand + draw
-                                // not exact
-                                // draw + hand + relin at most 4
-                                union_count_0 += hand_count[m].max(draw_count[m]).max(relin_count[m]);
-                                // draw + hand + relin + pile at most 5
-                                let max_union_count = hand_and_pile_count[m].max(relin_count[m]).max(pile_count[m]);
-                                // max cards at most 3
-                                if max_union_count > 3 {
-                                    continue 'inner;
-                                }
-                                union_count_1 += max_union_count;
-                            }
-                            if union_count_0 > 4 || union_count_1 > 5{
-                                continue 'inner;
-                            }
-                            // Enough space to have received the relinquish
-                            let mut pile_space: u8 = 0;
-                            pile_count.iter().zip(relin_count.iter()).for_each(|(p, r)| pile_space += *p.max(r));
-                            if pile_space > 3 {
-                                continue 'inner;
-                            }
-                            // Total amount in (draw union relinquish) and not in (hand + pile) cannot exceed (5 - hand.len() - pile.len())
-                            let mut draw_union_relin_count: [u8; 5] = [0; 5];
-                            let mut hand_plus_pile_count: [u8; 5] = [0; 5];
-                            let mut degrees_of_freedom_used: u8 = 0;
-                            draw_count.iter().zip(relin_count.iter()).enumerate().for_each(|(c, (d, r))| draw_union_relin_count[c] += *d.max(r));
-                            hand_plus_pile_count.iter_mut().enumerate().for_each(|(i, count)| *count = hand_count[i] + pile_count[i]);
-                            hand_plus_pile_count.iter().zip(draw_union_relin_count.iter()).for_each(|(h, d)| {
-                                if *d > *h {
-                                    degrees_of_freedom_used += *d - *h;
-                                }
-                            });
-                            if degrees_of_freedom_used + hand_plus_pile_count.iter().sum::<u8>() > 5{
-                                continue 'inner;
-                            }
-                            // destination hand must be  
-                            let draw = vec![Card::try_from(i).unwrap(), Card::try_from(j).unwrap()];
-                            let relinquish = vec![Card::try_from(k).unwrap(), Card::try_from(l).unwrap()];
-                            let exchange_private = Self::return_variants_exchange_private_3(0, &draw, &relinquish,item);
-                            log::info!("src ex_p draw: {:?}, relin: {:?} : {:?}", draw, relinquish, exchange_private);
-                            // Length Check
-                            for v in exchange_private.iter() {
-                                if v[0].len() > 2 || v[6].len() > 3 {
-                                    log::warn!("FAILED ORIG LEN CHECK");
-                                    continue 'inner;
-                                }
-                            }
-                            // Test if when all draw != relin, old hand == relinquish
-                            // Test can be done via reversing it to verify if given solution is legit
-                        }
-                    }
-                }
-            }
+            
+            // === START EXCHANGE CHOICE ===
+            // let mut hand_count: [u8; 5] = [0; 5];
+            // item[0].iter().for_each(|c| hand_count[*c as usize] += 1);
+            // let mut pile_count: [u8; 5] = [0; 5];
+            // item[6].iter().for_each(|c| pile_count[*c as usize] += 1);
+            // let mut symmetric_key: [u8; 10] = [0; 10];
+            // let mut temp = hand_count.clone();
+            // temp.sort_unstable();
+            // temp.iter().enumerate().for_each(|(i, c)| symmetric_key[i] = *c);
+            // let mut temp = pile_count.clone();
+            // temp.sort_unstable();
+            // temp.iter().enumerate().for_each(|(i, c)| symmetric_key[i+5] = *c);
+            // if symmetric_keys.contains(&symmetric_key) {
+            //     // Avoiding symmetric cases
+            //     continue 'outer;
+            // }
+            // symmetric_keys.insert(symmetric_key);
+            // let mut hand_and_pile_count = hand_count.clone();
+            // hand_and_pile_count.iter_mut().zip(pile_count.iter()).for_each(|(hp, p)| *hp += *p);
+            // for i in 0..5 {
+            //     for j in i..5 {
+            //         for k in 0..5 {
+            //             'inner: for l in k..5 {
+            //                 let mut temp_count: [u8; 5] = hand_count.clone();
+            //                 temp_count[i as usize] += 1;
+            //                 temp_count[j as usize] += 1;
+            //                 let mut relin_count: [u8; 5] = [0; 5];
+            //                 relin_count[k as usize] += 1;
+            //                 relin_count[l as usize] += 1;
+            //                 let mut draw_count: [u8; 5] = [0; 5];
+            //                 draw_count[i as usize] += 1;
+            //                 draw_count[j as usize] += 1;
+            //                 // Get union of all 3
+            //                 let mut union_count_0: u8 = 0;
+            //                 let mut union_count_1: u8 = 0;
+            //                 for m in 0..5 {
+            //                     // relinquish must be in outcome hand + draw
+            //                     // not exact
+            //                     // draw + hand + relin at most 4
+            //                     union_count_0 += hand_count[m].max(draw_count[m]).max(relin_count[m]);
+            //                     // draw + hand + relin + pile at most 5
+            //                     let max_union_count = hand_and_pile_count[m].max(relin_count[m]).max(pile_count[m]);
+            //                     // max cards at most 3
+            //                     if max_union_count > 3 {
+            //                         continue 'inner;
+            //                     }
+            //                     union_count_1 += max_union_count;
+            //                 }
+            //                 if union_count_0 > 4 || union_count_1 > 5{
+            //                     continue 'inner;
+            //                 }
+            //                 // Enough space to have received the relinquish
+            //                 let mut pile_space: u8 = 0;
+            //                 pile_count.iter().zip(relin_count.iter()).for_each(|(p, r)| pile_space += *p.max(r));
+            //                 if pile_space > 3 {
+            //                     continue 'inner;
+            //                 }
+            //                 // Total amount in (draw union relinquish) and not in (hand + pile) cannot exceed (5 - hand.len() - pile.len())
+            //                 let mut draw_union_relin_count: [u8; 5] = [0; 5];
+            //                 let mut hand_plus_pile_count: [u8; 5] = [0; 5];
+            //                 let mut degrees_of_freedom_used: u8 = 0;
+            //                 draw_count.iter().zip(relin_count.iter()).enumerate().for_each(|(c, (d, r))| draw_union_relin_count[c] += *d.max(r));
+            //                 hand_plus_pile_count.iter_mut().enumerate().for_each(|(i, count)| *count = hand_count[i] + pile_count[i]);
+            //                 hand_plus_pile_count.iter().zip(draw_union_relin_count.iter()).for_each(|(h, d)| {
+            //                     if *d > *h {
+            //                         degrees_of_freedom_used += *d - *h;
+            //                     }
+            //                 });
+            //                 if degrees_of_freedom_used + hand_plus_pile_count.iter().sum::<u8>() > 5{
+            //                     continue 'inner;
+            //                 }
+            //                 // destination hand must be  
+            //                 let draw = vec![Card::try_from(i).unwrap(), Card::try_from(j).unwrap()];
+            //                 let relinquish = vec![Card::try_from(k).unwrap(), Card::try_from(l).unwrap()];
+            //                 let exchange_private = Self::return_variants_exchange_private_3(0, &draw, &relinquish,item);
+            //                 log::info!("src ex_p draw: {:?}, relin: {:?} : {:?}", draw, relinquish, exchange_private);
+            //                 // Length Check
+            //                 for v in exchange_private.iter() {
+            //                     if v[0].len() > 2 || v[6].len() > 3 {
+            //                         log::warn!("FAILED ORIG LEN CHECK");
+            //                         continue 'inner;
+            //                     }
+            //                 }
+            //                 // Test if when all draw != relin, old hand == relinquish
+            //                 // Test can be done via reversing it to verify if given solution is legit
+            //             }
+            //         }
+            //     }
+            // }
+            // === END EXCHANGE CHOICE ===
             // if reveal.len() < relin.len() {
             //     log::warn!("reveal failed constraint check");
             // }
