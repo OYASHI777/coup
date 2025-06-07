@@ -5,7 +5,7 @@
 // Tried instead to save into hashmap and store in bson
 
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
-use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
+use crate::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
 use crate::history_public::{Card, AOName, ActionObservation};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
 // TODO: Store also a version of constraint_history but split by players
@@ -21,6 +21,7 @@ pub struct BackTrackCardCountManager<C>
     constraint_history_move_no: Vec<usize>, // TODO: determine if more optimal to put in constraint_history
     move_no: usize,
 }
+
 impl<C: CoupConstraint> BackTrackCardCountManager<C> {
     /// Constructor
     pub fn new() -> Self {
@@ -32,26 +33,6 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
             constraint_history_move_no,
             move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
         }
-    }
-    /// Adding private player starting hand
-    pub fn start_public(&mut self) {
-        self.constraint_history.push(C::game_start_public());
-        self.constraint_history_move_no.push(0);
-        self.move_no = 1;
-    }
-    /// Adding private player starting hand
-    pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
-        self.private_player = Some(player);
-        self.constraint_history.push(C::game_start_private(player, cards));
-        self.constraint_history_move_no.push(0);
-        self.move_no = 1;
-    }
-    /// Returns everything to original state
-    pub fn reset(&mut self) {
-        self.private_player = None;
-        self.constraint_history.clear();
-        self.constraint_history_move_no.clear();
-        self.move_no = 1;
     }
     /// Logs the constraint's log
     pub fn printlog(&self) {
@@ -74,10 +55,39 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
         self.constraint_history.last_mut().unwrap()
     }
     /// Entrypoint for any action done, updates history accordingly
-    /// Assumes knowledge of public information but not private information
-    pub fn push_ao_public(&mut self, ao: &ActionObservation){
+    /// Assumes knowledge of both public and private information
+    pub fn push_ao(&mut self, player: usize, action_info: &ActionInfo){
+        let mut last_constraint = self.constraint_history.last().unwrap().clone();
+        last_constraint.add_move(player as u8, action_info.clone());
+        // shove move_no into CollectiveConstraint
+        // post_increment: move_no is now the number of the next move
+        self.constraint_history.push(last_constraint);
+        self.constraint_history_move_no.push(self.move_no);
+        self.move_no += 1;
+    }
+}
+
+
+impl<C> CoupTraversal for BackTrackCardCountManager<C>
+where
+    C: CoupConstraint + CoupPossibilityAnalysis,
+{
+    fn start_public(&mut self) {
+        self.constraint_history.push(C::game_start_public());
+        self.constraint_history_move_no.push(0);
+        self.move_no = 1;
+    }
+
+    fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
+        self.private_player = Some(player);
+        self.constraint_history.push(C::game_start_private(player, cards));
+        self.constraint_history_move_no.push(0);
+        self.move_no = 1;
+    }
+
+    fn push_ao_public(&mut self, action: &ActionObservation) {
         // Handle different move types
-        match ao {
+        match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 // Assumes no_cards is either 1 or 2 only
                 let mut last_constraint = self.constraint_history.last().unwrap().clone();
@@ -120,11 +130,14 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
         // post_increment: move_no is now the number of the next move
         self.move_no += 1;
     }
-    /// Entrypoint for any action done, updates history accordingly
-    /// Assumes knowledge of private information
-    pub fn push_ao_private(&mut self, ao: &ActionObservation){
+
+    fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
+        self.push_ao_public(action);
+    }
+
+    fn push_ao_private(&mut self, action: &ActionObservation) {
         // Handle different move types
-        match ao {
+        match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 // Assumes no_cards is either 1 or 2 only
                 let mut last_constraint = self.constraint_history.last().unwrap().clone();
@@ -165,19 +178,12 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
         // post_increment: move_no is now the number of the next move
         self.move_no += 1;
     }
-    /// Entrypoint for any action done, updates history accordingly
-    /// Assumes knowledge of both public and private information
-    pub fn push_ao(&mut self, player: usize, action_info: &ActionInfo){
-        let mut last_constraint = self.constraint_history.last().unwrap().clone();
-        last_constraint.add_move(player as u8, action_info.clone());
-        // shove move_no into CollectiveConstraint
-        // post_increment: move_no is now the number of the next move
-        self.constraint_history.push(last_constraint);
-        self.constraint_history_move_no.push(self.move_no);
-        self.move_no += 1;
+
+    fn push_ao_private_lazy(&mut self, action: &ActionObservation) {
+        self.push_ao_private(action);
     }
-    /// pop latest move
-    pub fn pop(&mut self) {
+
+    fn pop(&mut self) {
         if self.move_no > 1 {
             self.move_no -= 1;
             if self.constraint_history_move_no.last() == Some(&self.move_no) {
@@ -186,8 +192,14 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
             }
         }
     }
-}
 
+    fn reset(&mut self) {
+        self.private_player = None;
+        self.constraint_history.clear();
+        self.constraint_history_move_no.clear();
+        self.move_no = 1;
+    }
+}
 
 impl<C> CoupPossibilityAnalysis for BackTrackCardCountManager<C>
 where
