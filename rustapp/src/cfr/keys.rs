@@ -12,6 +12,23 @@ pub struct BRKey {
 pub const MAX_NUM_BRKEY: usize = 6 * 15; 
 // pub const INFOSTATES: [&str; 15] = ["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE", "EE"];
 pub const INFOSTATES: [&Infostate; 15] = [&Infostate::AA, &Infostate::AB, &Infostate::AC, &Infostate::AD, &Infostate::AE, &Infostate::BB, &Infostate::BC, &Infostate::BD, &Infostate::BE, &Infostate::CC, &Infostate::CD, &Infostate::CE, &Infostate::DD, &Infostate::DE, &Infostate::EE];
+pub const INFOSTATES_NEW: [[Card; 2]; 15] = [
+    [Card::Ambassador, Card::Ambassador], 
+    [Card::Ambassador, Card::Assassin], 
+    [Card::Ambassador, Card::Captain], 
+    [Card::Ambassador, Card::Duke], 
+    [Card::Ambassador, Card::Contessa], 
+    [Card::Assassin, Card::Assassin], 
+    [Card::Assassin, Card::Captain], 
+    [Card::Assassin, Card::Duke], 
+    [Card::Assassin, Card::Contessa], 
+    [Card::Captain, Card::Captain], 
+    [Card::Captain, Card::Duke], 
+    [Card::Captain, Card::Contessa], 
+    [Card::Duke, Card::Duke], 
+    [Card::Duke, Card::Contessa], 
+    [Card::Contessa, Card::Contessa], 
+    ];
 impl BRKey {
     pub fn new(player_id: u8, infostate: &Infostate) -> Self {
         debug_assert!(player_id < 6, "Invalid player_id of {player_id}");
