@@ -7,7 +7,7 @@
 use std::hash::Hash;
 use std::fmt::{Debug, Display};
 use crate::history_public::{Card, AOName, ActionObservation};
-use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
+use crate::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
 use crate::traits::prob_manager::card_state::CardPermState;
 use crate::prob_manager::coup_const::MAX_PERM_STATES;
 use ahash::AHashSet;
@@ -63,128 +63,128 @@ where
             impossible_constraints_3_is_updated: auto_calc_3,
         }
     }
-    /// Adding private player starting hand
-    pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
-        self.private_player = Some(player);
-        self.restrict(player, cards);
-        // self.inferred_constraints[player].push(cards[0]);
-        // self.inferred_constraints[player].push(cards[1]);
-        // self.inferred_constraints[player].sort_unstable();
-        self.update_constraints();
-        self.set_impossible_constraints_2();
-        self.set_impossible_constraints_3();
-    }
-    /// Placeholder
-    pub fn start_public(&mut self) {
-    }
+    // /// Adding private player starting hand
+    // pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
+    //     self.private_player = Some(player);
+    //     self.restrict(player, cards);
+    //     // self.inferred_constraints[player].push(cards[0]);
+    //     // self.inferred_constraints[player].push(cards[1]);
+    //     // self.inferred_constraints[player].sort_unstable();
+    //     self.update_constraints();
+    //     self.set_impossible_constraints_2();
+    //     self.set_impossible_constraints_3();
+    // }
+    // /// Placeholder
+    // pub fn start_public(&mut self) {
+    // }
     /// total number of possible states
     pub fn len(&self) -> usize {
         self.calculated_states.len()
     }
-    /// Resets
-    pub fn reset(&mut self) {
-        self.history.clear();
-        self.private_player = None;
-        self.public_constraints = vec![Vec::with_capacity(2); 6];
-        self.public_constraints.push(Vec::with_capacity(3));
-        self.inferred_constraints = vec![Vec::with_capacity(2); 6];
-        self.inferred_constraints.push(Vec::with_capacity(3));
-        self.impossible_constraints = [[false; 5]; 7];
-        self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
-        self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
-        self.calculated_states = self.all_states.clone().into_iter().collect();
-    }
+    // /// Resets
+    // pub fn reset(&mut self) {
+    //     self.history.clear();
+    //     self.private_player = None;
+    //     self.public_constraints = vec![Vec::with_capacity(2); 6];
+    //     self.public_constraints.push(Vec::with_capacity(3));
+    //     self.inferred_constraints = vec![Vec::with_capacity(2); 6];
+    //     self.inferred_constraints.push(Vec::with_capacity(3));
+    //     self.impossible_constraints = [[false; 5]; 7];
+    //     self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
+    //     self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
+    //     self.calculated_states = self.all_states.clone().into_iter().collect();
+    // }
     /// adds public constraint
     pub fn add_public_constraint(&mut self, player_id: usize, card: Card) {
         self.public_constraints[player_id].push(card);
     }
     /// Modifies internal state based on latest action done by player
-    pub fn push_ao_public(&mut self, ao: &ActionObservation) {
-        match ao.name() {
-            AOName::Discard => {
-                match ao.no_cards() {
-                    1 => {
-                        self.public_constraints[ao.player_id()].push(ao.cards()[0]);
-                        if self.public_constraints[ao.player_id()].len() == 2 {
-                            // Handles the case where the players' dead cards are both the same, without this, restrict won't ensure player has both cards
-                            self.restrict(ao.player_id(), &self.public_constraints[ao.player_id()].clone());
-                        } else {
-                            self.restrict(ao.player_id(), &[ao.cards()[0]]);
-                        }
-                    }
-                    2 => {
-                        self.public_constraints[ao.player_id()].push(ao.cards()[0]);
-                        self.public_constraints[ao.player_id()].push(ao.cards()[1]);
-                        self.restrict(ao.player_id(), ao.cards());
-                    }
-                    _ => {
-                        debug_assert!(false, "woops");
-                    }
-                }
-                self.update_constraints();
-            },
-            AOName::RevealRedraw => {
-                self.reveal_redraw(ao.player_id(), ao.card());
-                self.update_constraints();
-            },
-            AOName::ExchangeDraw => {
-                // self.ambassador(ao.player_id());
-                // self.update_constraints();
-            },
-            AOName::ExchangeChoice => {
-                // TODO: public private split | currently this is commented out because bitprob calculated public on exchangedraw not exchangechoice
-                self.ambassador(ao.player_id());
-                self.update_constraints();
-            },
-            _ => {
+    // pub fn push_ao_public(&mut self, ao: &ActionObservation) {
+    //     match ao.name() {
+    //         AOName::Discard => {
+    //             match ao.no_cards() {
+    //                 1 => {
+    //                     self.public_constraints[ao.player_id()].push(ao.cards()[0]);
+    //                     if self.public_constraints[ao.player_id()].len() == 2 {
+    //                         // Handles the case where the players' dead cards are both the same, without this, restrict won't ensure player has both cards
+    //                         self.restrict(ao.player_id(), &self.public_constraints[ao.player_id()].clone());
+    //                     } else {
+    //                         self.restrict(ao.player_id(), &[ao.cards()[0]]);
+    //                     }
+    //                 }
+    //                 2 => {
+    //                     self.public_constraints[ao.player_id()].push(ao.cards()[0]);
+    //                     self.public_constraints[ao.player_id()].push(ao.cards()[1]);
+    //                     self.restrict(ao.player_id(), ao.cards());
+    //                 }
+    //                 _ => {
+    //                     debug_assert!(false, "woops");
+    //                 }
+    //             }
+    //             self.update_constraints();
+    //         },
+    //         AOName::RevealRedraw => {
+    //             self.reveal_redraw(ao.player_id(), ao.card());
+    //             self.update_constraints();
+    //         },
+    //         AOName::ExchangeDraw => {
+    //             // self.ambassador(ao.player_id());
+    //             // self.update_constraints();
+    //         },
+    //         AOName::ExchangeChoice => {
+    //             // TODO: public private split | currently this is commented out because bitprob calculated public on exchangedraw not exchangechoice
+    //             self.ambassador(ao.player_id());
+    //             self.update_constraints();
+    //         },
+    //         _ => {
 
-            },
-        };
-        self.history.push(ao.clone());
-    }
-    /// Modifies internal state based on latest action done by player
-    pub fn push_ao_private(&mut self, ao: &ActionObservation) {
-        match ao {
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                let mut card_restrictions = Vec::with_capacity(2);
-                for i in 0..*no_cards {
-                    card_restrictions.push(card[i]);
-                    self.public_constraints[*player_id].push(card[i]);
-                }
-                self.restrict(*player_id, &card_restrictions);
-                self.update_constraints();
-            },
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
-                let mut current_dead_cards: Vec<Card> = self.public_constraints[*player_id].clone();
-                current_dead_cards.push(*reveal);
-                self.restrict(*player_id, &current_dead_cards);
-                if *reveal != *redraw {
-                    self.restrict(6, &[*redraw]);
-                    self.redraw_swap(*player_id, *reveal, *redraw);
-                }
-                self.update_constraints();
-            },
-            ActionObservation::ExchangeDraw { player_id, card } => {
-                self.restrict(6, card);
-                self.update_constraints();
-            },
-            ActionObservation::ExchangeChoice { player_id, relinquish } => {
-                if let Some(ActionObservation::ExchangeDraw { card: draw, .. }) = self.history.last().cloned() {
-                    self.exchange_choice_swap(*player_id, &draw, relinquish);
-                } else {
-                    debug_assert!(false, "Some shit is wrong man");
-                }
-                self.update_constraints();
-            },
-            _ => {}
-        }
-        self.history.push(ao.clone());
-    }
-    /// Unsupported, as information is loss after pushing and cannot be reverted
-    pub fn pop(&mut self) {
-        panic!("No pops! This goes in one direction only!");
-        todo!("Add pops???");
-    }
+    //         },
+    //     };
+    //     self.history.push(ao.clone());
+    // }
+    // /// Modifies internal state based on latest action done by player
+    // pub fn push_ao_private(&mut self, ao: &ActionObservation) {
+    //     match ao {
+    //         ActionObservation::Discard { player_id, card, no_cards } => {
+    //             let mut card_restrictions = Vec::with_capacity(2);
+    //             for i in 0..*no_cards {
+    //                 card_restrictions.push(card[i]);
+    //                 self.public_constraints[*player_id].push(card[i]);
+    //             }
+    //             self.restrict(*player_id, &card_restrictions);
+    //             self.update_constraints();
+    //         },
+    //         ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+    //             let mut current_dead_cards: Vec<Card> = self.public_constraints[*player_id].clone();
+    //             current_dead_cards.push(*reveal);
+    //             self.restrict(*player_id, &current_dead_cards);
+    //             if *reveal != *redraw {
+    //                 self.restrict(6, &[*redraw]);
+    //                 self.redraw_swap(*player_id, *reveal, *redraw);
+    //             }
+    //             self.update_constraints();
+    //         },
+    //         ActionObservation::ExchangeDraw { player_id, card } => {
+    //             self.restrict(6, card);
+    //             self.update_constraints();
+    //         },
+    //         ActionObservation::ExchangeChoice { player_id, relinquish } => {
+    //             if let Some(ActionObservation::ExchangeDraw { card: draw, .. }) = self.history.last().cloned() {
+    //                 self.exchange_choice_swap(*player_id, &draw, relinquish);
+    //             } else {
+    //                 debug_assert!(false, "Some shit is wrong man");
+    //             }
+    //             self.update_constraints();
+    //         },
+    //         _ => {}
+    //     }
+    //     self.history.push(ao.clone());
+    // }
+    // /// Unsupported, as information is loss after pushing and cannot be reverted
+    // pub fn pop(&mut self) {
+    //     panic!("No pops! This goes in one direction only!");
+    //     todo!("Add pops???");
+    // }
     /// Use Rayon to parallelize the process of running `mix_one_char` on
     /// each state in `self.calculated_states`, collecting all results
     /// into a new AHashSet.
@@ -645,6 +645,135 @@ where
             }
         }
         output
+    }
+}
+
+impl<T> CoupTraversal for BruteCardCountManagerGeneric<T>
+where
+    T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
+{
+    fn start_public(&mut self) {
+        // Do nothing
+    }
+
+    fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
+        self.private_player = Some(player);
+        self.restrict(player, cards);
+        // self.inferred_constraints[player].push(cards[0]);
+        // self.inferred_constraints[player].push(cards[1]);
+        // self.inferred_constraints[player].sort_unstable();
+        self.update_constraints();
+        self.set_impossible_constraints_2();
+        self.set_impossible_constraints_3();
+    }
+
+    fn push_ao_public(&mut self, action: &ActionObservation) {
+        // TODO: Match on action instead?
+        match action.name() {
+            AOName::Discard => {
+                match action.no_cards() {
+                    1 => {
+                        self.public_constraints[action.player_id()].push(action.cards()[0]);
+                        if self.public_constraints[action.player_id()].len() == 2 {
+                            // Handles the case where the players' dead cards are both the same, without this, restrict won't ensure player has both cards
+                            self.restrict(action.player_id(), &self.public_constraints[action.player_id()].clone());
+                        } else {
+                            self.restrict(action.player_id(), &[action.cards()[0]]);
+                        }
+                    }
+                    2 => {
+                        self.public_constraints[action.player_id()].push(action.cards()[0]);
+                        self.public_constraints[action.player_id()].push(action.cards()[1]);
+                        self.restrict(action.player_id(), action.cards());
+                    }
+                    _ => {
+                        debug_assert!(false, "woops");
+                    }
+                }
+                self.update_constraints();
+            },
+            AOName::RevealRedraw => {
+                self.reveal_redraw(action.player_id(), action.card());
+                self.update_constraints();
+            },
+            AOName::ExchangeDraw => {
+                // self.ambassador(action.player_id());
+                // self.update_constraints();
+            },
+            AOName::ExchangeChoice => {
+                // TODO: public private split | currently this is commented out because bitprob calculated public on exchangedraw not exchangechoice
+                self.ambassador(action.player_id());
+                self.update_constraints();
+            },
+            _ => {
+
+            },
+        };
+        self.history.push(action.clone());
+    }
+
+    fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
+        self.push_ao_public(action);
+    }
+
+    fn push_ao_private(&mut self, action: &ActionObservation) {
+        match action {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                let mut card_restrictions = Vec::with_capacity(2);
+                for i in 0..*no_cards {
+                    card_restrictions.push(card[i]);
+                    self.public_constraints[*player_id].push(card[i]);
+                }
+                self.restrict(*player_id, &card_restrictions);
+                self.update_constraints();
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                let mut current_dead_cards: Vec<Card> = self.public_constraints[*player_id].clone();
+                current_dead_cards.push(*reveal);
+                self.restrict(*player_id, &current_dead_cards);
+                if *reveal != *redraw {
+                    self.restrict(6, &[*redraw]);
+                    self.redraw_swap(*player_id, *reveal, *redraw);
+                }
+                self.update_constraints();
+            },
+            ActionObservation::ExchangeDraw { player_id, card } => {
+                self.restrict(6, card);
+                self.update_constraints();
+            },
+            ActionObservation::ExchangeChoice { player_id, relinquish } => {
+                if let Some(ActionObservation::ExchangeDraw { card: draw, .. }) = self.history.last().cloned() {
+                    self.exchange_choice_swap(*player_id, &draw, relinquish);
+                } else {
+                    debug_assert!(false, "Some shit is wrong man");
+                }
+                self.update_constraints();
+            },
+            _ => {}
+        }
+        self.history.push(action.clone());
+    }
+
+    fn push_ao_private_lazy(&mut self, action: &ActionObservation) {
+        self.push_ao_private(action);
+    }
+
+    /// Unsupported, as information is loss after pushing and cannot be reverted
+    fn pop(&mut self) {
+        unimplemented!("brute prob does not support pop as it is irreversible")
+    }
+
+    fn reset(&mut self) {
+        self.history.clear();
+        self.private_player = None;
+        self.public_constraints = vec![Vec::with_capacity(2); 6];
+        self.public_constraints.push(Vec::with_capacity(3));
+        self.inferred_constraints = vec![Vec::with_capacity(2); 6];
+        self.inferred_constraints.push(Vec::with_capacity(3));
+        self.impossible_constraints = [[false; 5]; 7];
+        self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
+        self.calculated_states = self.all_states.clone().into_iter().collect();
     }
 }
 

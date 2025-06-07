@@ -19,8 +19,8 @@ pub mod prob_manager {
     pub mod backtracking_prob;
     pub mod backtracking_prob_hybrid;
     pub mod backtracking_collective_constraints;
-    pub mod backtracking_collective_constraints_lazy;
-    pub mod backtracking_collective_constraints_lite;
+    // pub mod backtracking_collective_constraints_lazy;
+    // pub mod backtracking_collective_constraints_lite;
     pub mod brute_prob_generic;
     pub mod card_state {
         pub mod card_state_u64;

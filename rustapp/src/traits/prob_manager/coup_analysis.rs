@@ -1,4 +1,24 @@
 use crate::history_public::{ActionObservation, Card};
+
+pub trait CoupTraversal {
+    /// Starts a game with public information
+    fn start_public(&mut self);
+    /// Starts a game with private information
+    fn start_private(&mut self, player: usize, cards: &[Card; 2]);
+    /// Adds an Action with only public information
+    fn push_ao_public(&mut self, action: &ActionObservation);
+    /// Adds an Action with only public information using lazy calculation methodology
+    fn push_ao_public_lazy(&mut self, action: &ActionObservation);
+    /// Adds an Action with public and private information
+    fn push_ao_private(&mut self, action: &ActionObservation);
+    /// Adds an Action with public and private information using lazy calculation methodology
+    fn push_ao_private_lazy(&mut self, action: &ActionObservation);
+    /// Pops latest move
+    fn pop(&mut self);
+    /// Resets game state. Use start_public or start_private to start a new game
+    fn reset(&mut self);
+}
+
 pub trait CoupPossibilityAnalysis {
     /// Returns reference to latest Public Constraints
     fn public_constraints(&mut self) -> &Vec<Vec<Card>>;

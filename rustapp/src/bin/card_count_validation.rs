@@ -3,15 +3,15 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
 use rustapp::prob_manager::backtracking_collective_constraints::{ActionInfo, BackTrackCollectiveConstraint};
-use rustapp::prob_manager::backtracking_collective_constraints_lazy::BackTrackCollectiveConstraintLazy;
-use rustapp::prob_manager::backtracking_collective_constraints_lite::BackTrackCollectiveConstraintLite;
+// use rustapp::prob_manager::backtracking_collective_constraints_lazy::BackTrackCollectiveConstraintLazy;
+// use rustapp::prob_manager::backtracking_collective_constraints_lite::BackTrackCollectiveConstraintLite;
 use rustapp::prob_manager::backtracking_prob::{BackTrackCardCountManager, CoupConstraint};
 use rustapp::prob_manager::brute_prob_generic::{BruteCardCountManagerGeneric};
 use rustapp::prob_manager::card_state::card_state_u64::{self, CardStateu64};
 use rustapp::prob_manager::compressed_group_constraint::{CompressedGroupConstraint};
 use rustapp::prob_manager::collective_constraint::{CompressedCollectiveConstraint};
 use rustapp::prob_manager::path_dependent_prob::PathDependentCardCountManager;
-use rustapp::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
+use rustapp::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
 use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
@@ -38,7 +38,7 @@ fn main() {
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
-    game_rnd_constraint_bt_mt::<BackTrackCollectiveConstraintLite>(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
+    game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
     game_rnd_constraint_bt_st_debug(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
     
     // game_rnd_constraint_bt_mt_g::<BackTrackCollectiveConstraintLite, BackTrackCollectiveConstraintLazy>(num_threads, game_no, bool_know_priv_info, print_frequency_fast, min_dead_check);
@@ -507,9 +507,7 @@ impl Stats {
         println!("Bad Moves Pushed: {}/{}", self.pushed_bad_move, self.total_tries);
     }
 }
-pub fn game_rnd_constraint_bt_mt<C>(num_threads: usize, game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: bool, print_frequency: usize, min_dead_check: usize, bool_lazy: bool)
-    where
-        C: CoupConstraint + CoupPossibilityAnalysis,
+pub fn game_rnd_constraint_bt_mt(num_threads: usize, game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: bool, print_frequency: usize, min_dead_check: usize, bool_lazy: bool)
 {
     let replay_file = Arc::new(Mutex::new(
         OpenOptions::new()
