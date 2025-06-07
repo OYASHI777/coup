@@ -6,6 +6,7 @@
 
 use std::hash::Hash;
 use std::fmt::{Debug, Display};
+use std::hint::unreachable_unchecked;
 use crate::history_public::{Card, AOName, ActionObservation};
 use crate::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
 use crate::traits::prob_manager::card_state::CardPermState;
@@ -555,46 +556,41 @@ where
 
     fn push_ao_public(&mut self, action: &ActionObservation) {
         // TODO: Match on action instead?
-        match action.name() {
-            AOName::Discard => {
-                match action.no_cards() {
+        match action {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                match no_cards {
                     1 => {
-                        self.public_constraints[action.player_id()].push(action.cards()[0]);
-                        if self.public_constraints[action.player_id()].len() == 2 {
+                        self.public_constraints[*player_id].push(card[0]);
+                        if self.public_constraints[*player_id].len() == 2 {
                             // Handles the case where the players' dead cards are both the same, without this, restrict won't ensure player has both cards
-                            self.restrict(action.player_id(), &self.public_constraints[action.player_id()].clone());
+                            self.restrict(*player_id, &self.public_constraints[*player_id].clone());
                         } else {
-                            self.restrict(action.player_id(), &[action.cards()[0]]);
+                            self.restrict(*player_id, &[card[0]]);
                         }
-                    }
+                    },
                     2 => {
-                        self.public_constraints[action.player_id()].push(action.cards()[0]);
-                        self.public_constraints[action.player_id()].push(action.cards()[1]);
-                        self.restrict(action.player_id(), action.cards());
+                        self.public_constraints[*player_id].push(card[0]);
+                        self.public_constraints[*player_id].push(card[1]);
+                        self.restrict(*player_id, card);
                     }
                     _ => {
-                        debug_assert!(false, "woops");
+                        unsafe {
+                            unreachable_unchecked()
+                        }
                     }
                 }
                 self.update_constraints();
             },
-            AOName::RevealRedraw => {
-                self.reveal_redraw(action.player_id(), action.card());
+            ActionObservation::RevealRedraw { player_id, reveal, .. } => {
+                self.reveal_redraw(*player_id, *reveal);
                 self.update_constraints();
             },
-            AOName::ExchangeDraw => {
-                // self.ambassador(action.player_id());
-                // self.update_constraints();
-            },
-            AOName::ExchangeChoice => {
-                // TODO: public private split | currently this is commented out because bitprob calculated public on exchangedraw not exchangechoice
-                self.ambassador(action.player_id());
+            ActionObservation::ExchangeChoice { player_id, .. } => {
+                self.ambassador(*player_id);
                 self.update_constraints();
             },
-            _ => {
-
-            },
-        };
+            _ => {},
+        }
         self.history.push(action.clone());
     }
 
