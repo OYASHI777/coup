@@ -4,7 +4,7 @@ use rand::{thread_rng, Rng};
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
 use rustapp::prob_manager::backtracking_collective_constraints::{ActionInfo};
 use rustapp::prob_manager::brute_prob_generic::{BruteCardCountManagerGeneric};
-use rustapp::prob_manager::card_state::card_state_u64::CardStateu64;
+use rustapp::prob_manager::models::card_state_u64::CardStateu64;
 use rustapp::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
 use std::fs::{File, OpenOptions};
 use std::io::{Write};

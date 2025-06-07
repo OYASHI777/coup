@@ -6,12 +6,8 @@
 
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 use crate::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
-use crate::history_public::{Card, AOName, ActionObservation};
-use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
-// TODO: Store also a version of constraint_history but split by players
-// TODO: Improve analysis interface when using the manager... using last_constraint then the analysis is very clunky
-// So it is easier to know the first time a player does something
-// May be useful later
+use crate::history_public::{Card, ActionObservation};
+use super::backtracking_collective_constraints::{ActionInfo};
 pub struct BackTrackCardCountManager<C> 
     where
         C: CoupConstraint,
@@ -264,10 +260,8 @@ pub trait CoupConstraint: Clone {
     fn game_start_public() -> Self;
     /// Initializes the state at beginning of the game
     fn game_start_private(player: usize, cards: &[Card; 2]) -> Self;
-
     /// Records a public move into the constraint.
     fn add_move(&mut self, player_id: u8, action: ActionInfo);
-
     /// Emit debug info about the constraint.
     fn printlog(&self);
 }

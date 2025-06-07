@@ -4,14 +4,11 @@
 // This is too long
 // Tried instead to save into hashmap and store in bson
 
-use std::hint::unreachable_unchecked;
-
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 use crate::history_public::{Card, ActionObservation};
-use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName, BacktrackMetaData};
+use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
+use crate::prob_manager::models::backtrack_metadata::BacktrackMetaData;
 use super::coup_const::MAX_GAME_LENGTH;
-// TODO: Shift this here!
-// use super::backtracking_prob::CoupConstraintAnalysis;
 use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 
 #[derive(Clone, Debug)]
@@ -1655,28 +1652,3 @@ impl CoupPossibilityAnalysis for BackTrackCardCountManager
         }
     }
 }
-
-// pub trait CoupConstraintAnalysis {
-//     /// Returns reference to latest Public Constraints
-//     fn public_constraints(&self) -> &Vec<Vec<Card>>;
-//     /// Returns reference to latest sorted Public Constraints
-//     fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>>;
-//     /// Returns reference to latest Inferred Constraints
-//     fn inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
-//     /// Returns reference to latest sorted Inferred Constraints
-//     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
-//     /// Returns reference to array[player][card] storing whether a player can have a card alive
-//     fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7];
-//     /// Returns reference to array[player][card_i][card_j] storing whether a player can have a card_i and card_j alive
-//     fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7];
-//     /// Returns reference to array[card_i][card_j][card_k] storing whether pile can have card_i, card_j, and card_k
-//     fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5];
-//     /// Returns true if player can have a particular card alive
-//     fn player_can_have_card_alive(&self, player: usize, card: Card) -> bool;
-//     /// Returns true if player can have a particular card alive | evaluates lazily
-//     fn player_can_have_card_alive_lazy(&self, player: usize, card: Card) -> bool;
-//     /// Returns true if player can have a collection of cards alive
-//     fn player_can_have_cards_alive(&self, player: usize, cards: &[Card]) -> bool;
-//     /// Returns true if player can have a collection of cards alive | evaluates lazily
-//     fn player_can_have_cards_alive_lazy(&self, player: usize, cards: &[Card]) -> bool;
-// } 
