@@ -2,32 +2,24 @@ use log::LevelFilter;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
-use rustapp::prob_manager::backtracking_collective_constraints::{ActionInfo, BackTrackCollectiveConstraint};
-use rustapp::prob_manager::backtracking_prob::{BackTrackCardCountManager, CoupConstraint};
+use rustapp::prob_manager::backtracking_collective_constraints::{ActionInfo};
 use rustapp::prob_manager::brute_prob_generic::{BruteCardCountManagerGeneric};
-use rustapp::prob_manager::card_state::card_state_u64::{self, CardStateu64};
-use rustapp::prob_manager::compressed_group_constraint::{CompressedGroupConstraint};
-use rustapp::prob_manager::collective_constraint::{CompressedCollectiveConstraint};
-use rustapp::prob_manager::path_dependent_prob::PathDependentCardCountManager;
+use rustapp::prob_manager::card_state::card_state_u64::CardStateu64;
 use rustapp::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
-use std::collections::HashSet;
 use std::fs::{File, OpenOptions};
 use std::io::{Write};
-use std::path::Path;
 use std::time::Instant;
-use itertools::Itertools;
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use env_logger::{Builder, Env, Target};
 use ActionObservation::*;
-use Card::*;
-pub const LOG_LEVEL: LevelFilter = LevelFilter::Info;
+pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";
 // TODO: [REFACTOR] in this bin
 // TODO: [REFACTOR] Lite to take history instead of store again and again
 fn main() {
-    let game_no = 1;
+    let game_no = 100000000;
     let log_bool = true;
     let bool_know_priv_info = true;
     let bool_skip_exchange = false;
@@ -36,13 +28,13 @@ fn main() {
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
-    // game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
+    game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
     // game_rnd_constraint_bt_st_debug(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
     
-    // game_rnd_constraint_bt_bench(100000, bool_know_priv_info);
-    // game_rnd_constraint_bt_bench_lazy(100000, bool_know_priv_info);
+    game_rnd_constraint_bt_bench(100000, bool_know_priv_info);
+    game_rnd_constraint_bt_bench_lazy(100000, bool_know_priv_info);
     game_rnd(game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, log_bool);
-    // test_variant_recurse();
+    test_variant_recurse();
 }
 // TODO: Move to collective_constraint when finalized
 pub fn test_variant_recurse() {
@@ -1202,14 +1194,12 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
             new_moves = hh.generate_legal_moves(None);
-            log::info!("Moves Generated Raw: {:?}", new_moves);
+            
             if bool_skip_exchange {
                 new_moves.retain(|m| m.name() != AOName::Exchange);
             }
-            log::info!("Moves Generated w Skip: {:?}", new_moves);
             let mut check_moves_prob = new_moves.clone();
             retain_legal_moves_with_card_constraints(&hh, &mut check_moves_prob, &mut prob, private_player);
-            log::info!("Prob Legal Moves Generated w Skip: {:?}", check_moves_prob);
             let mut check_moves_bit_prob = new_moves.clone();
             check_moves_bit_prob.retain(|ao| {
                 if Some(ao.player_id()) == private_player {
@@ -1218,7 +1208,6 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
                     bit_prob.is_legal_move_public(ao)
                 }
             });
-            log::info!("Bit_Prob Legal Moves Generated w Skip: {:?}", check_moves_bit_prob);
             if check_moves_prob.len() != check_moves_bit_prob.len() {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
@@ -1250,7 +1239,6 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
                 println!("impossible constraints_3: {:?}", prob.validated_impossible_constraints_3());
                 panic!("no legit moves found");
             });
-            log::info!("Choice: {:?}", action_obs);
             hh.push_ao(action_obs);
             if bool_know_priv_info && Some(action_obs.player_id()) == private_player {
                 prob.push_ao_private(&action_obs);
@@ -1284,46 +1272,38 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
                 });
                 // let pass_brute_prob_validity = prob.validate();
                 if !pass_public_constraints {
-                    log::info!("PUBLIC CONSTRAINTS FAILED");
                     break;
-                } else {
-                    log::info!("PUBLIC CONSTRAINTS PASSED");
+                }
+                if bool_test_over_inferred {
+                    // what we are testing inferred too many things
+                    println!("public: {:?}", validated_public_constraints);
+                    println!("vali: {:?}", validated_inferred_constraints);
+                    println!("test: {:?}", test_inferred_constraints);
+                    println!("test im 2: {:?}", test_impossible_constraints_2);
+                    println!("{}", hh.get_replay_history_braindead());
+                    panic!();
+                    break;
+                    // let replay = hh.get_history(hh.store_len());
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // panic!("Inferred to many items!")
                 }
                 if !pass_inferred_constraints {
                     // println!("vali: {:?}", validated_inferred_constraints);
                     // println!("test: {:?}", test_inferred_constraints);
                     // println!("{}", hh.get_replay_history_braindead());
                     // panic!();
-                    log::info!("INFERRED CONSTRAINTS FAILED");
                     break;
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     // panic!("Inferred constraints do not match!")
-                } else {
-                    log::info!("INFERRED CONSTRAINTS PASSED");
                 }
                 if !pass_impossible_constraints {
                     // println!("vali: {:?}", validated_impossible_constraints);
                     // println!("test: {:?}", test_impossible_constraints);
-                    log::info!("IMPOSSIBLE CONSTRAINTS FAILED");
                     break;
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     // panic!()
-                } else {
-                    log::info!("IMPOSSIBLE CONSTRAINTS PASSED");
-                }
-                if !pass_impossible_constraints_2 {
-                    log::info!("IMPOSSIBLE CONSTRAINTS 2 FAILED");
-                    break;
-                } else {
-                    log::info!("IMPOSSIBLE CONSTRAINTS 2 PASSED");
-                }
-                if !pass_impossible_constraints_3 {
-                    log::info!("IMPOSSIBLE CONSTRAINTS 3 FAILED");
-                    break;
-                } else {
-                    log::info!("IMPOSSIBLE CONSTRAINTS 3 PASSED");
                 }
             }
             step += 1;

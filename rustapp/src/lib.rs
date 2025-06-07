@@ -25,14 +25,14 @@ pub mod prob_manager {
     pub mod card_state {
         pub mod card_state_u64;
     }
-    pub mod collective_constraint;
-    pub mod compressed_group_constraint;
+    // pub mod collective_constraint;
+    // pub mod compressed_group_constraint;
     pub mod constraint;
     mod coup_const;
     pub mod naive_prob;
     pub mod naive_sampler;
-    pub mod path_dependent_collective_constraint;
-    pub mod path_dependent_prob;
+    // pub mod path_dependent_collective_constraint;
+    // pub mod path_dependent_prob;
     pub mod permutation_generator;
     pub mod recursion_fn;
 }
