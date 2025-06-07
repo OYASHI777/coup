@@ -137,6 +137,9 @@ impl SignificantAction {
     pub fn printlog(&self) {
         log::info!("{}", format!("Public Constraints: {:?}", self.public_constraints()));
         log::info!("{}", format!("Inferred Constraints: {:?}", self.inferred_constraints()));
+        log::info!("{}", format!("Impossible Constraints: {:?}", self.impossible_constraints()));
+        log::info!("{}", format!("Impossible Constraints 2: {:?}", self.impossible_constraints_2()));
+        log::info!("{}", format!("Impossible Constraints 3: {:?}", self.impossible_constraints_3()));
     }
 }
 impl CoupPossibilityAnalysis for SignificantAction
@@ -260,8 +263,8 @@ impl BackTrackCardCountManager {
     /// Logs the constraint's log
     pub fn printlog(&self) {
         log::trace!("{}", format!("Constraint History Len{}", self.constraint_history.len()));
-        log::trace!("PathDependentCardCountManager history_move_no: {:?}", self.move_no_history);
-        log::trace!("PathDependentCardCountManager move_no: {:?}", self.move_no);
+        log::trace!("history_move_no: {:?}", self.move_no_history);
+        log::trace!("move_no: {:?}", self.move_no);
         if let Some(constraint) = self.constraint_history.last() {
             constraint.printlog();
         } else {

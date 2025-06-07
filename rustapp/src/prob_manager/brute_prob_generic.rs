@@ -520,7 +520,9 @@ where
         log::info!("calculated_states.len: {}", self.calculated_states.len());
         log::info!("Brute public constraints: {:?}", self.validated_public_constraints());
         log::info!("Brute inferred constraints: {:?}", self.validated_inferred_constraints());
-        log::info!("Brute impossible cards: {:?}", self.validated_impossible_constraints());
+        log::info!("Brute impossible constraints: {:?}", self.validated_impossible_constraints());
+        log::info!("Brute impossible constraints 2: {:?}", self.validated_impossible_constraints_2());
+        log::info!("Brute impossible constraints 3: {:?}", self.validated_impossible_constraints_3());
     }
     /// Checks if calculated_states fulfils all self.public_constraints
     pub fn validate(&self) -> bool {
