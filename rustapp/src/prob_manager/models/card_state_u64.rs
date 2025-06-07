@@ -35,7 +35,7 @@ impl std::fmt::Debug for CardStateu64 {
         Ok(())
     }
 }
-use crate::prob_manager::coup_const::{BAG_SIZES, TOKENS};
+use crate::prob_manager::constants::{BAG_SIZES, TOKENS};
 impl CardStateu64 {
     /// Default creation for the uninitiated
     pub fn new() -> Self {

@@ -8,7 +8,7 @@
 use crate::history_public::{Card, ActionObservation};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
 use crate::prob_manager::models::backtrack_metadata::BacktrackMetaData;
-use super::coup_const::MAX_GAME_LENGTH;
+use super::constants::MAX_GAME_LENGTH;
 use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 
 #[derive(Clone, Debug)]

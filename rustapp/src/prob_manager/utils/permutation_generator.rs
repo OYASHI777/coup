@@ -2,7 +2,7 @@ use crate::string_utils::remove_chars;
 use crate::string_utils::sort_str;
 use crate::string_utils::unique_sorted_string;
 use crate::string_utils::filter_string_within;
-use crate::prob_manager::coup_const::{MAX_HAND_STATES, MAX_PERM_STATES};
+use crate::prob_manager::constants::{MAX_HAND_STATES, MAX_PERM_STATES};
 
 // This is unnecessary but used in case I ever want to port this code into a non-coup game
 const LOCAL_MAX_HAND_CAPACITY: usize = MAX_HAND_STATES;

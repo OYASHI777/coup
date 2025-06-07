@@ -7,10 +7,10 @@
 use std::hash::Hash;
 use std::fmt::{Debug, Display};
 use std::hint::unreachable_unchecked;
-use crate::history_public::{Card, AOName, ActionObservation};
+use crate::history_public::{Card, ActionObservation};
 use crate::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
 use crate::traits::prob_manager::card_state::CardPermState;
-use crate::prob_manager::coup_const::MAX_PERM_STATES;
+use crate::prob_manager::constants::MAX_PERM_STATES;
 use ahash::AHashSet;
 /// Struct that card count manually, by simulating movement of cards (as chars) for all possible permutations
 

@@ -35,7 +35,7 @@ pub mod prob_manager {
     // pub mod collective_constraint;
     // pub mod compressed_group_constraint;
     pub mod constraint;
-    mod coup_const;
+    mod constants;
     pub mod naive_prob;
     pub mod naive_sampler;
     // pub mod path_dependent_collective_constraint;
