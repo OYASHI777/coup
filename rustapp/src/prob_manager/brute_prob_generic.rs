@@ -619,7 +619,7 @@ where
                 }
                 self.update_constraints();
             },
-            ActionObservation::ExchangeDraw { player_id, card } => {
+            ActionObservation::ExchangeDraw { card, .. } => {
                 self.restrict(6, card);
                 self.update_constraints();
             },
