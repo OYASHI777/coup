@@ -1,10 +1,11 @@
 use crate::traits::prob_manager::coup_analysis::CoupTraversal;
 use crate::history_public::{ActionObservation, Card};
+use super::models::turn_start::TurnStart;
 
 enum EngineState {
     // Assassin => (-3 Coins)
     // Coup => (-7 Coins)
-    TurnStart,
+    TurnStart(TurnStart),
     // Assassin => (-3 Coins)
     // Coup => (-7 Coins)
     TurnStartCoup,
@@ -85,6 +86,9 @@ enum EngineState {
     // Challenger Discard => AssassinateInvitesBlock
     AssassinateChallengerFailed{player_challenger: u8},
 }
+pub trait Node {
+    fn dispatch(&self) -> bool;
+}
 // TODO: Write test for same resources after push() then pop()
 pub struct FSMEngine {
     store: Vec<EngineState>,
@@ -111,6 +115,45 @@ impl FSMEngine {
             current_turn = (current_turn + 1) % 6;
         }
         current_turn
+    }
+    pub fn dispatch_example(&self) -> bool {
+        if let Some(engine_state) = self.store.last() {
+            match engine_state {
+                EngineState::TurnStart(inner) => {
+                    return inner.dispatch()
+                },
+                EngineState::TurnStartCoup => todo!(),
+                EngineState::ForcedCoup => todo!(),
+                EngineState::CoupHit => todo!(),
+                EngineState::ForeignAidInvitesBlock => todo!(),
+                EngineState::ForeignAidBlockInvitesChallenge { player_blocking } => todo!(),
+                EngineState::ForeignAidBlockChallenged { player_challenger, player_blocking } => todo!(),
+                EngineState::ForeignAidBlockChallengerFailed { player_challenger } => todo!(),
+                EngineState::TaxInvitesChallenge => todo!(),
+                EngineState::TaxChallenged { player_challenger } => todo!(),
+                EngineState::TaxChallengerFailed { player_challenger } => todo!(),
+                EngineState::StealInvitesChallenge => todo!(),
+                EngineState::StealChallenged { player_challenger, player_blocking } => todo!(),
+                EngineState::StealChallengerFailed { player_challenger, player_blocking } => todo!(),
+                EngineState::StealInvitesBlock { player_blocking } => todo!(),
+                EngineState::StealBlockInvitesChallenge { card_blocker, player_blocking } => todo!(),
+                EngineState::StealBlockChallenged { card_blocker, player_challenger, player_blocking } => todo!(),
+                EngineState::StealBlockChallengerFailed { player_challenger } => todo!(),
+                EngineState::AmbassadorInvitesChallenge => todo!(),
+                EngineState::AmbassadorDrawn => todo!(),
+                EngineState::AmbassadorChallenged { player_challenger } => todo!(),
+                EngineState::AmbassadorChallengerFailed { player_challenger } => todo!(),
+                EngineState::AssassinateInvitesChallenge => todo!(),
+                EngineState::AssassinateInvitesBlock { player_blocking } => todo!(),
+                EngineState::AssassinateBlockInvitesChallenge { player_blocking } => todo!(),
+                EngineState::AssassinateBlockChallenged { player_challenger, player_blocking } => todo!(),
+                EngineState::AssassinateBlockChallengerFailed { player_challenger } => todo!(),
+                EngineState::AssassinateSucceeded { player_blocking } => todo!(),
+                EngineState::AssassinateChallenged { player_challenger } => todo!(),
+                EngineState::AssassinateChallengerFailed { player_challenger } => todo!(),
+            }
+        }
+        false
     }
 }
 impl CoupTraversal for FSMEngine {
