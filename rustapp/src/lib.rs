@@ -16,6 +16,9 @@ pub mod cfr {
     pub mod reach_prob;
 }
 pub mod prob_manager {
+    pub mod engine {
+        pub mod fsm_engine;
+    }
     pub mod models {
         pub mod backtrack_metadata;
         pub mod card_state_u64;
