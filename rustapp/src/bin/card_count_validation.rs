@@ -36,12 +36,12 @@ fn main() {
     let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12;
-    // game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
+    game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
     // game_rnd_constraint_bt_st_debug(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
     
     game_rnd_constraint_bt_bench(100000, bool_know_priv_info);
     game_rnd_constraint_bt_bench_lazy(100000, bool_know_priv_info);
-    // game_rnd(game_no, bool_know_priv_info, print_frequency, log_bool);
+    game_rnd(game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, log_bool);
     test_variant_recurse();
 }
 // TODO: Move to collective_constraint when finalized
@@ -1150,102 +1150,192 @@ pub fn replay_game_constraint_bt(replay: Vec<ActionObservation>, bool_know_priv_
     // println!("Total Tries: {}", total_tries);
 }
 
-// TODO: [REFACTOR]
-// pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, print_frequency: usize, log_bool: bool){
-//     if log_bool{
-//         logger(LOG_LEVEL);
-//     }
-//     let mut game: usize = 0;
-//     let mut max_steps: usize = 0;
-//     let mut prob = BruteCardCountManager::new();
-//     let mut bit_prob = BitCardCountManager::new();
-//     let mut total_tries: usize = 0;
-//     while game < game_no {
-//         log::info!("Game : {}", game);
-//         let mut hh = History::new(0);
-//         let mut step: usize = 0;
-//         let mut new_moves: Vec<ActionObservation>;
-//         // if game % (game_no / 10) == 0 {
-//         if game % print_frequency == 0 {
-//             println!("Game: {}", game);
-//         }
-//         log::trace!("Game Made:");
-//         while !hh.game_won() {
+
+pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: bool, print_frequency: usize, min_dead_check: usize, log_bool: bool){
+    if log_bool{
+        logger(LOG_LEVEL);
+    }
+    let mut game: usize = 0;
+    let mut max_steps: usize = 0;
+    let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(false, false);
+    let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
+    let mut total_tries: usize = 0;
+    while game < game_no {
+        log::info!("Game : {}", game);
+        let mut hh = History::new(0);
+        let mut step: usize = 0;
+        let mut new_moves: Vec<ActionObservation>;
+        let mut rng = thread_rng();
+        let private_player: Option<usize> = if bool_know_priv_info {
+            Some(rng.gen_range(0..6))
+        } else {
+            None
+        };
+        if bool_know_priv_info {
+            // Choose random player
+            // Initialize for that player
+            let mut rng = thread_rng();
+            let card_0: u8 = rng.gen_range(0..5);
+            let card_1: u8 = rng.gen_range(0..5);
+            let cards = [Card::try_from(card_0).unwrap(), Card::try_from(card_1).unwrap()];
+            // TODO: Fill those up
+            prob.start_private(private_player.unwrap(), &cards);
+            bit_prob.start_private(private_player.unwrap(), &cards);
+        } else {
+            prob.start_public();
+            bit_prob.start_public();
+        }
+        // if game % (game_no / 10) == 0 {
+        if game % print_frequency == 0 {
+            println!("Game: {}", game);
+        }
+        log::trace!("Game Made:");
+        while !hh.game_won() {
             
-//             log::trace!("Game Made:");
-//             // log::info!("{}", format!("Step : {:?}",step));
-//             hh.log_state();
-//             log::info!("=== Prob ===");
-//             prob.printlog();
-//             log::info!("=== BitProb ===");
-//             bit_prob.printlog();
-//             // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
-//             // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-//             new_moves = hh.generate_legal_moves(None);
-//             let test_impossible_constraints = bit_prob.latest_constraint().generate_one_card_impossibilities_player_card_indexing();
-//             log::info!("Impossible cards before choosing move: {:?}", test_impossible_constraints);
-//             if new_moves[0].name() != AOName::CollectiveChallenge {
-//                 log::info!("{}", format!("Legal Moves: {:?}", new_moves));
-//             } else {
-//                 // log::info!("{}", format!("Legal Moves: {:?}", new_moves));
-//                 log::info!("{}", format!("Legal Moves: CollectiveChallenge"));
-//             }
+            log::trace!("Game Made:");
+            // log::info!("{}", format!("Step : {:?}",step));
+            hh.log_state();
+            log::info!("=== Prob ===");
+            prob.printlog();
+            log::info!("=== BitProb ===");
+            bit_prob.printlog();
+            // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+            // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+            new_moves = hh.generate_legal_moves(None);
             
-//             if let Some(output) = new_moves.choose(&mut thread_rng()).cloned(){
-//                 log::info!("{}", format!("Choice: {:?}", output));
-//                 if output.name() == AOName::Discard{
-//                     let true_legality = if output.no_cards() == 1 {
-//                         prob.player_can_have_card_alive(output.player_id(), output.cards()[0])
-//                     } else {
-//                         prob.player_can_have_cards(output.player_id(), output.cards())
-//                     };
-//                     if !true_legality{
-//                         log::info!("Illegal Move, Ending Game");
-//                         break    
-//                     } 
-//                 } else if output.name() == AOName::RevealRedraw {
-//                     let true_legality: bool = prob.player_can_have_card_alive(output.player_id(), output.card());
-//                     if !true_legality{
-//                         log::info!("Illegal Move, Ending Game");
-//                         break    
-//                     } 
-//                 } else if output.name() == AOName::ExchangeDraw {
-//                     let true_legality: bool = prob.player_can_have_cards(6, output.cards());
-//                     if !true_legality {
-//                         log::info!("Illegal Move, Ending Game");
-//                         break    
-//                     }
-//                 } 
-//                 hh.push_ao(output);
-//                 prob.push_ao(&output, bool_know_priv_info);
-//                 bit_prob.push_ao(&output, bool_know_priv_info);
-//                 total_tries += 1;
-//             } else {
-//                 log::trace!("Pushed bad move somewhere earlier!");
-//                 break;
-//             }
-//             step += 1;
-//             if step > 1000 {
-//                 break;
-//             }
-//             log::info!("");
-//         }
-//         if step > max_steps {
-//             max_steps = step;
-//         }
-//         log::info!("{}", format!("Game Won : {:?}",step));
-//         hh.log_state();
-//         // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
-//         // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
-//         log::info!("");
-//         prob.reset();
-//         bit_prob.reset();
-//         game += 1;
-//     }
-//     log::info!("Most Steps: {}", max_steps);
-//     println!("Most Steps: {}", max_steps);
-//     println!("Total Tries: {}", total_tries);
-// }
+            if bool_skip_exchange {
+                new_moves.retain(|m| m.name() != AOName::Exchange);
+            }
+            let mut check_moves_prob = new_moves.clone();
+            retain_legal_moves_with_card_constraints(&hh, &mut check_moves_prob, &mut prob, private_player);
+            let mut check_moves_bit_prob = new_moves.clone();
+            check_moves_bit_prob.retain(|ao| {
+                if Some(ao.player_id()) == private_player {
+                    bit_prob.is_legal_move_private(ao)
+                } else {
+                    bit_prob.is_legal_move_public(ao)
+                }
+            });
+            if check_moves_prob.len() != check_moves_bit_prob.len() {
+                println!("{}", hh.get_replay_history_braindead());
+                println!("new_moves: {:?}", new_moves);
+                println!("public constraints: {:?}", prob.sorted_public_constraints().clone());
+                println!("inferred constraints: {:?}", prob.sorted_inferred_constraints().clone());
+                prob.set_impossible_constraints();
+                println!("impossible constraints: {:?}", prob.player_impossible_constraints());
+                prob.set_impossible_constraints_2();
+                println!("impossible constraints_2: {:?}", prob.player_impossible_constraints_paired());
+                prob.set_impossible_constraints_3();
+                println!("impossible constraints_3: {:?}", prob.player_impossible_constraints_triple());
+                println!("private_player: {:?}", private_player);
+                println!("check_moves_prob: {:?}", check_moves_prob);
+                println!("check_moves_bit_prob: {:?}", check_moves_bit_prob);
+                panic!();
+            }
+            // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
+            let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, private_player);
+            let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
+                println!("{}", hh.get_replay_history_braindead());
+                println!("new_moves: {:?}", new_moves);
+                println!("public constraints: {:?}", prob.validated_public_constraints());
+                println!("inferred constraints: {:?}", prob.validated_inferred_constraints());
+                prob.set_impossible_constraints();
+                println!("impossible constraints: {:?}", prob.validated_impossible_constraints());
+                prob.set_impossible_constraints_2();
+                println!("impossible constraints_2: {:?}", prob.validated_impossible_constraints_2());
+                prob.set_impossible_constraints_3();
+                println!("impossible constraints_3: {:?}", prob.validated_impossible_constraints_3());
+                panic!("no legit moves found");
+            });
+            hh.push_ao(action_obs);
+            if bool_know_priv_info && Some(action_obs.player_id()) == private_player {
+                prob.push_ao_private(&action_obs);
+                bit_prob.push_ao_private(&action_obs);
+            } else {
+                prob.push_ao_public(&action_obs);
+                bit_prob.push_ao_public(&action_obs);
+            }
+            // TODO: Add test for if player is alive they cannot be all impossible
+            let total_dead: usize = bit_prob.sorted_public_constraints().iter().map(|v| v.len()).sum();
+            if total_dead >= min_dead_check {
+                let validated_public_constraints = prob.sorted_public_constraints().clone();
+                let validated_inferred_constraints = prob.validated_inferred_constraints();
+                let validated_impossible_constraints = prob.player_impossible_constraints().clone();
+                let validated_impossible_constraints_2 = prob.player_impossible_constraints_paired().clone();
+                let validated_impossible_constraints_3 = prob.player_impossible_constraints_triple().clone();
+                // let validated_impossible_constraints_2 = prob.validated_impossible_constraints_2();
+                // let validated_impossible_constraints_3 = prob.validated_impossible_constraints_3();
+                let test_public_constraints = bit_prob.sorted_public_constraints().clone();
+                let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
+                let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
+                let test_impossible_constraints_2 = bit_prob.player_impossible_constraints_paired().clone();
+                let test_impossible_constraints_3 = bit_prob.player_impossible_constraints_triple().clone();
+                let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
+                let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
+                let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
+                let pass_impossible_constraints_2: bool = validated_impossible_constraints_2 == test_impossible_constraints_2;
+                let pass_impossible_constraints_3: bool = validated_impossible_constraints_3 == test_impossible_constraints_3;
+                let bool_test_over_inferred: bool = validated_inferred_constraints.iter().zip(test_inferred_constraints.iter()).any(|(val, test)| {
+                    test.iter().any(|item| !val.contains(item)) || test.len() > val.len()
+                });
+                // let pass_brute_prob_validity = prob.validate();
+                if !pass_public_constraints {
+                    break;
+                }
+                if bool_test_over_inferred {
+                    // what we are testing inferred too many things
+                    println!("public: {:?}", validated_public_constraints);
+                    println!("vali: {:?}", validated_inferred_constraints);
+                    println!("test: {:?}", test_inferred_constraints);
+                    println!("test im 2: {:?}", test_impossible_constraints_2);
+                    println!("{}", hh.get_replay_history_braindead());
+                    panic!();
+                    break;
+                    // let replay = hh.get_history(hh.store_len());
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // panic!("Inferred to many items!")
+                }
+                if !pass_inferred_constraints {
+                    // println!("vali: {:?}", validated_inferred_constraints);
+                    // println!("test: {:?}", test_inferred_constraints);
+                    // println!("{}", hh.get_replay_history_braindead());
+                    // panic!();
+                    break;
+                    // let replay = hh.get_history(hh.store_len());
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // panic!("Inferred constraints do not match!")
+                }
+                if !pass_impossible_constraints {
+                    // println!("vali: {:?}", validated_impossible_constraints);
+                    // println!("test: {:?}", test_impossible_constraints);
+                    break;
+                    // let replay = hh.get_history(hh.store_len());
+                    // replay_game_constraint(replay, bool_know_priv_info, log_bool);
+                    // panic!()
+                }
+            }
+            step += 1;
+            if step > 1000 {
+                break;
+            }
+            log::info!("");
+        }
+        if step > max_steps {
+            max_steps = step;
+        }
+        log::info!("{}", format!("Game Won : {:?}",step));
+        hh.log_state();
+        // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
+        // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
+        log::info!("");
+        prob.reset();
+        bit_prob.reset();
+        game += 1;
+    }
+    log::info!("Most Steps: {}", max_steps);
+    println!("Most Steps: {}", max_steps);
+    println!("Total Tries: {}", total_tries);
+}
 pub fn clear_log() -> std::io::Result<()> {
     // Open file with truncate flag to clear contents
     OpenOptions::new()
