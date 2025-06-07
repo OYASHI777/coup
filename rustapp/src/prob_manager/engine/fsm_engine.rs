@@ -2,9 +2,13 @@ use crate::traits::prob_manager::coup_analysis::CoupTraversal;
 use crate::history_public::{ActionObservation, Card};
 
 enum EngineState {
+    // Assassin => (-3 Coins)
+    // Coup => (-7 Coins)
     TurnStart,
+    // Assassin => (-3 Coins)
+    // Coup => (-7 Coins)
     TurnStartCoup,
-    // Player Chosen => TurnStart/TurnStartCoup/ForcedCoup
+    // Player Chosen => TurnStart/TurnStartCoup/ForcedCoup (-7 Coins)
     ForcedCoup,
     // Discard => TurnStart/TurnStartCoup/ForcedCoup
     CoupHit,
@@ -57,8 +61,31 @@ enum EngineState {
     AmbassadorChallenged{player_challenger: u8},
     // Challenger Discard => AmbassadorDrawn
     AmbassadorChallengerFailed{player_challenger: u8},
+    // No Challenge => AssassinInvitesBlock
+    // Challenge => AssassinateChallenged
+    AssassinateInvitesChallenge,
+    // Blocker Dead (from challenge) => TurnStart/TurnStartCoup/ForcedCoup
+    // Blocker Alive
+    //      Block (CON) => AssassinateBlockInvitesChallenge
+    //      No Block => AssassinateSucceeded
+    AssassinateInvitesBlock{player_blocking: u8},
+    // No Challenge => TurnStart/TurnStartCoup/ForcedCoup
+    // Challenge => AssassinateBlockChallenged
+    AssassinateBlockInvitesChallenge{player_blocking: u8},
+    // Challenged RevealRedraw => AssassinateBlockChallengerFailed
+    // Challenged Discard (ALL CARDS) => TurnStart/TurnStartCoup/ForcedCoup
+    AssassinateBlockChallenged{player_challenger: u8, player_blocking: u8},
+    // Challenger Discard => TurnStart/TurnStartCoup/ForcedCoup
+    AssassinateBlockChallengerFailed{player_challenger: u8},
+    // Blocker Discard (NOT Contessa) => TurnStart/TurnStartCoup/ForcedCoup
+    AssassinateSucceeded{player_blocking: u8},
+    // Challenged RevealRedraw => AssassinateChallengerFailed
+    // Challenged Discard (Not Assassin) => TurnStart/TurnStartCoup/ForcedCoup
+    AssassinateChallenged{player_challenger: u8},
+    // Challenger Discard => AssassinInvitesBlock
+    AssassinateChallengerFailed{player_challenger: u8},
 }
-
+// TODO: Write test for same resources after push() then pop()
 pub struct FSMEngine {
     store: Vec<EngineState>,
     player_turn: Vec<u8>,
