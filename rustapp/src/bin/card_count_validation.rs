@@ -38,7 +38,7 @@ fn main() {
 }
 // TODO: Move to collective_constraint when finalized
 pub fn test_variant_recurse() {
-    use rustapp::prob_manager::recursion_fn::RecursionTest;
+    use rustapp::prob_manager::tools::recursion_fn::RecursionTest;
     RecursionTest::test_variant_recurse(LOG_FILE_NAME);
 }
 #[derive(Default)]

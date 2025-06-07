@@ -1,7 +1,7 @@
 use std::{hash::Hasher};
 
 use crate::history_public::Card;
-use crate::prob_manager::permutation_generator::gen_table_combinations;
+use crate::prob_manager::utils::permutation_generator::gen_table_combinations;
 
 use crate::traits::prob_manager::card_state::CardPermState;
 #[derive(Clone, Copy, PartialEq, Eq)]

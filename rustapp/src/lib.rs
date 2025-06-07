@@ -20,6 +20,12 @@ pub mod prob_manager {
         pub mod backtrack_metadata;
         pub mod card_state_u64;
     }
+    pub mod tools {
+        pub mod recursion_fn;
+    }
+    pub mod utils {
+        pub mod permutation_generator;
+    }
     pub mod backtracking_prob;
     pub mod backtracking_prob_hybrid;
     pub mod backtracking_collective_constraints;
@@ -34,8 +40,6 @@ pub mod prob_manager {
     pub mod naive_sampler;
     // pub mod path_dependent_collective_constraint;
     // pub mod path_dependent_prob;
-    pub mod permutation_generator;
-    pub mod recursion_fn;
 }
 pub mod history_public;
 pub mod string_utils;
