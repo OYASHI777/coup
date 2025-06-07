@@ -8,14 +8,6 @@ enum EngineState {
     ForcedCoup,
     // Discard => TurnStart/TurnStartCoup/ForcedCoup
     CoupHit,
-    // No Challenge => TurnStart/TurnStartCoup/ForcedCoup (+3 Coins)
-    // Challenge => TaxChallenged
-    TaxInvitesChallenge, 
-    // Challenged RevealRedraw => TaxChallengerFailed (+3 Coins)
-    // Challenged Discard (Not Duke)=> TurnStart/TurnStartCoup/ForcedCoup
-    TaxChallenged{player_challenger: u8},
-    // Challenger Discard => TurnStart/TurnStartCoup/ForcedCoup
-    TaxChallengerFailed{player_challenger: u8},
     // No Block => TurnStart/TurnStartCoup/ForcedCoup (+2 Coins)
     // Block => ForeignAidBlockInvitesChallenge
     ForeignAidInvitesBlock,
@@ -26,6 +18,14 @@ enum EngineState {
     ForeignAidBlockChallenged{player_challenger: u8, player_blocking: u8}, // TODO: [OPTIMIZE] Can find player_blocking in index before
     // Discard => TurnStart/TurnStartCoup/ForcedCoup
     ForeignAidBlockChallengerFailed{player_challenger: u8},
+    // No Challenge => TurnStart/TurnStartCoup/ForcedCoup (+3 Coins)
+    // Challenge => TaxChallenged
+    TaxInvitesChallenge, 
+    // Challenged RevealRedraw => TaxChallengerFailed (+3 Coins)
+    // Challenged Discard (Not Duke)=> TurnStart/TurnStartCoup/ForcedCoup
+    TaxChallenged{player_challenger: u8},
+    // Challenger Discard => TurnStart/TurnStartCoup/ForcedCoup
+    TaxChallengerFailed{player_challenger: u8},
     // No Challenge => StealInvitesBlock
     // Challenge => StealChallenged
     StealInvitesChallenge,
@@ -46,8 +46,17 @@ enum EngineState {
     // Challenged Discard => TurnStart/TurnStartCoup/ForcedCoup (+min(2,x) Coins | -min(2,x) Coins)
     StealBlockChallenged{card_blocker: Card, player_challenger: u8, player_blocking: u8},
     // Challenger Discard => TurnStart/TurnStartCoup/ForcedCoup
-    StealBlockChallengerFailed{player_challenger: u8}
-
+    StealBlockChallengerFailed{player_challenger: u8},
+    // No Challenge => AmbassadorDrawn
+    // Challenge => AmbassadorChallenged
+    AmbassadorInvitesChallenge,
+    // ExchangeChoice => TurnStart/TurnStartCoup/ForcedCoup
+    AmbassadorDrawn,
+    // Challenged RevealRedraw => AmbassadorChallengerFailed
+    // Challenged Discard (Not Ambassador) => TurnStart/TurnStartCoup/ForcedCoup
+    AmbassadorChallenged{player_challenger: u8},
+    // Challenger Discard => AmbassadorDrawn
+    AmbassadorChallengerFailed{player_challenger: u8},
 }
 
 pub struct FSMEngine {
