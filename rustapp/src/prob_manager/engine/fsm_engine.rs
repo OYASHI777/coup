@@ -61,7 +61,7 @@ enum EngineState {
     AmbassadorChallenged{player_challenger: u8},
     // Challenger Discard => AmbassadorDrawn
     AmbassadorChallengerFailed{player_challenger: u8},
-    // No Challenge => AssassinInvitesBlock
+    // No Challenge => AssassinateInvitesBlock
     // Challenge => AssassinateChallenged
     AssassinateInvitesChallenge,
     // Blocker Dead (from challenge) => TurnStart/TurnStartCoup/ForcedCoup
@@ -73,7 +73,7 @@ enum EngineState {
     // Challenge => AssassinateBlockChallenged
     AssassinateBlockInvitesChallenge{player_blocking: u8},
     // Challenged RevealRedraw => AssassinateBlockChallengerFailed
-    // Challenged Discard (ALL CARDS) => TurnStart/TurnStartCoup/ForcedCoup
+    // Challenged Discard (ALL CARDS && NOT Contessa) => TurnStart/TurnStartCoup/ForcedCoup
     AssassinateBlockChallenged{player_challenger: u8, player_blocking: u8},
     // Challenger Discard => TurnStart/TurnStartCoup/ForcedCoup
     AssassinateBlockChallengerFailed{player_challenger: u8},
@@ -82,7 +82,7 @@ enum EngineState {
     // Challenged RevealRedraw => AssassinateChallengerFailed
     // Challenged Discard (Not Assassin) => TurnStart/TurnStartCoup/ForcedCoup
     AssassinateChallenged{player_challenger: u8},
-    // Challenger Discard => AssassinInvitesBlock
+    // Challenger Discard => AssassinateInvitesBlock
     AssassinateChallengerFailed{player_challenger: u8},
 }
 // TODO: Write test for same resources after push() then pop()
