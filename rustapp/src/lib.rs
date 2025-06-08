@@ -18,8 +18,17 @@ pub mod cfr {
 pub mod prob_manager {
     pub mod engine {
         pub mod models {
+            pub mod assassinate;
+            pub mod coup;
+            pub mod engine_state;
+            pub mod exchange;
+            pub mod foreign_aid;
+            pub mod game_state;
+            pub mod steal;
+            pub mod tax;
             pub mod turn_start;
         }
+        pub mod constants;
         pub mod fsm_engine;
     }
     pub mod models {
