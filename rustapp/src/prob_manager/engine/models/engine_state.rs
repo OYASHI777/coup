@@ -11,6 +11,8 @@ pub enum EngineState {
     // Assassin => (-3 Coins)
     // Coup => (-7 Coins)
     TurnStart(TurnStart),
+    // End of Game
+    End(End),
     // Discard => TurnStart/TurnStartCoup/ForcedCoup
     CoupHit(CoupHit),
     // No Block => TurnStart/TurnStartCoup/ForcedCoup (+2 Coins)
