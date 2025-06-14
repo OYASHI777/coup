@@ -35,22 +35,17 @@ impl GameData {
         }
         self.player_turn = current_turn;
     }
-    /// Checks if game will be won after a Discard
-    pub fn game_will_be_won(&self, action: &ActionObservation) -> bool {
-        match action {
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                self.influence.iter().enumerate().filter(
-                    |(p, l)| {
-                        if *p != *player_id {
-                            **l > 0
-                        } else {
-                            **l > *no_cards as u8
-                        }
-                    }
-                ).count() == 1
-            },
-            _ => false,
-        }
+    /// Checks if game will be won after a player loses no_cards
+    pub fn game_will_be_won(&self, player: usize, no_cards: u8) -> bool {
+        self.influence.iter().enumerate().filter(
+            |(p, l)| {
+                if *p != player {
+                    **l > 0
+                } else {
+                    **l > no_cards
+                }
+            }
+        ).count() == 1
     }
 }
 

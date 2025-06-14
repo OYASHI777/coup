@@ -1,9 +1,6 @@
-use std::hint::unreachable_unchecked;
-
 use crate::{prob_manager::engine::{fsm_engine::Node, models::engine_state::{CoupTransition, EngineState}}, traits::prob_manager::coup_analysis::CoupTraversal};
 use super::game_state::GameState;
 use crate::history_public::ActionObservation;
-use crate::prob_manager::engine::constants::GAIN_INCOME;
 use super::game_state::GameData;
 use super::coup::*;
 use super::end::*;
