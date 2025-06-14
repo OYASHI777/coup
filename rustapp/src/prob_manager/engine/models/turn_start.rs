@@ -4,6 +4,13 @@ use crate::{prob_manager::engine::{fsm_engine::Node, models::engine_state::{Coup
 use super::game_state::GameState;
 use crate::history_public::ActionObservation;
 use crate::prob_manager::engine::constants::INCOME_GAIN;
+use super::coup::*;
+use super::end::*;
+use super::exchange::*;
+use super::foreign_aid::*;
+use super::steal::*;
+use super::tax::*;
+use super::assassinate::*;
 pub struct TurnStart {
 }
 
@@ -53,7 +60,7 @@ impl CoupTransition for TurnStart {
                 EngineState::TurnStart(self)
             },
             ActionObservation::ForeignAid { player_id } => {
-                todo!()
+                EngineState::ForeignAidInvitesBlock(ForeignAidInvitesBlock {  })
             },
             ActionObservation::Tax { player_id } => {
                 todo!()
