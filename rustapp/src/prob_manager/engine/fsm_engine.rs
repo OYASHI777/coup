@@ -1,4 +1,5 @@
 use super::models::turn_start::TurnStart;
+use crate::prob_manager::engine::models::game_state::GameState;
 use crate::traits::prob_manager::coup_analysis::CoupTraversal;
 use crate::history_public::{ActionObservation};
 use super::models::engine_state::EngineState;
@@ -9,14 +10,14 @@ pub trait Node {
 // TODO: Write test for same resources after push() then pop()
 pub struct FSMEngine {
     history: Vec<ActionObservation>,
-    state: EngineState,
+    state: GameState,
 }
 impl FSMEngine {
     /// Generates an FSMEngine
     pub fn new() -> Self {
         FSMEngine { 
             history: Vec::with_capacity(128), 
-            state: EngineState::TurnStart(TurnStart::new()),
+            state: GameState::new(),
         }
     }
 }

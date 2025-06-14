@@ -1,7 +1,10 @@
+use crate::prob_manager::engine::models::{engine_state::EngineState, turn_start::TurnStart};
+
 pub struct GameState {
     influence: [u8; 6],
     coins: [u8; 6],
     player_turn: usize,
+    state: EngineState,
 }
 
 impl GameState {
@@ -10,6 +13,7 @@ impl GameState {
             influence: [0; 6], 
             coins: [0; 6], 
             player_turn: 0,
+            state: EngineState::TurnStart(TurnStart{ }),
         }
     }
     pub fn start(player_turn: usize) -> Self {
@@ -17,6 +21,7 @@ impl GameState {
             influence: [0; 6], 
             coins: [0; 6], 
             player_turn: player_turn,
+            state: EngineState::TurnStart(TurnStart{ }),
         }
     }
     pub fn influence(&self) -> &[u8; 6] {

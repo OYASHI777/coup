@@ -91,6 +91,6 @@ pub enum EngineState {
 }
 
 pub trait CoupTransition {
-    fn next(self, action: &ActionObservation) -> EngineState;
-    fn prev(self, action: &ActionObservation) -> EngineState;
+    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState;
+    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState;
 }

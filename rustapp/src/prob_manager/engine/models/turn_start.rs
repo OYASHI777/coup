@@ -5,24 +5,23 @@ use super::game_state::GameState;
 use crate::history_public::ActionObservation;
 use crate::prob_manager::engine::constants::INCOME_GAIN;
 pub struct TurnStart {
-    pub game_state: GameState,
 }
 
 impl TurnStart {
     pub fn new() -> Self {
         TurnStart { 
-            game_state: GameState::new(),
         }
     }
 }
 
 impl CoupTransition for TurnStart {
-    fn next(self, action: &ActionObservation) -> EngineState {
+    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         match action {
             ActionObservation::Income { player_id } => {
-                let mut game_state = self.game_state;
-                game_state.coins_add(*player_id, INCOME_GAIN);
-                EngineState::TurnStart(TurnStart { game_state, })
+                // let mut game_state = self.game_state;
+                // game_state.coins_add(*player_id, INCOME_GAIN);
+                // EngineState::TurnStart(TurnStart { game_state, })
+                todo!()
             },
             ActionObservation::ForeignAid { player_id } => {
                 todo!()
@@ -47,7 +46,7 @@ impl CoupTransition for TurnStart {
         }
     }
 
-    fn prev(self, action: &ActionObservation) -> EngineState {
+    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         match action {
             ActionObservation::EmptyAO => todo!(),
             ActionObservation::ChallengeAccept => todo!(),

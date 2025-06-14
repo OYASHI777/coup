@@ -1,57 +1,53 @@
 use crate::prob_manager::engine::models::engine_state::CoupTransition;
-
+use crate::history_public::ActionObservation;
 use super::game_state::GameState;
 use super::engine_state::EngineState;
 pub struct ForeignAidInvitesBlock {
-    game_state: GameState,
 }
 pub struct ForeignAidBlockInvitesChallenge {
-    game_state: GameState,
     player_blocking: usize,
 }
 pub struct ForeignAidBlockChallenged {
-    game_state: GameState,
     player_blocking: usize,
     player_challenger: usize,
 }
 pub struct ForeignAidBlockChallengerFailed {
-    game_state: GameState,
     player_challenger: usize,
 }
 
 impl CoupTransition for ForeignAidInvitesBlock {
-    fn next(self, action: &crate::history_public::ActionObservation) -> EngineState {
+    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &crate::history_public::ActionObservation) -> EngineState {
+    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for ForeignAidBlockInvitesChallenge {
-    fn next(self, action: &crate::history_public::ActionObservation) -> EngineState {
+    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &crate::history_public::ActionObservation) -> EngineState {
+    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for ForeignAidBlockChallenged {
-    fn next(self, action: &crate::history_public::ActionObservation) -> EngineState {
+    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &crate::history_public::ActionObservation) -> EngineState {
+    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for ForeignAidBlockChallengerFailed {
-    fn next(self, action: &crate::history_public::ActionObservation) -> EngineState {
+    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &crate::history_public::ActionObservation) -> EngineState {
+    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         todo!()
     }
 }
