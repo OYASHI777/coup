@@ -1,4 +1,4 @@
-use super::game_state::GameState;
+use super::game_state::GameData;
 use super::engine_state::EngineState;
 use crate::{prob_manager::engine::models::engine_state::CoupTransition};
 use crate::history_public::{ActionObservation, Card};
@@ -30,65 +30,65 @@ pub struct StealBlockChallengerFailed {
 }
 
 impl CoupTransition for StealInvitesChallenge {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for StealChallenged {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for StealChallengerFailed {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for StealInvitesBlock {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for StealBlockInvitesChallenge {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for StealBlockChallenged {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for StealBlockChallengerFailed {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 }

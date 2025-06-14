@@ -1,6 +1,7 @@
-use crate::prob_manager::engine::models::{engine_state::CoupTransition, game_state::GameState};
+use crate::prob_manager::engine::models::{engine_state::CoupTransition};
 use crate::history_public::ActionObservation;
 use super::engine_state::EngineState;
+use super::game_state::GameData;
 pub struct TaxInvitesChallenge {
 }
 pub struct TaxChallenged {
@@ -11,29 +12,29 @@ pub struct TaxChallengerFailed {
 }
 
 impl CoupTransition for TaxInvitesChallenge {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for TaxChallenged {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 }
 impl CoupTransition for TaxChallengerFailed {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 }

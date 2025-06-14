@@ -31,11 +31,11 @@ impl CoupTraversal for FSMEngine {
     }
     /// Update's Engine's state
     fn push_ao_public(&mut self, action: &ActionObservation) {
-        todo!()
+        self.state.push(action);
     }
 
     fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
-        todo!()
+        self.state.push(action);
     }
     /// Update's Engine's state with private information
     fn push_ao_private(&mut self, action: &ActionObservation) {
@@ -48,10 +48,13 @@ impl CoupTraversal for FSMEngine {
 
     fn pop(&mut self) {
         // Case when history is empty => Off or ignore
-        todo!()
+        if let Some(action) = self.history.pop() {
+            self.state.pop(&action);
+        }
     }
 
     fn reset(&mut self) {
-        todo!()
+        self.history.clear();
+        self.state.reset();
     }
 }

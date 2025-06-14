@@ -1,59 +1,70 @@
-use crate::prob_manager::engine::models::{engine_state::EngineState, turn_start::TurnStart};
+use crate::{prob_manager::engine::{constants::{STARTING_COINS, STARTING_INFLUENCE}, models::{engine_state::{CoupTransition, EngineState}, turn_start::TurnStart}}, traits::prob_manager::coup_analysis::CoupTraversal};
+use crate::history_public::ActionObservation;
+
+pub struct GameData {
+    pub influence: [u8; 6],
+    pub coins: [u8; 6],
+    pub player_turn: usize,
+}
+impl GameData {
+    pub fn new(player_turn: usize) -> Self {
+        GameData { 
+            influence: STARTING_INFLUENCE, 
+            coins: STARTING_COINS, 
+            player_turn,
+        }
+    }
+}
+
+impl GameData {
+    pub fn next_player(&mut self) {
+        let mut current_turn: usize = (self.player_turn + 1) % 6;
+        while self.influence[current_turn] == 0 {
+            current_turn = (current_turn + 1) % 6;
+        }
+        self.player_turn = current_turn;
+    }
+    /// Assumes previously deducted influence has already been readded in
+    pub fn prev_player(&mut self) {
+        let mut current_turn: usize = (self.player_turn + 5) % 6;
+        while self.influence[current_turn] == 0 {
+            current_turn = (current_turn + 5) % 6;
+        }
+        self.player_turn = current_turn;
+    }
+}
 
 pub struct GameState {
-    influence: [u8; 6],
-    coins: [u8; 6],
-    player_turn: usize,
+    game_data: GameData,
     state: EngineState,
 }
 
 impl GameState {
     pub fn new() -> Self {
         GameState { 
-            influence: [0; 6], 
-            coins: [0; 6], 
-            player_turn: 0,
+            game_data: GameData::new(0),
             state: EngineState::TurnStart(TurnStart{ }),
         }
     }
     pub fn start(player_turn: usize) -> Self {
         GameState { 
-            influence: [0; 6], 
-            coins: [0; 6], 
-            player_turn: player_turn,
+            game_data: GameData::new(player_turn),
             state: EngineState::TurnStart(TurnStart{ }),
         }
     }
     pub fn influence(&self) -> &[u8; 6] {
-        &self.influence
-    }
-    pub fn influence_add(&mut self, player: usize, amount: u8) {
-        self.influence[player] += amount;
-    }
-    pub fn influence_sub(&mut self, player: usize, amount: u8) {
-        self.influence[player] -= amount;
+        &self.game_data.influence
     }
     pub fn coins(&self) -> &[u8; 6] {
-        &self.coins
+        &self.game_data.coins
     }
-    pub fn coins_add(&mut self, player: usize, amount: u8) {
-        self.coins[player] += amount;
+    pub fn push(&mut self, action: &ActionObservation) {
+        self.state = self.state.next(action, &mut self.game_data);
     }
-    pub fn coins_sub(&mut self, player: usize, amount: u8) {
-        self.coins[player] += amount;
+    pub fn pop(&mut self, action: &ActionObservation) {
+        self.state = self.state.prev(action, &mut self.game_data);
     }
-    pub fn next_player(influence: &mut [u8; 6], player_turn: &mut usize) {
-        let mut current_turn: usize = (*player_turn + 1) % 6;
-        while influence[current_turn] == 0 {
-            current_turn = (current_turn + 1) % 6;
-        }
-        *player_turn = current_turn;
-    }
-    pub fn prev_player(influence: &mut [u8; 6], player_turn: &mut usize) {
-        let mut current_turn: usize = (*player_turn + 5) % 6;
-        while influence[current_turn] == 0 {
-            current_turn = (current_turn + 5) % 6;
-        }
-        *player_turn = current_turn;
+    pub fn reset(&mut self) {
+        *self = Self::new();
     }
 }

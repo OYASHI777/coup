@@ -4,6 +4,7 @@ use crate::{prob_manager::engine::{fsm_engine::Node, models::engine_state::{Coup
 use super::game_state::GameState;
 use crate::history_public::ActionObservation;
 use crate::prob_manager::engine::constants::INCOME_GAIN;
+use super::game_state::GameData;
 use super::coup::*;
 use super::end::*;
 use super::exchange::*;
@@ -22,12 +23,12 @@ impl TurnStart {
 }
 
 impl CoupTransition for TurnStart {
-    fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Income { player_id } => {
-                coins[*player_id] += INCOME_GAIN;
-                GameState::next_player(influence, player_turn);
-                EngineState::TurnStart(self)
+                game_data.coins[*player_id] += INCOME_GAIN;
+                game_data.next_player();
+                EngineState::TurnStart(TurnStart { })
             },
             ActionObservation::ForeignAid { player_id } => {
                 todo!()
@@ -52,12 +53,12 @@ impl CoupTransition for TurnStart {
         }
     }
 
-    fn prev(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
+    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Income { player_id } => {
-                coins[*player_id] -= INCOME_GAIN;
-                GameState::prev_player(influence, player_turn);
-                EngineState::TurnStart(self)
+                game_data.coins[*player_id] -= INCOME_GAIN;
+                game_data.prev_player();
+                EngineState::TurnStart(TurnStart {  })
             },
             ActionObservation::ForeignAid { player_id } => {
                 EngineState::ForeignAidInvitesBlock(ForeignAidInvitesBlock {  })
