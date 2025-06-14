@@ -47,6 +47,16 @@ impl GameData {
             }
         ).count() == 1
     }
+    /// Returns Coin amount zeroized for dead players
+    pub fn coins_display(&self) -> [u8; 6] {
+        let mut output = self.coins.clone();
+        self.influence.iter().enumerate().for_each(
+            |(p, l)| {
+                output[p] = output[p] * (*l > 0) as u8
+            }
+        );
+        output
+    }
 }
 
 pub struct GameState {
