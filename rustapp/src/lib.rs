@@ -20,6 +20,7 @@ pub mod prob_manager {
         pub mod models {
             pub mod assassinate;
             pub mod coup;
+            pub mod end;
             pub mod engine_state;
             pub mod exchange;
             pub mod foreign_aid;

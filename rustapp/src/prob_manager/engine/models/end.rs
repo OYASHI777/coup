@@ -1,3 +1,5 @@
+use crate::prob_manager::engine::models::game_state::GameState;
+
 pub struct End {
     pub game_state: GameState,
 }

@@ -2,6 +2,7 @@ use crate::history_public::ActionObservation;
 
 use super::turn_start::*;
 use super::coup::*;
+use super::end::*;
 use super::exchange::*;
 use super::foreign_aid::*;
 use super::steal::*;
