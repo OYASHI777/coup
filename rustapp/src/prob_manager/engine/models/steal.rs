@@ -1,5 +1,5 @@
 use super::game_state::GameData;
-use super::engine_state::{EngineState, EngineStateName};
+use super::engine_state::EngineState;
 use crate::{prob_manager::engine::models::engine_state::CoupTransition};
 use crate::history_public::{ActionObservation, Card};
 #[derive(Copy, Clone)]

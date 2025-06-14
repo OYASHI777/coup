@@ -64,6 +64,8 @@ pub enum EngineState {
     // No Challenge => ExchangeDrawn
     // Challenge => ExchangeChallenged
     ExchangeInvitesChallenge(ExchangeInvitesChallenge),
+    // ExchangeDraw => ExchangeDrawn
+    ExchangeDrawing(ExchangeDrawing),
     // ExchangeChoice => TurnStart/TurnStartCoup/ForcedCoup
     ExchangeDrawn(ExchangeDrawn),
     // Challenged RevealRedraw => ExchangeChallengerFailed
@@ -94,73 +96,6 @@ pub enum EngineState {
     AssassinateChallenged(AssassinateChallenged),
     // Challenger Discard => AssassinateInvitesBlock
     AssassinateChallengerFailed(AssassinateChallengerFailed),
-}
-impl EngineState {
-    pub fn name(&self) -> EngineStateName {
-        match self {
-            EngineState::TurnStart(_) => EngineStateName::TurnStart,
-            EngineState::End(_) => EngineStateName::End,
-            EngineState::CoupHit(_) => EngineStateName::CoupHit,
-            EngineState::ForeignAidInvitesBlock(_) => EngineStateName::ForeignAidInvitesBlock,
-            EngineState::ForeignAidBlockInvitesChallenge(_) => EngineStateName::ForeignAidBlockInvitesChallenge,
-            EngineState::ForeignAidBlockChallenged(_) => EngineStateName::ForeignAidBlockChallenged,
-            EngineState::ForeignAidBlockChallengerFailed(_) => EngineStateName::ForeignAidBlockChallengerFailed,
-            EngineState::TaxInvitesChallenge(_) => EngineStateName::TaxInvitesChallenge,
-            EngineState::TaxChallenged(_) => EngineStateName::TaxChallenged,
-            EngineState::TaxChallengerFailed(_) => EngineStateName::TaxChallengerFailed,
-            EngineState::StealInvitesChallenge(_) => EngineStateName::StealInvitesChallenge,
-            EngineState::StealChallenged(_) => EngineStateName::StealChallenged,
-            EngineState::StealChallengerFailed(_) => EngineStateName::StealChallengerFailed,
-            EngineState::StealInvitesBlock(_) => EngineStateName::StealInvitesBlock,
-            EngineState::StealBlockInvitesChallenge(_) => EngineStateName::StealBlockInvitesChallenge,
-            EngineState::StealBlockChallenged(_) => EngineStateName::StealBlockChallenged,
-            EngineState::StealBlockChallengerFailed(_) => EngineStateName::StealBlockChallengerFailed,
-            EngineState::ExchangeInvitesChallenge(_) => EngineStateName::ExchangeInvitesChallenge,
-            EngineState::ExchangeDrawn(_) => EngineStateName::ExchangeDrawn,
-            EngineState::ExchangeChallenged(_) => EngineStateName::ExchangeChallenged,
-            EngineState::ExchangeChallengerFailed(_) => EngineStateName::ExchangeChallengerFailed,
-            EngineState::AssassinateInvitesChallenge(_) => EngineStateName::AssassinateInvitesChallenge,
-            EngineState::AssassinateInvitesBlock(_) => EngineStateName::AssassinateInvitesBlock,
-            EngineState::AssassinateBlockInvitesChallenge(_) => EngineStateName::AssassinateBlockInvitesChallenge,
-            EngineState::AssassinateBlockChallenged(_) => EngineStateName::AssassinateBlockChallenged,
-            EngineState::AssassinateBlockChallengerFailed(_) => EngineStateName::AssassinateBlockChallengerFailed,
-            EngineState::AssassinateSucceeded(_) => EngineStateName::AssassinateSucceeded,
-            EngineState::AssassinateChallenged(_) => EngineStateName::AssassinateChallenged,
-            EngineState::AssassinateChallengerFailed(_) => EngineStateName::AssassinateChallengerFailed,
-        }
-    }
-}
-#[repr(u8)]
-pub enum EngineStateName {
-    TurnStart,
-    End,
-    CoupHit,
-    ForeignAidInvitesBlock,
-    ForeignAidBlockInvitesChallenge,
-    ForeignAidBlockChallenged,
-    ForeignAidBlockChallengerFailed,
-    TaxInvitesChallenge, 
-    TaxChallenged,
-    TaxChallengerFailed,
-    StealInvitesChallenge,
-    StealChallenged,
-    StealChallengerFailed,
-    StealInvitesBlock,
-    StealBlockInvitesChallenge,
-    StealBlockChallenged,
-    StealBlockChallengerFailed,
-    ExchangeInvitesChallenge,
-    ExchangeDrawn,
-    ExchangeChallenged,
-    ExchangeChallengerFailed,
-    AssassinateInvitesChallenge,
-    AssassinateInvitesBlock,
-    AssassinateBlockInvitesChallenge,
-    AssassinateBlockChallenged,
-    AssassinateBlockChallengerFailed,
-    AssassinateSucceeded,
-    AssassinateChallenged,
-    AssassinateChallengerFailed,
 }
 
 pub trait CoupTransition {
@@ -225,6 +160,7 @@ impl CoupTransition for EngineState {
             EngineState::StealBlockChallenged(steal_block_challenged) => steal_block_challenged.state_update(action, game_data),
             EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => steal_block_challenger_failed.state_update(action, game_data),
             EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => exchange_invites_challenge.state_update(action, game_data),
+            EngineState::ExchangeDrawing(exchange_drawing) => exchange_drawing.state_update(action, game_data),
             EngineState::ExchangeDrawn(exchange_drawn) => exchange_drawn.state_update(action, game_data),
             EngineState::ExchangeChallenged(exchange_challenged) => exchange_challenged.state_update(action, game_data),
             EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => exchange_challenger_failed.state_update(action, game_data),
@@ -259,6 +195,7 @@ impl CoupTransition for EngineState {
             EngineState::StealBlockChallenged(steal_block_challenged) => steal_block_challenged.reverse_state_update(action, game_data),
             EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => steal_block_challenger_failed.reverse_state_update(action, game_data),
             EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => exchange_invites_challenge.reverse_state_update(action, game_data),
+            EngineState::ExchangeDrawing(exchange_drawing) => exchange_drawing.reverse_state_update(action, game_data),
             EngineState::ExchangeDrawn(exchange_drawn) => exchange_drawn.reverse_state_update(action, game_data),
             EngineState::ExchangeChallenged(exchange_challenged) => exchange_challenged.reverse_state_update(action, game_data),
             EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => exchange_challenger_failed.reverse_state_update(action, game_data),

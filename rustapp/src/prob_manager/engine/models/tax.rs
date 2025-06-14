@@ -2,7 +2,7 @@ use crate::prob_manager::engine::constants::GAIN_DUKE;
 use crate::prob_manager::engine::models::turn_start::TurnStart;
 use crate::prob_manager::engine::models::{engine_state::CoupTransition};
 use crate::history_public::ActionObservation;
-use super::engine_state::{EngineState, EngineStateName};
+use super::engine_state::EngineState;
 use super::game_state::GameData;
 #[derive(Copy, Clone)]
 pub struct TaxInvitesChallenge {
@@ -22,7 +22,7 @@ impl CoupTransition for TaxInvitesChallenge {
             ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => {
                 match opposing_player_id == final_actioner {
                     true => {
-                        // nobody blocked
+                        // nobody challenges
                         game_data.coins[game_data.player_turn] += GAIN_DUKE;
                         game_data.next_player();
                         EngineState::TurnStart(TurnStart {  })

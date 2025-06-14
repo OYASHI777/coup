@@ -5,7 +5,6 @@ use super::game_state::GameState;
 use crate::history_public::ActionObservation;
 use crate::prob_manager::engine::constants::GAIN_INCOME;
 use super::game_state::GameData;
-use super::engine_state::EngineStateName;
 use super::coup::*;
 use super::end::*;
 use super::exchange::*;
@@ -50,7 +49,7 @@ impl CoupTransition for TurnStart {
                 todo!()
             },
             ActionObservation::Exchange { player_id } => {
-                todo!()
+                EngineState::ExchangeInvitesChallenge(ExchangeInvitesChallenge {  })
             },
             _ => {
                 unsafe {

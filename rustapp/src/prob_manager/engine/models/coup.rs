@@ -1,7 +1,7 @@
 use crate::prob_manager::engine::models::turn_start::TurnStart;
 use crate::prob_manager::engine::models::{engine_state::CoupTransition, game_state::GameState};
 use crate::history_public::ActionObservation;
-use super::engine_state::{EngineState, EngineStateName};
+use super::engine_state::EngineState;
 use super::game_state::GameData;
 #[derive(Copy, Clone)]
 pub struct CoupHit {
