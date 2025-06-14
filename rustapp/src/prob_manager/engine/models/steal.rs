@@ -40,7 +40,7 @@ impl CoupTransition for StealInvitesChallenge {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -49,7 +49,7 @@ impl CoupTransition for StealChallenged {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -58,7 +58,7 @@ impl CoupTransition for StealChallengerFailed {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -67,7 +67,7 @@ impl CoupTransition for StealInvitesBlock {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -76,7 +76,7 @@ impl CoupTransition for StealBlockInvitesChallenge {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -85,7 +85,7 @@ impl CoupTransition for StealBlockChallenged {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -94,7 +94,7 @@ impl CoupTransition for StealBlockChallengerFailed {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }

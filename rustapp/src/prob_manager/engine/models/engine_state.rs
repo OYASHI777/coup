@@ -165,11 +165,12 @@ pub enum EngineStateName {
 
 pub trait CoupTransition {
     fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState;
-    fn reverse_state_update(&self, game_data: &mut GameData);
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData);
     fn action_update(action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Income { player_id } => {
                 game_data.coins[*player_id] += GAIN_INCOME;
+                game_data.next_player();
             },
             ActionObservation::Assassinate { player_id, opposing_player_id } => {
                 game_data.coins[*player_id] -= COST_ASSASSINATE;
@@ -187,6 +188,7 @@ pub trait CoupTransition {
         match action {
             ActionObservation::Income { player_id } => {
                 game_data.coins[*player_id] -= GAIN_INCOME;
+                game_data.prev_player();
             },
             ActionObservation::Assassinate { player_id, opposing_player_id } => {
                 game_data.coins[*player_id] += COST_ASSASSINATE;
@@ -237,37 +239,37 @@ impl CoupTransition for EngineState {
         }
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         match self {
-            EngineState::TurnStart(turn_start) => turn_start.reverse_state_update(game_data),
-            EngineState::End(end) => end.reverse_state_update(game_data),
-            EngineState::CoupHit(coup_hit) => coup_hit.reverse_state_update(game_data),
-            EngineState::ForeignAidInvitesBlock(foreign_aid_invites_block) => foreign_aid_invites_block.reverse_state_update(game_data),
-            EngineState::ForeignAidBlockInvitesChallenge(foreign_aid_block_invites_challenge) => foreign_aid_block_invites_challenge.reverse_state_update(game_data),
-            EngineState::ForeignAidBlockChallenged(foreign_aid_block_challenged) => foreign_aid_block_challenged.reverse_state_update(game_data),
-            EngineState::ForeignAidBlockChallengerFailed(foreign_aid_block_challenger_failed) => foreign_aid_block_challenger_failed.reverse_state_update(game_data),
-            EngineState::TaxInvitesChallenge(tax_invites_challenge) => tax_invites_challenge.reverse_state_update(game_data),
-            EngineState::TaxChallenged(tax_challenged) => tax_challenged.reverse_state_update(game_data),
-            EngineState::TaxChallengerFailed(tax_challenger_failed) => tax_challenger_failed.reverse_state_update(game_data),
-            EngineState::StealInvitesChallenge(steal_invites_challenge) => steal_invites_challenge.reverse_state_update(game_data),
-            EngineState::StealChallenged(steal_challenged) => steal_challenged.reverse_state_update(game_data),
-            EngineState::StealChallengerFailed(steal_challenger_failed) => steal_challenger_failed.reverse_state_update(game_data),
-            EngineState::StealInvitesBlock(steal_invites_block) => steal_invites_block.reverse_state_update(game_data),
-            EngineState::StealBlockInvitesChallenge(steal_block_invites_challenge) => steal_block_invites_challenge.reverse_state_update(game_data),
-            EngineState::StealBlockChallenged(steal_block_challenged) => steal_block_challenged.reverse_state_update(game_data),
-            EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => steal_block_challenger_failed.reverse_state_update(game_data),
-            EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => exchange_invites_challenge.reverse_state_update(game_data),
-            EngineState::ExchangeDrawn(exchange_drawn) => exchange_drawn.reverse_state_update(game_data),
-            EngineState::ExchangeChallenged(exchange_challenged) => exchange_challenged.reverse_state_update(game_data),
-            EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => exchange_challenger_failed.reverse_state_update(game_data),
-            EngineState::AssassinateInvitesChallenge(assassinate_invites_challenge) => assassinate_invites_challenge.reverse_state_update(game_data),
-            EngineState::AssassinateInvitesBlock(assassinate_invites_block) => assassinate_invites_block.reverse_state_update(game_data),
-            EngineState::AssassinateBlockInvitesChallenge(assassinate_block_invites_challenge) => assassinate_block_invites_challenge.reverse_state_update(game_data),
-            EngineState::AssassinateBlockChallenged(assassinate_block_challenged) => assassinate_block_challenged.reverse_state_update(game_data),
-            EngineState::AssassinateBlockChallengerFailed(assassinate_block_challenger_failed) => assassinate_block_challenger_failed.reverse_state_update(game_data),
-            EngineState::AssassinateSucceeded(assassinate_succeeded) => assassinate_succeeded.reverse_state_update(game_data),
-            EngineState::AssassinateChallenged(assassinate_challenged) => assassinate_challenged.reverse_state_update(game_data),
-            EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => assassinate_challenger_failed.reverse_state_update(game_data),
+            EngineState::TurnStart(turn_start) => turn_start.reverse_state_update(action, game_data),
+            EngineState::End(end) => end.reverse_state_update(action, game_data),
+            EngineState::CoupHit(coup_hit) => coup_hit.reverse_state_update(action, game_data),
+            EngineState::ForeignAidInvitesBlock(foreign_aid_invites_block) => foreign_aid_invites_block.reverse_state_update(action, game_data),
+            EngineState::ForeignAidBlockInvitesChallenge(foreign_aid_block_invites_challenge) => foreign_aid_block_invites_challenge.reverse_state_update(action, game_data),
+            EngineState::ForeignAidBlockChallenged(foreign_aid_block_challenged) => foreign_aid_block_challenged.reverse_state_update(action, game_data),
+            EngineState::ForeignAidBlockChallengerFailed(foreign_aid_block_challenger_failed) => foreign_aid_block_challenger_failed.reverse_state_update(action, game_data),
+            EngineState::TaxInvitesChallenge(tax_invites_challenge) => tax_invites_challenge.reverse_state_update(action, game_data),
+            EngineState::TaxChallenged(tax_challenged) => tax_challenged.reverse_state_update(action, game_data),
+            EngineState::TaxChallengerFailed(tax_challenger_failed) => tax_challenger_failed.reverse_state_update(action, game_data),
+            EngineState::StealInvitesChallenge(steal_invites_challenge) => steal_invites_challenge.reverse_state_update(action, game_data),
+            EngineState::StealChallenged(steal_challenged) => steal_challenged.reverse_state_update(action, game_data),
+            EngineState::StealChallengerFailed(steal_challenger_failed) => steal_challenger_failed.reverse_state_update(action, game_data),
+            EngineState::StealInvitesBlock(steal_invites_block) => steal_invites_block.reverse_state_update(action, game_data),
+            EngineState::StealBlockInvitesChallenge(steal_block_invites_challenge) => steal_block_invites_challenge.reverse_state_update(action, game_data),
+            EngineState::StealBlockChallenged(steal_block_challenged) => steal_block_challenged.reverse_state_update(action, game_data),
+            EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => steal_block_challenger_failed.reverse_state_update(action, game_data),
+            EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => exchange_invites_challenge.reverse_state_update(action, game_data),
+            EngineState::ExchangeDrawn(exchange_drawn) => exchange_drawn.reverse_state_update(action, game_data),
+            EngineState::ExchangeChallenged(exchange_challenged) => exchange_challenged.reverse_state_update(action, game_data),
+            EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => exchange_challenger_failed.reverse_state_update(action, game_data),
+            EngineState::AssassinateInvitesChallenge(assassinate_invites_challenge) => assassinate_invites_challenge.reverse_state_update(action, game_data),
+            EngineState::AssassinateInvitesBlock(assassinate_invites_block) => assassinate_invites_block.reverse_state_update(action, game_data),
+            EngineState::AssassinateBlockInvitesChallenge(assassinate_block_invites_challenge) => assassinate_block_invites_challenge.reverse_state_update(action, game_data),
+            EngineState::AssassinateBlockChallenged(assassinate_block_challenged) => assassinate_block_challenged.reverse_state_update(action, game_data),
+            EngineState::AssassinateBlockChallengerFailed(assassinate_block_challenger_failed) => assassinate_block_challenger_failed.reverse_state_update(action, game_data),
+            EngineState::AssassinateSucceeded(assassinate_succeeded) => assassinate_succeeded.reverse_state_update(action, game_data),
+            EngineState::AssassinateChallenged(assassinate_challenged) => assassinate_challenged.reverse_state_update(action, game_data),
+            EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => assassinate_challenger_failed.reverse_state_update(action, game_data),
         }
     }
 }

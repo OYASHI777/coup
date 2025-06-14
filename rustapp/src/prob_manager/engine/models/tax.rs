@@ -19,7 +19,7 @@ impl CoupTransition for TaxInvitesChallenge {
         todo!()
     }
     
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -28,7 +28,7 @@ impl CoupTransition for TaxChallenged {
         todo!()
     }
     
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -37,7 +37,7 @@ impl CoupTransition for TaxChallengerFailed {
         todo!()
     }
     
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }

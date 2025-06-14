@@ -40,7 +40,7 @@ impl CoupTransition for AssassinateInvitesChallenge {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -49,7 +49,7 @@ impl CoupTransition for AssassinateInvitesBlock {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -58,7 +58,7 @@ impl CoupTransition for AssassinateBlockInvitesChallenge {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -67,7 +67,7 @@ impl CoupTransition for AssassinateBlockChallenged {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -76,7 +76,7 @@ impl CoupTransition for AssassinateBlockChallengerFailed {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -85,7 +85,7 @@ impl CoupTransition for AssassinateSucceeded {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -94,7 +94,7 @@ impl CoupTransition for AssassinateChallenged {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -103,7 +103,7 @@ impl CoupTransition for AssassinateChallengerFailed {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }

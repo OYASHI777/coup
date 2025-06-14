@@ -28,12 +28,10 @@ impl CoupTransition for TurnStart {
     fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Income { player_id } => {
-                game_data.coins[*player_id] += GAIN_INCOME;
-                game_data.next_player();
                 EngineState::TurnStart(TurnStart { })
             },
             ActionObservation::ForeignAid { player_id } => {
-                todo!()
+                EngineState::ForeignAidInvitesBlock(ForeignAidInvitesBlock {  })
             },
             ActionObservation::Tax { player_id } => {
                 todo!()
@@ -55,7 +53,7 @@ impl CoupTransition for TurnStart {
         }
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         // nothing
     }
 }

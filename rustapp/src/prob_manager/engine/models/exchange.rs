@@ -22,7 +22,7 @@ impl CoupTransition for ExchangeInvitesChallenge {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -31,7 +31,7 @@ impl CoupTransition for ExchangeDrawn {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -40,7 +40,7 @@ impl CoupTransition for ExchangeChallenged {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
@@ -49,7 +49,7 @@ impl CoupTransition for ExchangeChallengerFailed {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }

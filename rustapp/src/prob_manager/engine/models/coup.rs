@@ -12,7 +12,7 @@ impl CoupTransition for CoupHit {
         todo!()
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }

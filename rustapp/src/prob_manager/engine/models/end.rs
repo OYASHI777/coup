@@ -17,7 +17,7 @@ impl CoupTransition for End {
         panic!("Game has ended")
     }
 
-    fn reverse_state_update(&self, game_data: &mut GameData) {
+    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }

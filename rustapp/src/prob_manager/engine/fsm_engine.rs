@@ -58,10 +58,12 @@ impl CoupTraversal for FSMEngine {
         // Case when history is empty => Off or ignore
         if let Some(action) = self.history.pop() {
             self.history_state.pop();
+            // This must come first so Discard can add the influence back
             EngineState::reverse_action_update(&action, &mut self.state.game_data);
             if let Some(prev_state) = self.history_state.last() {
                 self.state.engine_state = *prev_state;
-                self.state.engine_state.reverse_state_update(&mut self.state.game_data);
+                // This is affected by Discard and must come after
+                self.state.engine_state.reverse_state_update(&action, &mut self.state.game_data);
             } else {
                 panic!("Pop not working")
             }
