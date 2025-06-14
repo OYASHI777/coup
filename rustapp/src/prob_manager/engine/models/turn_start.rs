@@ -41,7 +41,7 @@ impl CoupTransition for TurnStart {
                 EngineState::ForeignAidInvitesBlock(ForeignAidInvitesBlock {  })
             },
             ActionObservation::Tax { player_id } => {
-                todo!()
+                EngineState::TaxInvitesChallenge(TaxInvitesChallenge {  })
             },
             ActionObservation::Steal { player_id, opposing_player_id, amount } => {
                 todo!()

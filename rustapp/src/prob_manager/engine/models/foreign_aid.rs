@@ -28,6 +28,7 @@ impl CoupTransition for ForeignAidInvitesBlock {
                 match opposing_player_id == final_actioner {
                     true => {
                         // nobody blocked
+                        game_data.coins[game_data.player_turn] += GAIN_FOREIGNAID;
                         game_data.next_player();
                         EngineState::TurnStart(
                             TurnStart {  }
@@ -56,6 +57,7 @@ impl CoupTransition for ForeignAidInvitesBlock {
                     true => {
                         // nobody blocked
                         game_data.prev_player();
+                        game_data.coins[game_data.player_turn] -= GAIN_FOREIGNAID;
                     },
                     false => {
                         // final_actioner blocked
@@ -121,13 +123,17 @@ impl CoupTransition for ForeignAidBlockChallenged {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 debug_assert!(*no_cards == 1, "no_cards: {no_cards} should be 1");
-                game_data.next_player();
-                EngineState::TurnStart(
-                    TurnStart {  }
+                // TODO: Chain blocks!
+                // game_data.coins[game_data.player_turn] += GAIN_FOREIGNAID;
+                // game_data.next_player();
+                // EngineState::TurnStart(
+                //     TurnStart {  }
+                // )
+                EngineState::ForeignAidInvitesBlock(
+                    ForeignAidInvitesBlock {  }
                 )
             }
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
-                game_data.coins[*player_id] += GAIN_FOREIGNAID;
                 EngineState::ForeignAidBlockChallengerFailed(
                     ForeignAidBlockChallengerFailed { 
                         player_challenger: self.player_challenger, 
@@ -144,10 +150,10 @@ impl CoupTransition for ForeignAidBlockChallenged {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 debug_assert!(*no_cards == 1, "no_cards: {no_cards} should be 1");
-                game_data.prev_player();
+                // game_data.prev_player();
+                // game_data.coins[game_data.player_turn] -= GAIN_FOREIGNAID;
             }
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
-                game_data.coins[*player_id] -= GAIN_FOREIGNAID;
             },
             _ => {
                 panic!("Illegal move!")
@@ -159,6 +165,9 @@ impl CoupTransition for ForeignAidBlockChallengerFailed {
     fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
+                if *player_id != self.player_challenger {
+                    panic!("Illegal Move");
+                }
                 game_data.next_player();
                 EngineState::TurnStart(
                     TurnStart {  }
@@ -173,7 +182,10 @@ impl CoupTransition for ForeignAidBlockChallengerFailed {
     fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
-                game_data.next_player();
+                if *player_id != self.player_challenger {
+                    panic!("Illegal Move");
+                }
+                game_data.prev_player();
             },
             _ => {
                 panic!("Illegal move!")
