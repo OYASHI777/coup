@@ -30,6 +30,13 @@ impl CoupTransition for TurnStart {
             ActionObservation::Income { player_id } => {
                 EngineState::TurnStart(TurnStart { })
             },
+            ActionObservation::Coup { player_id, opposing_player_id } => {
+                EngineState::CoupHit(
+                    CoupHit { 
+                        player_hit: *opposing_player_id,
+                    }
+                )
+            }
             ActionObservation::ForeignAid { player_id } => {
                 EngineState::ForeignAidInvitesBlock(ForeignAidInvitesBlock {  })
             },

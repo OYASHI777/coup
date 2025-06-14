@@ -7,32 +7,32 @@ pub struct AssassinateInvitesChallenge {
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateInvitesBlock {
-    player_blocking: usize,
+    pub player_blocking: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateBlockInvitesChallenge {
-    player_blocking: usize,
+    pub player_blocking: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateBlockChallenged {
-    player_blocking: usize,
-    player_challenger: usize,
+    pub player_blocking: usize,
+    pub player_challenger: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateBlockChallengerFailed {
-    player_challenger: usize,
+    pub player_challenger: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateSucceeded {
-    player_blocking: usize,
+    pub player_blocking: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateChallenged {
-    player_challenger: usize,
+    pub player_challenger: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateChallengerFailed {
-    player_challenger: usize,
+    pub player_challenger: usize,
 }
 
 impl CoupTransition for AssassinateInvitesChallenge {
