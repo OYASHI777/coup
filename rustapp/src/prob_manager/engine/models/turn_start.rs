@@ -3,8 +3,9 @@ use std::hint::unreachable_unchecked;
 use crate::{prob_manager::engine::{fsm_engine::Node, models::engine_state::{CoupTransition, EngineState}}, traits::prob_manager::coup_analysis::CoupTraversal};
 use super::game_state::GameState;
 use crate::history_public::ActionObservation;
-use crate::prob_manager::engine::constants::INCOME_GAIN;
+use crate::prob_manager::engine::constants::GAIN_INCOME;
 use super::game_state::GameData;
+use super::engine_state::EngineStateName;
 use super::coup::*;
 use super::end::*;
 use super::exchange::*;
@@ -12,6 +13,7 @@ use super::foreign_aid::*;
 use super::steal::*;
 use super::tax::*;
 use super::assassinate::*;
+#[derive(Copy, Clone)]
 pub struct TurnStart {
 }
 
@@ -23,10 +25,10 @@ impl TurnStart {
 }
 
 impl CoupTransition for TurnStart {
-    fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Income { player_id } => {
-                game_data.coins[*player_id] += INCOME_GAIN;
+                game_data.coins[*player_id] += GAIN_INCOME;
                 game_data.next_player();
                 EngineState::TurnStart(TurnStart { })
             },
@@ -53,37 +55,8 @@ impl CoupTransition for TurnStart {
         }
     }
 
-    fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
-        // TODO: properly backtrack
-        match action {
-            ActionObservation::Income { player_id } => {
-                game_data.coins[*player_id] -= INCOME_GAIN;
-                game_data.prev_player();
-                EngineState::TurnStart(TurnStart {  })
-            },
-            ActionObservation::ForeignAid { player_id } => {
-                // i don't think this is the correct branch lol
-                game_data.prev_player();
-                EngineState::ForeignAidInvitesBlock(ForeignAidInvitesBlock {  })
-            },
-            ActionObservation::Tax { player_id } => {
-                todo!()
-            },
-            ActionObservation::Steal { player_id, opposing_player_id, amount } => {
-                todo!()
-            },
-            ActionObservation::Assassinate { player_id, opposing_player_id } => {
-                todo!()
-            },
-            ActionObservation::Exchange { player_id } => {
-                todo!()
-            },
-            _ => {
-                unsafe {
-                    unreachable_unchecked()
-                }
-            }
-        }
+    fn reverse_state_update(&self, game_data: &mut GameData) {
+        // nothing
     }
 }
 

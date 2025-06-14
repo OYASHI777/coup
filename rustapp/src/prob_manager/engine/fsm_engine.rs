@@ -1,4 +1,5 @@
 use super::models::turn_start::TurnStart;
+use crate::prob_manager::engine::models::engine_state::{CoupTransition, EngineStateName};
 use crate::prob_manager::engine::models::game_state::GameState;
 use crate::traits::prob_manager::coup_analysis::CoupTraversal;
 use crate::history_public::{ActionObservation};
@@ -10,6 +11,7 @@ pub trait Node {
 // TODO: Write test for same resources after push() then pop()
 pub struct FSMEngine {
     history: Vec<ActionObservation>,
+    history_state: Vec<EngineState>,
     state: GameState,
 }
 impl FSMEngine {
@@ -17,13 +19,16 @@ impl FSMEngine {
     pub fn new() -> Self {
         FSMEngine { 
             history: Vec::with_capacity(128), 
+            history_state: Vec::with_capacity(128),
             state: GameState::new(),
         }
     }
 }
 impl CoupTraversal for FSMEngine {
     fn start_public(&mut self) {
-        todo!()
+        self.reset();
+        *self = Self::new();
+        self.history_state.push(EngineState::TurnStart(TurnStart {  }));
     }
 
     fn start_private(&mut self, player: usize, cards: &[crate::history_public::Card; 2]) {
@@ -31,11 +36,14 @@ impl CoupTraversal for FSMEngine {
     }
     /// Update's Engine's state
     fn push_ao_public(&mut self, action: &ActionObservation) {
-        self.state.push(action);
+        self.state.engine_state = self.state.engine_state.state_update(action, &mut self.state.game_data);
+        EngineState::action_update(action, &mut self.state.game_data);
+        self.history_state.push(self.state.engine_state);
+        self.history.push(*action);
     }
 
     fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
-        self.state.push(action);
+        self.push_ao_public(action);
     }
     /// Update's Engine's state with private information
     fn push_ao_private(&mut self, action: &ActionObservation) {
@@ -49,7 +57,14 @@ impl CoupTraversal for FSMEngine {
     fn pop(&mut self) {
         // Case when history is empty => Off or ignore
         if let Some(action) = self.history.pop() {
-            self.state.pop(&action);
+            self.history_state.pop();
+            EngineState::reverse_action_update(&action, &mut self.state.game_data);
+            if let Some(prev_state) = self.history_state.last() {
+                self.state.engine_state = *prev_state;
+                self.state.engine_state.reverse_state_update(&mut self.state.game_data);
+            } else {
+                panic!("Pop not working")
+            }
         }
     }
 

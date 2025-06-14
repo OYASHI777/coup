@@ -1,4 +1,7 @@
-use crate::{prob_manager::engine::{constants::{STARTING_COINS, STARTING_INFLUENCE}, models::{engine_state::{CoupTransition, EngineState}, turn_start::TurnStart}}, traits::prob_manager::coup_analysis::CoupTraversal};
+use crate::prob_manager::engine::{constants::{STARTING_COINS, STARTING_INFLUENCE}};
+use crate::traits::prob_manager::coup_analysis::CoupTraversal;
+use super::engine_state::{CoupTransition, EngineState, EngineStateName};
+use super::turn_start::TurnStart;
 use crate::history_public::ActionObservation;
 
 pub struct GameData {
@@ -35,21 +38,21 @@ impl GameData {
 }
 
 pub struct GameState {
-    game_data: GameData,
-    state: EngineState,
+    pub game_data: GameData,
+    pub engine_state: EngineState,
 }
 
 impl GameState {
     pub fn new() -> Self {
         GameState { 
             game_data: GameData::new(0),
-            state: EngineState::TurnStart(TurnStart{ }),
+            engine_state: EngineState::TurnStart(TurnStart{ }),
         }
     }
     pub fn start(player_turn: usize) -> Self {
         GameState { 
             game_data: GameData::new(player_turn),
-            state: EngineState::TurnStart(TurnStart{ }),
+            engine_state: EngineState::TurnStart(TurnStart{ }),
         }
     }
     pub fn influence(&self) -> &[u8; 6] {
@@ -57,12 +60,6 @@ impl GameState {
     }
     pub fn coins(&self) -> &[u8; 6] {
         &self.game_data.coins
-    }
-    pub fn push(&mut self, action: &ActionObservation) {
-        self.state = self.state.next(action, &mut self.game_data);
-    }
-    pub fn pop(&mut self, action: &ActionObservation) {
-        self.state = self.state.prev(action, &mut self.game_data);
     }
     pub fn reset(&mut self) {
         *self = Self::new();
