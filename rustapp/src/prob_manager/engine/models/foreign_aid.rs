@@ -18,7 +18,7 @@ pub struct ForeignAidBlockChallengerFailed {
 impl CoupTransition for ForeignAidInvitesBlock {
     fn next(self, action: &ActionObservation, influence: &mut [u8; 6], coins: &mut [u8; 6], player_turn: &mut usize) -> EngineState {
         match action {
-            ActionObservation::ChallengeAccept => todo!(),
+            ActionObservation::ChallengeAccept { player_id, opposing_player_id } => todo!(),
             ActionObservation::ChallengeDeny => todo!(),
             _ => {
                 panic!("illegal move!")

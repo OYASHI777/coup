@@ -648,397 +648,398 @@ impl <'a> Explorer<'a> {
     // }
 
     pub fn pmccfr(&mut self, depth_counter: usize, reach_prob: &ReachProb, back_transition: Option<HashMap<BRKey, Vec<BRKey>>>) -> AHashMap<BRKey, f32> {
-        // TODO: move history out of self and into an input
-        // TODO: Reorganise using backtransition for return as backtransition depends on action
-        // Prunes not for next actions but for current action
-        // Add forward pass and prune
-        // TODO: Do one that prunes next actions on blue node
-        // TODO: Change reach_prob to struct with 6 players and each a hm of infostate: bool
-        // TODO: rayon the should_prune_current
-        self.visit_counter += 1;
+        todo!();
+    //     // TODO: move history out of self and into an input
+    //     // TODO: Reorganise using backtransition for return as backtransition depends on action
+    //     // Prunes not for next actions but for current action
+    //     // Add forward pass and prune
+    //     // TODO: Do one that prunes next actions on blue node
+    //     // TODO: Change reach_prob to struct with 6 players and each a hm of infostate: bool
+    //     // TODO: rayon the should_prune_current
+    //     self.visit_counter += 1;
         
-        // INITIALISE REWARDS
-        // TODO: abstract to a function
-        let mut rewards: AHashMap<BRKey, f32> = AHashMap::with_capacity(MAX_NUM_BRKEY);
-        if depth_counter >= self.max_depth || self.history.game_won(){
-            // CASE WHEN LEAF NODE REACHED
-            if self.history.game_won() {
-                self.won_counter += 1;
-            }
-            self.node_counter += 1;
-            let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
-            let move_player: usize = self.history.latest_move().player_id();
-            rewards = self.rewards_evaluator.predict_value(&latest_influence_time_t.to_vec());
-            // if let Some(None) = back_transition {
-            //     // TODO: Modify rewards with back_transition
-            //     rewards = rewards;
-            // }
-        // } else if self.policy_handler.should_prune_current(reach_prob){
-        } else if reach_prob.should_prune(){
-            self.prune_counter += 1;
-            let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
-            for player_id in 0..6 as u8 {
-                key_br.set_player_id(player_id);
-                for infostate in reach_prob.player_infostate_keys(player_id) {
-                    key_br.set_infostate(infostate);
-                    rewards.insert(key_br, 0.0);
-                }
-            }
-        } else {
-            // Always false for simulations
-            let bool_know_priv_info: bool = false; 
-            let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves(None);
-            let path_t: String = self.path.clone();
-            // TOCHECK: In cases of collective action next, this makes no sense
-            // INITIALISATIONS
-            if self.is_exchangedraw_node() {
-                // Dont need to initialise
-            } else if self.is_collective_node() {
-                // FOR SPECIAL CASES => {Collective Challenge, CollectiveBlock}
-                // based on key_ms_t
-                // TODO: fix for ExchangeDraw case
-                // TODO: Free for all CollectiveChallenge and CollectiveBlock
-                let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
-                let possible_challenge_moves: Vec<ActionObservation> = vec![ActionObservation::ChallengeAccept, ActionObservation::ChallengeDeny];
-                let challenged_player_id: u8 = self.history.latest_move().player_id() as u8;
-                for player_id in 0..6 as u8 {
-                    if player_id == challenged_player_id || latest_influence_time_t[player_id as usize] == 0 {
-                        continue;
-                    }
-                    self.mixed_strategy_policy_vec.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));
-                    self.q_values.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));   
-                }
-            } else {
-                // FOR NORMAL MOVES
-                // based on key_ms_t
-                let player_id: u8 = possible_outcomes[0].player_id() as u8;
-                self.mixed_strategy_policy_vec.insert_default_if_empty_by_keys(player_id, &self.path, &possible_outcomes, reach_prob.player_infostate_keys(player_id));
-                self.q_values.insert_default_if_empty_by_keys(player_id, &self.path, &possible_outcomes, reach_prob.player_infostate_keys(player_id));
-            }
-            // RECURSIONS
-            // Test if depth < 6 whether can random sample
-            if self.is_collective_node() {
-                // TODO: SHIFT OUT AND USE ACTIONS
-                // CollectiveChallenge
-                // CollectiveBlock
-                // TODO: sample a random action and sample if nobody challenges (which is move 0)
-                // Should sample outcomes equally so we converge on a more reliable outcome
-                // Dont need to sample action by action, can sample whole, but must update the mixed strategy reach prob and rewards accurately 
-                // Or maybe its ok to sample because sometimes players choose no and end up with no risk anyways, just randomly sample the move...
-                if let Some(action) = possible_outcomes.choose(&mut thread_rng()).cloned() {
-                    self.add_node(action, bool_know_priv_info);
-                    // TODO: forward pass
-                    // fwd pass needs mixed strategy policy working
-                    // mix_strat_policy_time_t is a variable
-                    // self.policy_handler.forward_pass_best_response_policy(&self.path, latest_influence_time_t, &self.history, &mut self.best_response_policy_vec, mix_strat_policy_time_t);
-                    let mut next_reach_prob: ReachProb = reach_prob.clone();
+    //     // INITIALISE REWARDS
+    //     // TODO: abstract to a function
+    //     let mut rewards: AHashMap<BRKey, f32> = AHashMap::with_capacity(MAX_NUM_BRKEY);
+    //     if depth_counter >= self.max_depth || self.history.game_won(){
+    //         // CASE WHEN LEAF NODE REACHED
+    //         if self.history.game_won() {
+    //             self.won_counter += 1;
+    //         }
+    //         self.node_counter += 1;
+    //         let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
+    //         let move_player: usize = self.history.latest_move().player_id();
+    //         rewards = self.rewards_evaluator.predict_value(&latest_influence_time_t.to_vec());
+    //         // if let Some(None) = back_transition {
+    //         //     // TODO: Modify rewards with back_transition
+    //         //     rewards = rewards;
+    //         // }
+    //     // } else if self.policy_handler.should_prune_current(reach_prob){
+    //     } else if reach_prob.should_prune(){
+    //         self.prune_counter += 1;
+    //         let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
+    //         for player_id in 0..6 as u8 {
+    //             key_br.set_player_id(player_id);
+    //             for infostate in reach_prob.player_infostate_keys(player_id) {
+    //                 key_br.set_infostate(infostate);
+    //                 rewards.insert(key_br, 0.0);
+    //             }
+    //         }
+    //     } else {
+    //         // Always false for simulations
+    //         let bool_know_priv_info: bool = false; 
+    //         let possible_outcomes: Vec<ActionObservation> = self.history.generate_legal_moves(None);
+    //         let path_t: String = self.path.clone();
+    //         // TOCHECK: In cases of collective action next, this makes no sense
+    //         // INITIALISATIONS
+    //         if self.is_exchangedraw_node() {
+    //             // Dont need to initialise
+    //         } else if self.is_collective_node() {
+    //             // FOR SPECIAL CASES => {Collective Challenge, CollectiveBlock}
+    //             // based on key_ms_t
+    //             // TODO: fix for ExchangeDraw case
+    //             // TODO: Free for all CollectiveChallenge and CollectiveBlock
+    //             let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
+    //             let possible_challenge_moves: Vec<ActionObservation> = vec![ActionObservation::ChallengeAccept, ActionObservation::ChallengeDeny];
+    //             let challenged_player_id: u8 = self.history.latest_move().player_id() as u8;
+    //             for player_id in 0..6 as u8 {
+    //                 if player_id == challenged_player_id || latest_influence_time_t[player_id as usize] == 0 {
+    //                     continue;
+    //                 }
+    //                 self.mixed_strategy_policy_vec.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));
+    //                 self.q_values.insert_default_if_empty_by_keys(player_id, &self.path, &possible_challenge_moves, reach_prob.player_infostate_keys(player_id));   
+    //             }
+    //         } else {
+    //             // FOR NORMAL MOVES
+    //             // based on key_ms_t
+    //             let player_id: u8 = possible_outcomes[0].player_id() as u8;
+    //             self.mixed_strategy_policy_vec.insert_default_if_empty_by_keys(player_id, &self.path, &possible_outcomes, reach_prob.player_infostate_keys(player_id));
+    //             self.q_values.insert_default_if_empty_by_keys(player_id, &self.path, &possible_outcomes, reach_prob.player_infostate_keys(player_id));
+    //         }
+    //         // RECURSIONS
+    //         // Test if depth < 6 whether can random sample
+    //         if self.is_collective_node() {
+    //             // TODO: SHIFT OUT AND USE ACTIONS
+    //             // CollectiveChallenge
+    //             // CollectiveBlock
+    //             // TODO: sample a random action and sample if nobody challenges (which is move 0)
+    //             // Should sample outcomes equally so we converge on a more reliable outcome
+    //             // Dont need to sample action by action, can sample whole, but must update the mixed strategy reach prob and rewards accurately 
+    //             // Or maybe its ok to sample because sometimes players choose no and end up with no risk anyways, just randomly sample the move...
+    //             if let Some(action) = possible_outcomes.choose(&mut thread_rng()).cloned() {
+    //                 self.add_node(action, bool_know_priv_info);
+    //                 // TODO: forward pass
+    //                 // fwd pass needs mixed strategy policy working
+    //                 // mix_strat_policy_time_t is a variable
+    //                 // self.policy_handler.forward_pass_best_response_policy(&self.path, latest_influence_time_t, &self.history, &mut self.best_response_policy_vec, mix_strat_policy_time_t);
+    //                 let mut next_reach_prob: ReachProb = reach_prob.clone();
 
-                    let opposing_player_id: u8 = action.opposing_player_id() as u8;
-                    let mut key_ms_t = MSKey::new(0, &path_t);
-                    let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
-                    for player_id in 0..6 as u8 {
-                        if player_id == opposing_player_id || latest_influence_time_t[player_id as usize] == 0{
-                            continue;
-                        }
-                        key_ms_t.set_player_id(player_id);
-                        for infostate in reach_prob.player_infostate_keys(player_id) {
-                            if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
-                                if *old_indicator {
-                                    let infostate_best_response: ActionObservation = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, infostate);
-                                    if !(infostate_best_response == action) {
-                                        // change 1 to 0
-                                        next_reach_prob.set_status(player_id, infostate, false);
-                                    }
-                                }
-                            }
-                        }
-                    }
+    //                 let opposing_player_id: u8 = action.opposing_player_id() as u8;
+    //                 let mut key_ms_t = MSKey::new(0, &path_t);
+    //                 let latest_influence_time_t: &[u8; 6] = self.history.latest_influence();
+    //                 for player_id in 0..6 as u8 {
+    //                     if player_id == opposing_player_id || latest_influence_time_t[player_id as usize] == 0{
+    //                         continue;
+    //                     }
+    //                     key_ms_t.set_player_id(player_id);
+    //                     for infostate in reach_prob.player_infostate_keys(player_id) {
+    //                         if let Some(old_indicator) = reach_prob.get_status(player_id, infostate) {
+    //                             if *old_indicator {
+    //                                 let infostate_best_response: ActionObservation = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, infostate);
+    //                                 if !(infostate_best_response == action) {
+    //                                     // change 1 to 0
+    //                                     next_reach_prob.set_status(player_id, infostate, false);
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+    //                 }
 
-                    rewards = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
-                    // rewards = self.pmccfr(depth_counter + 1, &reach_prob, None);
-                    // TODO: backpropogate
-                    self.drop_node();
-                }
-            // Add ExchangeDraw here
-            } else if self.is_exchangedraw_node() {
-                // TODO: Sample based on actual draw probability using NaiveSampler please
-                // TODO: Consider private/public seperation how does this work?
-                // For each infostate of the player, sample 2 new cards for exchange choice
-                let action: ActionObservation = possible_outcomes[0];
-                let move_player: u8 = action.player_id() as u8;
-                // if let Some(sampled_action) = self.naive_sample_exchange_draw(action.player_id()) {
-                //     self.add_node(sampled_action, bool_know_priv_info);
-                //     // let next_reach_prob: HashMap<BRKey, bool> = HashMap::with_capacity(MAX_NUM_BRKEY);
-                //     // TODO: Fill reach prob based on input reachprob and action for pmccfr function
-                //     // let transition_map: HashMap<String, Vec<String>> = HashMap::with_capacity(MAX_NUM_BRKEY);
-                //     // TODO: Fill transition hashmap for pmccfr function
-                //     rewards = self.pmccfr(depth_counter + 1, reach_prob, None);
-                //     // TODO: backpropogate
-                //     self.drop_node();
-                //     // TODO: UPDATE REWARDS?
-                // }
-                // === NEW ===
-                // get infostates
-                // TODO: Remember to empty later on!
-                let infostates: Vec<Infostate> = reach_prob.get_infostates(move_player);
-                self.naive_sample_exchange_draw_all(move_player, &infostates);
-                // Assuming that over here action info doesnt matter as bool_know_priv_info == false
-                self.add_node(action, bool_know_priv_info);
-                // KEEP: Protection in case impossible states returned
-                if self.exchange_draw_info.keys().len() == reach_prob.player_infostate_keys(move_player).len(){
-                    rewards = self.pmccfr(depth_counter + 1, &reach_prob, None);
-                } else {
-                    let mut next_reach_prob: ReachProb = reach_prob.clone();
-                    let retained_info_str: Vec<String> = self.exchange_draw_info.keys().cloned().collect();
-                    let retained_info: Vec<Infostate> = retained_info_str.into_iter().map(|str| Infostate::from_str(&str)).collect();
-                    next_reach_prob.retain_infostates(move_player, retained_info);
-                    rewards = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
-                }
-                self.drop_node();
-            } else {
-                // Initialise rewards to 0 for relevant infostates
-                let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
-                for player_id in 0..6 as u8 {
-                    key_br.set_player_id(player_id);
-                    for infostate in reach_prob.player_infostate_keys(player_id) {
-                        key_br.set_infostate(infostate);
-                        rewards.insert(key_br, 0.0);
-                    }
-                }
+    //                 rewards = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
+    //                 // rewards = self.pmccfr(depth_counter + 1, &reach_prob, None);
+    //                 // TODO: backpropogate
+    //                 self.drop_node();
+    //             }
+    //         // Add ExchangeDraw here
+    //         } else if self.is_exchangedraw_node() {
+    //             // TODO: Sample based on actual draw probability using NaiveSampler please
+    //             // TODO: Consider private/public seperation how does this work?
+    //             // For each infostate of the player, sample 2 new cards for exchange choice
+    //             let action: ActionObservation = possible_outcomes[0];
+    //             let move_player: u8 = action.player_id() as u8;
+    //             // if let Some(sampled_action) = self.naive_sample_exchange_draw(action.player_id()) {
+    //             //     self.add_node(sampled_action, bool_know_priv_info);
+    //             //     // let next_reach_prob: HashMap<BRKey, bool> = HashMap::with_capacity(MAX_NUM_BRKEY);
+    //             //     // TODO: Fill reach prob based on input reachprob and action for pmccfr function
+    //             //     // let transition_map: HashMap<String, Vec<String>> = HashMap::with_capacity(MAX_NUM_BRKEY);
+    //             //     // TODO: Fill transition hashmap for pmccfr function
+    //             //     rewards = self.pmccfr(depth_counter + 1, reach_prob, None);
+    //             //     // TODO: backpropogate
+    //             //     self.drop_node();
+    //             //     // TODO: UPDATE REWARDS?
+    //             // }
+    //             // === NEW ===
+    //             // get infostates
+    //             // TODO: Remember to empty later on!
+    //             let infostates: Vec<Infostate> = reach_prob.get_infostates(move_player);
+    //             self.naive_sample_exchange_draw_all(move_player, &infostates);
+    //             // Assuming that over here action info doesnt matter as bool_know_priv_info == false
+    //             self.add_node(action, bool_know_priv_info);
+    //             // KEEP: Protection in case impossible states returned
+    //             if self.exchange_draw_info.keys().len() == reach_prob.player_infostate_keys(move_player).len(){
+    //                 rewards = self.pmccfr(depth_counter + 1, &reach_prob, None);
+    //             } else {
+    //                 let mut next_reach_prob: ReachProb = reach_prob.clone();
+    //                 let retained_info_str: Vec<String> = self.exchange_draw_info.keys().cloned().collect();
+    //                 let retained_info: Vec<Infostate> = retained_info_str.into_iter().map(|str| Infostate::from_str(&str)).collect();
+    //                 next_reach_prob.retain_infostates(move_player, retained_info);
+    //                 rewards = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
+    //             }
+    //             self.drop_node();
+    //         } else {
+    //             // Initialise rewards to 0 for relevant infostates
+    //             let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
+    //             for player_id in 0..6 as u8 {
+    //                 key_br.set_player_id(player_id);
+    //                 for infostate in reach_prob.player_infostate_keys(player_id) {
+    //                     key_br.set_infostate(infostate);
+    //                     rewards.insert(key_br, 0.0);
+    //                 }
+    //             }
 
-                let mut action_index: usize = 0;
-                // LOOP THROUGH ALL ACTIONS AND RECURSE
-                for action in possible_outcomes.iter() {
-                    // TODO: Include naive pruning for impossible actions!
-                    if self.naive_prune(action){
-                        continue;
-                    } 
-                    if action.name() == AOName::ExchangeChoice {
-                        // TODO: Change to the actual code randomly sample from each player's mixed_strategy
-                        // Shuffle reach prob
-                        // let mut next_reach_prob: HashMap<BRKey, bool> = reach_prob.clone();
-                        self.add_node(*action, bool_know_priv_info);
-                        // Recurse and continue on an action
-                        // rewards should be temp-rewards
-                        rewards = self.pmccfr(depth_counter + 1, reach_prob, None);
-                        self.drop_node();
-                        // TODO: UPDATE REWARDS?
-                        // Player chooses "AB"
-                        // Need to know exchangeDraw
-                        // reward should update to all states that can choose AB
-                    } else if ![AOName::Discard, AOName::RevealRedraw].contains(&action.name()) {
-                        // NORMAL MOVE CASE
-                        // all actions will be sampled
+    //             let mut action_index: usize = 0;
+    //             // LOOP THROUGH ALL ACTIONS AND RECURSE
+    //             for action in possible_outcomes.iter() {
+    //                 // TODO: Include naive pruning for impossible actions!
+    //                 if self.naive_prune(action){
+    //                     continue;
+    //                 } 
+    //                 if action.name() == AOName::ExchangeChoice {
+    //                     // TODO: Change to the actual code randomly sample from each player's mixed_strategy
+    //                     // Shuffle reach prob
+    //                     // let mut next_reach_prob: HashMap<BRKey, bool> = reach_prob.clone();
+    //                     self.add_node(*action, bool_know_priv_info);
+    //                     // Recurse and continue on an action
+    //                     // rewards should be temp-rewards
+    //                     rewards = self.pmccfr(depth_counter + 1, reach_prob, None);
+    //                     self.drop_node();
+    //                     // TODO: UPDATE REWARDS?
+    //                     // Player chooses "AB"
+    //                     // Need to know exchangeDraw
+    //                     // reward should update to all states that can choose AB
+    //                 } else if ![AOName::Discard, AOName::RevealRedraw].contains(&action.name()) {
+    //                     // NORMAL MOVE CASE
+    //                     // all actions will be sampled
 
-                        // How to update depends on the best_response_indicator stored in best_response_policy
-                        // has 2 cases: updatespolicy_indicator for current player is 1 or 0
+    //                     // How to update depends on the best_response_indicator stored in best_response_policy
+    //                     // has 2 cases: updatespolicy_indicator for current player is 1 or 0
 
-                        // Add History and stuff to sample a possible move
+    //                     // Add History and stuff to sample a possible move
                         
-                        let next_player_id: u8 = action.player_id() as u8;
-                        let key_ms_t = MSKey::new(next_player_id, &path_t);
-                        
-                        
-                        // INITIALISING next_reach_prob based on action sampled to be passed into recursion
-                        // TODO: Abstract this to a function
-                        let mut next_reach_prob: ReachProb = reach_prob.clone();
-                        // Filling next reach prob based on input reachprob and action for pmccfr function
-                        //      If indicator == 1 and action is best response => 1
-                        //      If indicator == 1 and action is not best response => 0
-                        //      If indicator == 0 => 0
-                        // TOCHECK: next player?
-                        for infostate in reach_prob.player_infostate_keys(next_player_id) {
-                            if let Some(old_indicator) = reach_prob.get_status(next_player_id, infostate) {
-                                if *old_indicator {
-                                    let infostate_best_response: ActionObservation = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, infostate);
-                                    if !(infostate_best_response == *action) {
-                                        // change 1 to 0
-                                        next_reach_prob.set_status(next_player_id, infostate, false);
-                                    }
-                                }
-                            }
-                        }
-                        // Filling transition hashmap for pmccfr function 1 to 1
-                        // TODO: Abstract this to a function
-                        // let mut transition_map: HashMap<String, Vec<String>> = HashMap::with_capacity(MAX_NUM_BRKEY);
-                        // for key_br in next_reach_prob.keys() {
-                        //     // 1 to 1 no change case
-                        //     transition_map.insert(key_br, vec![key_br]);
-                        // }
-                        self.add_node(*action, bool_know_priv_info);
-                        // Recurse and continue on an action
-                        let temp_reward: AHashMap<BRKey, f32> = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
-                        
-                        // TODO: Change, move_player is same as next_player_id
-                        let move_player: u8 = action.player_id() as u8;
-                        
-                        // UPDATE Q_VALUES BASED ON RETURNED REWARDS
-                        // TODO: Abstract this to a function
-                        if let Some(q_value) = self.q_values.policy_get_mut(&key_ms_t) {
-                            let mut key_br: BRKey = BRKey::new(next_player_id, &Infostate::AA);
-                            for infostate in INFOSTATES {
-                                key_br.set_infostate(infostate);
-                                // TODO: update q_value 
-                                // TOCHECK: value updating
-                                if let Some(values_vec) = q_value.get_mut(&key_br) {
-                                    if let Some(reward_val) = temp_reward.get(&key_br){
-                                        values_vec[action_index] += *reward_val;
-                                    }
-                                }
-                            }
-                        } else {
-                            panic!("q_values should have been initialised earlier!");
-                        }
-                        // UPDATE REWARDS for now if reach_prob = 1 we update
-                            // Ignore the distinction for when current player is playing BR cos its complicated for infostates
-                        // TODO: Abstract this to a function
-                        let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
-                        for player_id in 0..6 as u8 {
-                            key_br.set_player_id(player_id);
-                            for infostate in reach_prob.player_infostate_keys(player_id) {
-                                if let Some(indicator) = reach_prob.get_status(player_id, infostate) {
-                                    if *indicator {
-                                        let mut increment_val: f32 = 0.0;
-                                        key_br.set_infostate(infostate);
-                                        // 0-100ns for increment but usually 100ns
-                                        if let Some(temp_reward_val) = temp_reward.get(&key_br) {
-                                            increment_val = *temp_reward_val;
-                                        }
-                                        // 0-100ns usually 100 ns
-                                        if let Some(reward_val) = rewards.get_mut(&key_br){
-                                            *reward_val += increment_val;
-                                        } else {
-                                            rewards.insert(key_br, increment_val);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // IMPROVE: Do like some rayon shit
-                        // Drop node we added before recursing
-                        self.drop_node();                      
+    //                     let next_player_id: u8 = action.player_id() as u8;
+    //                     let key_ms_t = MSKey::new(next_player_id, &path_t);
                         
                         
-                    } else {
-                        // CASE DISCARD, REVEALREDRAW and player cannot have the cards to do the current action
-                        // Do not do anything
-                        let move_player: u8 = action.player_id() as u8;
-                        let key_ms_t: MSKey = MSKey::new(move_player, &path_t);
+    //                     // INITIALISING next_reach_prob based on action sampled to be passed into recursion
+    //                     // TODO: Abstract this to a function
+    //                     let mut next_reach_prob: ReachProb = reach_prob.clone();
+    //                     // Filling next reach prob based on input reachprob and action for pmccfr function
+    //                     //      If indicator == 1 and action is best response => 1
+    //                     //      If indicator == 1 and action is not best response => 0
+    //                     //      If indicator == 0 => 0
+    //                     // TOCHECK: next player?
+    //                     for infostate in reach_prob.player_infostate_keys(next_player_id) {
+    //                         if let Some(old_indicator) = reach_prob.get_status(next_player_id, infostate) {
+    //                             if *old_indicator {
+    //                                 let infostate_best_response: ActionObservation = self.mixed_strategy_policy_vec.get_best_response(&key_ms_t, infostate);
+    //                                 if !(infostate_best_response == *action) {
+    //                                     // change 1 to 0
+    //                                     next_reach_prob.set_status(next_player_id, infostate, false);
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+    //                     // Filling transition hashmap for pmccfr function 1 to 1
+    //                     // TODO: Abstract this to a function
+    //                     // let mut transition_map: HashMap<String, Vec<String>> = HashMap::with_capacity(MAX_NUM_BRKEY);
+    //                     // for key_br in next_reach_prob.keys() {
+    //                     //     // 1 to 1 no change case
+    //                     //     transition_map.insert(key_br, vec![key_br]);
+    //                     // }
+    //                     self.add_node(*action, bool_know_priv_info);
+    //                     // Recurse and continue on an action
+    //                     let temp_reward: AHashMap<BRKey, f32> = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
                         
-                        // TODO: Just clone reach prob and edit so its not so messy...
-                        let mut next_reach_prob: ReachProb = ReachProb::new_empty();
+    //                     // TODO: Change, move_player is same as next_player_id
+    //                     let move_player: u8 = action.player_id() as u8;
+                        
+    //                     // UPDATE Q_VALUES BASED ON RETURNED REWARDS
+    //                     // TODO: Abstract this to a function
+    //                     if let Some(q_value) = self.q_values.policy_get_mut(&key_ms_t) {
+    //                         let mut key_br: BRKey = BRKey::new(next_player_id, &Infostate::AA);
+    //                         for infostate in INFOSTATES {
+    //                             key_br.set_infostate(infostate);
+    //                             // TODO: update q_value 
+    //                             // TOCHECK: value updating
+    //                             if let Some(values_vec) = q_value.get_mut(&key_br) {
+    //                                 if let Some(reward_val) = temp_reward.get(&key_br){
+    //                                     values_vec[action_index] += *reward_val;
+    //                                 }
+    //                             }
+    //                         }
+    //                     } else {
+    //                         panic!("q_values should have been initialised earlier!");
+    //                     }
+    //                     // UPDATE REWARDS for now if reach_prob = 1 we update
+    //                         // Ignore the distinction for when current player is playing BR cos its complicated for infostates
+    //                     // TODO: Abstract this to a function
+    //                     let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
+    //                     for player_id in 0..6 as u8 {
+    //                         key_br.set_player_id(player_id);
+    //                         for infostate in reach_prob.player_infostate_keys(player_id) {
+    //                             if let Some(indicator) = reach_prob.get_status(player_id, infostate) {
+    //                                 if *indicator {
+    //                                     let mut increment_val: f32 = 0.0;
+    //                                     key_br.set_infostate(infostate);
+    //                                     // 0-100ns for increment but usually 100ns
+    //                                     if let Some(temp_reward_val) = temp_reward.get(&key_br) {
+    //                                         increment_val = *temp_reward_val;
+    //                                     }
+    //                                     // 0-100ns usually 100 ns
+    //                                     if let Some(reward_val) = rewards.get_mut(&key_br){
+    //                                         *reward_val += increment_val;
+    //                                     } else {
+    //                                         rewards.insert(key_br, increment_val);
+    //                                     }
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+    //                     // IMPROVE: Do like some rayon shit
+    //                     // Drop node we added before recursing
+    //                     self.drop_node();                      
+                        
+                        
+    //                 } else {
+    //                     // CASE DISCARD, REVEALREDRAW and player cannot have the cards to do the current action
+    //                     // Do not do anything
+    //                     let move_player: u8 = action.player_id() as u8;
+    //                     let key_ms_t: MSKey = MSKey::new(move_player, &path_t);
+                        
+    //                     // TODO: Just clone reach prob and edit so its not so messy...
+    //                     let mut next_reach_prob: ReachProb = ReachProb::new_empty();
 
-                        // INITIALISING REACH_PROB AFTER THIS MOVE
-                        if action.name() == AOName::Discard {
-                            if action.no_cards() == 1 {
-                                let card: Card = action.cards()[0];
-                                next_reach_prob = reach_prob.clone_constrained(move_player, &card, &self.mixed_strategy_policy_vec, &key_ms_t, action);
-                            } else {
-                                let cards_action: Infostate = Infostate::cards_to_enum(&action.cards()[0], &action.cards()[1]);
-                                next_reach_prob = reach_prob.clone_constrained_infostate(move_player, &cards_action);
-                            }
-                        } else if action.name() == AOName::RevealRedraw {
-                            let card: Card = action.card();
-                            next_reach_prob = reach_prob.clone_constrained(move_player, &card, &self.mixed_strategy_policy_vec, &key_ms_t, action);
-                        }
-                        // ADDING NODE
-                        self.add_node(*action, bool_know_priv_info);
-                        // RECURSING
-                        let temp_reward: AHashMap<BRKey, f32> = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
-                        // Update the rewards SAME AS NORMAL MOVES
-                        let move_player: u8 = action.player_id() as u8;
+    //                     // INITIALISING REACH_PROB AFTER THIS MOVE
+    //                     if action.name() == AOName::Discard {
+    //                         if action.no_cards() == 1 {
+    //                             let card: Card = action.cards()[0];
+    //                             next_reach_prob = reach_prob.clone_constrained(move_player, &card, &self.mixed_strategy_policy_vec, &key_ms_t, action);
+    //                         } else {
+    //                             let cards_action: Infostate = Infostate::cards_to_enum(&action.cards()[0], &action.cards()[1]);
+    //                             next_reach_prob = reach_prob.clone_constrained_infostate(move_player, &cards_action);
+    //                         }
+    //                     } else if action.name() == AOName::RevealRedraw {
+    //                         let card: Card = action.card();
+    //                         next_reach_prob = reach_prob.clone_constrained(move_player, &card, &self.mixed_strategy_policy_vec, &key_ms_t, action);
+    //                     }
+    //                     // ADDING NODE
+    //                     self.add_node(*action, bool_know_priv_info);
+    //                     // RECURSING
+    //                     let temp_reward: AHashMap<BRKey, f32> = self.pmccfr(depth_counter + 1, &next_reach_prob, None);
+    //                     // Update the rewards SAME AS NORMAL MOVES
+    //                     let move_player: u8 = action.player_id() as u8;
                         
-                        // UPDATE Q_VALUES BASED ON RETURNED REWARDS
-                        // TODO: Abstract this to a function
-                        let mut key_br: BRKey = BRKey::new(move_player, &Infostate::AA);
-                        if let Some(q_value) = self.q_values.policy_get_mut(&key_ms_t) {
-                            for infostate in INFOSTATES {
-                                key_br.set_infostate(infostate);
-                                // TODO: update q_value 
-                                // TOCHECK: value updating
-                                if let Some(values_vec) = q_value.get_mut(&key_br) {
-                                    if let Some(reward_val) = temp_reward.get(&key_br) {
-                                        values_vec[action_index] += *reward_val;
-                                    }
-                                }
-                            }
-                        } else {
-                            panic!("q_values should have been initialised earlier!");
-                        }
-                        // UPDATE REWARDS for now if reach_prob = 1 we update
-                            // Ignore the distinction for when current player is playing BR cos its complicated for infostates
-                        // TODO: Abstract this to a function
-                        let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
-                        for player_id in 0..6 as u8 {
-                            key_br.set_player_id(player_id);
-                            for infostate in reach_prob.player_infostate_keys(player_id) {
-                                if let Some(indicator) = reach_prob.get_status(player_id, infostate) {
-                                    if *indicator {
-                                        let mut increment_val: f32 = 0.0;
-                                        key_br.set_infostate(infostate);
-                                        if let Some(temp_reward_val) = temp_reward.get(&key_br) {
-                                            increment_val = *temp_reward_val;
-                                        } 
-                                        if let Some(reward_val) = rewards.get_mut(&key_br){
-                                            *reward_val += increment_val
-                                        } else {
-                                            rewards.insert(key_br, increment_val);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        self.drop_node();
-                    }
-                    action_index += 1;
-                }
-                // UPDATED MIXED STRATEGY POLICY based on action with highest Q value
-                // Abstract to a 
-                if self.is_collective_node() {
-                    // CASE WHEN action == CollectiveChallenge or CollectiveBlock
-                    // TODO: Check
-                    let mut mskey_t: MSKey = MSKey::new(0, &path_t);
-                    for player_id in 0..6 {
-                        mskey_t.set_player_id(player_id);
-                        for infostate in INFOSTATES {
-                            if let Some(best_move_index) = self.q_values.get_best_response_index(&mskey_t, infostate) {
-                                self.mixed_strategy_policy_vec.add_value(&mskey_t, player_id, infostate, best_move_index, 1.0);
-                            }
-                        }
-                    }
-                }
-                else if self.is_chance_node() {
-                    // CASE WHEN action == ExchangeDraw
-                } else {
-                    // MIXED STRATEGY POLICY should have been initialised earlier
-                    let current_player: u8 = possible_outcomes[0].player_id() as u8;
-                    let mskey_t: MSKey = MSKey::new(current_player, &path_t);
-                    for infostate in INFOSTATES {
-                        if let Some(best_move_index) = self.q_values.get_best_response_index(&mskey_t, infostate) {
-                            self.mixed_strategy_policy_vec.add_value(&mskey_t, current_player, infostate, best_move_index, 1.0);
-                        } 
-                    }
-                }
-            }
-        }
-        // TODO: Backtransition here
-        if let Some(transition_map) = back_transition {
-            let mut rewards_clone: AHashMap<BRKey, f32> = AHashMap::with_capacity(MAX_NUM_BRKEY);
-            //  Temp
-            for key_br in rewards.keys() {
-                rewards_clone.insert(*key_br, 0.0);
-            }
-            for (key_br, key_br_vec) in transition_map {
-                for new_key_br in key_br_vec {
-                    if let Some(value) = rewards_clone.get_mut(&new_key_br) {
-                        *value += rewards[&key_br];
-                    }
-                }
-            }
-            rewards_clone
-        } else {
-            rewards
-        }
+    //                     // UPDATE Q_VALUES BASED ON RETURNED REWARDS
+    //                     // TODO: Abstract this to a function
+    //                     let mut key_br: BRKey = BRKey::new(move_player, &Infostate::AA);
+    //                     if let Some(q_value) = self.q_values.policy_get_mut(&key_ms_t) {
+    //                         for infostate in INFOSTATES {
+    //                             key_br.set_infostate(infostate);
+    //                             // TODO: update q_value 
+    //                             // TOCHECK: value updating
+    //                             if let Some(values_vec) = q_value.get_mut(&key_br) {
+    //                                 if let Some(reward_val) = temp_reward.get(&key_br) {
+    //                                     values_vec[action_index] += *reward_val;
+    //                                 }
+    //                             }
+    //                         }
+    //                     } else {
+    //                         panic!("q_values should have been initialised earlier!");
+    //                     }
+    //                     // UPDATE REWARDS for now if reach_prob = 1 we update
+    //                         // Ignore the distinction for when current player is playing BR cos its complicated for infostates
+    //                     // TODO: Abstract this to a function
+    //                     let mut key_br: BRKey = BRKey::new(0, &Infostate::AA);
+    //                     for player_id in 0..6 as u8 {
+    //                         key_br.set_player_id(player_id);
+    //                         for infostate in reach_prob.player_infostate_keys(player_id) {
+    //                             if let Some(indicator) = reach_prob.get_status(player_id, infostate) {
+    //                                 if *indicator {
+    //                                     let mut increment_val: f32 = 0.0;
+    //                                     key_br.set_infostate(infostate);
+    //                                     if let Some(temp_reward_val) = temp_reward.get(&key_br) {
+    //                                         increment_val = *temp_reward_val;
+    //                                     } 
+    //                                     if let Some(reward_val) = rewards.get_mut(&key_br){
+    //                                         *reward_val += increment_val
+    //                                     } else {
+    //                                         rewards.insert(key_br, increment_val);
+    //                                     }
+    //                                 }
+    //                             }
+    //                         }
+    //                     }
+    //                     self.drop_node();
+    //                 }
+    //                 action_index += 1;
+    //             }
+    //             // UPDATED MIXED STRATEGY POLICY based on action with highest Q value
+    //             // Abstract to a 
+    //             if self.is_collective_node() {
+    //                 // CASE WHEN action == CollectiveChallenge or CollectiveBlock
+    //                 // TODO: Check
+    //                 let mut mskey_t: MSKey = MSKey::new(0, &path_t);
+    //                 for player_id in 0..6 {
+    //                     mskey_t.set_player_id(player_id);
+    //                     for infostate in INFOSTATES {
+    //                         if let Some(best_move_index) = self.q_values.get_best_response_index(&mskey_t, infostate) {
+    //                             self.mixed_strategy_policy_vec.add_value(&mskey_t, player_id, infostate, best_move_index, 1.0);
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //             else if self.is_chance_node() {
+    //                 // CASE WHEN action == ExchangeDraw
+    //             } else {
+    //                 // MIXED STRATEGY POLICY should have been initialised earlier
+    //                 let current_player: u8 = possible_outcomes[0].player_id() as u8;
+    //                 let mskey_t: MSKey = MSKey::new(current_player, &path_t);
+    //                 for infostate in INFOSTATES {
+    //                     if let Some(best_move_index) = self.q_values.get_best_response_index(&mskey_t, infostate) {
+    //                         self.mixed_strategy_policy_vec.add_value(&mskey_t, current_player, infostate, best_move_index, 1.0);
+    //                     } 
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     // TODO: Backtransition here
+    //     if let Some(transition_map) = back_transition {
+    //         let mut rewards_clone: AHashMap<BRKey, f32> = AHashMap::with_capacity(MAX_NUM_BRKEY);
+    //         //  Temp
+    //         for key_br in rewards.keys() {
+    //             rewards_clone.insert(*key_br, 0.0);
+    //         }
+    //         for (key_br, key_br_vec) in transition_map {
+    //             for new_key_br in key_br_vec {
+    //                 if let Some(value) = rewards_clone.get_mut(&new_key_br) {
+    //                     *value += rewards[&key_br];
+    //                 }
+    //             }
+    //         }
+    //         rewards_clone
+    //     } else {
+    //         rewards
+    //     }
     }
 }
 

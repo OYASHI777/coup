@@ -107,7 +107,10 @@ pub enum AOResult {
 pub enum ActionObservation {
     EmptyAO,
     // Challenge Status before collation
-    ChallengeAccept,
+    ChallengeAccept {
+        player_id: usize,
+        opposing_player_id: usize,
+    },
     ChallengeDeny,
     Income {
         player_id: usize,
@@ -191,7 +194,7 @@ impl ActionObservation {
         use ActionObservation::*;
         match self {
             EmptyAO => AOName::EmptyAO,
-            ChallengeAccept => AOName::ChallengeAccept,
+            ChallengeAccept { .. } => AOName::ChallengeAccept,
             ChallengeDeny => AOName::ChallengeDeny,
             Income { .. } => AOName::Income,
             ForeignAid { .. } => AOName::ForeignAid,
@@ -229,7 +232,7 @@ impl ActionObservation {
             | ActionObservation::ExchangeDraw { player_id, .. }
             | ActionObservation::ExchangeChoice { player_id, .. } => *player_id,
             // No player_id available in these variants, so we panic
-            ActionObservation::ChallengeAccept => {
+            ActionObservation::ChallengeAccept { .. } => {
                 panic!("ChallengeAccept  does not contain a player_id");
             },
             ActionObservation::ChallengeDeny => {
