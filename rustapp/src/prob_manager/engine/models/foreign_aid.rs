@@ -19,19 +19,18 @@ pub struct ForeignAidBlockChallengerFailed {
 impl CoupTransition for ForeignAidInvitesBlock {
     fn next(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::CollectiveBlock { participants, opposing_player_id, final_actioner } => {
+            ActionObservation::CollectiveBlock { opposing_player_id, final_actioner , .. } => {
                 match opposing_player_id == final_actioner {
                     true => {
-                        // nobody challenged
+                        // nobody blocked
                         game_data.next_player();
                         EngineState::TurnStart(TurnStart {  })
                     },
                     false => {
-                        // final_actioner challenged
-                        todo!();
+                        // final_actioner blocked
+                        EngineState::ForeignAidBlockInvitesChallenge(ForeignAidBlockInvitesChallenge { player_blocking: *final_actioner })
                     },
                 }
-
             },
             _ => {
                 panic!("illegal move!")
@@ -40,7 +39,7 @@ impl CoupTransition for ForeignAidInvitesBlock {
     }
 
     fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
-        todo!()
+        EngineState::TurnStart(TurnStart {  })
     }
 }
 impl CoupTransition for ForeignAidBlockInvitesChallenge {

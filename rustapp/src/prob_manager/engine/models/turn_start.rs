@@ -54,6 +54,7 @@ impl CoupTransition for TurnStart {
     }
 
     fn prev(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+        // TODO: properly backtrack
         match action {
             ActionObservation::Income { player_id } => {
                 game_data.coins[*player_id] -= INCOME_GAIN;
@@ -61,6 +62,8 @@ impl CoupTransition for TurnStart {
                 EngineState::TurnStart(TurnStart {  })
             },
             ActionObservation::ForeignAid { player_id } => {
+                // i don't think this is the correct branch lol
+                game_data.prev_player();
                 EngineState::ForeignAidInvitesBlock(ForeignAidInvitesBlock {  })
             },
             ActionObservation::Tax { player_id } => {
