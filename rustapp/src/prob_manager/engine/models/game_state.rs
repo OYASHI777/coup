@@ -42,18 +42,18 @@ impl GameState {
     pub fn coins_sub(&mut self, player: usize, amount: u8) {
         self.coins[player] += amount;
     }
-    pub fn next_player(&mut self) {
-        let mut current_turn: usize = (self.player_turn + 1) % 6;
-        while self.influence()[current_turn] == 0 {
+    pub fn next_player(influence: &mut [u8; 6], player_turn: &mut usize) {
+        let mut current_turn: usize = (*player_turn + 1) % 6;
+        while influence[current_turn] == 0 {
             current_turn = (current_turn + 1) % 6;
         }
-        self.player_turn = current_turn;
+        *player_turn = current_turn;
     }
-    pub fn prev_player(&mut self) {
-        let mut current_turn: usize = (self.player_turn + 5) % 6;
-        while self.influence()[current_turn] == 0 {
+    pub fn prev_player(influence: &mut [u8; 6], player_turn: &mut usize) {
+        let mut current_turn: usize = (*player_turn + 5) % 6;
+        while influence[current_turn] == 0 {
             current_turn = (current_turn + 5) % 6;
         }
-        self.player_turn = current_turn;
+        *player_turn = current_turn;
     }
 }
