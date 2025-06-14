@@ -1,3 +1,4 @@
+use crate::prob_manager::engine::models::end::End;
 use crate::prob_manager::engine::models::turn_start::TurnStart;
 use crate::prob_manager::engine::models::{engine_state::CoupTransition, game_state::GameState};
 use crate::history_public::ActionObservation;
@@ -14,7 +15,14 @@ impl CoupTransition for CoupHit {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 match *player_id == self.player_hit {
                     true => {
-                        EngineState::TurnStart(TurnStart {  })
+                        match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                            true => {
+                                EngineState::End(End {  })
+                            },
+                            false => {
+                                EngineState::TurnStart(TurnStart {  })
+                            },
+                        }
                     },
                     false => {
                         panic!("Illegal Move");
