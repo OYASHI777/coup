@@ -22,7 +22,7 @@ pub struct ForeignAidBlockChallengerFailed {
 }
 
 impl CoupTransition for ForeignAidInvitesBlock {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::CollectiveBlock { opposing_player_id, final_actioner , .. } => {
                 match opposing_player_id == final_actioner {
@@ -50,7 +50,7 @@ impl CoupTransition for ForeignAidInvitesBlock {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::CollectiveBlock { opposing_player_id, final_actioner , .. } => {
                 match opposing_player_id == final_actioner {
@@ -71,7 +71,7 @@ impl CoupTransition for ForeignAidInvitesBlock {
     }
 }
 impl CoupTransition for ForeignAidBlockInvitesChallenge {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::CollectiveChallenge { opposing_player_id, final_actioner, .. } => {
                 match opposing_player_id == final_actioner {
@@ -99,7 +99,7 @@ impl CoupTransition for ForeignAidBlockInvitesChallenge {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::CollectiveChallenge { opposing_player_id, final_actioner, .. } => {
                 match opposing_player_id == final_actioner {
@@ -119,7 +119,7 @@ impl CoupTransition for ForeignAidBlockInvitesChallenge {
     }
 }
 impl CoupTransition for ForeignAidBlockChallenged {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 debug_assert!(*no_cards == 1, "no_cards: {no_cards} should be 1");
@@ -146,7 +146,7 @@ impl CoupTransition for ForeignAidBlockChallenged {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 debug_assert!(*no_cards == 1, "no_cards: {no_cards} should be 1");
@@ -162,7 +162,7 @@ impl CoupTransition for ForeignAidBlockChallenged {
     }
 }
 impl CoupTransition for ForeignAidBlockChallengerFailed {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 if *player_id != self.player_challenger {
@@ -179,7 +179,7 @@ impl CoupTransition for ForeignAidBlockChallengerFailed {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 if *player_id != self.player_challenger {

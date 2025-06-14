@@ -36,65 +36,65 @@ pub struct StealBlockChallengerFailed {
 }
 
 impl CoupTransition for StealInvitesChallenge {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for StealChallenged {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for StealChallengerFailed {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for StealInvitesBlock {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for StealBlockInvitesChallenge {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for StealBlockChallenged {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for StealBlockChallengerFailed {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }

@@ -9,7 +9,7 @@ pub struct CoupHit {
 }
 
 impl CoupTransition for CoupHit {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 match *player_id == self.player_hit {
@@ -27,7 +27,7 @@ impl CoupTransition for CoupHit {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 match *player_id == self.player_hit {

@@ -36,74 +36,74 @@ pub struct AssassinateChallengerFailed {
 }
 
 impl CoupTransition for AssassinateInvitesChallenge {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for AssassinateInvitesBlock {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for AssassinateBlockInvitesChallenge {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for AssassinateBlockChallenged {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for AssassinateBlockChallengerFailed {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for AssassinateSucceeded {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for AssassinateChallenged {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }
 impl CoupTransition for AssassinateChallengerFailed {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         todo!()
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         todo!()
     }
 }

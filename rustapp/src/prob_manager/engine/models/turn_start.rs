@@ -24,7 +24,7 @@ impl TurnStart {
 }
 
 impl CoupTransition for TurnStart {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Income { player_id } => {
                 EngineState::TurnStart(TurnStart { })
@@ -57,7 +57,7 @@ impl CoupTransition for TurnStart {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         // nothing
     }
 }

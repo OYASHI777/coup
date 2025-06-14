@@ -22,7 +22,7 @@ pub struct ExchangeChallengerFailed {
 }
 
 impl CoupTransition for ExchangeInvitesChallenge {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => {
                 match opposing_player_id == final_actioner {
@@ -41,7 +41,7 @@ impl CoupTransition for ExchangeInvitesChallenge {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => {
             },
@@ -52,7 +52,7 @@ impl CoupTransition for ExchangeInvitesChallenge {
     }
 }
 impl CoupTransition for ExchangeDrawing {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::ExchangeDraw { player_id, card } => {
                 EngineState::ExchangeDrawn(ExchangeDrawn {  })
@@ -61,7 +61,7 @@ impl CoupTransition for ExchangeDrawing {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::ExchangeDraw { player_id, card } => {
             },
@@ -70,7 +70,7 @@ impl CoupTransition for ExchangeDrawing {
     }
 }
 impl CoupTransition for ExchangeDrawn {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
                 game_data.next_player();
@@ -80,7 +80,7 @@ impl CoupTransition for ExchangeDrawn {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
                 game_data.prev_player();
@@ -90,7 +90,7 @@ impl CoupTransition for ExchangeDrawn {
     }
 }
 impl CoupTransition for ExchangeChallenged {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 EngineState::ExchangeChallengerFailed(ExchangeChallengerFailed { player_challenger: self.player_challenger })
@@ -103,7 +103,7 @@ impl CoupTransition for ExchangeChallenged {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
             },
@@ -115,7 +115,7 @@ impl CoupTransition for ExchangeChallenged {
     }
 }
 impl CoupTransition for ExchangeChallengerFailed {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 EngineState::ExchangeDrawing(ExchangeDrawing {  })
@@ -124,7 +124,7 @@ impl CoupTransition for ExchangeChallengerFailed {
         }
     }
 
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
             },

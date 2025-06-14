@@ -17,7 +17,7 @@ pub struct TaxChallengerFailed {
 }
 
 impl CoupTransition for TaxInvitesChallenge {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => {
                 match opposing_player_id == final_actioner {
@@ -42,7 +42,7 @@ impl CoupTransition for TaxInvitesChallenge {
         }
     }
     
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => {
                 match opposing_player_id == final_actioner {
@@ -63,7 +63,7 @@ impl CoupTransition for TaxInvitesChallenge {
     }
 }
 impl CoupTransition for TaxChallenged {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 game_data.coins[game_data.player_turn] += GAIN_DUKE;
@@ -83,7 +83,7 @@ impl CoupTransition for TaxChallenged {
         }
     }
     
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 game_data.coins[game_data.player_turn] -= GAIN_DUKE;
@@ -98,7 +98,7 @@ impl CoupTransition for TaxChallenged {
     }
 }
 impl CoupTransition for TaxChallengerFailed {
-    fn state_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 game_data.next_player();
@@ -110,7 +110,7 @@ impl CoupTransition for TaxChallengerFailed {
         }
     }
     
-    fn reverse_state_update(&self, action: &ActionObservation, game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 game_data.prev_player();
