@@ -52,9 +52,7 @@ impl CoupTransition for TurnStart {
                 EngineState::ExchangeInvitesChallenge(ExchangeInvitesChallenge {  })
             },
             _ => {
-                unsafe {
-                    unreachable_unchecked()
-                }
+                panic!("Illegal Move");
             }
         }
     }
