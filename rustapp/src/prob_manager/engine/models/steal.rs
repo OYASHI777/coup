@@ -157,19 +157,18 @@ impl CoupTransition for StealChallengerFailed {
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, no_cards, .. } => {
-                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
-                    true => {
-                        EngineState::End(End { })
-                    },
-                    false => {
-                        if *player_id == self.player_blocking && game_data.influence[self.player_blocking] <= *no_cards as u8 {
-                            // Blocking Player is dead and cannot block
+                if *player_id == self.player_blocking {
+                    match game_data.influence[self.player_blocking] < *no_cards as u8 {
+                        true => {
+                            // Player is dead already and cannot block
                             EngineState::TurnStart(
                                 TurnStart { 
                                     player_turn: self.player_turn,
                                 }
                             )
-                        } else {
+                        },
+                        false => {
+                            // Player is alive to block
                             EngineState::StealInvitesBlock(
                                 StealInvitesBlock { 
                                     player_turn: self.player_turn, 
@@ -178,7 +177,22 @@ impl CoupTransition for StealChallengerFailed {
                                 }
                             )
                         }
-                    },
+                    }
+                } else {
+                    match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                        true => {
+                            EngineState::End(End { })
+                        },
+                        false => {
+                            EngineState::StealInvitesBlock(
+                                StealInvitesBlock { 
+                                    player_turn: self.player_turn, 
+                                    player_blocking: self.player_blocking, 
+                                    coins_stolen: game_data.influence[self.player_blocking].min(GAIN_STEAL),
+                                }
+                            )
+                        },
+                    }
                 }
             },
             _ => {

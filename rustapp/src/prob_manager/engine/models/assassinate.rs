@@ -389,19 +389,40 @@ impl CoupTransition for AssassinateChallengerFailed {
         match action {
             // TODO: [OPTIMIZE] You can technically just return TurnStart if you have a check wrapper outside this!
             ActionObservation::Discard { player_id, no_cards, .. } => {
-                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
-                    true => {
-                        EngineState::End(End { })
-                    },
-                    false => {
-                        // TODO: Do you need to check if player is alive to block it?
-                        EngineState::AssassinateInvitesBlock(
-                            AssassinateInvitesBlock { 
-                                player_turn: self.player_turn,
-                                player_blocking: self.player_blocking,
-                            }
-                        )
-                    },
+                if *player_id == self.player_blocking {
+                    match game_data.influence[self.player_blocking] < *no_cards as u8 {
+                        true => {
+                            // Player is dead already and cannot block
+                            EngineState::TurnStart(
+                                TurnStart { 
+                                    player_turn: self.player_turn,
+                                }
+                            )
+                        },
+                        false => {
+                            // Player is alive to block
+                            EngineState::AssassinateInvitesBlock(
+                                AssassinateInvitesBlock { 
+                                    player_turn: self.player_turn,
+                                    player_blocking: self.player_blocking,
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                        true => {
+                            EngineState::End(End { })
+                        },
+                        false => {
+                            EngineState::AssassinateInvitesBlock(
+                                AssassinateInvitesBlock { 
+                                    player_turn: self.player_turn,
+                                    player_blocking: self.player_blocking,
+                                }
+                            )
+                        },
+                    }
                 }
             },
             _ => {
