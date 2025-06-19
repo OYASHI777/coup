@@ -210,7 +210,6 @@ impl ActionObservation {
             Exchange { .. } => AOName::Exchange,
             ExchangeDraw { .. } => AOName::ExchangeDraw,
             ExchangeChoice { .. } => AOName::ExchangeChoice,
-            _ => panic!("bad kind"),
         }
     }
     pub fn player_id(&self) -> usize {
@@ -240,9 +239,6 @@ impl ActionObservation {
             ActionObservation::EmptyAO => {
                 panic!("EmptyAO does not contain a player_id");
             },
-            _ => {
-                panic!("This ActionObservation Variant does not contain a player_id");
-            }
         }
     }
     pub fn opposing_player_id(&self) -> usize {
@@ -1239,7 +1235,6 @@ impl History {
                 if bool_know_priv_info {
                     // Let hand be determined externally so hand here is a default value
                     let mut total_counts: [u8; 5] = [0; 5];
-                    let no_cards_choice = self.latest_influence()[player_id] as usize;
                     for i in 0..5 {
                         total_counts[i] += 1;
                         if total_counts[i] + count_card_arr[i] < 4 {
