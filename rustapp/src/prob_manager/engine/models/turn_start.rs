@@ -20,9 +20,22 @@ impl TurnStart {
             player_turn,
         }
     }
+    pub fn next_player(&mut self, influence: &[u8; 6]) {
+        let mut current_turn: usize = (self.player_turn + 1) % 6;
+        while influence[current_turn] == 0 {
+            current_turn = (current_turn + 1) % 6;
+        }
+        self.player_turn = current_turn;
+    }
 }
 
 impl CoupTransition for TurnStart {
+    fn state_enter_update(&mut self, game_data: &mut GameData) {
+        self.next_player(&game_data.influence);
+    }
+    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Income { player_id } => {

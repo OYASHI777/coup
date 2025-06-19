@@ -43,6 +43,7 @@ impl CoupTraversal for FSMEngine {
     fn push_ao_public(&mut self, action: &ActionObservation) {
         self.state.engine_state = self.state.engine_state.state_leave_update(action, &mut self.state.game_data);
         EngineState::action_update(action, &mut self.state.game_data);
+        self.state.engine_state.state_enter_update(&mut self.state.game_data);
         self.history_state.push(self.state.engine_state);
         self.history.push(*action);
     }
@@ -64,6 +65,7 @@ impl CoupTraversal for FSMEngine {
         if let Some(action) = self.history.pop() {
             self.history_state.pop();
             // This must come first so Discard can add the influence back
+            self.state.engine_state.state_enter_reverse(&mut self.state.game_data);
             EngineState::action_reverse(&action, &mut self.state.game_data);
             if let Some(prev_state) = self.history_state.last() {
                 self.state.engine_state = *prev_state;

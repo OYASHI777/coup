@@ -20,6 +20,12 @@ pub struct TaxChallengerFailed {
 }
 
 impl CoupTransition for TaxInvitesChallenge {
+    fn state_enter_update(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
+    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => {
@@ -71,6 +77,12 @@ impl CoupTransition for TaxInvitesChallenge {
     }
 }
 impl CoupTransition for TaxChallenged {
+    fn state_enter_update(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
+    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
@@ -111,6 +123,12 @@ impl CoupTransition for TaxChallenged {
     }
 }
 impl CoupTransition for TaxChallengerFailed {
+    fn state_enter_update(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
+    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {

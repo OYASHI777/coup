@@ -13,6 +13,12 @@ impl End {
 }
 
 impl CoupTransition for End {
+    fn state_enter_update(&mut self, game_data: &mut GameData) {
+        todo!()
+    }
+    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+        todo!()
+    }
     fn state_leave_update(&self, action: &crate::history_public::ActionObservation, game_data: &mut GameData) -> EngineState {
         panic!("Game has ended")
     }

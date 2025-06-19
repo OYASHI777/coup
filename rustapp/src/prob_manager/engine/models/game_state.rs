@@ -19,13 +19,6 @@ impl GameData {
 }
 
 impl GameData {
-    // pub fn next_player(&mut self) {
-    //     let mut current_turn: usize = (self.player_turn + 1) % 6;
-    //     while self.influence[current_turn] == 0 {
-    //         current_turn = (current_turn + 1) % 6;
-    //     }
-    //     self.player_turn = current_turn;
-    // }
     /// Checks if game will be won after a player loses no_cards
     pub fn game_will_be_won(&self, player: usize, no_cards: u8) -> bool {
         self.influence.iter().enumerate().filter(

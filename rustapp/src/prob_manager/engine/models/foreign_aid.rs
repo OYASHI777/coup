@@ -26,6 +26,12 @@ pub struct ForeignAidBlockChallengerFailed {
 }
 
 impl CoupTransition for ForeignAidInvitesBlock {
+    fn state_enter_update(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
+    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::CollectiveBlock { opposing_player_id, final_actioner , .. } => {
@@ -78,6 +84,12 @@ impl CoupTransition for ForeignAidInvitesBlock {
     }
 }
 impl CoupTransition for ForeignAidBlockInvitesChallenge {
+    fn state_enter_update(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
+    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::CollectiveChallenge { opposing_player_id, final_actioner, .. } => {
@@ -129,6 +141,12 @@ impl CoupTransition for ForeignAidBlockInvitesChallenge {
     }
 }
 impl CoupTransition for ForeignAidBlockChallenged {
+    fn state_enter_update(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
+    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
@@ -175,6 +193,12 @@ impl CoupTransition for ForeignAidBlockChallenged {
     }
 }
 impl CoupTransition for ForeignAidBlockChallengerFailed {
+    fn state_enter_update(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
+    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+        // nothing
+    }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
