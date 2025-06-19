@@ -1,9 +1,8 @@
-use crate::{prob_manager::engine::{fsm_engine::Node, models::engine_state::{CoupTransition, EngineState}}, traits::prob_manager::coup_analysis::CoupTraversal};
-use super::game_state::GameState;
+use crate::prob_manager::engine::fsm_engine::Node;
 use crate::history_public::ActionObservation;
 use super::game_state::GameData;
+use super::engine_state::{CoupTransition, EngineState};
 use super::coup::*;
-use super::end::*;
 use super::exchange::*;
 use super::foreign_aid::*;
 use super::steal::*;
@@ -75,7 +74,7 @@ impl CoupTransition for TurnStart {
                     }
                 )
             },
-            ActionObservation::Assassinate { player_id, opposing_player_id } => {
+            ActionObservation::Assassinate { opposing_player_id, .. } => {
                 EngineState::AssassinateInvitesChallenge(
                     AssassinateInvitesChallenge { 
                         player_turn: self.player_turn,

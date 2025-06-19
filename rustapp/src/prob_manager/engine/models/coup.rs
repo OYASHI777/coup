@@ -1,6 +1,6 @@
-use crate::prob_manager::engine::models::end::End;
-use crate::prob_manager::engine::models::turn_start::TurnStart;
-use crate::prob_manager::engine::models::engine_state::CoupTransition;
+use super::end::End;
+use super::turn_start::TurnStart;
+use super::engine_state::CoupTransition;
 use crate::history_public::ActionObservation;
 use super::engine_state::EngineState;
 use super::game_state::GameData;
@@ -20,23 +20,16 @@ impl CoupTransition for CoupHit {
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, no_cards, .. } => {
-                match *player_id == self.player_hit {
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
                     true => {
-                        match game_data.game_will_be_won(*player_id, *no_cards as u8) {
-                            true => {
-                                EngineState::End(End {  })
-                            },
-                            false => {
-                                EngineState::TurnStart(
-                                    TurnStart {  
-                                        player_turn: self.player_turn,
-                                    }
-                                )
-                            },
-                        }
+                        EngineState::End(End { })
                     },
                     false => {
-                        panic!("Illegal Move");
+                        EngineState::TurnStart(
+                            TurnStart {  
+                                player_turn: self.player_turn,
+                            }
+                        )
                     },
                 }
             },

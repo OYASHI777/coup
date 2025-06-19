@@ -28,7 +28,7 @@ impl CoupTraversal for FSMEngine {
     fn start_public(&mut self, player: usize) {
         self.history.clear();
         self.history_state.clear();
-        self.state.reset(player);
+        self.state = GameState::start(player);
         self.history_state.push(self.state.engine_state.clone());
     }
 
@@ -36,7 +36,7 @@ impl CoupTraversal for FSMEngine {
         todo!();
         self.history.clear();
         self.history_state.clear();
-        self.state.reset(player);
+        self.state = GameState::start(player);
         self.history_state.push(self.state.engine_state.clone());
     }
     /// Update's Engine's state

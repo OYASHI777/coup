@@ -541,7 +541,7 @@ impl<T> CoupTraversal for BruteCardCountManagerGeneric<T>
 where
     T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
 {
-    fn start_public(&mut self, player: usize) {
+    fn start_public(&mut self, _player: usize) {
         // Reset
         self.history.clear();
         self.private_player = None;
@@ -787,7 +787,7 @@ where
                     self.player_can_have_cards_alive_lazy(*player_id, card)
                 }
             },
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+            ActionObservation::RevealRedraw { player_id, reveal, .. } => {
                 self.player_can_have_card_alive_lazy(*player_id, *reveal)
             },
             _ => true,

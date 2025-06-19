@@ -2,8 +2,8 @@ use crate::history_public::ActionObservation;
 use crate::prob_manager::engine::constants::COST_ASSASSINATE;
 use crate::prob_manager::engine::constants::COST_COUP;
 use crate::prob_manager::engine::constants::GAIN_INCOME;
-use crate::prob_manager::engine::models::game_state::GameData;
 
+use super::game_state::GameData;
 use super::turn_start::*;
 use super::coup::*;
 use super::end::*;

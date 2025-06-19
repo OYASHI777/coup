@@ -74,7 +74,4 @@ impl GameState {
     pub fn coins(&self) -> &[u8; 6] {
         &self.game_data.coins
     }
-    pub fn reset(&mut self, player_turn: usize) {
-        *self = Self::new(player_turn);
-    }
 }

@@ -38,7 +38,7 @@ impl<C: CoupConstraint> BackTrackCardCountManager<C> {
         if let Some(constraint) = self.constraint_history.last() {
             constraint.printlog();
         } else {
-            log::trace!("Failed to print log, empty constraint history");;
+            log::trace!("Failed to print log, empty constraint history");
         }
     }
     /// Gets the Latest Constraint
@@ -68,7 +68,7 @@ impl<C> CoupTraversal for BackTrackCardCountManager<C>
 where
     C: CoupConstraint + CoupPossibilityAnalysis,
 {
-    fn start_public(&mut self, player: usize) {
+    fn start_public(&mut self, _player: usize) {
         // Reset
         self.constraint_history.clear();
         self.constraint_history_move_no.clear();
@@ -248,11 +248,11 @@ where
         self.latest_constraint_mut().player_can_have_cards_alive_lazy(player, cards)
     }
     
-    fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_public(&mut self, _action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
     
-    fn is_legal_move_private(&mut self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_private(&mut self, _action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
 }

@@ -1,9 +1,10 @@
+use crate::prob_manager::engine::constants::GAIN_STEAL;
+use crate::history_public::{ActionObservation, Card};
+use super::end::End;
 use super::game_state::GameData;
 use super::engine_state::EngineState;
-use crate::prob_manager::engine::constants::GAIN_STEAL;
-use crate::prob_manager::engine::models::turn_start::TurnStart;
-use crate::{prob_manager::engine::models::engine_state::CoupTransition};
-use crate::history_public::{ActionObservation, Card};
+use super::turn_start::TurnStart;
+use super::engine_state::CoupTransition;
 #[derive(Copy, Clone)]
 pub struct StealInvitesChallenge {
     pub player_turn: usize,
@@ -104,7 +105,7 @@ impl CoupTransition for StealChallenged {
     fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::RevealRedraw { .. } => {
                 EngineState::StealChallengerFailed(
@@ -115,12 +116,19 @@ impl CoupTransition for StealChallenged {
                     }
                 )
             },
-            ActionObservation::Discard { .. } => {
-                EngineState::TurnStart(
-                    TurnStart { 
-                        player_turn: self.player_turn,
-                    }
-                )
+            ActionObservation::Discard { player_id, no_cards, .. } => {
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                    true => {
+                        EngineState::End(End { })
+                    },
+                    false => {
+                        EngineState::TurnStart(
+                            TurnStart { 
+                                player_turn: self.player_turn,
+                            }
+                        )
+                    },
+                }
             },
             _ => {
                 panic!("Illegal Move!");
@@ -317,14 +325,21 @@ impl CoupTransition for StealBlockChallenged {
                     }
                 )
             },
-            ActionObservation::Discard { .. } => {
+            ActionObservation::Discard { player_id, no_cards, .. } => {
                 game_data.influence[self.player_blocking] -= self.coins_stolen;
                 game_data.influence[self.player_turn] += self.coins_stolen;
-                EngineState::TurnStart(
-                    TurnStart { 
-                        player_turn: self.player_turn,
-                    }
-                )
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                    true => {
+                        EngineState::End(End { })
+                    },
+                    false => {
+                        EngineState::TurnStart(
+                            TurnStart { 
+                                player_turn: self.player_turn,
+                            }
+                        )
+                    },
+                }
             },
             _ => {
                 panic!("Illegal Move!");
@@ -353,14 +368,21 @@ impl CoupTransition for StealBlockChallengerFailed {
     fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::Discard { .. } => {
-                EngineState::TurnStart(
-                    TurnStart { 
-                        player_turn: self.player_turn,
-                    }
-                )
+            ActionObservation::Discard { player_id, no_cards, .. } => {
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                    true => {
+                        EngineState::End(End { })
+                    },
+                    false => {
+                        EngineState::TurnStart(
+                            TurnStart { 
+                                player_turn: self.player_turn,
+                            }
+                        )
+                    },
+                }
             },
             _ => {
                 panic!("Illegal Move!");

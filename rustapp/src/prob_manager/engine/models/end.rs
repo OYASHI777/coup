@@ -1,4 +1,4 @@
-use crate::prob_manager::engine::models::{engine_state::CoupTransition, game_state::GameState};
+use super::engine_state::CoupTransition;
 use crate::history_public::ActionObservation;
 use super::engine_state::EngineState;
 use super::game_state::GameData;

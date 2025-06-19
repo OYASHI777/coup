@@ -1,5 +1,6 @@
-use crate::prob_manager::engine::models::turn_start::TurnStart;
-use crate::prob_manager::engine::models::engine_state::CoupTransition;
+use super::end::End;
+use super::turn_start::TurnStart;
+use super::engine_state::CoupTransition;
 use crate::history_public::ActionObservation;
 use super::engine_state::EngineState;
 use super::game_state::GameData;
@@ -204,7 +205,7 @@ impl CoupTransition for AssassinateBlockChallenged {
     fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::RevealRedraw { .. } => {
                 EngineState::AssassinateBlockChallengerFailed(
@@ -214,14 +215,21 @@ impl CoupTransition for AssassinateBlockChallenged {
                     }
                 )
             },
-            ActionObservation::Discard { .. } => {
+            ActionObservation::Discard { player_id, no_cards, .. } => {
                 // NOTE: Cards cannot be Contessa!
                 // NOTE: This would be discard the WHOLE HAND
-                EngineState::TurnStart(
-                    TurnStart { 
-                        player_turn: self.player_turn,
-                    }
-                )
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                    true => {
+                        EngineState::End(End { })
+                    },
+                    false => {
+                        EngineState::TurnStart(
+                            TurnStart {  
+                                player_turn: self.player_turn,
+                            }
+                        )
+                    },
+                }
             },
             _ => {
                 panic!("Illegal Move!");
@@ -247,15 +255,22 @@ impl CoupTransition for AssassinateBlockChallengerFailed {
     fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         // TODO: [OPTIMIZE] You can technically just return TurnStart if you have a check wrapper outside this!
         match action {
-            ActionObservation::Discard { .. } => {
-                EngineState::TurnStart(
-                    TurnStart { 
-                        player_turn: self.player_turn,
-                    }
-                )
+            ActionObservation::Discard { player_id, no_cards, .. } => {
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                    true => {
+                        EngineState::End(End { })
+                    },
+                    false => {
+                        EngineState::TurnStart(
+                            TurnStart {  
+                                player_turn: self.player_turn,
+                            }
+                        )
+                    },
+                }
             },
             _ => {
                 panic!("Illegal Move!");
@@ -280,15 +295,22 @@ impl CoupTransition for AssassinateSucceeded {
     fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             // TODO: [OPTIMIZE] You can technically just return TurnStart if you have a check wrapper outside this!
-            ActionObservation::Discard { .. } => {
-                EngineState::TurnStart(
-                    TurnStart { 
-                        player_turn: self.player_turn,
-                    }
-                )
+            ActionObservation::Discard { player_id, no_cards, .. } => {
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                    true => {
+                        EngineState::End(End { })
+                    },
+                    false => {
+                        EngineState::TurnStart(
+                            TurnStart {  
+                                player_turn: self.player_turn,
+                            }
+                        )
+                    },
+                }
             },
             _ => {
                 panic!("Illegal Move!")
@@ -314,7 +336,7 @@ impl CoupTransition for AssassinateChallenged {
     fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::RevealRedraw { .. } => {
                 EngineState::AssassinateChallengerFailed(
@@ -325,12 +347,19 @@ impl CoupTransition for AssassinateChallenged {
                     }
                 )
             },
-            ActionObservation::Discard { .. } => {
-                EngineState::TurnStart(
-                    TurnStart { 
-                        player_turn: self.player_turn,
-                    }
-                )
+            ActionObservation::Discard { player_id, no_cards, .. } => {
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                    true => {
+                        EngineState::End(End { })
+                    },
+                    false => {
+                        EngineState::TurnStart(
+                            TurnStart { 
+                                player_turn: self.player_turn,
+                            }
+                        )
+                    },
+                }
             },
             _ => {
                 panic!("Illegal Move!");
@@ -356,16 +385,24 @@ impl CoupTransition for AssassinateChallengerFailed {
     fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             // TODO: [OPTIMIZE] You can technically just return TurnStart if you have a check wrapper outside this!
-            ActionObservation::Discard { .. } => {
-                EngineState::AssassinateInvitesBlock(
-                    AssassinateInvitesBlock { 
-                        player_turn: self.player_turn,
-                        player_blocking: self.player_blocking,
-                    }
-                )
+            ActionObservation::Discard { player_id, no_cards, .. } => {
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                    true => {
+                        EngineState::End(End { })
+                    },
+                    false => {
+                        // TODO: Do you need to check if player is alive to block it?
+                        EngineState::AssassinateInvitesBlock(
+                            AssassinateInvitesBlock { 
+                                player_turn: self.player_turn,
+                                player_blocking: self.player_blocking,
+                            }
+                        )
+                    },
+                }
             },
             _ => {
                 panic!("Illegal Move!");
