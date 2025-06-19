@@ -5,25 +5,19 @@ use super::game_state::GameData;
 #[derive(Copy, Clone)]
 pub struct End {
 }
-// TODO: Mate put all of these in GameState not vice versa
-impl End {
-    pub fn new() -> Self {
-        todo!()
-    }
-}
 
 impl CoupTransition for End {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
-        todo!()
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
+        // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
-        todo!()
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
+        // nothing
     }
-    fn state_leave_update(&self, action: &crate::history_public::ActionObservation, game_data: &mut GameData) -> EngineState {
-        panic!("Game has ended")
+    fn state_leave_update(&self, _action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
+        unimplemented!("Game has ended! Cannot leave this state!")
     }
 
-    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        todo!()
+    fn state_leave_reverse(&self, _action: &ActionObservation, _game_data: &mut GameData) {
+        unimplemented!("Game has ended! You should not have called this at all!")
     }
 }
