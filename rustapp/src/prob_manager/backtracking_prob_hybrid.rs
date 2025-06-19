@@ -5,7 +5,7 @@
 // Tried instead to save into hashmap and store in bson
 
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
-use crate::history_public::{Card, ActionObservation};
+use crate::{history_public::{ActionObservation, Card}, traits::prob_manager::coup_analysis::CoupTraversal};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
 use crate::prob_manager::models::backtrack_metadata::BacktrackMetaData;
 use super::constants::MAX_GAME_LENGTH;
@@ -231,30 +231,6 @@ impl BackTrackCardCountManager {
             move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
         }
     }
-    /// Adding private player starting hand
-    pub fn start_public(&mut self) {
-        self.private_player = None;
-        self.constraint_history.clear();
-        self.move_no_history.clear();
-        let start_public = BacktrackMetaData::start_public();
-        self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, start_public.clone()));
-        self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_public));
-        self.move_no_history.push(0);
-        self.move_no_history.push(0);
-        self.move_no = 1;
-    }
-    /// Adding private player starting hand
-    pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
-        self.private_player = Some(player);
-        self.constraint_history.clear();
-        self.move_no_history.clear();
-        let start_private = BacktrackMetaData::start_private(player, cards);
-        self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, BacktrackMetaData::start_public()));
-        self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_private));
-        self.move_no_history.push(0);
-        self.move_no_history.push(0);
-        self.move_no = 1;
-    }
     /// Logs the constraint's log
     pub fn printlog(&self) {
         log::trace!("{}", format!("Constraint History Len{}", self.constraint_history.len()));
@@ -302,146 +278,6 @@ impl BackTrackCardCountManager {
         let significant_action = SignificantAction::new(player_id as u8, action_info, self.constraint_history.last().unwrap().clone_meta_data());
         self.constraint_history.push(significant_action);
         self.move_no_history.push(self.move_no);
-    }
-    /// Entrypoint for any action done, updates history accordingly
-    /// Assumes knowledge of public information but not private information
-    pub fn push_ao_public(&mut self, ao: &ActionObservation){
-        // Handle different move types
-        match ao {
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                self.add_move_discard(*player_id, card, *no_cards);
-                self.generate_all_constraints();
-            },
-            ActionObservation::RevealRedraw { player_id, reveal, .. } => {
-                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
-                log::trace!("Adding move RevealRedraw");
-                self.add_move_clone_public(*player_id, action_info);
-                self.generate_all_constraints();
-            },
-            ActionObservation::ExchangeDraw { player_id, .. } => {
-                let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
-                log::trace!("Adding move ExchangeDraw");
-                self.add_move_clone_all(*player_id, action_info);
-            },
-            ActionObservation::ExchangeChoice { player_id, .. } => {
-                let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
-                log::trace!("Adding move ExchangeChoice");
-                self.add_move_clone_public(*player_id, action_info);
-                self.generate_all_constraints();
-            },
-            _ => {},
-        }
-        // shove move_no into CollectiveConstraint
-        // post_increment: move_no is now the number of the next move
-        self.move_no += 1;
-    }
-    // TODO: [OPTIMIZE] Add checks for if previous move has been calculated properly
-    // TODO: [OPTIMIZE] Consider Add clones for impossible states based on public constraints?
-    /// Entrypoint for any action done, updates history accordingly
-    /// Assumes knowledge of public information but not private information
-    pub fn push_ao_public_lazy(&mut self, ao: &ActionObservation){
-        // Handle different move types
-        match ao {
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                self.add_move_discard(*player_id, card, *no_cards);
-            },
-            ActionObservation::RevealRedraw { player_id, reveal, .. } => {
-                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
-                log::trace!("Adding move RevealRedraw");
-                self.add_move_clone_public(*player_id, action_info);
-            },
-            ActionObservation::ExchangeDraw { player_id, .. } => {
-                let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
-                log::trace!("Adding move ExchangeDraw");
-                self.add_move_clone_all(*player_id, action_info);
-            },
-            ActionObservation::ExchangeChoice { player_id, .. } => {
-                let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
-                log::trace!("Adding move ExchangeChoice");
-                self.add_move_clone_public(*player_id, action_info);
-            },
-            _ => {},
-        }
-        // shove move_no into CollectiveConstraint
-        // post_increment: move_no is now the number of the next move
-        self.move_no += 1;
-    }
-    /// Entrypoint for any action done, updates history accordingly
-    /// Assumes knowledge of private information
-    pub fn push_ao_private(&mut self, ao: &ActionObservation){
-        // Handle different move types
-        match ao {
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                self.add_move_discard(*player_id, card, *no_cards);
-                self.generate_all_constraints();
-            },
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
-                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
-                log::trace!("Adding move RevealRedraw");
-                if *reveal == *redraw {
-                    self.add_move_clone_all(*player_id, action_info);
-                    self.generate_all_constraints();
-                } else {
-                    self.add_move_clone_public(*player_id, action_info);
-                    self.generate_all_constraints();
-                }
-            },
-            ActionObservation::ExchangeDraw { player_id, card } => {
-                let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
-                log::trace!("Adding move ExchangeChoice");
-                self.add_move_clone_public(*player_id, action_info);
-                self.generate_all_constraints();
-            },
-            ActionObservation::ExchangeChoice { player_id, relinquish } => {
-                let action_info = ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() };
-                log::trace!("Adding move ExchangeChoice");
-                self.add_move_clone_public(*player_id, action_info);
-                self.generate_all_constraints();
-            },
-            _ => {},
-        }
-        // shove move_no into CollectiveConstraint
-        // post_increment: move_no is now the number of the next move
-        self.move_no += 1;
-    }
-    /// Entrypoint for any action done, updates history accordingly
-    /// Assumes knowledge of private information
-    pub fn push_ao_private_lazy(&mut self, ao: &ActionObservation){
-        // Handle different move types
-        match ao {
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                self.add_move_discard(*player_id, card, *no_cards);
-            },
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
-                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
-                log::trace!("Adding move RevealRedraw");
-                self.add_move_clone_public(*player_id, action_info);
-            },
-            ActionObservation::ExchangeDraw { player_id, card } => {
-                let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
-                log::trace!("Adding move ExchangeChoice");
-                self.add_move_clone_public(*player_id, action_info);
-            },
-            ActionObservation::ExchangeChoice { player_id, relinquish } => {
-                let action_info = ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() };
-                log::trace!("Adding move ExchangeChoice");
-                self.add_move_clone_public(*player_id, action_info);
-            },
-            _ => {},
-        }
-        // shove move_no into CollectiveConstraint
-        // post_increment: move_no is now the number of the next move
-        self.move_no += 1;
-    }
-    /// pop latest move
-    pub fn pop(&mut self) {
-        if self.move_no > 1 {
-            self.move_no -= 1;
-            while self.move_no_history.last() == Some(&self.move_no) {
-                self.constraint_history.pop();
-                self.move_no_history.pop();
-            }
-        }
     }
     // TODO: [OPTIMIZE] Add support for if constraint has been generated already!
     /// Generates all possible constraints
@@ -1535,6 +1371,172 @@ impl BackTrackCardCountManager {
     }
 }
 
+
+impl CoupTraversal for BackTrackCardCountManager {
+    fn start_public(&mut self, _player: usize) {
+        self.private_player = None;
+        self.constraint_history.clear();
+        self.move_no_history.clear();
+        let start_public = BacktrackMetaData::start_public();
+        self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, start_public.clone()));
+        self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_public));
+        self.move_no_history.push(0);
+        self.move_no_history.push(0);
+        self.move_no = 1;
+    }
+
+    fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
+        self.private_player = Some(player);
+        self.constraint_history.clear();
+        self.move_no_history.clear();
+        let start_private = BacktrackMetaData::start_private(player, cards);
+        self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, BacktrackMetaData::start_public()));
+        self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_private));
+        self.move_no_history.push(0);
+        self.move_no_history.push(0);
+        self.move_no = 1;
+    }
+    /// Entrypoint for any action done, updates history accordingly
+    /// Assumes knowledge of public information but not private information
+    fn push_ao_public(&mut self, action: &ActionObservation) {
+        // Handle different move types
+        match action {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                self.add_move_discard(*player_id, card, *no_cards);
+                self.generate_all_constraints();
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, .. } => {
+                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
+                log::trace!("Adding move RevealRedraw");
+                self.add_move_clone_public(*player_id, action_info);
+                self.generate_all_constraints();
+            },
+            ActionObservation::ExchangeDraw { player_id, .. } => {
+                let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
+                log::trace!("Adding move ExchangeDraw");
+                self.add_move_clone_all(*player_id, action_info);
+            },
+            ActionObservation::ExchangeChoice { player_id, .. } => {
+                let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
+                log::trace!("Adding move ExchangeChoice");
+                self.add_move_clone_public(*player_id, action_info);
+                self.generate_all_constraints();
+            },
+            _ => {},
+        }
+        // shove move_no into CollectiveConstraint
+        // post_increment: move_no is now the number of the next move
+        self.move_no += 1;
+    }
+    // TODO: [OPTIMIZE] Add checks for if previous move has been calculated properly
+    // TODO: [OPTIMIZE] Consider Add clones for impossible states based on public constraints?
+    /// Entrypoint for any action done, updates history accordingly
+    /// Assumes knowledge of public information but not private information
+    fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
+        // Handle different move types
+        match action {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                self.add_move_discard(*player_id, card, *no_cards);
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, .. } => {
+                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: None, relinquish: None };
+                log::trace!("Adding move RevealRedraw");
+                self.add_move_clone_public(*player_id, action_info);
+            },
+            ActionObservation::ExchangeDraw { player_id, .. } => {
+                let action_info = ActionInfo::ExchangeDraw { draw: Vec::with_capacity(2) };
+                log::trace!("Adding move ExchangeDraw");
+                self.add_move_clone_all(*player_id, action_info);
+            },
+            ActionObservation::ExchangeChoice { player_id, .. } => {
+                let action_info = ActionInfo::ExchangeChoice { relinquish: Vec::with_capacity(2) };
+                log::trace!("Adding move ExchangeChoice");
+                self.add_move_clone_public(*player_id, action_info);
+            },
+            _ => {},
+        }
+        // shove move_no into CollectiveConstraint
+        // post_increment: move_no is now the number of the next move
+        self.move_no += 1;
+    }
+    /// Entrypoint for any action done, updates history accordingly
+    /// Assumes knowledge of private information
+    fn push_ao_private(&mut self, action: &ActionObservation) {
+        // Handle different move types
+        match action {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                self.add_move_discard(*player_id, card, *no_cards);
+                self.generate_all_constraints();
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
+                log::trace!("Adding move RevealRedraw");
+                if *reveal == *redraw {
+                    self.add_move_clone_all(*player_id, action_info);
+                    self.generate_all_constraints();
+                } else {
+                    self.add_move_clone_public(*player_id, action_info);
+                    self.generate_all_constraints();
+                }
+            },
+            ActionObservation::ExchangeDraw { player_id, card } => {
+                let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
+                log::trace!("Adding move ExchangeChoice");
+                self.add_move_clone_public(*player_id, action_info);
+                self.generate_all_constraints();
+            },
+            ActionObservation::ExchangeChoice { player_id, relinquish } => {
+                let action_info = ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() };
+                log::trace!("Adding move ExchangeChoice");
+                self.add_move_clone_public(*player_id, action_info);
+                self.generate_all_constraints();
+            },
+            _ => {},
+        }
+        // shove move_no into CollectiveConstraint
+        // post_increment: move_no is now the number of the next move
+        self.move_no += 1;
+    }
+    /// Entrypoint for any action done, updates history accordingly
+    /// Assumes knowledge of private information
+    fn push_ao_private_lazy(&mut self, action: &ActionObservation) {
+        // Handle different move types
+        match action {
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                self.add_move_discard(*player_id, card, *no_cards);
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                let action_info = ActionInfo::RevealRedraw { reveal: *reveal, redraw: Some(*redraw), relinquish: None };
+                log::trace!("Adding move RevealRedraw");
+                self.add_move_clone_public(*player_id, action_info);
+            },
+            ActionObservation::ExchangeDraw { player_id, card } => {
+                let action_info = ActionInfo::ExchangeDraw { draw: card.to_vec() };
+                log::trace!("Adding move ExchangeChoice");
+                self.add_move_clone_public(*player_id, action_info);
+            },
+            ActionObservation::ExchangeChoice { player_id, relinquish } => {
+                let action_info = ActionInfo::ExchangeChoice { relinquish: relinquish.to_vec() };
+                log::trace!("Adding move ExchangeChoice");
+                self.add_move_clone_public(*player_id, action_info);
+            },
+            _ => {},
+        }
+        // shove move_no into CollectiveConstraint
+        // post_increment: move_no is now the number of the next move
+        self.move_no += 1;
+    }
+
+    fn pop(&mut self) {
+        if self.move_no > 1 {
+            self.move_no -= 1;
+            while self.move_no_history.last() == Some(&self.move_no) {
+                self.constraint_history.pop();
+                self.move_no_history.pop();
+            }
+        }
+    }
+}
 
 impl CoupPossibilityAnalysis for BackTrackCardCountManager
 {
