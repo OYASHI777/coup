@@ -162,13 +162,22 @@ impl CoupTransition for StealChallengerFailed {
                         EngineState::End(End { })
                     },
                     false => {
-                        EngineState::StealInvitesBlock(
-                            StealInvitesBlock { 
-                                player_turn: self.player_turn, 
-                                player_blocking: self.player_blocking, 
-                                coins_stolen: game_data.influence[self.player_blocking].min(GAIN_STEAL),
-                            }
-                        )
+                        if *player_id == self.player_blocking && game_data.influence[self.player_blocking] <= *no_cards as u8 {
+                            // Blocking Player is dead and cannot block
+                            EngineState::TurnStart(
+                                TurnStart { 
+                                    player_turn: self.player_turn,
+                                }
+                            )
+                        } else {
+                            EngineState::StealInvitesBlock(
+                                StealInvitesBlock { 
+                                    player_turn: self.player_turn, 
+                                    player_blocking: self.player_blocking, 
+                                    coins_stolen: game_data.influence[self.player_blocking].min(GAIN_STEAL),
+                                }
+                            )
+                        }
                     },
                 }
             },
