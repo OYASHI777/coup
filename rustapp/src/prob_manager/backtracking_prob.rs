@@ -69,12 +69,21 @@ where
     C: CoupConstraint + CoupPossibilityAnalysis,
 {
     fn start_public(&mut self, player: usize) {
+        // Reset
+        self.constraint_history.clear();
+        self.constraint_history_move_no.clear();
+        // Start
+        self.private_player = None;
         self.constraint_history.push(C::game_start_public());
         self.constraint_history_move_no.push(0);
         self.move_no = 1;
     }
 
     fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
+        // Reset
+        self.constraint_history.clear();
+        self.constraint_history_move_no.clear();
+        // Start
         self.private_player = Some(player);
         self.constraint_history.push(C::game_start_private(player, cards));
         self.constraint_history_move_no.push(0);
@@ -190,10 +199,10 @@ where
     }
 
     fn reset(&mut self) {
-        self.private_player = None;
-        self.constraint_history.clear();
-        self.constraint_history_move_no.clear();
-        self.move_no = 1;
+        // self.private_player = None;
+        // self.constraint_history.clear();
+        // self.constraint_history_move_no.clear();
+        // self.move_no = 1;
     }
 }
 

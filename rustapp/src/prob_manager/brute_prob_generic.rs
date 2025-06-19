@@ -542,10 +542,32 @@ where
     T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
 {
     fn start_public(&mut self, player: usize) {
+        // Reset
+        self.history.clear();
+        self.private_player = None;
+        self.public_constraints = vec![Vec::with_capacity(2); 6];
+        self.public_constraints.push(Vec::with_capacity(3));
+        self.inferred_constraints = vec![Vec::with_capacity(2); 6];
+        self.inferred_constraints.push(Vec::with_capacity(3));
+        self.impossible_constraints = [[false; 5]; 7];
+        self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
+        self.calculated_states = self.all_states.clone().into_iter().collect();
         // Do nothing
     }
 
     fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
+        // Reset
+        self.history.clear();
+        self.public_constraints = vec![Vec::with_capacity(2); 6];
+        self.public_constraints.push(Vec::with_capacity(3));
+        self.inferred_constraints = vec![Vec::with_capacity(2); 6];
+        self.inferred_constraints.push(Vec::with_capacity(3));
+        self.impossible_constraints = [[false; 5]; 7];
+        self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
+        self.calculated_states = self.all_states.clone().into_iter().collect();
+        // Start
         self.private_player = Some(player);
         self.restrict(player, cards);
         // self.inferred_constraints[player].push(cards[0]);
@@ -648,16 +670,16 @@ where
     }
 
     fn reset(&mut self) {
-        self.history.clear();
-        self.private_player = None;
-        self.public_constraints = vec![Vec::with_capacity(2); 6];
-        self.public_constraints.push(Vec::with_capacity(3));
-        self.inferred_constraints = vec![Vec::with_capacity(2); 6];
-        self.inferred_constraints.push(Vec::with_capacity(3));
-        self.impossible_constraints = [[false; 5]; 7];
-        self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
-        self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
-        self.calculated_states = self.all_states.clone().into_iter().collect();
+        // self.history.clear();
+        // self.private_player = None;
+        // self.public_constraints = vec![Vec::with_capacity(2); 6];
+        // self.public_constraints.push(Vec::with_capacity(3));
+        // self.inferred_constraints = vec![Vec::with_capacity(2); 6];
+        // self.inferred_constraints.push(Vec::with_capacity(3));
+        // self.impossible_constraints = [[false; 5]; 7];
+        // self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
+        // self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
+        // self.calculated_states = self.all_states.clone().into_iter().collect();
     }
 }
 
