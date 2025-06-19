@@ -198,12 +198,6 @@ where
         }
     }
 
-    fn reset(&mut self) {
-        // self.private_player = None;
-        // self.constraint_history.clear();
-        // self.constraint_history_move_no.clear();
-        // self.move_no = 1;
-    }
 }
 
 impl<C> CoupPossibilityAnalysis for BackTrackCardCountManager<C>

@@ -16,8 +16,6 @@ pub trait CoupTraversal {
     fn push_ao_private_lazy(&mut self, action: &ActionObservation);
     /// Pops latest move
     fn pop(&mut self);
-    /// Resets game state. Use start_public or start_private to start a new game
-    fn reset(&mut self);
 }
 
 pub trait CoupPossibilityAnalysis {

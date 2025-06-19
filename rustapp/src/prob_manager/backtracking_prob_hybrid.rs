@@ -233,6 +233,9 @@ impl BackTrackCardCountManager {
     }
     /// Adding private player starting hand
     pub fn start_public(&mut self) {
+        self.private_player = None;
+        self.constraint_history.clear();
+        self.move_no_history.clear();
         let start_public = BacktrackMetaData::start_public();
         self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, start_public.clone()));
         self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_public));
@@ -243,18 +246,13 @@ impl BackTrackCardCountManager {
     /// Adding private player starting hand
     pub fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
         self.private_player = Some(player);
+        self.constraint_history.clear();
+        self.move_no_history.clear();
         let start_private = BacktrackMetaData::start_private(player, cards);
         self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, BacktrackMetaData::start_public()));
         self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_private));
         self.move_no_history.push(0);
         self.move_no_history.push(0);
-        self.move_no = 1;
-    }
-    /// Returns everything to original state
-    pub fn reset(&mut self) {
-        self.private_player = None;
-        self.constraint_history.clear();
-        self.move_no_history.clear();
         self.move_no = 1;
     }
     /// Logs the constraint's log

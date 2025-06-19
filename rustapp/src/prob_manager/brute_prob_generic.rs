@@ -669,18 +669,6 @@ where
         unimplemented!("brute prob does not support pop as it is irreversible")
     }
 
-    fn reset(&mut self) {
-        // self.history.clear();
-        // self.private_player = None;
-        // self.public_constraints = vec![Vec::with_capacity(2); 6];
-        // self.public_constraints.push(Vec::with_capacity(3));
-        // self.inferred_constraints = vec![Vec::with_capacity(2); 6];
-        // self.inferred_constraints.push(Vec::with_capacity(3));
-        // self.impossible_constraints = [[false; 5]; 7];
-        // self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
-        // self.impossible_constraints_3 = [[[false; 5]; 5]; 5];
-        // self.calculated_states = self.all_states.clone().into_iter().collect();
-    }
 }
 
 impl<T> CoupPossibilityAnalysis for BruteCardCountManagerGeneric<T> 

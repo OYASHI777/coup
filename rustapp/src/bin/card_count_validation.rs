@@ -368,8 +368,6 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
         stats.replay_string = hh.get_replay_history_braindead();
         stats.games += 1;
         tx.send(stats).unwrap();
-        prob.reset();
-        bit_prob.reset();
         game += 1;
     }
 }
@@ -548,8 +546,6 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
         stats.replay_string = hh.get_replay_history_braindead();
         stats.games += 1;
         tx.send(stats).unwrap();
-        prob.reset();
-        bit_prob.reset();
         game += 1;
     }
 }
@@ -692,8 +688,6 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
         }
         stats.replay_string = hh.get_replay_history_braindead();
         stats.games += 1;
-        prob.reset();
-        bit_prob.reset();
         game += 1;
     }
 }
@@ -916,7 +910,6 @@ pub fn game_rnd_constraint_bt_bench(game_no : usize, bool_know_priv_info: bool) 
             }
             log::info!("");
         }
-        bit_prob.reset();
         game += 1;
     }
     let elapsed_time = start_time.elapsed();
@@ -992,7 +985,6 @@ pub fn game_rnd_constraint_bt_bench_lazy(game_no : usize, bool_know_priv_info: b
             }
             log::info!("");
         }
-        bit_prob.reset();
         game += 1;
     }
     let elapsed_time = start_time.elapsed();
@@ -1325,8 +1317,6 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
         // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
         // log::info!("{}", format!("History: {:?}",hh.get_history(step)));
         log::info!("");
-        prob.reset();
-        bit_prob.reset();
         game += 1;
     }
     log::info!("Most Steps: {}", max_steps);

@@ -77,9 +77,4 @@ impl CoupTraversal for FSMEngine {
         }
     }
 
-    fn reset(&mut self) {
-        todo!("remove this method");
-        // self.history.clear();
-        // self.state.reset(player_turn);
-    }
 }
