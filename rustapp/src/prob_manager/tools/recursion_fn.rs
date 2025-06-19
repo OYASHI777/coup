@@ -1,9 +1,8 @@
 use log::LevelFilter;
 use crate::history_public::Card;
 use std::collections::HashSet;
-use std::fs::{File, OpenOptions};
-use std::io::{Write};
-use std::path::Path;
+use std::fs::OpenOptions;
+use std::io::Write;
 use env_logger::{Builder, Env, Target};
 use itertools::Itertools;
 pub struct RecursionTest;
@@ -756,7 +755,7 @@ impl RecursionTest {
                 }
             }
         }
-        let mut symmetric_keys: HashSet<[u8; 10]> = HashSet::with_capacity(200);
+        // let mut symmetric_keys: HashSet<[u8; 10]> = HashSet::with_capacity(200);
         'outer: for item in test_inferred_constraints.iter() {
             for card_num in 0..5 {
                 if item.iter().map(|v| v.iter().filter(|c| **c as usize == card_num).count() as u8).sum::<u8>() > 3 {

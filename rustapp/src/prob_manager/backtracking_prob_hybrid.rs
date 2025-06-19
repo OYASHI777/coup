@@ -174,7 +174,7 @@ impl CoupPossibilityAnalysis for SignificantAction
         !self.meta_data.impossible_constraints()[player][card as usize]
     }
     
-    fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool {
+    fn player_can_have_card_alive_lazy(&mut self, _player: usize, _card: Card) -> bool {
         unimplemented!()
     }
 
@@ -196,15 +196,15 @@ impl CoupPossibilityAnalysis for SignificantAction
         }
         false
     }
-    fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool {
+    fn player_can_have_cards_alive_lazy(&mut self, _player: usize, _cards: &[Card]) -> bool {
         unimplemented!()
     }
     
-    fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_public(&mut self, _action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
     
-    fn is_legal_move_private(&mut self, action_observation: &ActionObservation) -> bool {
+    fn is_legal_move_private(&mut self, _action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
 }
@@ -239,7 +239,7 @@ impl BackTrackCardCountManager {
         if let Some(constraint) = self.constraint_history.last() {
             constraint.printlog();
         } else {
-            log::trace!("Failed to print log, empty constraint history");;
+            log::trace!("Failed to print log, empty constraint history");
         }
     }
     /// Gets the Latest Constraint
@@ -534,7 +534,7 @@ impl BackTrackCardCountManager {
                     },
                     None => {
                         match relinquish {
-                            Some(relinquish_i) => {
+                            Some(_relinquish_i) => {
                                 // swap cards around sir
                                 // relinquish_i == *reveal always
                                 // Case 0: player redrew card != reveal
@@ -754,7 +754,7 @@ impl BackTrackCardCountManager {
             },
             ActionInfo::ExchangeDrawChoice { .. } => {
                 unimplemented!("Deprecated!");
-                response = self.recurse_variants_exchange_public(index_loop, player_loop, public_constraints, inferred_constraints);
+                // response = self.recurse_variants_exchange_public(index_loop, player_loop, public_constraints, inferred_constraints);
             },
             ActionInfo::ExchangeDraw { draw } => {
                 if !draw.is_empty() {
@@ -1598,7 +1598,7 @@ impl CoupPossibilityAnalysis for BackTrackCardCountManager
                     self.player_can_have_cards_alive_lazy(*player_id, card)
                 }
             },
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+            ActionObservation::RevealRedraw { player_id, reveal, .. } => {
                 self.player_can_have_card_alive_lazy(*player_id, *reveal)
             },
             _ => true,
