@@ -11,11 +11,13 @@ use super::tax::*;
 use super::assassinate::*;
 #[derive(Copy, Clone)]
 pub struct TurnStart {
+    pub player_turn: usize,
 }
 
 impl TurnStart {
-    pub fn new() -> Self {
+    pub fn new(player_turn: usize) -> Self {
         TurnStart { 
+            player_turn,
         }
     }
 }
@@ -24,20 +26,33 @@ impl CoupTransition for TurnStart {
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Income { player_id } => {
-                EngineState::TurnStart(TurnStart { })
+                EngineState::TurnStart(
+                    TurnStart { 
+                        player_turn: self.player_turn,
+                    }
+                )
             },
             ActionObservation::Coup { player_id, opposing_player_id } => {
                 EngineState::CoupHit(
                     CoupHit { 
+                        player_turn: self.player_turn,
                         player_hit: *opposing_player_id,
                     }
                 )
             }
             ActionObservation::ForeignAid { player_id } => {
-                EngineState::ForeignAidInvitesBlock(ForeignAidInvitesBlock {  })
+                EngineState::ForeignAidInvitesBlock(
+                    ForeignAidInvitesBlock {  
+                        player_turn: self.player_turn,
+                    }
+                )
             },
             ActionObservation::Tax { player_id } => {
-                EngineState::TaxInvitesChallenge(TaxInvitesChallenge {  })
+                EngineState::TaxInvitesChallenge(
+                    TaxInvitesChallenge {  
+                        player_turn: self.player_turn,
+                    }
+                )
             },
             ActionObservation::Steal { player_id, opposing_player_id, amount } => {
                 todo!()
@@ -46,7 +61,11 @@ impl CoupTransition for TurnStart {
                 todo!()
             },
             ActionObservation::Exchange { player_id } => {
-                EngineState::ExchangeInvitesChallenge(ExchangeInvitesChallenge {  })
+                EngineState::ExchangeInvitesChallenge(
+                    ExchangeInvitesChallenge {  
+                        player_turn: self.player_turn,
+                    }
+                )
             },
             _ => {
                 panic!("Illegal Move");

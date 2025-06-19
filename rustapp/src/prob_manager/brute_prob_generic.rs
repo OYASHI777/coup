@@ -541,7 +541,7 @@ impl<T> CoupTraversal for BruteCardCountManagerGeneric<T>
 where
     T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
 {
-    fn start_public(&mut self) {
+    fn start_public(&mut self, player: usize) {
         // Do nothing
     }
 

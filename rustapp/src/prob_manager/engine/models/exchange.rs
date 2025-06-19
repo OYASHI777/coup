@@ -5,19 +5,24 @@ use super::engine_state::EngineState;
 use super::game_state::GameData;
 #[derive(Copy, Clone)]
 pub struct ExchangeInvitesChallenge {
+    pub player_turn: usize,
 }
 #[derive(Copy, Clone)]
 pub struct ExchangeDrawing {
+    pub player_turn: usize,
 }
 #[derive(Copy, Clone)]
 pub struct ExchangeDrawn {
+    pub player_turn: usize,
 }
 #[derive(Copy, Clone)]
 pub struct ExchangeChallenged {
+    pub player_turn: usize,
     pub player_challenger: usize,
 }
 #[derive(Copy, Clone)]
 pub struct ExchangeChallengerFailed {
+    pub player_turn: usize,
     pub player_challenger: usize,
 }
 
@@ -28,10 +33,19 @@ impl CoupTransition for ExchangeInvitesChallenge {
                 match opposing_player_id == final_actioner {
                     true => {
                         // nobody challenged
-                        EngineState::ExchangeDrawing(ExchangeDrawing {  })
+                        EngineState::ExchangeDrawing(
+                            ExchangeDrawing {  
+                                player_turn: self.player_turn,
+                            }
+                        )
                     },
                     false => {
-                        EngineState::ExchangeChallenged(ExchangeChallenged { player_challenger: *final_actioner })
+                        EngineState::ExchangeChallenged(
+                            ExchangeChallenged { 
+                                player_turn: self.player_turn,
+                                player_challenger: *final_actioner 
+                            }
+                        )
                     },
                 }
             },
@@ -55,7 +69,11 @@ impl CoupTransition for ExchangeDrawing {
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::ExchangeDraw { player_id, card } => {
-                EngineState::ExchangeDrawn(ExchangeDrawn {  })
+                EngineState::ExchangeDrawn(
+                    ExchangeDrawn {  
+                        player_turn: self.player_turn,
+                    }
+                )
             },
             _ => panic!("Illegal Move"),
         }
@@ -73,8 +91,12 @@ impl CoupTransition for ExchangeDrawn {
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
-                game_data.next_player();
-                EngineState::TurnStart(TurnStart {  })
+                // game_data.next_player();
+                EngineState::TurnStart(
+                    TurnStart {  
+                        player_turn: self.player_turn,
+                    }
+                )
             },
             _ => panic!("Illegal Move"),
         }
@@ -83,7 +105,7 @@ impl CoupTransition for ExchangeDrawn {
     fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
-                game_data.prev_player();
+                // game_data.prev_player();
             },
             _ => panic!("Illegal Move"),
         }
@@ -93,11 +115,20 @@ impl CoupTransition for ExchangeChallenged {
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
-                EngineState::ExchangeChallengerFailed(ExchangeChallengerFailed { player_challenger: self.player_challenger })
+                EngineState::ExchangeChallengerFailed(
+                    ExchangeChallengerFailed { 
+                        player_turn: self.player_turn,
+                        player_challenger: self.player_challenger 
+                    }
+                )
             },
             ActionObservation::Discard { player_id, card, no_cards } => {
-                game_data.next_player();
-                EngineState::TurnStart(TurnStart {  })
+                // game_data.next_player();
+                EngineState::TurnStart(
+                    TurnStart {  
+                        player_turn: self.player_turn,
+                    }
+                )
             },
             _ => panic!("Illegal Move"),
         }
@@ -108,7 +139,7 @@ impl CoupTransition for ExchangeChallenged {
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
             },
             ActionObservation::Discard { player_id, card, no_cards } => {
-                game_data.prev_player();
+                // game_data.prev_player();
             },
             _ => panic!("Illegal Move"),
         }
@@ -118,7 +149,11 @@ impl CoupTransition for ExchangeChallengerFailed {
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
-                EngineState::ExchangeDrawing(ExchangeDrawing {  })
+                EngineState::ExchangeDrawing(
+                    ExchangeDrawing {  
+                        player_turn: self.player_turn,
+                    }
+                )
             },
             _ => panic!("Illegal Move"),
         }

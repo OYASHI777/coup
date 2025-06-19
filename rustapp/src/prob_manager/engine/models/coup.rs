@@ -6,6 +6,7 @@ use super::engine_state::EngineState;
 use super::game_state::GameData;
 #[derive(Copy, Clone)]
 pub struct CoupHit {
+    pub player_turn: usize,
     pub player_hit: usize,
 }
 
@@ -20,7 +21,11 @@ impl CoupTransition for CoupHit {
                                 EngineState::End(End {  })
                             },
                             false => {
-                                EngineState::TurnStart(TurnStart {  })
+                                EngineState::TurnStart(
+                                    TurnStart {  
+                                        player_turn: self.player_turn,
+                                    }
+                                )
                             },
                         }
                     },

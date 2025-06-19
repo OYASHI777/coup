@@ -3,7 +3,7 @@ use crate::history_public::{ActionObservation, Card};
 pub trait CoupTraversal {
     // TODO: Consider taking starting_player: Option<usize>
     /// Starts a game with public information
-    fn start_public(&mut self);
+    fn start_public(&mut self, player: usize);
     /// Starts a game with private information
     fn start_private(&mut self, player: usize, cards: &[Card; 2]);
     /// Adds an Action with only public information

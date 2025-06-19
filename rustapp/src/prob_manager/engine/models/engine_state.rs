@@ -105,7 +105,7 @@ pub trait CoupTransition {
         match action {
             ActionObservation::Income { player_id } => {
                 game_data.coins[*player_id] += GAIN_INCOME;
-                game_data.next_player();
+                // game_data.next_player();
             },
             ActionObservation::Assassinate { player_id, opposing_player_id } => {
                 game_data.coins[*player_id] -= COST_ASSASSINATE;
@@ -123,7 +123,7 @@ pub trait CoupTransition {
         match action {
             ActionObservation::Income { player_id } => {
                 game_data.coins[*player_id] -= GAIN_INCOME;
-                game_data.prev_player();
+                // game_data.prev_player();
             },
             ActionObservation::Assassinate { player_id, opposing_player_id } => {
                 game_data.coins[*player_id] += COST_ASSASSINATE;

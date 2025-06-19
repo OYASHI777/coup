@@ -220,7 +220,7 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
             prob.start_private(private_player.unwrap(), &cards);
             bit_prob.start_private(private_player.unwrap(), &cards);
         } else {
-            prob.start_public();
+            prob.start_public(7);
             bit_prob.start_public();
         }
         while !hh.game_won() {
@@ -400,7 +400,7 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
             prob.start_private(private_player.unwrap(), &cards);
             bit_prob.start_private(private_player.unwrap(), &cards);
         } else {
-            prob.start_public();
+            prob.start_public(7);
             bit_prob.start_public();
         }
         while !hh.game_won() {
@@ -575,7 +575,7 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
             prob.start_private(private_player, &starting_hand);
             bit_prob.start_private(private_player, &starting_hand);
         } else {
-            prob.start_public();
+            prob.start_public(7);
             bit_prob.start_public();
         }
         while !hh.game_won() {
@@ -1018,7 +1018,7 @@ pub fn replay_game_constraint_bt(replay: Vec<ActionObservation>, bool_know_priv_
         prob.start_private(private_player, starting_hand);
         bit_prob.start_private(private_player, starting_hand);
     } else {
-        prob.start_public();
+        prob.start_public(7);
         bit_prob.start_public();
     }
     while !hh.game_won() {
@@ -1174,7 +1174,7 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
             prob.start_private(private_player.unwrap(), &cards);
             bit_prob.start_private(private_player.unwrap(), &cards);
         } else {
-            prob.start_public();
+            prob.start_public(7);
             bit_prob.start_public();
         }
         // if game % (game_no / 10) == 0 {

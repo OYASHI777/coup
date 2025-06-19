@@ -4,37 +4,28 @@ use super::engine_state::{CoupTransition, EngineState};
 use super::turn_start::TurnStart;
 use crate::history_public::ActionObservation;
 
+#[derive(Clone)]
 pub struct GameData {
     pub influence: [u8; 6],
     pub coins: [u8; 6],
-    pub player_turn: usize,
 }
 impl GameData {
-    pub fn new(player_turn: usize) -> Self {
+    pub fn new() -> Self {
         GameData { 
             influence: STARTING_INFLUENCE, 
             coins: STARTING_COINS, 
-            player_turn,
         }
     }
 }
 
 impl GameData {
-    pub fn next_player(&mut self) {
-        let mut current_turn: usize = (self.player_turn + 1) % 6;
-        while self.influence[current_turn] == 0 {
-            current_turn = (current_turn + 1) % 6;
-        }
-        self.player_turn = current_turn;
-    }
-    /// Assumes previously deducted influence has already been readded in
-    pub fn prev_player(&mut self) {
-        let mut current_turn: usize = (self.player_turn + 5) % 6;
-        while self.influence[current_turn] == 0 {
-            current_turn = (current_turn + 5) % 6;
-        }
-        self.player_turn = current_turn;
-    }
+    // pub fn next_player(&mut self) {
+    //     let mut current_turn: usize = (self.player_turn + 1) % 6;
+    //     while self.influence[current_turn] == 0 {
+    //         current_turn = (current_turn + 1) % 6;
+    //     }
+    //     self.player_turn = current_turn;
+    // }
     /// Checks if game will be won after a player loses no_cards
     pub fn game_will_be_won(&self, player: usize, no_cards: u8) -> bool {
         self.influence.iter().enumerate().filter(
@@ -59,22 +50,31 @@ impl GameData {
     }
 }
 
+#[derive(Clone)]
 pub struct GameState {
     pub game_data: GameData,
     pub engine_state: EngineState,
 }
 
 impl GameState {
-    pub fn new() -> Self {
+    pub fn new(player_turn: usize) -> Self {
         GameState { 
-            game_data: GameData::new(0),
-            engine_state: EngineState::TurnStart(TurnStart{ }),
+            game_data: GameData::new(),
+            engine_state: EngineState::TurnStart(
+                TurnStart{ 
+                    player_turn,
+                }
+            ),
         }
     }
     pub fn start(player_turn: usize) -> Self {
         GameState { 
-            game_data: GameData::new(player_turn),
-            engine_state: EngineState::TurnStart(TurnStart{ }),
+            game_data: GameData::new(),
+            engine_state: EngineState::TurnStart(
+                TurnStart{ 
+                    player_turn,
+                }
+            ),
         }
     }
     pub fn influence(&self) -> &[u8; 6] {
@@ -83,7 +83,7 @@ impl GameState {
     pub fn coins(&self) -> &[u8; 6] {
         &self.game_data.coins
     }
-    pub fn reset(&mut self) {
-        *self = Self::new();
+    pub fn reset(&mut self, player_turn: usize) {
+        *self = Self::new(player_turn);
     }
 }

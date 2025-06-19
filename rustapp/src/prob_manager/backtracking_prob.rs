@@ -68,7 +68,7 @@ impl<C> CoupTraversal for BackTrackCardCountManager<C>
 where
     C: CoupConstraint + CoupPossibilityAnalysis,
 {
-    fn start_public(&mut self) {
+    fn start_public(&mut self, player: usize) {
         self.constraint_history.push(C::game_start_public());
         self.constraint_history_move_no.push(0);
         self.move_no = 1;

@@ -4,34 +4,42 @@ use super::engine_state::EngineState;
 use super::game_state::GameData;
 #[derive(Copy, Clone)]
 pub struct AssassinateInvitesChallenge {
+    pub player_turn: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateInvitesBlock {
+    pub player_turn: usize,
     pub player_blocking: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateBlockInvitesChallenge {
+    pub player_turn: usize,
     pub player_blocking: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateBlockChallenged {
+    pub player_turn: usize,
     pub player_blocking: usize,
     pub player_challenger: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateBlockChallengerFailed {
+    pub player_turn: usize,
     pub player_challenger: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateSucceeded {
+    pub player_turn: usize,
     pub player_blocking: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateChallenged {
+    pub player_turn: usize,
     pub player_challenger: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateChallengerFailed {
+    pub player_turn: usize,
     pub player_challenger: usize,
 }
 

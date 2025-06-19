@@ -20,19 +20,24 @@ impl FSMEngine {
         FSMEngine { 
             history: Vec::with_capacity(128), 
             history_state: Vec::with_capacity(128),
-            state: GameState::new(),
+            state: GameState::new(0),
         }
     }
 }
 impl CoupTraversal for FSMEngine {
-    fn start_public(&mut self) {
-        self.reset();
-        *self = Self::new();
-        self.history_state.push(EngineState::TurnStart(TurnStart {  }));
+    fn start_public(&mut self, player: usize) {
+        self.history.clear();
+        self.history_state.clear();
+        self.state.reset(player);
+        self.history_state.push(self.state.engine_state.clone());
     }
 
     fn start_private(&mut self, player: usize, cards: &[crate::history_public::Card; 2]) {
-        todo!()
+        todo!();
+        self.history.clear();
+        self.history_state.clear();
+        self.state.reset(player);
+        self.history_state.push(self.state.engine_state.clone());
     }
     /// Update's Engine's state
     fn push_ao_public(&mut self, action: &ActionObservation) {
@@ -71,7 +76,8 @@ impl CoupTraversal for FSMEngine {
     }
 
     fn reset(&mut self) {
-        self.history.clear();
-        self.state.reset();
+        todo!("remove this method");
+        // self.history.clear();
+        // self.state.reset(player_turn);
     }
 }
