@@ -162,7 +162,7 @@ impl CoupTransition for ForeignAidBlockChallenged {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
                 game_data.coins[self.player_turn] -= GAIN_FOREIGNAID;
-            }
+            },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
             },
             _ => {

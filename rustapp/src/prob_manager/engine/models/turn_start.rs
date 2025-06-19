@@ -68,7 +68,12 @@ impl CoupTransition for TurnStart {
                 )
             },
             ActionObservation::Steal { player_id, opposing_player_id, amount } => {
-                todo!()
+                EngineState::StealInvitesChallenge(
+                    StealInvitesChallenge { 
+                        player_turn: self.player_turn,
+                        player_blocking: *opposing_player_id,
+                    }
+                )
             },
             ActionObservation::Assassinate { player_id, opposing_player_id } => {
                 todo!()

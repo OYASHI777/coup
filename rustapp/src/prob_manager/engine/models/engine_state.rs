@@ -244,7 +244,7 @@ impl CoupTransition for EngineState {
             EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => assassinate_challenger_failed.state_leave_update(action, game_data),
         }
     }
-
+    // TODO: Remove all panics where not needed, pop can be trust based or use debug_assert!
     fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match self {
             EngineState::TurnStart(turn_start) => turn_start.state_leave_reverse(action, game_data),
