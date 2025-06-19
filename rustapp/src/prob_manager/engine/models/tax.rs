@@ -33,7 +33,6 @@ impl CoupTransition for TaxInvitesChallenge {
                     true => {
                         // nobody challenges
                         game_data.coins[self.player_turn] += GAIN_DUKE;
-                        // game_data.next_player();
                         EngineState::TurnStart(
                             TurnStart {  
                                 player_turn: self.player_turn,
@@ -62,7 +61,6 @@ impl CoupTransition for TaxInvitesChallenge {
                 match opposing_player_id == final_actioner {
                     true => {
                         // nobody blocked
-                        // game_data.prev_player();
                         game_data.coins[self.player_turn] -= GAIN_DUKE;
                     },
                     false => {
@@ -132,7 +130,6 @@ impl CoupTransition for TaxChallengerFailed {
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::Discard { player_id, card, no_cards } => {
-                // game_data.next_player();
                 EngineState::TurnStart(
                     TurnStart {  
                         player_turn: self.player_turn,
@@ -146,13 +143,6 @@ impl CoupTransition for TaxChallengerFailed {
     }
     
     fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        match action {
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                // game_data.prev_player();
-            },
-            _ => {
-                panic!("Illegal Move");
-            }
-        }
+        // nothing
     }
 }
