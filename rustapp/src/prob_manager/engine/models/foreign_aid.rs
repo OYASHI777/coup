@@ -138,15 +138,22 @@ impl CoupTransition for ForeignAidBlockChallenged {
     }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::Discard { no_cards, .. } => {
+            ActionObservation::Discard { player_id, no_cards, .. } => {
                 debug_assert!(*no_cards == 1, "no_cards: {no_cards} should be 1");
-                // TODO: Chain blocks!
                 game_data.coins[self.player_turn] += GAIN_FOREIGNAID;
-                EngineState::TurnStart(
-                    TurnStart {  
-                        player_turn: self.player_turn,
-                    }
-                )
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                    true => {
+                        EngineState::End(End { })
+                    },
+                    false => {
+                        EngineState::TurnStart(
+                            TurnStart { 
+                                player_turn: self.player_turn,
+                            }
+                        )
+                    },
+                }
+                // TODO: Chain blocks!
                 // EngineState::ForeignAidInvitesBlock(
                 //     ForeignAidInvitesBlock {  }
                 // )

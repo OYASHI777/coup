@@ -156,14 +156,21 @@ impl CoupTransition for StealChallengerFailed {
     }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::Discard { .. } => {
-                EngineState::StealInvitesBlock(
-                    StealInvitesBlock { 
-                        player_turn: self.player_turn, 
-                        player_blocking: self.player_blocking, 
-                        coins_stolen: game_data.influence[self.player_blocking].min(GAIN_STEAL),
-                    }
-                )
+            ActionObservation::Discard { player_id, no_cards, .. } => {
+                match game_data.game_will_be_won(*player_id, *no_cards as u8) {
+                    true => {
+                        EngineState::End(End { })
+                    },
+                    false => {
+                        EngineState::StealInvitesBlock(
+                            StealInvitesBlock { 
+                                player_turn: self.player_turn, 
+                                player_blocking: self.player_blocking, 
+                                coins_stolen: game_data.influence[self.player_blocking].min(GAIN_STEAL),
+                            }
+                        )
+                    },
+                }
             },
             _ => {
                 panic!("Illegal Move!");
