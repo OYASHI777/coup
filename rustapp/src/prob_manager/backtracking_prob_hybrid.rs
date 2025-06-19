@@ -572,7 +572,7 @@ impl BackTrackCardCountManager {
                                 let mut iter_cards = inferred_constraints[player_loop].clone();
                                 iter_cards.sort_unstable();
                                 iter_cards.dedup();
-                                for (i, card_player) in iter_cards.iter().enumerate() {
+                                for card_player in iter_cards.iter() {
                                     // Card Source was not from Pile
                                     log::trace!("Before Reveal Relinquish B");
                                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
