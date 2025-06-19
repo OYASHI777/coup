@@ -107,15 +107,14 @@ pub trait CoupTransition {
         match action {
             ActionObservation::Income { player_id } => {
                 game_data.coins[*player_id] += GAIN_INCOME;
-                // game_data.next_player();
             },
-            ActionObservation::Assassinate { player_id, opposing_player_id } => {
+            ActionObservation::Assassinate { player_id, .. } => {
                 game_data.coins[*player_id] -= COST_ASSASSINATE;
             },
-            ActionObservation::Coup { player_id, opposing_player_id } => {
+            ActionObservation::Coup { player_id, .. } => {
                 game_data.coins[*player_id] -= COST_COUP;
             },
-            ActionObservation::Discard { player_id, card, no_cards } => {
+            ActionObservation::Discard { player_id, no_cards, .. } => {
                 game_data.influence[*player_id] -= *no_cards as u8;
             },
             _ => {}
@@ -125,15 +124,14 @@ pub trait CoupTransition {
         match action {
             ActionObservation::Income { player_id } => {
                 game_data.coins[*player_id] -= GAIN_INCOME;
-                // game_data.prev_player();
             },
-            ActionObservation::Assassinate { player_id, opposing_player_id } => {
+            ActionObservation::Assassinate { player_id, .. } => {
                 game_data.coins[*player_id] += COST_ASSASSINATE;
             },
-            ActionObservation::Coup { player_id, opposing_player_id } => {
+            ActionObservation::Coup { player_id, .. } => {
                 game_data.coins[*player_id] += COST_COUP;
             },
-            ActionObservation::Discard { player_id, card, no_cards } => {
+            ActionObservation::Discard { player_id, no_cards, .. } => {
                 game_data.influence[*player_id] += *no_cards as u8;
             },
             _ => {}

@@ -1,6 +1,6 @@
 use crate::prob_manager::engine::models::end::End;
 use crate::prob_manager::engine::models::turn_start::TurnStart;
-use crate::prob_manager::engine::models::{engine_state::CoupTransition, game_state::GameState};
+use crate::prob_manager::engine::models::engine_state::CoupTransition;
 use crate::history_public::ActionObservation;
 use super::engine_state::EngineState;
 use super::game_state::GameData;
@@ -11,15 +11,15 @@ pub struct CoupHit {
 }
 
 impl CoupTransition for CoupHit {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::Discard { player_id, card, no_cards } => {
+            ActionObservation::Discard { player_id, no_cards, .. } => {
                 match *player_id == self.player_hit {
                     true => {
                         match game_data.game_will_be_won(*player_id, *no_cards as u8) {
@@ -46,19 +46,13 @@ impl CoupTransition for CoupHit {
         }
     }
 
-    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        match action {
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                match *player_id == self.player_hit {
-                    true => {},
-                    false => {
-                        panic!("Illegal Move");
-                    },
-                }
+    fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
+        debug_assert!(
+            match action {
+                ActionObservation::Discard { .. } => true,
+                _ => false,
             },
-            _ => {
-                panic!("Illegal Move");
-            }
-        }
+            "Illegal Move!"
+        )
     }
 }

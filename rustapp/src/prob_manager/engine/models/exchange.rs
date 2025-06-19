@@ -1,5 +1,5 @@
 use crate::prob_manager::engine::models::turn_start::TurnStart;
-use crate::prob_manager::engine::models::{engine_state::CoupTransition, game_state::GameState};
+use crate::prob_manager::engine::models::engine_state::CoupTransition;
 use crate::history_public::ActionObservation;
 use super::engine_state::EngineState;
 use super::game_state::GameData;
@@ -27,15 +27,15 @@ pub struct ExchangeChallengerFailed {
 }
 
 impl CoupTransition for ExchangeInvitesChallenge {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => {
+            ActionObservation::CollectiveChallenge { opposing_player_id, final_actioner, .. } => {
                 match opposing_player_id == final_actioner {
                     true => {
                         // nobody challenged
@@ -61,20 +61,26 @@ impl CoupTransition for ExchangeInvitesChallenge {
         }
     }
 
-    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        // nothing
+    fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
+        debug_assert!(
+            match action {
+                ActionObservation::CollectiveChallenge { .. } => true,
+                _ => false,
+            },
+            "Illegal Move!"
+        )
     }
 }
 impl CoupTransition for ExchangeDrawing {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::ExchangeDraw { player_id, card } => {
+            ActionObservation::ExchangeDraw { .. } => {
                 EngineState::ExchangeDrawn(
                     ExchangeDrawn {  
                         player_turn: self.player_turn,
@@ -85,20 +91,26 @@ impl CoupTransition for ExchangeDrawing {
         }
     }
 
-    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        // nothing
+    fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
+        debug_assert!(
+            match action {
+                ActionObservation::ExchangeDraw { .. } => true,
+                _ => false,
+            },
+            "Illegal Move!"
+        )
     }
 }
 impl CoupTransition for ExchangeDrawn {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::ExchangeChoice { player_id, relinquish } => {
+            ActionObservation::ExchangeChoice { .. } => {
                 EngineState::TurnStart(
                     TurnStart {  
                         player_turn: self.player_turn,
@@ -109,20 +121,26 @@ impl CoupTransition for ExchangeDrawn {
         }
     }
 
-    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        // nothing
+    fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
+        debug_assert!(
+            match action {
+                ActionObservation::ExchangeChoice { .. } => true,
+                _ => false,
+            },
+            "Illegal Move!"
+        )
     }
 }
 impl CoupTransition for ExchangeChallenged {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+            ActionObservation::RevealRedraw { .. } => {
                 EngineState::ExchangeChallengerFailed(
                     ExchangeChallengerFailed { 
                         player_turn: self.player_turn,
@@ -130,7 +148,7 @@ impl CoupTransition for ExchangeChallenged {
                     }
                 )
             },
-            ActionObservation::Discard { player_id, card, no_cards } => {
+            ActionObservation::Discard { .. } => {
                 EngineState::TurnStart(
                     TurnStart {  
                         player_turn: self.player_turn,
@@ -141,20 +159,27 @@ impl CoupTransition for ExchangeChallenged {
         }
     }
 
-    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        // nothing
+    fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
+        debug_assert!(
+            match action {
+                ActionObservation::RevealRedraw { .. } 
+                | ActionObservation::Discard { .. } => true,
+                _ => false,
+            },
+            "Illegal Move!"
+        )
     }
 }
 impl CoupTransition for ExchangeChallengerFailed {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::Discard { player_id, card, no_cards } => {
+            ActionObservation::Discard { .. } => {
                 EngineState::ExchangeDrawing(
                     ExchangeDrawing {  
                         player_turn: self.player_turn,
@@ -165,7 +190,13 @@ impl CoupTransition for ExchangeChallengerFailed {
         }
     }
 
-    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        // nothing
+    fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
+        debug_assert!(
+            match action {
+                ActionObservation::Discard { .. } => true,
+                _ => false,
+            },
+            "Illegal Move!"
+        )
     }
 }

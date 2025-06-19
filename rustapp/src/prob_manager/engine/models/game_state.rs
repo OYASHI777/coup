@@ -1,8 +1,6 @@
-use crate::prob_manager::engine::{constants::{STARTING_COINS, STARTING_INFLUENCE}};
-use crate::traits::prob_manager::coup_analysis::CoupTraversal;
-use super::engine_state::{CoupTransition, EngineState};
+use crate::prob_manager::engine::constants::{STARTING_COINS, STARTING_INFLUENCE};
+use super::engine_state::EngineState;
 use super::turn_start::TurnStart;
-use crate::history_public::ActionObservation;
 
 #[derive(Clone)]
 pub struct GameData {

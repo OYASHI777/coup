@@ -90,12 +90,8 @@ impl CoupTransition for StealInvitesChallenge {
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
             match action {
-                ActionObservation::CollectiveChallenge { .. } => {
-                    true
-                },
-                _ => {
-                    false
-                }
+                ActionObservation::CollectiveChallenge { .. } => true,
+                _ => false,
             },
             "Illegal Move!"
         )
@@ -136,12 +132,8 @@ impl CoupTransition for StealChallenged {
         debug_assert!(
             match action {
                 ActionObservation::RevealRedraw { .. } 
-                | ActionObservation::Discard { .. } => {
-                    true
-                },
-                _ => {
-                    false
-                }
+                | ActionObservation::Discard { .. } => true,
+                _ => false,
             },
             "Illegal Move!"
         )
@@ -174,12 +166,8 @@ impl CoupTransition for StealChallengerFailed {
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
             match action {
-                ActionObservation::Discard { .. } => {
-                    true
-                },
-                _ => {
-                    false
-                }
+                ActionObservation::Discard { .. } => true,
+                _ => false,
             },
             "Illegal Move!"
         )
@@ -304,12 +292,8 @@ impl CoupTransition for StealBlockInvitesChallenge {
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
             match action {
-                ActionObservation::CollectiveChallenge { .. } => {
-                    true
-                },
-                _ => {
-                    false
-                }
+                ActionObservation::CollectiveChallenge { .. } => true,
+                _ => false,
             },
             "Illegal Move!"
         )
@@ -387,12 +371,8 @@ impl CoupTransition for StealBlockChallengerFailed {
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
             match action {
-                ActionObservation::Discard { .. } => {
-                    true
-                },
-                _ => {
-                    false
-                }
+                ActionObservation::Discard { .. } => true,
+                _ => false,
             },
             "Illegal Move!"
         )

@@ -26,10 +26,10 @@ pub struct ForeignAidBlockChallengerFailed {
 }
 
 impl CoupTransition for ForeignAidInvitesBlock {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
@@ -76,19 +76,19 @@ impl CoupTransition for ForeignAidInvitesBlock {
                 }
             },
             _ => {
-                panic!("illegal move!")
+                debug_assert!(false, "illegal move!")
             },
         }
     }
 }
 impl CoupTransition for ForeignAidBlockInvitesChallenge {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::CollectiveChallenge { opposing_player_id, final_actioner, .. } => {
                 match opposing_player_id == final_actioner {
@@ -118,20 +118,26 @@ impl CoupTransition for ForeignAidBlockInvitesChallenge {
         }
     }
 
-    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        // nothing
+    fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
+        debug_assert!(
+            match action {
+                ActionObservation::CollectiveChallenge { .. } => true,
+                _ => false,
+            },
+            "Illegal Move!"
+        )
     }
 }
 impl CoupTransition for ForeignAidBlockChallenged {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::Discard { player_id, card, no_cards } => {
+            ActionObservation::Discard { no_cards, .. } => {
                 debug_assert!(*no_cards == 1, "no_cards: {no_cards} should be 1");
                 // TODO: Chain blocks!
                 game_data.coins[self.player_turn] += GAIN_FOREIGNAID;
@@ -144,7 +150,7 @@ impl CoupTransition for ForeignAidBlockChallenged {
                 //     ForeignAidInvitesBlock {  }
                 // )
             }
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+            ActionObservation::RevealRedraw { .. } => {
                 EngineState::ForeignAidBlockChallengerFailed(
                     ForeignAidBlockChallengerFailed { 
                         player_turn: self.player_turn,
@@ -160,27 +166,27 @@ impl CoupTransition for ForeignAidBlockChallenged {
 
     fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
-            ActionObservation::Discard { player_id, card, no_cards } => {
+            ActionObservation::Discard { .. } => {
                 game_data.coins[self.player_turn] -= GAIN_FOREIGNAID;
             },
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+            ActionObservation::RevealRedraw { .. } => {
             },
             _ => {
-                panic!("Illegal move!")
+                debug_assert!(false, "Illegal move!")
             }
         }
     }
 }
 impl CoupTransition for ForeignAidBlockChallengerFailed {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::Discard { player_id, card, no_cards } => {
+            ActionObservation::Discard { player_id, .. } => {
                 if *player_id != self.player_challenger {
                     panic!("Illegal Move");
                 }
@@ -196,7 +202,13 @@ impl CoupTransition for ForeignAidBlockChallengerFailed {
         }
     }
 
-    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        // nothing
+    fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
+        debug_assert!(
+            match action {
+                ActionObservation::Discard { .. } => true,
+                _ => false,
+            },
+            "Illegal Move!"
+        )
     }
 }

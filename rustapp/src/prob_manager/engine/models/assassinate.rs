@@ -5,6 +5,7 @@ use super::game_state::GameData;
 #[derive(Copy, Clone)]
 pub struct AssassinateInvitesChallenge {
     pub player_turn: usize,
+    pub player_blocking: usize,
 }
 #[derive(Copy, Clone)]
 pub struct AssassinateInvitesBlock {

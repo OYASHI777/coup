@@ -20,15 +20,15 @@ pub struct TaxChallengerFailed {
 }
 
 impl CoupTransition for TaxInvitesChallenge {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => {
+            ActionObservation::CollectiveChallenge { opposing_player_id, final_actioner, .. } => {
                 match opposing_player_id == final_actioner {
                     true => {
                         // nobody challenges
@@ -57,7 +57,7 @@ impl CoupTransition for TaxInvitesChallenge {
     
     fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
-            ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => {
+            ActionObservation::CollectiveChallenge { opposing_player_id, final_actioner, .. } => {
                 match opposing_player_id == final_actioner {
                     true => {
                         // nobody blocked
@@ -69,21 +69,21 @@ impl CoupTransition for TaxInvitesChallenge {
                 }
             },
             _ => {
-                panic!("Illegal Move");
+                debug_assert!(false, "Illegal Move!")
             }
         }
     }
 }
 impl CoupTransition for TaxChallenged {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+            ActionObservation::RevealRedraw { .. } => {
                 game_data.coins[self.player_turn] += GAIN_DUKE;
                 EngineState::TaxChallengerFailed(
                     TaxChallengerFailed { 
@@ -92,8 +92,7 @@ impl CoupTransition for TaxChallenged {
                     }
                 )
             },
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                // game_data.next_player();
+            ActionObservation::Discard { .. } => {
                 EngineState::TurnStart(
                     TurnStart {  
                         player_turn: self.player_turn,
@@ -108,28 +107,27 @@ impl CoupTransition for TaxChallenged {
     
     fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+            ActionObservation::RevealRedraw { .. } => {
                 game_data.coins[self.player_turn] -= GAIN_DUKE;
             },
-            ActionObservation::Discard { player_id, card, no_cards } => {
-                // game_data.prev_player();
+            ActionObservation::Discard { .. } => {
             },
             _ => {
-                panic!("Illegal Move");
+                debug_assert!(false, "Illegal Move");
             }
         }
     }
 }
 impl CoupTransition for TaxChallengerFailed {
-    fn state_enter_update(&mut self, game_data: &mut GameData) {
+    fn state_enter_update(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_enter_reverse(&mut self, game_data: &mut GameData) {
+    fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
     }
-    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(&self, action: &ActionObservation, _game_data: &mut GameData) -> EngineState {
         match action {
-            ActionObservation::Discard { player_id, card, no_cards } => {
+            ActionObservation::Discard { .. } => {
                 EngineState::TurnStart(
                     TurnStart {  
                         player_turn: self.player_turn,
@@ -142,7 +140,13 @@ impl CoupTransition for TaxChallengerFailed {
         }
     }
     
-    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
-        // nothing
+    fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
+        debug_assert!(
+            match action {
+                ActionObservation::Discard { .. } => true,
+                _ => false,
+            },
+            "Illegal Move!"
+        )
     }
 }
