@@ -578,6 +578,10 @@ where
         self.set_impossible_constraints_3();
     }
 
+    fn start_known(&mut self, cards: &Vec<Vec<Card>>) {
+        unimplemented!()
+    }
+
     fn push_ao_public(&mut self, action: &ActionObservation) {
         // TODO: Match on action instead?
         match action {

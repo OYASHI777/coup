@@ -1396,6 +1396,11 @@ impl CoupTraversal for BackTrackCardCountManager {
         self.move_no_history.push(0);
         self.move_no = 1;
     }
+
+    fn start_known(&mut self, cards: &Vec<Vec<Card>>) {
+        unimplemented!()
+    }
+
     /// Entrypoint for any action done, updates history accordingly
     /// Assumes knowledge of public information but not private information
     fn push_ao_public(&mut self, action: &ActionObservation) {

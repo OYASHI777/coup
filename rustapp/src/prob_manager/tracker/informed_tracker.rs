@@ -1,5 +1,5 @@
 use crate::prob_manager::engine::constants::{MAX_CARD_PERMS_ONE, MAX_PLAYERS_EXCL_PILE};
-use crate::traits::prob_manager::coup_analysis::CoupGeneration;
+use crate::traits::prob_manager::coup_analysis::{CoupGeneration, CoupTraversal};
 use crate::prob_manager::engine::models_prelude::*;
 use crate::prob_manager::engine::models::game_state::GameData;
 use crate::history_public::{ActionObservation, Card};
@@ -9,11 +9,17 @@ pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
 /// This is a class created purely for documentation purposes
 /// It outlines all the possible moves legal without considering any information
 /// other than coins a player has and their lives.
-pub struct UninformedTracker;
+pub struct InformedTracker {
+    public_constraints: Vec<Vec<Card>>,
+    inferred_constraints: Vec<Vec<Card>>,
+}
 
-impl UninformedTracker {
+impl InformedTracker {
     pub fn new() -> Self {
-        UninformedTracker
+        InformedTracker { 
+            public_constraints: vec![Vec::with_capacity(2); 7], 
+            inferred_constraints: vec![Vec::with_capacity(4); 7],
+        }
     }
     #[inline(always)]
     pub fn discard(&self, player: usize) -> Vec<ActionObservation> {
@@ -48,8 +54,56 @@ impl UninformedTracker {
     }
 }
 
+impl CoupTraversal for InformedTracker {
+    fn start_public(&mut self, _player: usize) {
+        self.public_constraints
+        .iter_mut()
+        .for_each(|v| v.clear());
+        self.inferred_constraints
+        .iter_mut()
+        .for_each(|v| v.clear());
+    }
+
+    fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
+        unimplemented!()
+    }
+
+    fn start_known(&mut self, player_cards: &Vec<Vec<Card>>) {
+        self.public_constraints
+        .iter_mut()
+        .for_each(|v| v.clear());
+        self.inferred_constraints
+        .iter_mut()
+        .for_each(|v| v.clear());
+        player_cards
+        .iter()
+        .enumerate()
+        .for_each(|(i, v)| self.inferred_constraints[i].extend(v));
+    }
+    
+    fn push_ao_public(&mut self, action: &ActionObservation) {
+        todo!()
+    }
+
+    fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
+        todo!()
+    }
+
+    fn push_ao_private(&mut self, action: &ActionObservation) {
+        todo!()
+    }
+
+    fn push_ao_private_lazy(&mut self, action: &ActionObservation) {
+        todo!()
+    }
+
+    fn pop(&mut self) {
+        todo!()
+    }
+}
+
 // TODO: Refactor Steal to register remove the amount!
-impl CoupGeneration for UninformedTracker {
+impl CoupGeneration for InformedTracker {
     fn on_turn_start(&self, state: &TurnStart, data: &GameData) -> Vec<ActionObservation> {
         match data.coins()[state.player_turn] {
             0..=6 => {

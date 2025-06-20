@@ -90,6 +90,10 @@ where
         self.move_no = 1;
     }
 
+    fn start_known(&mut self, cards: &Vec<Vec<Card>>) {
+        unimplemented!()
+    }
+
     fn push_ao_public(&mut self, action: &ActionObservation) {
         // Handle different move types
         match action {

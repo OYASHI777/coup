@@ -52,6 +52,7 @@ pub mod prob_manager {
         pub mod recursion_fn;
     }
     pub mod tracker {
+        pub mod informed_tracker;
         pub mod uninformed_tracker;
     }
     pub mod utils {

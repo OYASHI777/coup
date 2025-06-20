@@ -1,7 +1,7 @@
 use crate::prob_manager::engine::models::engine_state::CoupTransition;
 use crate::prob_manager::engine::models::game_state::GameState;
 use crate::traits::prob_manager::coup_analysis::{CoupGeneration, CoupTraversal};
-use crate::history_public::ActionObservation;
+use crate::history_public::{ActionObservation, Card};
 use super::models::engine_state::EngineState;
 
 pub trait Node {
@@ -76,6 +76,11 @@ impl CoupTraversal for FSMEngine {
         self.state = GameState::start(player);
         self.history_state.push(self.state.engine_state.clone());
     }
+
+    fn start_known(&mut self, cards: &Vec<Vec<Card>>) {
+        unimplemented!()
+    }
+
     /// Update's Engine's state
     fn push_ao_public(&mut self, action: &ActionObservation) {
         self.state.engine_state = self.state.engine_state.state_leave_update(action, &mut self.state.game_data);
