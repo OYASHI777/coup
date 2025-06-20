@@ -33,7 +33,8 @@ impl CoupTransition for TaxInvitesChallenge {
                 match opposing_player_id == final_actioner {
                     true => {
                         // nobody challenges
-                        game_data.coins[self.player_turn] += GAIN_DUKE;
+                        // game_data.coins[self.player_turn] += GAIN_DUKE;
+                        game_data.add_coins(self.player_turn, GAIN_DUKE);
                         EngineState::TurnStart(
                             TurnStart {  
                                 player_turn: self.player_turn,
@@ -62,7 +63,8 @@ impl CoupTransition for TaxInvitesChallenge {
                 match opposing_player_id == final_actioner {
                     true => {
                         // nobody blocked
-                        game_data.coins[self.player_turn] -= GAIN_DUKE;
+                        // game_data.coins[self.player_turn] -= GAIN_DUKE;
+                        game_data.sub_coins(self.player_turn, GAIN_DUKE);
                     },
                     false => {
                         
@@ -85,7 +87,8 @@ impl CoupTransition for TaxChallenged {
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
         match action {
             ActionObservation::RevealRedraw { .. } => {
-                game_data.coins[self.player_turn] += GAIN_DUKE;
+                // game_data.coins[self.player_turn] += GAIN_DUKE;
+                game_data.add_coins(self.player_turn, GAIN_DUKE);
                 EngineState::TaxChallengerFailed(
                     TaxChallengerFailed { 
                         player_turn: self.player_turn,
@@ -116,7 +119,8 @@ impl CoupTransition for TaxChallenged {
     fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::RevealRedraw { .. } => {
-                game_data.coins[self.player_turn] -= GAIN_DUKE;
+                // game_data.coins[self.player_turn] -= GAIN_DUKE;
+                game_data.sub_coins(self.player_turn, GAIN_DUKE);
             },
             ActionObservation::Discard { .. } => {
             },

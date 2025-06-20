@@ -5,47 +5,50 @@ use super::turn_start::TurnStart;
 #[derive(Clone)]
 pub struct GameData {
     influence: [u8; 6],
-    pub coins: [u8; 6],
+    coins: [u8; 6],
+    players_alive: u8,
 }
 impl GameData {
     pub fn new() -> Self {
         GameData { 
             influence: STARTING_INFLUENCE, 
             coins: STARTING_COINS, 
+            players_alive: 6,
         }
     }
     pub fn influence(&self) -> &[u8; 6] {
         &self.influence
     }
     pub fn add_influence(&mut self, player: usize, amount: u8) {
+        self.players_alive += (self.influence[player] == 0) as u8;
         self.influence[player] += amount;
     }
     pub fn sub_influence(&mut self, player: usize, amount: u8) {
         self.influence[player] -= amount;
+        self.players_alive -= (self.influence[player] == 0) as u8;
     }
     pub fn coins(&self) -> &[u8; 6] {
         &self.coins
     }
     pub fn add_coins(&mut self, player: usize, amount: u8) {
-        todo!();
+        self.coins[player] += amount;
     }
     pub fn sub_coins(&mut self, player: usize, amount: u8) {
-        todo!();
+        self.coins[player] -= amount;
     }
-}
-
-impl GameData {
     /// Checks if game will be won after a player loses no_cards
     pub fn game_will_be_won(&self, player: usize, no_cards: u8) -> bool {
-        self.influence.iter().enumerate().filter(
-            |(p, l)| {
-                if *p != player {
-                    **l > 0
-                } else {
-                    **l > no_cards
-                }
-            }
-        ).count() == 1
+        // self.influence.iter().enumerate().filter(
+        //     |(p, l)| {
+        //         if *p != player {
+        //             **l > 0
+        //         } else {
+        //             **l > no_cards
+        //         }
+        //     }
+        // ).count() == 1
+        debug_assert!(self.influence()[player] != 0, "We assume player is alive");
+        self.players_alive == 2 && self.influence()[player] < no_cards
     }
     /// Returns Coin amount zeroized for dead players
     pub fn coins_display(&self) -> [u8; 6] {

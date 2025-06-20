@@ -39,7 +39,8 @@ impl CoupTransition for ForeignAidInvitesBlock {
                 match opposing_player_id == final_actioner {
                     true => {
                         // nobody blocked
-                        game_data.coins[self.player_turn] += GAIN_FOREIGNAID;
+                        // game_data.coins[self.player_turn] += GAIN_FOREIGNAID;
+                        game_data.add_coins(self.player_turn, GAIN_FOREIGNAID);
                         EngineState::TurnStart(
                             TurnStart {  
                                 player_turn: self.player_turn,
@@ -69,7 +70,8 @@ impl CoupTransition for ForeignAidInvitesBlock {
                 match opposing_player_id == final_actioner {
                     true => {
                         // nobody blocked
-                        game_data.coins[self.player_turn] -= GAIN_FOREIGNAID;
+                        // game_data.coins[self.player_turn] -= GAIN_FOREIGNAID;
+                        game_data.sub_coins(self.player_turn, GAIN_FOREIGNAID);
                     },
                     false => {
                         // final_actioner blocked
@@ -140,7 +142,8 @@ impl CoupTransition for ForeignAidBlockChallenged {
         match action {
             ActionObservation::Discard { player_id, no_cards, .. } => {
                 debug_assert!(*no_cards == 1, "no_cards: {no_cards} should be 1");
-                game_data.coins[self.player_turn] += GAIN_FOREIGNAID;
+                // game_data.coins[self.player_turn] += GAIN_FOREIGNAID;
+                game_data.add_coins(self.player_turn, GAIN_FOREIGNAID);
                 match game_data.game_will_be_won(*player_id, *no_cards as u8) {
                     true => {
                         EngineState::End(End { })
@@ -175,7 +178,8 @@ impl CoupTransition for ForeignAidBlockChallenged {
     fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Discard { .. } => {
-                game_data.coins[self.player_turn] -= GAIN_FOREIGNAID;
+                // game_data.coins[self.player_turn] -= GAIN_FOREIGNAID;
+                game_data.sub_coins(self.player_turn, GAIN_FOREIGNAID);
             },
             ActionObservation::RevealRedraw { .. } => {
             },

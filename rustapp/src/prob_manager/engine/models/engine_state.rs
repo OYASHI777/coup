@@ -99,13 +99,16 @@ pub trait CoupTransition {
     fn action_update(action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Income { player_id } => {
-                game_data.coins[*player_id] += GAIN_INCOME;
+                // game_data.coins[*player_id] += GAIN_INCOME;
+                game_data.add_coins(*player_id, GAIN_INCOME);
             },
             ActionObservation::Assassinate { player_id, .. } => {
-                game_data.coins[*player_id] -= COST_ASSASSINATE;
+                // game_data.coins[*player_id] -= COST_ASSASSINATE;
+                game_data.sub_coins(*player_id, COST_ASSASSINATE);
             },
             ActionObservation::Coup { player_id, .. } => {
-                game_data.coins[*player_id] -= COST_COUP;
+                // game_data.coins[*player_id] -= COST_COUP;
+                game_data.sub_coins(*player_id, COST_COUP);
             },
             ActionObservation::Discard { player_id, no_cards, .. } => {
                 // game_data.influence()[*player_id] -= *no_cards as u8;
@@ -117,13 +120,16 @@ pub trait CoupTransition {
     fn action_reverse(action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Income { player_id } => {
-                game_data.coins[*player_id] -= GAIN_INCOME;
+                // game_data.coins[*player_id] -= GAIN_INCOME;
+                game_data.sub_coins(*player_id, GAIN_INCOME);
             },
             ActionObservation::Assassinate { player_id, .. } => {
-                game_data.coins[*player_id] += COST_ASSASSINATE;
+                // game_data.coins[*player_id] += COST_ASSASSINATE;
+                game_data.add_coins(*player_id, COST_ASSASSINATE);
             },
             ActionObservation::Coup { player_id, .. } => {
-                game_data.coins[*player_id] += COST_COUP;
+                // game_data.coins[*player_id] += COST_COUP;
+                game_data.add_coins(*player_id, COST_COUP);
             },
             ActionObservation::Discard { player_id, no_cards, .. } => {
                 // game_data.influence()[*player_id] += *no_cards as u8;
