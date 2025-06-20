@@ -8,6 +8,7 @@ use crate::prob_manager::engine::models::foreign_aid::*;
 use crate::prob_manager::engine::models::steal::*;
 use crate::prob_manager::engine::models::tax::*;
 use crate::prob_manager::engine::models::turn_start::*;
+
 pub trait CoupTraversal {
     // TODO: Consider taking starting_player: Option<usize>
     /// Starts a game with public information
