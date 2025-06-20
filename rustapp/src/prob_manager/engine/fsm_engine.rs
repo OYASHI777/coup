@@ -1,7 +1,7 @@
 use super::models::turn_start::TurnStart;
 use crate::prob_manager::engine::models::engine_state::CoupTransition;
 use crate::prob_manager::engine::models::game_state::GameState;
-use crate::traits::prob_manager::coup_analysis::CoupTraversal;
+use crate::traits::prob_manager::coup_analysis::{CoupGeneration, CoupPossibilityAnalysis, CoupTraversal};
 use crate::history_public::{ActionObservation};
 use super::models::engine_state::EngineState;
 
@@ -21,6 +21,44 @@ impl FSMEngine {
             history: Vec::with_capacity(128), 
             history_state: Vec::with_capacity(128),
             state: GameState::new(0),
+        }
+    }
+
+    pub fn generate_legal_moves<T>(&self, tracker: T) -> Vec<ActionObservation> 
+    where
+        T: CoupGeneration,
+    {
+        match self.state.engine_state {
+            EngineState::TurnStart(state) => tracker.on_turn_start(&state, &self.state.game_data),
+            EngineState::End(state) => tracker.on_end(&state, &self.state.game_data),
+            EngineState::CoupHit(state) => tracker.on_coup_hit(&state, &self.state.game_data),
+            EngineState::ForeignAidInvitesBlock(state) => tracker.on_foreign_aid_invites_block(&state, &self.state.game_data),
+            EngineState::ForeignAidBlockInvitesChallenge(state) => tracker.on_foreign_aid_block_invites_challenge(&state, &self.state.game_data),
+            EngineState::ForeignAidBlockChallenged(state) => tracker.on_foreign_aid_block_challenged(&state, &self.state.game_data),
+            EngineState::ForeignAidBlockChallengerFailed(state) => tracker.on_foreign_aid_block_challenger_failed(&state, &self.state.game_data),
+            EngineState::TaxInvitesChallenge(state) => tracker.on_tax_invites_challenge(&state, &self.state.game_data),
+            EngineState::TaxChallenged(state) => tracker.on_tax_challenged(&state, &self.state.game_data),
+            EngineState::TaxChallengerFailed(state) => tracker.on_tax_challenger_failed(&state, &self.state.game_data),
+            EngineState::StealInvitesChallenge(state) => tracker.on_steal_invites_challenge(&state, &self.state.game_data),
+            EngineState::StealChallenged(state) => tracker.on_steal_challenged(&state, &self.state.game_data),
+            EngineState::StealChallengerFailed(state) => tracker.on_steal_challenger_failed(&state, &self.state.game_data),
+            EngineState::StealInvitesBlock(state) => tracker.on_steal_invites_block(&state, &self.state.game_data),
+            EngineState::StealBlockInvitesChallenge(state) => tracker.on_steal_block_invites_challenge(&state, &self.state.game_data),
+            EngineState::StealBlockChallenged(state) => tracker.on_steal_block_challenged(&state, &self.state.game_data),
+            EngineState::StealBlockChallengerFailed(state) => tracker.on_steal_block_challenger_failed(&state, &self.state.game_data),
+            EngineState::ExchangeInvitesChallenge(state) => tracker.on_exchange_invites_challenge(&state, &self.state.game_data),
+            EngineState::ExchangeDrawing(state) => tracker.on_exchange_drawing(&state, &self.state.game_data),
+            EngineState::ExchangeDrawn(state) => tracker.on_exchange_drawn(&state, &self.state.game_data),
+            EngineState::ExchangeChallenged(state) => tracker.on_exchange_challenged(&state, &self.state.game_data),
+            EngineState::ExchangeChallengerFailed(state) => tracker.on_exchange_challenger_failed(&state, &self.state.game_data),
+            EngineState::AssassinateInvitesChallenge(state) => tracker.on_assassinate_invites_challenge(&state, &self.state.game_data),
+            EngineState::AssassinateInvitesBlock(state) => tracker.on_assassinate_invites_block(&state, &self.state.game_data),
+            EngineState::AssassinateBlockInvitesChallenge(state) => tracker.on_assassinate_block_invites_challenge(&state, &self.state.game_data),
+            EngineState::AssassinateBlockChallenged(state) => tracker.on_assassinate_block_challenged(&state, &self.state.game_data),
+            EngineState::AssassinateBlockChallengerFailed(state) => tracker.on_assassinate_block_challenger_failed(&state, &self.state.game_data),
+            EngineState::AssassinateSucceeded(state) => tracker.on_assassinate_succeeded(&state, &self.state.game_data),
+            EngineState::AssassinateChallenged(state) => tracker.on_assassinate_challenged(&state, &self.state.game_data),
+            EngineState::AssassinateChallengerFailed(state) => tracker.on_assassinate_challenger_failed(&state, &self.state.game_data),
         }
     }
 }
