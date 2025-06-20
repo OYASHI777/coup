@@ -1,7 +1,7 @@
 use crate::traits::prob_manager::coup_analysis::CoupGeneration;
 use crate::prob_manager::engine::models_prelude::*;
 use crate::prob_manager::engine::models::game_state::GameData;
-use crate::history_public::ActionObservation;
+use crate::history_public::{ActionObservation, Card};
 pub struct UninformedTracker;
 // TODO: Refactor Steal to register remove the amount!
 impl CoupGeneration for UninformedTracker {
@@ -62,12 +62,18 @@ impl CoupGeneration for UninformedTracker {
         }
     }
 
-    fn on_end(&self, state: &End, data: &GameData) -> Vec<ActionObservation> {
-        todo!()
+    fn on_end(&self, _state: &End, _data: &GameData) -> Vec<ActionObservation> {
+        vec![]
     }
 
-    fn on_coup_hit(&self, state: &CoupHit, data: &GameData) -> Vec<ActionObservation> {
-        todo!()
+    fn on_coup_hit(&self, state: &CoupHit, _data: &GameData) -> Vec<ActionObservation> {
+        vec![
+            ActionObservation::Discard { player_id: state.player_turn, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 },
+            ActionObservation::Discard { player_id: state.player_turn, card: [Card::Assassin, Card::Assassin], no_cards: 1 },
+            ActionObservation::Discard { player_id: state.player_turn, card: [Card::Captain, Card::Captain], no_cards: 1 },
+            ActionObservation::Discard { player_id: state.player_turn, card: [Card::Duke, Card::Duke], no_cards: 1 },
+            ActionObservation::Discard { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa], no_cards: 1 },
+        ]
     }
 
     fn on_foreign_aid_invites_block(&self, state: &ForeignAidInvitesBlock, data: &GameData) -> Vec<ActionObservation> {
