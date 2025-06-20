@@ -29,6 +29,18 @@ pub mod prob_manager {
             pub mod tax;
             pub mod turn_start;
         }
+        pub mod models_prelude {
+            pub use super::models::{
+                assassinate::*,
+                coup::*,
+                end::*,
+                exchange::*,
+                foreign_aid::*,
+                steal::*,
+                tax::*,
+                turn_start::*,
+            };
+        }
         pub mod constants;
         pub mod fsm_engine;
     }
@@ -38,6 +50,9 @@ pub mod prob_manager {
     }
     pub mod tools {
         pub mod recursion_fn;
+    }
+    pub mod tracker {
+        pub mod uninformed_tracker;
     }
     pub mod utils {
         pub mod permutation_generator;

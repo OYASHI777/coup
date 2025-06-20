@@ -1,13 +1,6 @@
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::engine::models::game_state::GameData;
-use crate::prob_manager::engine::models::assassinate::*;
-use crate::prob_manager::engine::models::coup::*;
-use crate::prob_manager::engine::models::end::*;
-use crate::prob_manager::engine::models::exchange::*;
-use crate::prob_manager::engine::models::foreign_aid::*;
-use crate::prob_manager::engine::models::steal::*;
-use crate::prob_manager::engine::models::tax::*;
-use crate::prob_manager::engine::models::turn_start::*;
+use crate::prob_manager::engine::models_prelude::*;
 
 pub trait CoupTraversal {
     // TODO: Consider taking starting_player: Option<usize>
