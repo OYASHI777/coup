@@ -1,3 +1,4 @@
+use crate::prob_manager::constants::MAX_GAME_LENGTH;
 use crate::prob_manager::engine::constants::{MAX_CARD_PERMS_ONE, MAX_PLAYERS_EXCL_PILE};
 use crate::traits::prob_manager::coup_analysis::{CoupGeneration, CoupTraversal};
 use crate::prob_manager::engine::models_prelude::*;
@@ -10,6 +11,7 @@ pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
 /// It outlines all the possible moves legal without considering any information
 /// other than coins a player has and their lives.
 pub struct InformedTracker {
+    history: Vec<ActionObservation>,
     public_constraints: Vec<Vec<Card>>,
     inferred_constraints: Vec<Vec<Card>>,
 }
@@ -17,6 +19,7 @@ pub struct InformedTracker {
 impl InformedTracker {
     pub fn new() -> Self {
         InformedTracker { 
+            history: Vec::with_capacity(MAX_GAME_LENGTH),
             public_constraints: vec![Vec::with_capacity(2); 7], 
             inferred_constraints: vec![Vec::with_capacity(4); 7],
         }
@@ -56,16 +59,11 @@ impl InformedTracker {
 
 impl CoupTraversal for InformedTracker {
     fn start_public(&mut self, _player: usize) {
-        self.public_constraints
-        .iter_mut()
-        .for_each(|v| v.clear());
-        self.inferred_constraints
-        .iter_mut()
-        .for_each(|v| v.clear());
+        unimplemented!();
     }
 
-    fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
-        unimplemented!()
+    fn start_private(&mut self, _player: usize, _cards: &[Card; 2]) {
+        unimplemented!();
     }
 
     fn start_known(&mut self, player_cards: &Vec<Vec<Card>>) {
@@ -80,25 +78,39 @@ impl CoupTraversal for InformedTracker {
         .enumerate()
         .for_each(|(i, v)| self.inferred_constraints[i].extend(v));
     }
-    
-    fn push_ao_public(&mut self, action: &ActionObservation) {
-        todo!()
+
+    fn push_ao_public(&mut self, _action: &ActionObservation) {
+        unimplemented!("Informed Tracker is only intended to support moves with private information!");
     }
 
     fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
-        todo!()
+        self.push_ao_public(action);
     }
 
     fn push_ao_private(&mut self, action: &ActionObservation) {
-        todo!()
+        match action {
+            ActionObservation::Discard { player_id, card, no_cards } => todo!(),
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => todo!(),
+            ActionObservation::ExchangeDraw { player_id, card } => todo!(),
+            ActionObservation::ExchangeChoice { player_id, relinquish } => todo!(),
+            _ => {},
+        }
     }
 
     fn push_ao_private_lazy(&mut self, action: &ActionObservation) {
-        todo!()
+        self.push_ao_private(action);
     }
 
     fn pop(&mut self) {
-        todo!()
+        if let Some(action) = self.history.pop() {
+            match action {
+                ActionObservation::Discard { player_id, card, no_cards } => todo!(),
+                ActionObservation::RevealRedraw { player_id, reveal, redraw } => todo!(),
+                ActionObservation::ExchangeDraw { player_id, card } => todo!(),
+                ActionObservation::ExchangeChoice { player_id, relinquish } => todo!(),
+                _ => {},
+            }
+        }
     }
 }
 
