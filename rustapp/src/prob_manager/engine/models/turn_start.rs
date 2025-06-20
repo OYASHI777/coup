@@ -25,7 +25,7 @@ impl TurnStart {
 
 impl CoupTransition for TurnStart {
     fn state_enter_update(&mut self, game_data: &mut GameData) {
-        self.next_player(&game_data.influence);
+        self.next_player(&game_data.influence());
     }
     fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing

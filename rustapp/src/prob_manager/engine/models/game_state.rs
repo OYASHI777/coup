@@ -4,7 +4,7 @@ use super::turn_start::TurnStart;
 
 #[derive(Clone)]
 pub struct GameData {
-    pub influence: [u8; 6],
+    influence: [u8; 6],
     pub coins: [u8; 6],
 }
 impl GameData {
@@ -13,6 +13,24 @@ impl GameData {
             influence: STARTING_INFLUENCE, 
             coins: STARTING_COINS, 
         }
+    }
+    pub fn influence(&self) -> &[u8; 6] {
+        &self.influence
+    }
+    pub fn add_influence(&mut self, player: usize, amount: u8) {
+        self.influence[player] += amount;
+    }
+    pub fn sub_influence(&mut self, player: usize, amount: u8) {
+        self.influence[player] -= amount;
+    }
+    pub fn coins(&self) -> &[u8; 6] {
+        &self.coins
+    }
+    pub fn add_coins(&mut self, player: usize, amount: u8) {
+        todo!();
+    }
+    pub fn sub_coins(&mut self, player: usize, amount: u8) {
+        todo!();
     }
 }
 
@@ -69,7 +87,7 @@ impl GameState {
         }
     }
     pub fn influence(&self) -> &[u8; 6] {
-        &self.game_data.influence
+        &self.game_data.influence()
     }
     pub fn coins(&self) -> &[u8; 6] {
         &self.game_data.coins

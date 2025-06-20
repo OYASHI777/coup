@@ -103,7 +103,7 @@ impl CoupTransition for AssassinateInvitesBlock {
         // nothing
     }
     fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
-        match (game_data.influence[self.player_blocking], action) {
+        match (game_data.influence()[self.player_blocking], action) {
             (0, _) => {
                 EngineState::TurnStart(
                     TurnStart { 
@@ -137,7 +137,7 @@ impl CoupTransition for AssassinateInvitesBlock {
             },
             _ => {
 
-                panic!("Illegal! player lives: {}, for player: {}", game_data.influence[self.player_blocking], self.player_blocking);
+                panic!("Illegal! player lives: {}, for player: {}", game_data.influence()[self.player_blocking], self.player_blocking);
             },
         }
     }
@@ -390,7 +390,7 @@ impl CoupTransition for AssassinateChallengerFailed {
             // TODO: [OPTIMIZE] You can technically just return TurnStart if you have a check wrapper outside this!
             ActionObservation::Discard { player_id, no_cards, .. } => {
                 if *player_id == self.player_blocking {
-                    match game_data.influence[self.player_blocking] < *no_cards as u8 {
+                    match game_data.influence()[self.player_blocking] < *no_cards as u8 {
                         true => {
                             // Player is dead already and cannot block
                             EngineState::TurnStart(

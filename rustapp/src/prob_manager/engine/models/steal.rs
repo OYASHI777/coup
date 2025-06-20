@@ -67,7 +67,7 @@ impl CoupTransition for StealInvitesChallenge {
                             StealInvitesBlock { 
                                 player_turn: self.player_turn, 
                                 player_blocking: self.player_blocking, 
-                                coins_stolen: game_data.influence[self.player_blocking].min(GAIN_STEAL),
+                                coins_stolen: game_data.influence()[self.player_blocking].min(GAIN_STEAL),
                             }
                         )
                     },
@@ -158,7 +158,7 @@ impl CoupTransition for StealChallengerFailed {
         match action {
             ActionObservation::Discard { player_id, no_cards, .. } => {
                 if *player_id == self.player_blocking {
-                    match game_data.influence[self.player_blocking] < *no_cards as u8 {
+                    match game_data.influence()[self.player_blocking] < *no_cards as u8 {
                         true => {
                             // Player is dead already and cannot block
                             EngineState::TurnStart(
@@ -173,7 +173,7 @@ impl CoupTransition for StealChallengerFailed {
                                 StealInvitesBlock { 
                                     player_turn: self.player_turn, 
                                     player_blocking: self.player_blocking, 
-                                    coins_stolen: game_data.influence[self.player_blocking].min(GAIN_STEAL),
+                                    coins_stolen: game_data.influence()[self.player_blocking].min(GAIN_STEAL),
                                 }
                             )
                         }
@@ -188,7 +188,7 @@ impl CoupTransition for StealChallengerFailed {
                                 StealInvitesBlock { 
                                     player_turn: self.player_turn, 
                                     player_blocking: self.player_blocking, 
-                                    coins_stolen: game_data.influence[self.player_blocking].min(GAIN_STEAL),
+                                    coins_stolen: game_data.influence()[self.player_blocking].min(GAIN_STEAL),
                                 }
                             )
                         },
@@ -225,8 +225,10 @@ impl CoupTransition for StealInvitesBlock {
                     true => {
                         // pass on block
                         debug_assert!(*opposing_player_id == self.player_turn, "Illegal Move!");
-                        game_data.influence[self.player_blocking] -= self.coins_stolen;
-                        game_data.influence[self.player_turn] += self.coins_stolen;
+                        // game_data.influence[self.player_blocking] -= self.coins_stolen;
+                        // game_data.influence[self.player_turn] += self.coins_stolen;
+                        game_data.sub_influence(self.player_blocking, self.coins_stolen);
+                        game_data.add_influence(self.player_turn, self.coins_stolen);
                         EngineState::TurnStart(
                             TurnStart { 
                                 player_turn: self.player_turn,
@@ -267,8 +269,10 @@ impl CoupTransition for StealInvitesBlock {
                     true => {
                         // pass on block
                         debug_assert!(*opposing_player_id == self.player_turn, "Illegal Move!");
-                        game_data.influence[self.player_blocking] += self.coins_stolen;
-                        game_data.influence[self.player_turn] -= self.coins_stolen;
+                        // game_data.influence[self.player_blocking] += self.coins_stolen;
+                        // game_data.influence[self.player_turn] -= self.coins_stolen;
+                        game_data.add_influence(self.player_blocking, self.coins_stolen);
+                        game_data.sub_influence(self.player_turn, self.coins_stolen);
                     },
                     false => {
                         // player_id blocked
@@ -356,8 +360,10 @@ impl CoupTransition for StealBlockChallenged {
                 )
             },
             ActionObservation::Discard { player_id, no_cards, .. } => {
-                game_data.influence[self.player_blocking] -= self.coins_stolen;
-                game_data.influence[self.player_turn] += self.coins_stolen;
+                // game_data.influence[self.player_blocking] -= self.coins_stolen;
+                // game_data.influence[self.player_turn] += self.coins_stolen;
+                game_data.sub_influence(self.player_blocking, self.coins_stolen);
+                game_data.add_influence(self.player_turn, self.coins_stolen);
                 match game_data.game_will_be_won(*player_id, *no_cards as u8) {
                     true => {
                         EngineState::End(End { })
@@ -382,8 +388,10 @@ impl CoupTransition for StealBlockChallenged {
             ActionObservation::RevealRedraw { .. } => {
             },
             ActionObservation::Discard { .. } => {
-                game_data.influence[self.player_blocking] += self.coins_stolen;
-                game_data.influence[self.player_turn] -= self.coins_stolen;
+                // game_data.influence[self.player_blocking] += self.coins_stolen;
+                // game_data.influence[self.player_turn] -= self.coins_stolen;
+                game_data.add_influence(self.player_blocking, self.coins_stolen);
+                game_data.sub_influence(self.player_turn, self.coins_stolen);
             },
             _ => {
                 debug_assert!(false, "Illegal Move!");

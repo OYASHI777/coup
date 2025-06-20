@@ -108,7 +108,8 @@ pub trait CoupTransition {
                 game_data.coins[*player_id] -= COST_COUP;
             },
             ActionObservation::Discard { player_id, no_cards, .. } => {
-                game_data.influence[*player_id] -= *no_cards as u8;
+                // game_data.influence()[*player_id] -= *no_cards as u8;
+                game_data.sub_influence(*player_id, *no_cards as u8);
             },
             _ => {}
         }
@@ -125,7 +126,8 @@ pub trait CoupTransition {
                 game_data.coins[*player_id] += COST_COUP;
             },
             ActionObservation::Discard { player_id, no_cards, .. } => {
-                game_data.influence[*player_id] += *no_cards as u8;
+                // game_data.influence()[*player_id] += *no_cards as u8;
+                game_data.add_influence(*player_id, *no_cards as u8);
             },
             _ => {}
         }
