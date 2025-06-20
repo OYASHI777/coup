@@ -2,6 +2,10 @@ use crate::traits::prob_manager::coup_analysis::CoupGeneration;
 use crate::prob_manager::engine::models_prelude::*;
 use crate::prob_manager::engine::models::game_state::GameData;
 use crate::history_public::{ActionObservation, Card};
+
+/// This is a class created purely for documentation purposes
+/// It outlines all the possible moves legal without considering any information
+/// other than coins a player has and their lives.
 pub struct UninformedTracker;
 // TODO: Refactor Steal to register remove the amount!
 impl CoupGeneration for UninformedTracker {
@@ -21,7 +25,7 @@ impl CoupGeneration for UninformedTracker {
                 );
                 output.extend(
                     data
-                    .player_targets_kill(state.player_turn)
+                    .player_targets_alive(state.player_turn)
                     .map(|p| ActionObservation::Assassinate { player_id: state.player_turn, opposing_player_id: p })
                 );
                 output
@@ -40,12 +44,12 @@ impl CoupGeneration for UninformedTracker {
                 );
                 output.extend(
                     data
-                    .player_targets_kill(state.player_turn)
+                    .player_targets_alive(state.player_turn)
                     .map(|p| ActionObservation::Assassinate { player_id: state.player_turn, opposing_player_id: p })
                 );
                 output.extend(
                     data
-                    .player_targets_kill(state.player_turn)
+                    .player_targets_alive(state.player_turn)
                     .map(|p| ActionObservation::Coup { player_id: state.player_turn, opposing_player_id: p })
                 );
                 output
@@ -54,7 +58,7 @@ impl CoupGeneration for UninformedTracker {
                 let mut output = Vec::with_capacity(5);
                 output.extend(
                     data
-                    .player_targets_kill(state.player_turn)
+                    .player_targets_alive(state.player_turn)
                     .map(|p| ActionObservation::Coup{ player_id: state.player_turn, opposing_player_id: p})
                 );
                 output
@@ -77,19 +81,45 @@ impl CoupGeneration for UninformedTracker {
     }
 
     fn on_foreign_aid_invites_block(&self, state: &ForeignAidInvitesBlock, data: &GameData) -> Vec<ActionObservation> {
-        todo!()
+        // participants is all false here indicating that we aren't trying every combination of players who wish to block
+        // opposing_player == final_actioner indicates nobody blocks
+        let mut output = Vec::with_capacity(6);
+        output.extend(
+            data
+            .players_alive()
+            .map(|p| ActionObservation::CollectiveBlock { participants: [false; 6], opposing_player_id: state.player_turn, final_actioner: p })
+        );
+        output
     }
 
     fn on_foreign_aid_block_invites_challenge(&self, state: &ForeignAidBlockInvitesChallenge, data: &GameData) -> Vec<ActionObservation> {
-        todo!()
+        let mut output = Vec::with_capacity(6);
+        output.extend(
+            data
+            .players_alive()
+            .map(|p| ActionObservation::CollectiveChallenge { participants: [false; 6], opposing_player_id: state.player_blocking, final_actioner: p })
+        );
+        output
     }
 
     fn on_foreign_aid_block_challenged(&self, state: &ForeignAidBlockChallenged, data: &GameData) -> Vec<ActionObservation> {
-        todo!()
+        let mut output = Vec::with_capacity(5);
+        output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Duke, redraw: Card::Duke });
+        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
+        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
+        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Captain, Card::Captain], no_cards: 1 });
+        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Contessa, Card::Contessa], no_cards: 1 });
+        output
     }
 
-    fn on_foreign_aid_block_challenger_failed(&self, state: &ForeignAidBlockChallengerFailed, data: &GameData) -> Vec<ActionObservation> {
-        todo!()
+    fn on_foreign_aid_block_challenger_failed(&self, state: &ForeignAidBlockChallengerFailed, _data: &GameData) -> Vec<ActionObservation> {
+        vec![
+            ActionObservation::Discard { player_id: state.player_challenger, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 },
+            ActionObservation::Discard { player_id: state.player_challenger, card: [Card::Assassin, Card::Assassin], no_cards: 1 },
+            ActionObservation::Discard { player_id: state.player_challenger, card: [Card::Captain, Card::Captain], no_cards: 1 },
+            ActionObservation::Discard { player_id: state.player_challenger, card: [Card::Duke, Card::Duke], no_cards: 1 },
+            ActionObservation::Discard { player_id: state.player_challenger, card: [Card::Contessa, Card::Contessa], no_cards: 1 },
+        ]
     }
 
     fn on_tax_invites_challenge(&self, state: &TaxInvitesChallenge, data: &GameData) -> Vec<ActionObservation> {

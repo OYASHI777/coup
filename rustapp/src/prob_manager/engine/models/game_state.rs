@@ -36,12 +36,21 @@ impl GameData {
     pub fn sub_coins(&mut self, player: usize, amount: u8) {
         self.coins[player] -= amount;
     }
-    pub fn player_targets_kill(&self, player: usize) -> impl Iterator<Item = usize> + '_ {
+    /// Returns an iterator over all players alive
+    pub fn players_alive(&self) -> impl Iterator<Item = usize> + '_ {
         self.influence
-            .iter()
-            .enumerate()
-            .filter_map(move |(opposing_player, influence)| (*influence > 0 && opposing_player != player).then_some(opposing_player))
+        .iter()
+        .enumerate()
+        .filter_map(|(player, influence)| (*influence > 0).then_some(player))
     }
+    /// Returns an iterator over all players alive and not player
+    pub fn player_targets_alive(&self, player: usize) -> impl Iterator<Item = usize> + '_ {
+        self.influence
+        .iter()
+        .enumerate()
+        .filter_map(move |(opposing_player, influence)| (*influence > 0 && opposing_player != player).then_some(opposing_player))
+    }
+    /// Returns an iterator over all players alive and not player that have coins
     pub fn player_targets_steal(&self, player: usize) -> impl Iterator<Item = usize> + '_ {
         self.influence
             .iter()
