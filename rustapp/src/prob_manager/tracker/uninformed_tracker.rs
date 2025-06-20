@@ -291,7 +291,7 @@ impl CoupGeneration for UninformedTracker {
         self.challenge_invite(state.player_turn, data)
     }
 
-    fn on_assassinate_invites_block(&self, state: &AssassinateInvitesBlock, data: &GameData) -> Vec<ActionObservation> {
+    fn on_assassinate_invites_block(&self, state: &AssassinateInvitesBlock, _data: &GameData) -> Vec<ActionObservation> {
         vec![
             ActionObservation::BlockAssassinate { player_id: state.player_blocking, opposing_player_id: state.player_turn },
             ActionObservation::BlockAssassinate { player_id: state.player_blocking, opposing_player_id: state.player_blocking },
