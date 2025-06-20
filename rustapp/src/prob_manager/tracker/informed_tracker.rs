@@ -26,13 +26,11 @@ impl InformedTracker {
     }
     #[inline(always)]
     pub fn discard(&self, player: usize) -> Vec<ActionObservation> {
-        vec![
-            ActionObservation::Discard { player_id: player, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 },
-            ActionObservation::Discard { player_id: player, card: [Card::Assassin, Card::Assassin], no_cards: 1 },
-            ActionObservation::Discard { player_id: player, card: [Card::Captain, Card::Captain], no_cards: 1 },
-            ActionObservation::Discard { player_id: player, card: [Card::Duke, Card::Duke], no_cards: 1 },
-            ActionObservation::Discard { player_id: player, card: [Card::Contessa, Card::Contessa], no_cards: 1 },
-        ]
+        self.inferred_constraints[player]
+        .iter()
+        .copied()
+        .map(|c| ActionObservation::Discard { player_id: player, card: [c, c], no_cards: 1 })
+        .collect()
     }
     #[inline(always)]
     pub fn challenge_invite(&self, player: usize, data: &GameData) -> Vec<ActionObservation> {
@@ -89,10 +87,46 @@ impl CoupTraversal for InformedTracker {
 
     fn push_ao_private(&mut self, action: &ActionObservation) {
         match action {
-            ActionObservation::Discard { player_id, card, no_cards } => todo!(),
-            ActionObservation::RevealRedraw { player_id, reveal, redraw } => todo!(),
-            ActionObservation::ExchangeDraw { player_id, card } => todo!(),
-            ActionObservation::ExchangeChoice { player_id, relinquish } => todo!(),
+            ActionObservation::Discard { player_id, card, no_cards } => {
+                for i in 0..*no_cards {
+                    if let Some(pos) = self.inferred_constraints[*player_id].iter().rposition(|c| *c == card[i]) {
+                        self.inferred_constraints[*player_id].swap_remove(pos);
+                        self.public_constraints[*player_id].push(card[i]);
+                    } else {
+                        debug_assert!(false, "Card not found!");
+                    }
+                }
+            },
+            ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                if let Some(pos_i) = self.inferred_constraints[*player_id].iter().rposition(|c| *c == *reveal) {
+                    if let Some(pos_j) = self.inferred_constraints[6].iter().rposition(|c| *c == *redraw) {
+                        self.inferred_constraints[*player_id].swap_remove(pos_i);
+                        self.inferred_constraints[6].swap_remove(pos_j);
+                        self.inferred_constraints[6].push(*reveal);
+                        self.inferred_constraints[*player_id].push(*redraw);
+                    } else {
+                        debug_assert!(false, "Card not found!");
+                    }
+                } else {
+                    debug_assert!(false, "Card not found!");
+                }
+            },
+            ActionObservation::ExchangeDraw { player_id, card } => {
+                for d in card.iter() {
+                    if let Some(pos) = self.inferred_constraints[6].iter().rposition(|c| *c == *d) {
+                        self.inferred_constraints[6].swap_remove(pos);
+                        self.inferred_constraints[*player_id].push(*d);
+                    }
+                }
+            },
+            ActionObservation::ExchangeChoice { player_id, relinquish } => {
+                for d in relinquish.iter() {
+                    if let Some(pos) = self.inferred_constraints[*player_id].iter().rposition(|c| *c == *d) {
+                        self.inferred_constraints[*player_id].swap_remove(pos);
+                        self.inferred_constraints[6].push(*d);
+                    }
+                }
+            },
             _ => {},
         }
     }
