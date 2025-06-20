@@ -6,3 +6,7 @@ pub const GAIN_DUKE: u8 = 3;
 pub const GAIN_STEAL: u8 = 3;
 pub const COST_ASSASSINATE: u8 = 3;
 pub const COST_COUP: u8 = 7;
+pub const MAX_CARD_PERMS_TWO: usize = 15;
+pub const MAX_CARD_PERMS_ONE: usize = 15;
+pub const MAX_PLAYERS_EXCL_PILE: usize = 6;
+pub const MAX_PLAYERS_INCL_PILE: usize = 7;

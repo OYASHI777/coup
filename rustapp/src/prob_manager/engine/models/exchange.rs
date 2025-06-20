@@ -12,6 +12,7 @@ pub struct ExchangeInvitesChallenge {
 pub struct ExchangeDrawing {
     pub player_turn: usize,
 }
+// TODO: Consider storing the drawn cards in here!
 #[derive(Copy, Clone)]
 pub struct ExchangeDrawn {
     pub player_turn: usize,
