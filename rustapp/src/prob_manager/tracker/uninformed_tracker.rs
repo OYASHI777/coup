@@ -3,10 +3,63 @@ use crate::prob_manager::engine::models_prelude::*;
 use crate::prob_manager::engine::models::game_state::GameData;
 use crate::history_public::ActionObservation;
 pub struct UninformedTracker;
-
+// TODO: Refactor Steal to register remove the amount!
 impl CoupGeneration for UninformedTracker {
     fn on_turn_start(&self, state: &TurnStart, data: &GameData) -> Vec<ActionObservation> {
-        todo!()
+        match data.coins()[state.player_turn] {
+            0..=6 => {
+                let mut output = Vec::with_capacity(1 + 1 + 1 + 1 + 5 + 5);
+                output.push(ActionObservation::Income { player_id: state.player_turn });
+                output.push(ActionObservation::ForeignAid { player_id: state.player_turn });
+                output.push(ActionObservation::Tax { player_id: state.player_turn });
+                output.push(ActionObservation::Exchange { player_id: state.player_turn });
+                output.extend(
+                    data
+                    .player_targets_steal(state.player_turn)
+                    .map(|p| ActionObservation::Steal { player_id: state.player_turn, opposing_player_id: p, amount: 7 })
+                    // Steal amount is handled in engine not in move!
+                );
+                output.extend(
+                    data
+                    .player_targets_kill(state.player_turn)
+                    .map(|p| ActionObservation::Assassinate { player_id: state.player_turn, opposing_player_id: p })
+                );
+                output
+            },
+            7..=9 => {
+                let mut output = Vec::with_capacity(1 + 1 + 1 + 1 + 5 + 5 + 5);
+                output.push(ActionObservation::Income { player_id: state.player_turn });
+                output.push(ActionObservation::ForeignAid { player_id: state.player_turn });
+                output.push(ActionObservation::Tax { player_id: state.player_turn });
+                output.push(ActionObservation::Exchange { player_id: state.player_turn });
+                output.extend(
+                    data
+                    .player_targets_steal(state.player_turn)
+                    .map(|p| ActionObservation::Steal { player_id: state.player_turn, opposing_player_id: p, amount: 7 })
+                    // Steal amount is handled in engine not in move!
+                );
+                output.extend(
+                    data
+                    .player_targets_kill(state.player_turn)
+                    .map(|p| ActionObservation::Assassinate { player_id: state.player_turn, opposing_player_id: p })
+                );
+                output.extend(
+                    data
+                    .player_targets_kill(state.player_turn)
+                    .map(|p| ActionObservation::Coup { player_id: state.player_turn, opposing_player_id: p })
+                );
+                output
+            },
+            10.. => {
+                let mut output = Vec::with_capacity(5);
+                output.extend(
+                    data
+                    .player_targets_kill(state.player_turn)
+                    .map(|p| ActionObservation::Coup{ player_id: state.player_turn, opposing_player_id: p})
+                );
+                output
+            }
+        }
     }
 
     fn on_end(&self, state: &End, data: &GameData) -> Vec<ActionObservation> {

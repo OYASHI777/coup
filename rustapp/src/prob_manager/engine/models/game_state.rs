@@ -36,6 +36,19 @@ impl GameData {
     pub fn sub_coins(&mut self, player: usize, amount: u8) {
         self.coins[player] -= amount;
     }
+    pub fn player_targets_kill(&self, player: usize) -> impl Iterator<Item = usize> + '_ {
+        self.influence
+            .iter()
+            .enumerate()
+            .filter_map(move |(opposing_player, influence)| (*influence > 0 && opposing_player != player).then_some(opposing_player))
+    }
+    pub fn player_targets_steal(&self, player: usize) -> impl Iterator<Item = usize> + '_ {
+        self.influence
+            .iter()
+            .enumerate()
+            .zip(self.coins.iter())
+            .filter_map(move |((opposing_player, influence), coins)| (*influence > 0 && *coins > 0 && opposing_player != player).then_some(opposing_player))
+    }
     /// Checks if game will be won after a player loses no_cards
     pub fn game_will_be_won(&self, player: usize, no_cards: u8) -> bool {
         // self.influence.iter().enumerate().filter(
