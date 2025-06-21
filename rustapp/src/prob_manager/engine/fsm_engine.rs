@@ -8,6 +8,7 @@ pub trait Node {
     fn dispatch(&self) -> bool;
 }
 // TODO: Write test for same resources after push() then pop()
+// TODO: Write mode for simulation and mode for registering player moves and randomly choosing?
 pub struct FSMEngine {
     history: Vec<ActionObservation>,
     history_state: Vec<EngineState>,
