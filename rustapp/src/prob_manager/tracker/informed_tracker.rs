@@ -7,6 +7,8 @@ use crate::history_public::{ActionObservation, Card};
 
 pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
 
+// TODO: Unique ExchangeDraw vs Random Sampled vs Single Sample
+// TODO: Collective Indicator vs All Final Actioners vs All Responses
 /// This is a class created purely for documentation purposes
 /// It outlines all the possible moves legal without considering any information
 /// other than coins a player has and their lives.
@@ -14,6 +16,7 @@ pub struct InformedTracker {
     history: Vec<ActionObservation>,
     public_constraints: Vec<Vec<Card>>,
     inferred_constraints: Vec<Vec<Card>>,
+    card_counts: [u8; 5],
 }
 
 impl InformedTracker {
@@ -22,6 +25,7 @@ impl InformedTracker {
             history: Vec::with_capacity(MAX_GAME_LENGTH),
             public_constraints: vec![Vec::with_capacity(2); 7], 
             inferred_constraints: vec![Vec::with_capacity(4); 7],
+            card_counts: [3; 5],
         }
     }
     #[inline(always)]
@@ -34,23 +38,42 @@ impl InformedTracker {
     }
     #[inline(always)]
     pub fn challenge_invite(&self, player: usize, data: &GameData) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(MAX_PLAYERS_EXCL_PILE);
-        output.extend(
-            data
-            .players_alive()
-            .map(|p| ActionObservation::CollectiveChallenge { participants: [false; 6], opposing_player_id: player, final_actioner: p })
-        );
-        output
+        // participants here indicates the players alive that can block
+        // final_actioner here is just a place holder
+        let participants = std::array::from_fn(|p| data.influence()[p] > 0);
+        vec![
+            ActionObservation::CollectiveChallenge { participants, opposing_player_id: player, final_actioner: player }
+        ]
     }
     pub fn block_invite(&self, player: usize, data: &GameData) -> Vec<ActionObservation> {
-        // participants is all false here indicating that we aren't trying every combination of players who wish to block
-        // opposing_player == final_actioner indicates nobody blocks
-        let mut output = Vec::with_capacity(MAX_PLAYERS_EXCL_PILE);
-        output.extend(
-            data
-            .players_alive()
-            .map(|p| ActionObservation::CollectiveBlock { participants: [false; 6], opposing_player_id: player, final_actioner: p })
-        );
+        // participants here indicates the players alive that can block
+        // final_actioner here is just a place holder
+        let participants = std::array::from_fn(|p| data.influence()[p] > 0);
+        vec![
+            ActionObservation::CollectiveBlock { participants, opposing_player_id: player, final_actioner: player }
+        ]
+    }
+    pub fn reveal_or_discard(&self, player: usize, card_reveal: Card) -> Vec<ActionObservation> {
+        // TODO: Consider Random Sample vs Single Sample vs Unique Samples
+        let mut output = Vec::with_capacity(5);
+        let mut player_cards = self.inferred_constraints[player].clone();
+        let mut pile_cards = self.inferred_constraints[player].clone();
+        player_cards.sort_unstable();
+        player_cards.dedup();
+        for card in player_cards.iter() {
+            if *card == card_reveal {
+                pile_cards.push(card_reveal);
+                pile_cards.sort_unstable();
+                pile_cards.dedup();
+                output.extend(
+                    pile_cards
+                    .iter()
+                    .map(|c| ActionObservation::RevealRedraw { player_id: player, reveal: card_reveal, redraw: *c })
+                );
+            } else {
+                output.push(ActionObservation::Discard { player_id: player, card: [*card; 2], no_cards: 1 })
+            }
+        }
         output
     }
 }
@@ -92,6 +115,7 @@ impl CoupTraversal for InformedTracker {
                     if let Some(pos) = self.inferred_constraints[*player_id].iter().rposition(|c| *c == card[i]) {
                         self.inferred_constraints[*player_id].swap_remove(pos);
                         self.public_constraints[*player_id].push(card[i]);
+                        self.card_counts[card[i] as usize] -= 1;
                     } else {
                         debug_assert!(false, "Card not found!");
                     }
@@ -143,6 +167,7 @@ impl CoupTraversal for InformedTracker {
                         if let Some(pos) = self.public_constraints[player_id].iter().rposition(|c| *c == card[i]) {
                             self.public_constraints[player_id].swap_remove(pos);
                             self.inferred_constraints[player_id].push(card[i]);
+                            self.card_counts[card[i] as usize] += 1;
                         } else {
                             debug_assert!(false, "Card not found!");
                         }
@@ -260,17 +285,7 @@ impl CoupGeneration for InformedTracker {
     }
 
     fn on_foreign_aid_block_challenged(&self, state: &ForeignAidBlockChallenged, _data: &GameData) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Duke, redraw: Card::Ambassador });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Duke, redraw: Card::Assassin });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Duke, redraw: Card::Captain });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Duke, redraw: Card::Duke });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Duke, redraw: Card::Contessa });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Captain, Card::Captain], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Contessa, Card::Contessa], no_cards: 1 });
-        output
+        self.reveal_or_discard(state.player_blocking, Card::Duke)
     }
 
     fn on_foreign_aid_block_challenger_failed(&self, state: &ForeignAidBlockChallengerFailed, _data: &GameData) -> Vec<ActionObservation> {
@@ -282,17 +297,7 @@ impl CoupGeneration for InformedTracker {
     }
 
     fn on_tax_challenged(&self, state: &TaxChallenged, _data: &GameData) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Duke, redraw: Card::Ambassador });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Duke, redraw: Card::Assassin });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Duke, redraw: Card::Captain });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Duke, redraw: Card::Duke });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Duke, redraw: Card::Contessa });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Captain, Card::Captain], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa], no_cards: 1 });
-        output
+        self.reveal_or_discard(state.player_turn, Card::Duke)
     }
 
     fn on_tax_challenger_failed(&self, state: &TaxChallengerFailed, _data: &GameData) -> Vec<ActionObservation> {
@@ -304,25 +309,31 @@ impl CoupGeneration for InformedTracker {
     }
 
     fn on_steal_challenged(&self, state: &StealChallenged, _data: &GameData) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Ambassador });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Assassin });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Captain });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Duke });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Contessa });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Duke, Card::Duke], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa], no_cards: 1 });
-        output
+        // let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Ambassador });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Assassin });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Captain });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Duke });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Contessa });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Duke, Card::Duke], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa], no_cards: 1 });
+        // output
+        self.reveal_or_discard(state.player_turn, Card::Captain)
     }
 
     fn on_steal_challenger_failed(&self, state: &StealChallengerFailed, _data: &GameData) -> Vec<ActionObservation> {
         self.discard(state.player_challenger)
     }
 
-    fn on_steal_invites_block(&self, state: &StealInvitesBlock, data: &GameData) -> Vec<ActionObservation> {
-        self.block_invite(state.player_turn, data)
+    fn on_steal_invites_block(&self, state: &StealInvitesBlock, _data: &GameData) -> Vec<ActionObservation> {
+        vec![
+            ActionObservation::BlockSteal { player_id: state.player_blocking, opposing_player_id: state.player_turn, card: Card::Ambassador },
+            ActionObservation::BlockSteal { player_id: state.player_blocking, opposing_player_id: state.player_turn, card: Card::Captain },
+            // This represents not Blocking
+            ActionObservation::BlockSteal { player_id: state.player_blocking, opposing_player_id: state.player_blocking, card: Card::Captain },
+        ]
     }
 
     fn on_steal_block_invites_challenge(&self, state: &StealBlockInvitesChallenge, data: &GameData) -> Vec<ActionObservation> {
@@ -331,160 +342,168 @@ impl CoupGeneration for InformedTracker {
 
     fn on_steal_block_challenged(&self, state: &StealBlockChallenged, _data: &GameData) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(2* MAX_CARD_PERMS_ONE - 1);
-        match state.card_blocker {
-            Card::Ambassador => {
-                output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Ambassador });
-                output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Assassin });
-                output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Captain });
-                output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Duke });
-                output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Contessa });
-                output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Captain, Card::Captain], no_cards: 1 });
-            },
-            Card::Captain => {
-                output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Ambassador });
-                output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Assassin });
-                output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Captain });
-                output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Duke });
-                output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Captain, redraw: Card::Contessa });
-                output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
-            },
-            _ => {
-                panic!("Illegal Move!")
+        let mut pile_cards = self.inferred_constraints[6].clone();
+        pile_cards.sort_unstable();
+        pile_cards.dedup();
+        if self.inferred_constraints[state.player_blocking].contains(&state.card_blocker) {
+            if !pile_cards.contains(&state.card_blocker) {
+                output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: state.card_blocker, redraw: state.card_blocker });
+            }
+            for card in pile_cards.iter() {
+                output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: state.card_blocker, redraw: *card });
             }
         }
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Duke, Card::Duke], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa], no_cards: 1 });
+        output.extend(
+            self.inferred_constraints[state.player_blocking]
+            .iter()
+            .filter_map(|player_card| (*player_card != state.card_blocker).then_some(
+                ActionObservation::Discard { player_id: state.player_blocking, card: [*player_card; 2], no_cards: 1 }
+            ))
+        );
         output
     }
 
     fn on_steal_block_challenger_failed(&self, state: &StealBlockChallengerFailed, _data: &GameData) -> Vec<ActionObservation> {
         // In this case if the player_challenger == player_blocking, they can still discard blocking card if they have 2 blocking cards
         // Although it should be [PRUNE] if player only has 1 blocking card
-        self.discard(state.player_challenger)
+        // self.discard(state.player_challenger)
+        todo!();
     }
 
     fn on_exchange_invites_challenge(&self, state: &ExchangeInvitesChallenge, data: &GameData) -> Vec<ActionObservation> {
-        self.challenge_invite(state.player_turn, data)
+        // self.challenge_invite(state.player_turn, data)
+        todo!();
     }
 
     fn on_exchange_drawing(&self, state: &ExchangeDrawing, _data: &GameData) -> Vec<ActionObservation> {
-        vec![
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Ambassador, Card::Ambassador] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Ambassador, Card::Assassin] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Ambassador, Card::Captain] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Ambassador, Card::Duke] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Ambassador, Card::Contessa] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Assassin, Card::Assassin] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Assassin, Card::Captain] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Assassin, Card::Duke] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Assassin, Card::Contessa] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Captain, Card::Captain] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Captain, Card::Duke] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Captain, Card::Contessa] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Duke, Card::Duke] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Duke, Card::Contessa] },
-            ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa] },
-        ]
+        // vec![
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Ambassador, Card::Ambassador] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Ambassador, Card::Assassin] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Ambassador, Card::Captain] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Ambassador, Card::Duke] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Ambassador, Card::Contessa] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Assassin, Card::Assassin] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Assassin, Card::Captain] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Assassin, Card::Duke] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Assassin, Card::Contessa] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Captain, Card::Captain] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Captain, Card::Duke] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Captain, Card::Contessa] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Duke, Card::Duke] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Duke, Card::Contessa] },
+        //     ActionObservation::ExchangeDraw { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa] },
+        // ]
+        todo!();
     }
     
     fn on_exchange_drawn(&self, state: &ExchangeDrawn, _data: &GameData) -> Vec<ActionObservation> {
-        vec![
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Ambassador, Card::Ambassador] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Ambassador, Card::Assassin] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Ambassador, Card::Captain] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Ambassador, Card::Duke] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Ambassador, Card::Contessa] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Assassin, Card::Assassin] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Assassin, Card::Captain] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Assassin, Card::Duke] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Assassin, Card::Contessa] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Captain, Card::Captain] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Captain, Card::Duke] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Captain, Card::Contessa] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Duke, Card::Duke] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Duke, Card::Contessa] },
-            ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Contessa, Card::Contessa] },
-        ]
+        // vec![
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Ambassador, Card::Ambassador] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Ambassador, Card::Assassin] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Ambassador, Card::Captain] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Ambassador, Card::Duke] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Ambassador, Card::Contessa] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Assassin, Card::Assassin] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Assassin, Card::Captain] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Assassin, Card::Duke] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Assassin, Card::Contessa] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Captain, Card::Captain] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Captain, Card::Duke] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Captain, Card::Contessa] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Duke, Card::Duke] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Duke, Card::Contessa] },
+        //     ActionObservation::ExchangeChoice { player_id: state.player_turn, relinquish: [Card::Contessa, Card::Contessa] },
+        // ]
+        todo!();
     }
 
     fn on_exchange_challenged(&self, state: &ExchangeChallenged, _data: &GameData) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Ambassador });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Assassin });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Captain });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Duke });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Contessa });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Captain, Card::Captain], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Duke, Card::Duke], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa], no_cards: 1 });
-        output
+        // let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Ambassador });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Assassin });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Captain });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Duke });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Ambassador, redraw: Card::Contessa });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Captain, Card::Captain], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Duke, Card::Duke], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa], no_cards: 1 });
+        // output
+        todo!();
     }
 
     fn on_exchange_challenger_failed(&self, state: &ExchangeChallengerFailed, _data: &GameData) -> Vec<ActionObservation> {
-        self.discard(state.player_challenger)
+        // self.discard(state.player_challenger)
+        todo!();
     }
 
     fn on_assassinate_invites_challenge(&self, state: &AssassinateInvitesChallenge, data: &GameData) -> Vec<ActionObservation> {
-        self.challenge_invite(state.player_turn, data)
+        // self.challenge_invite(state.player_turn, data)
+        todo!();
     }
 
     fn on_assassinate_invites_block(&self, state: &AssassinateInvitesBlock, _data: &GameData) -> Vec<ActionObservation> {
-        vec![
-            ActionObservation::BlockAssassinate { player_id: state.player_blocking, opposing_player_id: state.player_turn },
-            ActionObservation::BlockAssassinate { player_id: state.player_blocking, opposing_player_id: state.player_blocking },
-        ]
+        // vec![
+        //     ActionObservation::BlockAssassinate { player_id: state.player_blocking, opposing_player_id: state.player_turn },
+        //     ActionObservation::BlockAssassinate { player_id: state.player_blocking, opposing_player_id: state.player_blocking },
+        // ]
+        todo!();
     }
 
     fn on_assassinate_block_invites_challenge(&self, state: &AssassinateBlockInvitesChallenge, data: &GameData) -> Vec<ActionObservation> {
-        self.challenge_invite(state.player_blocking, data)
+        // self.challenge_invite(state.player_blocking, data)
+        todo!();
     }
 
     fn on_assassinate_block_challenged(&self, state: &AssassinateBlockChallenged, _data: &GameData) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Contessa, redraw: Card::Ambassador });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Contessa, redraw: Card::Assassin });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Contessa, redraw: Card::Captain });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Contessa, redraw: Card::Duke });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Contessa, redraw: Card::Contessa });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Captain, Card::Captain], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Duke, Card::Duke], no_cards: 1 });
-        output
+        // let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Contessa, redraw: Card::Ambassador });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Contessa, redraw: Card::Assassin });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Contessa, redraw: Card::Captain });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Contessa, redraw: Card::Duke });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_blocking, reveal: Card::Contessa, redraw: Card::Contessa });
+        // output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Captain, Card::Captain], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Duke, Card::Duke], no_cards: 1 });
+        // output
+        todo!();
     }
 
     fn on_assassinate_block_challenger_failed(&self, state: &AssassinateBlockChallengerFailed, _data: &GameData) -> Vec<ActionObservation> {
-        self.discard(state.player_challenger)
+        // self.discard(state.player_challenger)
+        todo!();
     }
 
     fn on_assassinate_succeeded(&self, state: &AssassinateSucceeded, _data: &GameData) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(MAX_CARD_PERMS_ONE);
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Captain, Card::Captain], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Duke, Card::Duke], no_cards: 1 });
-        output
+        // let mut output = Vec::with_capacity(MAX_CARD_PERMS_ONE);
+        // output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Assassin, Card::Assassin], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Captain, Card::Captain], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_blocking, card: [Card::Duke, Card::Duke], no_cards: 1 });
+        // output
+        todo!();
     }
 
     fn on_assassinate_challenged(&self, state: &AssassinateChallenged, _data: &GameData) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Assassin, redraw: Card::Ambassador });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Assassin, redraw: Card::Assassin });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Assassin, redraw: Card::Captain });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Assassin, redraw: Card::Duke });
-        output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Assassin, redraw: Card::Contessa });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Captain, Card::Captain], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Duke, Card::Duke], no_cards: 1 });
-        output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa], no_cards: 1 });
-        output
+        // let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Assassin, redraw: Card::Ambassador });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Assassin, redraw: Card::Assassin });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Assassin, redraw: Card::Captain });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Assassin, redraw: Card::Duke });
+        // output.push(ActionObservation::RevealRedraw { player_id: state.player_turn, reveal: Card::Assassin, redraw: Card::Contessa });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Ambassador, Card::Ambassador], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Captain, Card::Captain], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Duke, Card::Duke], no_cards: 1 });
+        // output.push(ActionObservation::Discard { player_id: state.player_turn, card: [Card::Contessa, Card::Contessa], no_cards: 1 });
+        // output
+        todo!();
     }
     
     fn on_assassinate_challenger_failed(&self, state: &AssassinateChallengerFailed, _data: &GameData) -> Vec<ActionObservation> {
         // In this case if the player_challenger == player_blocking, they can still discard Contessa if they have double Contessa
         // Although it should be [PRUNE] if player only has 1 Contessa
-        self.discard(state.player_challenger)
+        // self.discard(state.player_challenger)
+        todo!();
     }
 }
