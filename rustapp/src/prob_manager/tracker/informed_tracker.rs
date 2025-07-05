@@ -17,6 +17,8 @@ pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
 //      - Agent interface (move ingress/egress to process chance stuff and round robin)
 //          - [b] Add filter/round robin interfaces
 //          - [c] Chance node drawing interface
+//              - will need generic for UniqueMove (generation of all possible moves)
+//              - will need generic for Receiving move and providing random chance
 // TODO: Receive Collective Indicator vs All Final Actioners vs All Responses
 // TODO: Receive Action and decide the chance stuff
 // TODO: Create trait to process incoming moves!
@@ -64,6 +66,8 @@ impl InformedTracker {
             ActionObservation::CollectiveBlock { participants, opposing_player_id: player, final_actioner: player }
         ]
     }
+    // TODO: This current implementation provides all Unique moves,
+    // TODO: for actual gameplay it should be done in the move intake interface
     pub fn reveal_or_discard(&self, player: usize, card_reveal: Card) -> Vec<ActionObservation> {
         // TODO: Consider Random Sample vs Single Sample vs Unique Samples
         let mut output = Vec::with_capacity(5);
@@ -220,6 +224,7 @@ impl CoupTraversal for InformedTracker {
     }
 }
 
+// TODO: Add another trait for Coup move collection
 // TODO: Refactor Steal to register remove the amount!
 impl CoupGeneration for InformedTracker {
     fn on_turn_start(&self, state: &TurnStart, data: &GameData) -> Vec<ActionObservation> {
