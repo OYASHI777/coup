@@ -8,7 +8,16 @@ use crate::history_public::{ActionObservation, Card};
 pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
 
 // TODO: Unique ExchangeDraw vs Agent Choice
-// TODO: Collective Indicator vs All Final Actioners vs All Responses
+// TODO: Unique ExchangeDraw is implemented
+// Functionality needed:
+//      - CFR Traversal
+//          - Create another that uses card counter
+//      - Actual Game Traversal
+//          - Check and modify legal moves accordingly
+//      - Agent interface
+//          - Add filter/round robin interfaces
+// TODO: Receive Collective Indicator vs All Final Actioners vs All Responses
+// TODO: Receive Action and decide the chance stuff
 // TODO: Create trait to process incoming moves!
 /// This is a class created purely for documentation purposes
 /// It outlines all the possible moves legal without considering any information
