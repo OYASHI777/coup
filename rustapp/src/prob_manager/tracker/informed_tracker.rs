@@ -14,8 +14,9 @@ pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
 //          - Create another that uses card counter
 //      - Actual Game Traversal
 //          - Check and modify legal moves accordingly
-//      - Agent interface
+//      - Agent interface (move ingress/egress to process chance stuff and round robin)
 //          - Add filter/round robin interfaces
+//          - Chance node drawing interface
 // TODO: Receive Collective Indicator vs All Final Actioners vs All Responses
 // TODO: Receive Action and decide the chance stuff
 // TODO: Create trait to process incoming moves!
