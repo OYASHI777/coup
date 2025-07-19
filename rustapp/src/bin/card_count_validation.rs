@@ -19,7 +19,7 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";
 // TODO: [REFACTOR] in this bin
 // TODO: [REFACTOR] Lite to take history instead of store again and again
 fn main() {
-    let game_no = 1000;
+    let game_no = 1000000;
     let log_bool = true;
     let bool_know_priv_info = false;
     let bool_skip_exchange = false;
@@ -30,15 +30,15 @@ fn main() {
     let num_threads = 12;
     game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
     // game_rnd_constraint_bt_st_debug(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
-    benchmarks();
+    // benchmarks();
 
     // game_rnd(game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, log_bool);
     // test_variant_recurse();
 }
 pub fn benchmarks() {
     game_rnd_constraint_bt_bench(10000, false);
-    game_rnd_constraint_bt_bench_lazy(100000, true);
-    game_rnd_constraint_bt_bench(10000, false);
+    game_rnd_constraint_bt_bench_lazy(100000, false);
+    game_rnd_constraint_bt_bench(10000, true);
     game_rnd_constraint_bt_bench_lazy(100000, true);
 }
 // TODO: Move to collective_constraint when finalized
