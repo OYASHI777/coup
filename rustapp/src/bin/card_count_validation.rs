@@ -21,7 +21,7 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";
 fn main() {
     let game_no = 1000000;
     let log_bool = true;
-    let bool_know_priv_info = false;
+    let bool_know_priv_info = true;
     let bool_skip_exchange = false;
     let bool_lazy =  true;
     let print_frequency: usize = 100;
@@ -30,7 +30,7 @@ fn main() {
     let num_threads = 12;
     game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
     // game_rnd_constraint_bt_st_debug(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
-    // benchmarks();
+    benchmarks();
 
     // game_rnd(game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, log_bool);
     // test_variant_recurse();
