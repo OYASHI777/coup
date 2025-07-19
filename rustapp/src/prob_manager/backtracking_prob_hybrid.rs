@@ -966,20 +966,16 @@ impl BackTrackCardCountManager {
         if inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 0{
             for card_player in iter_cards_player.iter() {
             // move to pile
-                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_player) {
-                    log::trace!("Before Exchange 1 player_to_pile 0 pile_to_player");
-                    log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-        
-                    inferred_constraints[player_loop].swap_remove(pos);
-                    inferred_constraints[6].push(*card_player);
-                    if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints) {
-                        return true;
-                    }
-                    inferred_constraints[player_loop].push(*card_player);
-                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_player) {
-                        inferred_constraints[6].swap_remove(pos);
-                    }
+                if MoveGuard::swap_run_reset(
+                    public_constraints,
+                    inferred_constraints,
+                    player_loop, 
+                    6, 
+                    &[*card_player], 
+                    &[],
+                    |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
+                ) {
+                    return true;
                 }
             }
         }
@@ -987,20 +983,16 @@ impl BackTrackCardCountManager {
         if inferred_constraints[player_loop].len() < 2 && inferred_constraints[6].len() > 0{
             for card_pile in iter_cards_pile.iter() {
             // move to player
-                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_pile) {
-                    log::trace!("Before Exchange 0 player_to_pile 1 pile_to_player");
-                    log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-        
-                    inferred_constraints[6].swap_remove(pos);
-                    inferred_constraints[player_loop].push(*card_pile);
-                    if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints) {
-                        return true;
-                    }
-                    inferred_constraints[6].push(*card_pile);
-                    if let Some(pos) = inferred_constraints[player_loop].iter().position(|c| *c == *card_pile) {
-                        inferred_constraints[player_loop].swap_remove(pos);
-                    }
+                if MoveGuard::swap_run_reset(
+                    public_constraints,
+                    inferred_constraints,
+                    player_loop, 
+                    6, 
+                    &[], 
+                    &[*card_pile],
+                    |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
+                ) {
+                    return true;
                 }
             }
         }
@@ -1014,32 +1006,16 @@ impl BackTrackCardCountManager {
                     log::trace!("Before Exchange 1 player_to_pile 1 pile_to_player");
                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                     log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-        
-                    let (mut bool_pile_removed, mut bool_player_removed) = (false, false);
-                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_pile) {
-                        inferred_constraints[6].swap_remove(pos);
-                        bool_pile_removed = true;
-                    }
-                    if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_player) {
-                        inferred_constraints[player_loop].swap_remove(pos);
-                        bool_player_removed = true;
-                    }
-                    inferred_constraints[6].push(*card_player);
-                    inferred_constraints[player_loop].push(*card_pile);
-                    if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints) {
+                    if MoveGuard::swap_run_reset(
+                        public_constraints,
+                        inferred_constraints,
+                        player_loop, 
+                        6, 
+                        &[*card_player], 
+                        &[*card_pile],
+                        |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
+                    ) {
                         return true;
-                    }
-                    if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_pile) {
-                        inferred_constraints[player_loop].swap_remove(pos);
-                    }
-                    if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_player) {
-                        inferred_constraints[6].swap_remove(pos);
-                    }
-                    if bool_player_removed {
-                        inferred_constraints[player_loop].push(*card_player);
-                    }
-                    if bool_pile_removed {
-                        inferred_constraints[6].push(*card_pile);
                     }
                 }
             }
@@ -1050,23 +1026,17 @@ impl BackTrackCardCountManager {
                 log::trace!("Before Exchange 2 player_to_pile 0 pile_to_player");
                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-        
-                let card_0 = inferred_constraints[player_loop][0];
-                let card_1 = inferred_constraints[player_loop][1];
-                inferred_constraints[player_loop].clear();
-                inferred_constraints[6].push(card_0);
-                inferred_constraints[6].push(card_1);
-                if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints) {
+                if MoveGuard::swap_run_reset(
+                    public_constraints,
+                    inferred_constraints,
+                    player_loop, 
+                    6, 
+                    &[inferred_constraints[player_loop][0], inferred_constraints[player_loop][1]], 
+                    &[],
+                    |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
+                ) {
                     return true;
                 }
-                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == card_0) {
-                    inferred_constraints[6].swap_remove(pos);
-                }
-                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == card_1) {
-                    inferred_constraints[6].swap_remove(pos);
-                }
-                inferred_constraints[player_loop].push(card_0);
-                inferred_constraints[player_loop].push(card_1);
             }
             // 0 player_to_pile move, 2 pile_to_player move
             if inferred_constraints[player_loop].len() == 0 && inferred_constraints[6].len() > 1 {
@@ -1078,32 +1048,16 @@ impl BackTrackCardCountManager {
                         log::trace!("Before Exchange 0 player_to_pile 2 pile_to_player");
                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-        
-                        let (mut bool_pile_removed_0, mut bool_pile_removed_1) = (false, false);
-                        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
-                            inferred_constraints[6].swap_remove(pos);
-                            bool_pile_removed_0 = true;
-                        }
-                        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
-                            inferred_constraints[6].swap_remove(pos);
-                            bool_pile_removed_1 = true;
-                        }
-                        inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_0]);
-                        inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_1]);
-                        if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints) {
+                        if MoveGuard::swap_run_reset(
+                            public_constraints,
+                            inferred_constraints,
+                            player_loop, 
+                            6, 
+                            &[], 
+                            &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
+                            |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
+                        ) {
                             return true;
-                        }
-                        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
-                            inferred_constraints[player_loop].swap_remove(pos);
-                        }
-                        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
-                            inferred_constraints[player_loop].swap_remove(pos);
-                        }
-                        if bool_pile_removed_1 {
-                            inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_1]);
-                        }
-                        if bool_pile_removed_0 {
-                            inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_0]);
                         }
                     }
                 }
@@ -1129,43 +1083,16 @@ impl BackTrackCardCountManager {
                             log::trace!("Before Exchange 2 player_to_pile 1 pile_to_player");
                             log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                             log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-        
-                            let (mut bool_player_removed_0, mut bool_player_removed_1, mut bool_pile_removed_0) = (false, false, false);
-                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
-                                inferred_constraints[player_loop].swap_remove(pos);
-                                bool_player_removed_0 = true;
-                            }
-                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
-                                inferred_constraints[player_loop].swap_remove(pos);
-                                bool_player_removed_1 = true;
-                            }
-                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_pile) {
-                                inferred_constraints[6].swap_remove(pos);
-                                bool_pile_removed_0 = true;
-                            }
-                            inferred_constraints[6].push(iter_cards_player[index_player_to_pile_0]);
-                            inferred_constraints[6].push(iter_cards_player[index_player_to_pile_1]);
-                            inferred_constraints[player_loop].push(*card_pile);
-                            if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints) {
+                            if MoveGuard::swap_run_reset(
+                                public_constraints,
+                                inferred_constraints,
+                                player_loop, 
+                                6, 
+                                &[iter_cards_player[index_player_to_pile_0], iter_cards_player[index_player_to_pile_1]], 
+                                &[*card_pile],
+                                |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
+                            ) {
                                 return true;
-                            }
-                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_pile) {
-                                inferred_constraints[player_loop].swap_remove(pos);
-                            }
-                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
-                                inferred_constraints[6].swap_remove(pos);
-                            }
-                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
-                                inferred_constraints[6].swap_remove(pos);
-                            }
-                            if bool_pile_removed_0 {
-                                inferred_constraints[6].push(*card_pile);
-                            }
-                            if bool_player_removed_1 {
-                                inferred_constraints[player_loop].push(iter_cards_player[index_player_to_pile_1]);
-                            }
-                            if bool_player_removed_0 {
-                                inferred_constraints[player_loop].push(iter_cards_player[index_player_to_pile_0]);
                             }
                         }
                     }
@@ -1191,43 +1118,16 @@ impl BackTrackCardCountManager {
                             log::trace!("Before Exchange 1 player_to_pile 2 pile_to_player");
                             log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                             log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-        
-                            let (mut bool_pile_removed_0, mut bool_pile_removed_1, mut bool_player_removed_0) = (false, false, false);
-                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
-                                inferred_constraints[6].swap_remove(pos);
-                                bool_pile_removed_0 = true;
-                            }
-                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
-                                inferred_constraints[6].swap_remove(pos);
-                                bool_pile_removed_1 = true;
-                            }
-                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *card_player) {
-                                inferred_constraints[player_loop].swap_remove(pos);
-                                bool_player_removed_0 = true;
-                            }
-                            inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_0]);
-                            inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_1]);
-                            inferred_constraints[6].push(*card_player);
-                            if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints) {
+                            if MoveGuard::swap_run_reset(
+                                public_constraints,
+                                inferred_constraints,
+                                player_loop, 
+                                6, 
+                                &[*card_player], 
+                                &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
+                                |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
+                            ) {
                                 return true;
-                            }
-                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *card_player) {
-                                inferred_constraints[6].swap_remove(pos);
-                            }
-                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
-                                inferred_constraints[player_loop].swap_remove(pos);
-                            }
-                            if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
-                                inferred_constraints[player_loop].swap_remove(pos);
-                            }
-                            if bool_player_removed_0 {
-                                inferred_constraints[player_loop].push(*card_player);
-                            }
-                            if bool_pile_removed_1 {
-                                inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_1]);
-                            }
-                            if bool_pile_removed_0 {
-                                inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_0]);
                             }
                         }
                     }
@@ -1259,54 +1159,16 @@ impl BackTrackCardCountManager {
                                 log::trace!("Before Exchange 2 player_to_pile 2 pile_to_player");
                                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-        
-                                let (mut bool_pile_removed_0, mut bool_pile_removed_1, mut bool_player_removed_0, mut bool_player_removed_1) = (false, false, false, false);
-                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
-                                    inferred_constraints[6].swap_remove(pos);
-                                    bool_pile_removed_0 = true;
-                                }
-                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
-                                    inferred_constraints[6].swap_remove(pos);
-                                    bool_pile_removed_1 = true;
-                                }
-                                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
-                                    inferred_constraints[player_loop].swap_remove(pos);
-                                    bool_player_removed_0 = true;
-                                }
-                                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
-                                    inferred_constraints[player_loop].swap_remove(pos);
-                                    bool_player_removed_1 = true;
-                                }
-                                inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_0]);
-                                inferred_constraints[player_loop].push(iter_cards_pile[index_pile_to_player_1]);
-                                inferred_constraints[6].push(iter_cards_player[index_player_to_pile_0]);
-                                inferred_constraints[6].push(iter_cards_player[index_player_to_pile_1]);
-                                if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints) {
+                                if MoveGuard::swap_run_reset(
+                                    public_constraints,
+                                    inferred_constraints,
+                                    player_loop, 
+                                    6, 
+                                    &[iter_cards_player[index_player_to_pile_0], iter_cards_player[index_player_to_pile_1]], 
+                                    &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
+                                    |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
+                                ) {
                                     return true;
-                                }
-                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
-                                    inferred_constraints[6].swap_remove(pos);
-                                }
-                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
-                                    inferred_constraints[6].swap_remove(pos);
-                                }
-                                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
-                                    inferred_constraints[player_loop].swap_remove(pos);
-                                }
-                                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
-                                    inferred_constraints[player_loop].swap_remove(pos);
-                                }
-                                if bool_player_removed_1 {
-                                    inferred_constraints[player_loop].push(iter_cards_player[index_player_to_pile_1]);
-                                }
-                                if bool_player_removed_0 {
-                                    inferred_constraints[player_loop].push(iter_cards_player[index_player_to_pile_0]);
-                                }
-                                if bool_pile_removed_1 {
-                                    inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_1]);
-                                }
-                                if bool_pile_removed_0 {
-                                    inferred_constraints[6].push(iter_cards_pile[index_pile_to_player_0]);
                                 }
                             } 
                         }
@@ -1316,245 +1178,6 @@ impl BackTrackCardCountManager {
         }
         false
     }
-    /// Recursion case for exchange with no private information
-    /// This is using guard, but it seems to fail tests
-    // pub fn recurse_variants_exchange_public(&self, index_loop: usize, player_loop: usize, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
-    //     let player_lives = 2 - self.constraint_history[index_loop].public_constraints()[player_loop].len() as u8;
-    //     let mut iter_cards_player = inferred_constraints[player_loop].clone();
-    //     iter_cards_player.sort_unstable();
-    //     iter_cards_player.dedup();
-    //     let mut iter_cards_pile = inferred_constraints[6].clone();
-    //     iter_cards_pile.sort_unstable();
-    //     iter_cards_pile.dedup();
-    //     let mut player_count = [0u8; 5];
-    //     let mut pile_count = [0u8; 5];
-    //     inferred_constraints[player_loop].iter().for_each(|c| player_count[*c as usize] += 1);
-    //     inferred_constraints[6].iter().for_each(|c| pile_count[*c as usize] += 1);
-
-    //     // 0 player_to_pile move, 0 pile_to_player move
-    //     log::trace!("Before Exchange Same");
-    //     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-    //     log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-                
-    //     if self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints) {
-    //         return true;
-    //     }
-    //     // 1 player_to_pile move, 0 pile_to_player move
-    //     if inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 0{
-    //         for card_player in iter_cards_player.iter() {
-    //         // move to pile
-    //             if MoveGuard::swap_run_reset(
-    //                 public_constraints,
-    //                 inferred_constraints,
-    //                 player_loop, 
-    //                 6, 
-    //                 &[*card_player], 
-    //                 &[],
-    //                 |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
-    //             ) {
-    //                 return true;
-    //             }
-    //         }
-    //     }
-    //     // 0 player_to_pile move, 1 pile_to_player move
-    //     if inferred_constraints[player_loop].len() < 2 && inferred_constraints[6].len() > 0{
-    //         for card_pile in iter_cards_pile.iter() {
-    //         // move to player
-    //             if MoveGuard::swap_run_reset(
-    //                 public_constraints,
-    //                 inferred_constraints,
-    //                 player_loop, 
-    //                 6, 
-    //                 &[], 
-    //                 &[*card_pile],
-    //                 |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
-    //             ) {
-    //                 return true;
-    //             }
-    //         }
-    //     }
-    //     // 1 player_to_pile move, 1 pile_to_player move
-    //     if inferred_constraints[player_loop].len() > 0 && inferred_constraints[6].len() > 0 {
-    //         for card_player in iter_cards_player.iter() {
-    //             for card_pile in iter_cards_pile.iter() {
-    //                 if card_player == card_pile {
-    //                     continue;
-    //                 }
-    //                 log::trace!("Before Exchange 1 player_to_pile 1 pile_to_player");
-    //                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-    //                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-    //                 if MoveGuard::swap_run_reset(
-    //                     public_constraints,
-    //                     inferred_constraints,
-    //                     player_loop, 
-    //                     6, 
-    //                     &[*card_player], 
-    //                     &[*card_pile],
-    //                     |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
-    //                 ) {
-    //                     return true;
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     if player_lives > 1 {
-    //         // 2 player_to_pile move, 0 pile_to_player move
-    //         if inferred_constraints[player_loop].len() == 2 && inferred_constraints[6].len() < 2 {
-    //             log::trace!("Before Exchange 2 player_to_pile 0 pile_to_player");
-    //             log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-    //             log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-    //             if MoveGuard::swap_run_reset(
-    //                 public_constraints,
-    //                 inferred_constraints,
-    //                 player_loop, 
-    //                 6, 
-    //                 &[inferred_constraints[player_loop][0], inferred_constraints[player_loop][0]], 
-    //                 &[],
-    //                 |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
-    //             ) {
-    //                 return true;
-    //             }
-    //         }
-    //         // 0 player_to_pile move, 2 pile_to_player move
-    //         if inferred_constraints[player_loop].len() == 0 && inferred_constraints[6].len() > 1 {
-    //             for index_pile_to_player_0 in 0..iter_cards_pile.len() {
-    //                 for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
-    //                     if index_pile_to_player_0 == index_pile_to_player_1 && pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2 {
-    //                         continue; // Ensure enough cards to move
-    //                     }
-    //                     log::trace!("Before Exchange 0 player_to_pile 2 pile_to_player");
-    //                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-    //                     log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-    //                     if MoveGuard::swap_run_reset(
-    //                         public_constraints,
-    //                         inferred_constraints,
-    //                         player_loop, 
-    //                         6, 
-    //                         &[], 
-    //                         &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
-    //                         |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
-    //                     ) {
-    //                         return true;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //         // 2 player_to_pile move, 1 pile_to_player move
-    //         if inferred_constraints[6].len() > 0 && inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 1 {
-    //             for card_pile in iter_cards_pile.iter() {
-    //                 for index_player_to_pile_0 in 0..iter_cards_player.len() {
-    //                     // TODO: Shift index_player_to_pile == case shift here
-    //                     if iter_cards_player[index_player_to_pile_0] == *card_pile {
-    //                         continue; // Avoid duplicates
-    //                     }
-    //                     for index_player_to_pile_1 in index_player_to_pile_0..iter_cards_player.len() {
-    //                         // Check DF
-    //                         if iter_cards_player[index_player_to_pile_1] == *card_pile {
-    //                             continue; // Avoid duplicates
-    //                         }
-    //                         if index_player_to_pile_0 == index_player_to_pile_1 && player_count[iter_cards_player[index_player_to_pile_0] as usize] < 2 {
-    //                             // Checks that player has enough cards to move out
-    //                             // TODO: OPTIMIZE Can shift this out of for loop actually
-    //                             continue // Ensure enough cards to move
-    //                         }
-    //                         log::trace!("Before Exchange 2 player_to_pile 1 pile_to_player");
-    //                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-    //                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-    //                         if MoveGuard::swap_run_reset(
-    //                             public_constraints,
-    //                             inferred_constraints,
-    //                             player_loop, 
-    //                             6, 
-    //                             &[iter_cards_player[index_player_to_pile_0], iter_cards_player[index_player_to_pile_1]], 
-    //                             &[*card_pile],
-    //                             |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
-    //                         ) {
-    //                             return true;
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //         // 1 player_to_pile move, 2 pile_to_player move
-    //         if inferred_constraints[player_loop].len() == 1 && inferred_constraints[6].len() > 1{
-    //             for card_player in iter_cards_player.iter() {
-    //                 for index_pile_to_player_0 in 0..iter_cards_pile.len() {
-    //                     if iter_cards_pile[index_pile_to_player_0] == *card_player {
-    //                         continue; // Avoid Duplicates
-    //                     }
-    //                     for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
-    //                         // Check DF
-    //                         if iter_cards_pile[index_pile_to_player_1] == *card_player {
-    //                             continue; // Avoid Duplicates
-    //                         }
-    //                         if index_pile_to_player_0 == index_pile_to_player_1 && (pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2) {
-    //                             // Checks that player has enough cards to move out
-    //                             // TODO: OPTIMIZE Can shift this out of for loop actually
-    //                             continue // Ensure enough cards to move
-    //                         }
-    //                         log::trace!("Before Exchange 1 player_to_pile 2 pile_to_player");
-    //                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-    //                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-    //                         if MoveGuard::swap_run_reset(
-    //                             public_constraints,
-    //                             inferred_constraints,
-    //                             player_loop, 
-    //                             6, 
-    //                             &[*card_player], 
-    //                             &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
-    //                             |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
-    //                         ) {
-    //                             return true;
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //         // 2 player_to_pile move, 2 pile_to_player move
-    //         if inferred_constraints[player_loop].len() > 1 && inferred_constraints[6].len() > 1 {
-    //             for index_player_to_pile_0 in 0..iter_cards_player.len() {
-    //                 for index_player_to_pile_1 in index_player_to_pile_0..iter_cards_player.len() {
-    //                     if index_player_to_pile_0 == index_player_to_pile_1 && player_count[iter_cards_player[index_player_to_pile_0] as usize] < 2 {
-    //                         // Checks that player has enough cards to move out
-    //                         // TODO: OPTIMIZE Can shift this out of for loop actually
-    //                         continue // Ensure enough cards to move
-    //                     }
-    //                     // Check DF
-    //                     for index_pile_to_player_0 in 0..iter_cards_pile.len() {
-    //                         if iter_cards_pile[index_pile_to_player_0] == iter_cards_player[index_player_to_pile_0] || iter_cards_pile[index_pile_to_player_0] == iter_cards_player[index_player_to_pile_1] {
-    //                             continue; // Avoid Duplicates
-    //                         }
-    //                         for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
-    //                             if iter_cards_pile[index_pile_to_player_1] == iter_cards_player[index_player_to_pile_0] || iter_cards_pile[index_pile_to_player_1] == iter_cards_player[index_player_to_pile_1] {
-    //                                 continue; // Avoid Duplicates
-    //                             }
-    //                             if index_pile_to_player_0 == index_pile_to_player_1 && (pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2) {
-    //                                 // Checks that player has enough cards to move out
-    //                                 // TODO: OPTIMIZE Can shift this out of for loop actually
-    //                                 continue // Ensure enough cards to move
-    //                             }
-    //                             log::trace!("Before Exchange 2 player_to_pile 2 pile_to_player");
-    //                             log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-    //                             log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
-    //                             if MoveGuard::swap_run_reset(
-    //                                 public_constraints,
-    //                                 inferred_constraints,
-    //                                 player_loop, 
-    //                                 6, 
-    //                                 &[iter_cards_player[index_player_to_pile_0], iter_cards_player[index_player_to_pile_1]], 
-    //                                 &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
-    //                                 |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
-    //                             ) {
-    //                                 return true;
-    //                             }
-    //                         } 
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     false
-    // }
     /// Recursion case for exchange with private information
     pub fn recurse_variants_exchange_private(&self, index_loop: usize, player_loop: usize, draw: &Vec<Card>, relinquish: &Vec<Card>, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
         log::trace!("In recurse_variants_exchange_private!");

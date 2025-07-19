@@ -34,12 +34,12 @@ impl MoveGuard {
         }
         if public_constraint[player_a].len() + inferred_constraint[player_a].len() <= MAX_PLAYER_HAND_SIZE[player_a]
         && public_constraint[player_b].len() + inferred_constraint[player_b].len() <= MAX_PLAYER_HAND_SIZE[player_b]
-        && !f(public_constraint, inferred_constraint) {
-            inferred_constraint[player_a] = backup_player_a;
-            inferred_constraint[player_b] = backup_player_b; 
-            return false
+        && f(public_constraint, inferred_constraint) {
+            return true
         }
-        true
+        inferred_constraint[player_a] = backup_player_a;
+        inferred_constraint[player_b] = backup_player_b; 
+        false
     }
     #[inline(always)]
     /// Here it is intended that the cards are 
@@ -69,21 +69,24 @@ impl MoveGuard {
         inferred_constraint[player_a].extend(moved_from_b_to_a.iter());
         if public_constraint[player_a].len() + inferred_constraint[player_a].len() <= MAX_PLAYER_HAND_SIZE[player_a]
         && public_constraint[player_b].len() + inferred_constraint[player_b].len() <= MAX_PLAYER_HAND_SIZE[player_b]
-        && !f(public_constraint, inferred_constraint) {
-            for c in moved_from_b_to_a.iter() {
-                if let Some(pos) = inferred_constraint[player_a].iter().rposition(|card| card == c) {
-                    inferred_constraint[player_a].swap_remove(pos);
-                }
-            }
-            for c in moved_from_a_to_b.iter() {
-                if let Some(pos) = inferred_constraint[player_b].iter().rposition(|card| card == c) {
-                    inferred_constraint[player_b].swap_remove(pos);
-                }
-            }
-            inferred_constraint[player_b].extend(moved_from_b_to_a.iter());
-            inferred_constraint[player_a].extend(moved_from_a_to_b.iter());
-            return false
+        && f(public_constraint, inferred_constraint) {
+            return true
         }
-        true
+        for c in moved_from_b_to_a.iter() {
+            if let Some(pos) = inferred_constraint[player_a].iter().rposition(|card| card == c) {
+                inferred_constraint[player_a].swap_remove(pos);
+            }
+        }
+        for c in moved_from_a_to_b.iter() {
+            if let Some(pos) = inferred_constraint[player_b].iter().rposition(|card| card == c) {
+                inferred_constraint[player_b].swap_remove(pos);
+            }
+        }
+        inferred_constraint[player_b].extend(moved_from_b_to_a.iter());
+        inferred_constraint[player_a].extend(moved_from_a_to_b.iter());
+        false
+    }
+    pub fn ordered_swap_run_reset() {
+        todo!()
     }
 }
