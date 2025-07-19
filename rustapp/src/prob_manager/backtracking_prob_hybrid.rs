@@ -1343,12 +1343,13 @@ impl BackTrackCardCountManager {
             for card_player in iter_cards_player.iter() {
             // move to pile
                 if MoveGuard::swap_run_reset(
+                    public_constraints,
                     inferred_constraints,
                     player_loop, 
                     6, 
                     &[*card_player], 
                     &[],
-                    |inf| {self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inf)}
+                    |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
                 ) {
                     return true;
                 }
@@ -1359,12 +1360,13 @@ impl BackTrackCardCountManager {
             for card_pile in iter_cards_pile.iter() {
             // move to player
                 if MoveGuard::swap_run_reset(
+                    public_constraints,
                     inferred_constraints,
                     player_loop, 
                     6, 
                     &[], 
                     &[*card_pile],
-                    |inf| {self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inf)}
+                    |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
                 ) {
                     return true;
                 }
@@ -1381,12 +1383,13 @@ impl BackTrackCardCountManager {
                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                     log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
                     if MoveGuard::swap_run_reset(
+                        public_constraints,
                         inferred_constraints,
                         player_loop, 
                         6, 
                         &[*card_player], 
                         &[*card_pile],
-                        |inf| {self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inf)}
+                        |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
                     ) {
                         return true;
                     }
@@ -1400,12 +1403,13 @@ impl BackTrackCardCountManager {
                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
                 if MoveGuard::swap_run_reset(
+                    public_constraints,
                     inferred_constraints,
                     player_loop, 
                     6, 
                     &[inferred_constraints[player_loop][0], inferred_constraints[player_loop][0]], 
                     &[],
-                    |inf| {self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inf)}
+                    |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
                 ) {
                     return true;
                 }
@@ -1421,12 +1425,13 @@ impl BackTrackCardCountManager {
                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
                         if MoveGuard::swap_run_reset(
+                            public_constraints,
                             inferred_constraints,
                             player_loop, 
                             6, 
                             &[], 
                             &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
-                            |inf| {self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inf)}
+                            |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
                         ) {
                             return true;
                         }
@@ -1455,12 +1460,13 @@ impl BackTrackCardCountManager {
                             log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                             log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
                             if MoveGuard::swap_run_reset(
+                                public_constraints,
                                 inferred_constraints,
                                 player_loop, 
                                 6, 
                                 &[iter_cards_player[index_player_to_pile_0], iter_cards_player[index_player_to_pile_1]], 
                                 &[*card_pile],
-                                |inf| {self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inf)}
+                                |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
                             ) {
                                 return true;
                             }
@@ -1489,12 +1495,13 @@ impl BackTrackCardCountManager {
                             log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                             log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
                             if MoveGuard::swap_run_reset(
+                                public_constraints,
                                 inferred_constraints,
                                 player_loop, 
                                 6, 
                                 &[*card_player], 
                                 &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
-                                |inf| {self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inf)}
+                                |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
                             ) {
                                 return true;
                             }
@@ -1529,12 +1536,13 @@ impl BackTrackCardCountManager {
                                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
                                 if MoveGuard::swap_run_reset(
+                                    public_constraints,
                                     inferred_constraints,
                                     player_loop, 
                                     6, 
                                     &[iter_cards_player[index_player_to_pile_0], iter_cards_player[index_player_to_pile_1]], 
                                     &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
-                                    |inf| {self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inf)}
+                                    |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
                                 ) {
                                     return true;
                                 }
