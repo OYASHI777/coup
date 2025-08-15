@@ -3,9 +3,8 @@ use ahash::AHashMap;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use rand::prelude::SliceRandom;
-use super::constraint::{GroupConstraint, CollectiveConstraint};
+use super::constraint::CollectiveConstraint;
 use crate::{cfr::keys::Infostate, history_public::Card};
-use dashmap::DashMap;
 use crate::cfr::keys::INFOSTATES;
 
 #[derive(Debug)]

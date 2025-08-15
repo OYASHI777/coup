@@ -31,7 +31,7 @@ impl ActionInfo {
             Self::RevealRedraw { reveal: revealed, .. } => {
                 Self::RevealRedraw { reveal: *revealed, redraw: None, relinquish: None }
             },
-            Self::ExchangeDrawChoice { draw, .. } => {
+            Self::ExchangeDrawChoice {  .. } => {
                 Self::ExchangeDrawChoice { draw: Vec::with_capacity(2), relinquish: Vec::with_capacity(2) }
             },
             Self::ExchangeDraw { .. } => {
@@ -342,7 +342,7 @@ impl BackTrackCollectiveConstraint {
         log::info!("Regenerating Path");
         self.regenerate_game_start();
         // TODO: Implement skipping starting empty ambassadors
-        let mut skip_starting_empty_ambassador: bool = true;
+        let skip_starting_empty_ambassador: bool = true;
         for index in 1..self.history.len() {
             // run the update for that action
             // if action is an starting empty ambassador, continue

@@ -1,4 +1,4 @@
-use tokio::time::{self, Duration};
+use tokio::time::Duration;
 use std::collections::VecDeque;
 
 // makes like a queue to handle queries to value handler

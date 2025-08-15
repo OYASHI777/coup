@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use super::keys::{BRKey, MAX_NUM_BRKEY, INFOSTATES};
 pub struct HeuristicValueFunction;
 use ahash::AHashMap;

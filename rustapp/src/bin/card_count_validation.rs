@@ -6,7 +6,7 @@ use rustapp::prob_manager::backtracking_collective_constraints::{ActionInfo};
 use rustapp::prob_manager::brute_prob_generic::{BruteCardCountManagerGeneric};
 use rustapp::prob_manager::models::card_state_u64::CardStateu64;
 use rustapp::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::{Write};
 use std::time::Instant;
 use std::sync::mpsc::{self, Sender};
@@ -296,16 +296,16 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
             if total_dead >= min_dead_check {
                 let validated_public_constraints = prob.sorted_public_constraints().clone();
                 let validated_inferred_constraints = prob.validated_inferred_constraints();
-                let validated_impossible_constraints = prob.player_impossible_constraints().clone();
-                let validated_impossible_constraints_2 = prob.player_impossible_constraints_paired().clone();
-                let validated_impossible_constraints_3 = prob.player_impossible_constraints_triple().clone();
+                let validated_impossible_constraints = *prob.player_impossible_constraints();
+                let validated_impossible_constraints_2 = *prob.player_impossible_constraints_paired();
+                let validated_impossible_constraints_3 = *prob.player_impossible_constraints_triple();
                 // let validated_impossible_constraints_2 = prob.validated_impossible_constraints_2();
                 // let validated_impossible_constraints_3 = prob.validated_impossible_constraints_3();
                 let test_public_constraints = bit_prob.sorted_public_constraints().clone();
                 let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
-                let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
-                let test_impossible_constraints_2 = bit_prob.player_impossible_constraints_paired().clone();
-                let test_impossible_constraints_3 = bit_prob.player_impossible_constraints_triple().clone();
+                let test_impossible_constraints = *bit_prob.player_impossible_constraints();
+                let test_impossible_constraints_2 = *bit_prob.player_impossible_constraints_paired();
+                let test_impossible_constraints_3 = *bit_prob.player_impossible_constraints_triple();
                 let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
                 let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
                 let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
@@ -481,16 +481,16 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
             if total_dead >= min_dead_check {
                 let validated_public_constraints = prob.sorted_public_constraints().clone();
                 let validated_inferred_constraints = prob.sorted_inferred_constraints().clone();
-                let validated_impossible_constraints = prob.player_impossible_constraints().clone();
-                let validated_impossible_constraints_2 = prob.player_impossible_constraints_paired().clone();
-                let validated_impossible_constraints_3 = prob.player_impossible_constraints_triple().clone();
+                let validated_impossible_constraints = *prob.player_impossible_constraints();
+                let validated_impossible_constraints_2 = *prob.player_impossible_constraints_paired();
+                let validated_impossible_constraints_3 = *prob.player_impossible_constraints_triple();
                 // let validated_impossible_constraints_2 = prob.validated_impossible_constraints_2();
                 // let validated_impossible_constraints_3 = prob.validated_impossible_constraints_3();
                 let test_public_constraints = bit_prob.sorted_public_constraints().clone();
                 let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
-                let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
-                let test_impossible_constraints_2 = bit_prob.player_impossible_constraints_paired().clone();
-                let test_impossible_constraints_3 = bit_prob.player_impossible_constraints_triple().clone();
+                let test_impossible_constraints = *bit_prob.player_impossible_constraints();
+                let test_impossible_constraints_2 = *bit_prob.player_impossible_constraints_paired();
+                let test_impossible_constraints_3 = *bit_prob.player_impossible_constraints_triple();
                 let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
                 let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
                 let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
@@ -621,7 +621,7 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
                 let validated_impossible_constraints = prob.validated_impossible_constraints();
                 let test_public_constraints = bit_prob.sorted_public_constraints().clone();
                 let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
-                let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
+                let test_impossible_constraints = *bit_prob.player_impossible_constraints();
                 let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
                 let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
                 let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
@@ -705,26 +705,22 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
                         if prob.player_can_have_card_alive(*player_id, card[0]) {
                             return Ok((*player_id, *candidate, Some(ActionInfo::Discard { discard: card[0] })));
                         }
-                    } else {
-                        if prob.player_can_have_cards(*player_id, candidate.cards()) {
-                            // todo!("Make multiple Discard");
-                            // return (*player_id, *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
-                            return Ok((*player_id, *candidate, None));
-                        }
+                    } else if prob.player_can_have_cards(*player_id, candidate.cards()) {
+                        // todo!("Make multiple Discard");
+                        // return (*player_id, *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                        return Ok((*player_id, *candidate, None));
+                    }
+                } else if *no_cards == 1 {
+                    if prob.player_can_have_card_alive(*player_id, card[0]) {
+                        return Ok((*player_id, *candidate, Some(ActionInfo::Discard { discard: card[0] })));
                     }
                 } else {
-                    if *no_cards == 1 {
-                        if prob.player_can_have_card_alive(*player_id, card[0]) {
-                            return Ok((*player_id, *candidate, Some(ActionInfo::Discard { discard: card[0] })));
-                        }
-                    } else {
-                        if prob.player_can_have_cards(*player_id, candidate.cards()) {
-                            // todo!("Make multiple Discard");
-                            // return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
-                            return Ok((*player_id, *candidate, None));
-                        }
-                        log::info!("prob.player_can_have_cards({}, {:?}) = false", *player_id, candidate.cards());
+                    if prob.player_can_have_cards(*player_id, candidate.cards()) {
+                        // todo!("Make multiple Discard");
+                        // return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                        return Ok((*player_id, *candidate, None));
                     }
+                    log::info!("prob.player_can_have_cards({}, {:?}) = false", *player_id, candidate.cards());
                 }
             },
             RevealRedraw { player_id, reveal: reveal_card , redraw: redraw_card} => {
@@ -737,10 +733,8 @@ pub fn generate_legal_moves_with_card_constraints(history: &History, new_moves: 
                             return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: Some(*redraw_card), relinquish: None } )));
                         }
                     }
-                } else {
-                    if prob.player_can_have_card_alive(*player_id, *reveal_card) {
-                        return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: None, relinquish: None })));
-                    }
+                } else if prob.player_can_have_card_alive(*player_id, *reveal_card) {
+                    return Ok((*player_id, *candidate, Some(ActionInfo::RevealRedraw { reveal: *reveal_card, redraw: None, relinquish: None })));
                 }
             },
             ExchangeDraw { player_id, card } => {
@@ -783,36 +777,30 @@ pub fn retain_legal_moves_with_card_constraints(history: &History, new_moves: &m
                         if prob.player_can_have_card_alive(*player_id, card[0]) {
                             return true
                         }
-                    } else {
-                        if prob.player_can_have_cards(*player_id, ao.cards()) {
-                            // todo!("Make multiple Discard");
-                            // return (*player_id, *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
-                            return true
-                        }
+                    } else if prob.player_can_have_cards(*player_id, ao.cards()) {
+                        // todo!("Make multiple Discard");
+                        // return (*player_id, *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                        return true
+                    }
+                } else if *no_cards == 1 {
+                    if prob.player_can_have_card_alive(*player_id, card[0]) {
+                        return true
                     }
                 } else {
-                    if *no_cards == 1 {
-                        if prob.player_can_have_card_alive(*player_id, card[0]) {
-                            return true
-                        }
-                    } else {
-                        if prob.player_can_have_cards(*player_id, ao.cards()) {
-                            // todo!("Make multiple Discard");
-                            // return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
-                            return true
-                        }
-                        log::info!("prob.player_can_have_cards({}, {:?}) = false", *player_id, ao.cards());
+                    if prob.player_can_have_cards(*player_id, ao.cards()) {
+                        // todo!("Make multiple Discard");
+                        // return (candidate.player_id(), *candidate, Some(ActionInfo::Discard { discard: candidate.cards()[0] }));
+                        return true
                     }
+                    log::info!("prob.player_can_have_cards({}, {:?}) = false", *player_id, ao.cards());
                 }
             },
             RevealRedraw { player_id, reveal: reveal_card , redraw: redraw_card} => {
                 if Some(*player_id) == private_player {
                     return prob.player_can_have_card_alive(*player_id, *reveal_card) 
                     && (*reveal_card == *redraw_card || prob.player_can_have_card_alive(6, *redraw_card))
-                } else {
-                    if prob.player_can_have_card_alive(*player_id, *reveal_card) {
-                        return true
-                    }
+                } else if prob.player_can_have_card_alive(*player_id, *reveal_card) {
+                    return true
                 }
             },
             ExchangeDraw { player_id, card } => {
@@ -848,7 +836,7 @@ pub fn game_rnd_constraint_bt_bench(game_no : usize, bool_know_priv_info: bool) 
     let mut game: usize = 0;
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     let mut actions_processed: u128 = 0;
-    let mut start_time = Instant::now();
+    let start_time = Instant::now();
     while game < game_no {
         let mut hh = History::new(0);
         let mut step: usize = 0;
@@ -914,7 +902,7 @@ pub fn game_rnd_constraint_bt_bench(game_no : usize, bool_know_priv_info: bool) 
     }
     let elapsed_time = start_time.elapsed();
     let process_per_action_us = elapsed_time.as_micros() as f64 / actions_processed as f64;
-    println!("Benchmark for: {}", "backtracking_prob_2");
+    println!("Benchmark for: backtracking_prob_2");
     println!("Games Ran: {}", game_no);
     println!("Nodes Processed: {}", actions_processed);
     println!("Estimated Time per nodes: {} micro seconds", process_per_action_us);
@@ -923,7 +911,7 @@ pub fn game_rnd_constraint_bt_bench_lazy(game_no : usize, bool_know_priv_info: b
     let mut game: usize = 0;
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     let mut actions_processed: u128 = 0;
-    let mut start_time = Instant::now();
+    let start_time = Instant::now();
     while game < game_no {
         let mut hh = History::new(0);
         let mut step: usize = 0;
@@ -989,7 +977,7 @@ pub fn game_rnd_constraint_bt_bench_lazy(game_no : usize, bool_know_priv_info: b
     }
     let elapsed_time = start_time.elapsed();
     let process_per_action_us = elapsed_time.as_micros() as f64 / actions_processed as f64;
-    println!("Benchmark for: {}", "backtracking_prob_2");
+    println!("Benchmark for: backtracking_prob_2");
     println!("Games Ran: {}", game_no);
     println!("Nodes Processed: {}", actions_processed);
     println!("Estimated Time per nodes: {} micro seconds", process_per_action_us);
@@ -999,7 +987,7 @@ pub fn replay_game_constraint_bt(replay: Vec<ActionObservation>, bool_know_priv_
     if log_bool{
         logger(LOG_LEVEL);
     }
-    let mut game: usize = 0;
+    let game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(true, true);
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
@@ -1040,11 +1028,11 @@ pub fn replay_game_constraint_bt(replay: Vec<ActionObservation>, bool_know_priv_
             log::info!("{}", format!("Choice: {:?}", output));
             hh.push_ao(*output);
             if bool_know_priv_info && output.player_id() == private_player {
-                prob.push_ao_private(&output);
-                bit_prob.push_ao_private(&output);
+                prob.push_ao_private(output);
+                bit_prob.push_ao_private(output);
             } else {
-                prob.push_ao_public(&output);
-                bit_prob.push_ao_public(&output);
+                prob.push_ao_public(output);
+                bit_prob.push_ao_public(output);
             }
             log::info!("Just before validation");
             bit_prob.printlog();
@@ -1057,9 +1045,9 @@ pub fn replay_game_constraint_bt(replay: Vec<ActionObservation>, bool_know_priv_
             let validated_impossible_constraints_3 = prob.validated_impossible_constraints_3();
             let test_public_constraints = bit_prob.sorted_public_constraints().clone();
             let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
-            let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
-            let test_impossible_constraints_2 = bit_prob.player_impossible_constraints_paired().clone();
-            let test_impossible_constraints_3 = bit_prob.player_impossible_constraints_triple().clone();
+            let test_impossible_constraints = *bit_prob.player_impossible_constraints();
+            let test_impossible_constraints_2 = *bit_prob.player_impossible_constraints_paired();
+            let test_impossible_constraints_3 = *bit_prob.player_impossible_constraints_triple();
             log::info!("validated_public_constraints: {:?}", validated_public_constraints);
             log::info!("test_public_constraints: {:?}", test_public_constraints);
             let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
@@ -1148,7 +1136,7 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> = BruteCardCountManagerGeneric::new(false, false);
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
-    let mut total_tries: usize = 0;
+    let total_tries: usize = 0;
     while game < game_no {
         log::info!("Game : {}", game);
         let mut hh = History::new(0);
@@ -1249,16 +1237,16 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
             if total_dead >= min_dead_check {
                 let validated_public_constraints = prob.sorted_public_constraints().clone();
                 let validated_inferred_constraints = prob.validated_inferred_constraints();
-                let validated_impossible_constraints = prob.player_impossible_constraints().clone();
-                let validated_impossible_constraints_2 = prob.player_impossible_constraints_paired().clone();
-                let validated_impossible_constraints_3 = prob.player_impossible_constraints_triple().clone();
+                let validated_impossible_constraints = *prob.player_impossible_constraints();
+                let validated_impossible_constraints_2 = *prob.player_impossible_constraints_paired();
+                let validated_impossible_constraints_3 = *prob.player_impossible_constraints_triple();
                 // let validated_impossible_constraints_2 = prob.validated_impossible_constraints_2();
                 // let validated_impossible_constraints_3 = prob.validated_impossible_constraints_3();
                 let test_public_constraints = bit_prob.sorted_public_constraints().clone();
                 let test_inferred_constraints = bit_prob.sorted_inferred_constraints().clone();
-                let test_impossible_constraints = bit_prob.player_impossible_constraints().clone();
-                let test_impossible_constraints_2 = bit_prob.player_impossible_constraints_paired().clone();
-                let test_impossible_constraints_3 = bit_prob.player_impossible_constraints_triple().clone();
+                let test_impossible_constraints = *bit_prob.player_impossible_constraints();
+                let test_impossible_constraints_2 = *bit_prob.player_impossible_constraints_paired();
+                let test_impossible_constraints_3 = *bit_prob.player_impossible_constraints_triple();
                 let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
                 let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
                 let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
@@ -1338,7 +1326,7 @@ pub fn logger(level: LevelFilter) {
     let _ = clear_log();
     let log_file = OpenOptions::new()
         .create(true)
-        .write(true)
+        
         .append(true)
         .open(LOG_FILE_NAME)
         .expect("Failed to open log file");

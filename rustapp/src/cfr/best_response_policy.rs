@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use super::keys::{BRKey, MAX_NUM_BRKEY, INFOSTATES};
+use super::keys::BRKey;
 pub struct BestResponseIndVec {
     // === BRKey ===
     //          Player
@@ -65,7 +65,7 @@ impl BestResponseIndVec {
         }
     }
     pub fn with_capacity(max_size: usize) -> Self {
-        let mut policies = Vec::with_capacity(max_size);
+        let policies = Vec::with_capacity(max_size);
         // for _ in 0..max_size {
         //     // 90 because 15 states * 6 players = 90 required.
         //     policies.push(HashMap::with_capacity(MAX_NUM_BRKEY));
