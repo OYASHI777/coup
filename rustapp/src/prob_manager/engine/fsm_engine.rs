@@ -1,5 +1,6 @@
 use crate::prob_manager::engine::models::engine_state::CoupTransition;
 use crate::prob_manager::engine::models::game_state::GameState;
+use crate::prob_manager::engine::models_prelude::End;
 use crate::traits::prob_manager::coup_analysis::{CoupGeneration, CoupTraversal};
 use crate::history_public::{ActionObservation, Card};
 use super::models::engine_state::EngineState;
@@ -9,10 +10,11 @@ pub trait Node {
 }
 // TODO: Write test for same resources after push() then pop()
 // TODO: Write mode for simulation and mode for registering player moves and randomly choosing?
+// TODO: Make a better api pls omg, just write a random game to see how bad it is
 pub struct FSMEngine {
-    history: Vec<ActionObservation>,
-    history_state: Vec<EngineState>,
-    state: GameState,
+    pub history: Vec<ActionObservation>,
+    pub history_state: Vec<EngineState>,
+    pub state: GameState,
 }
 impl FSMEngine {
     /// Generates an FSMEngine
@@ -24,7 +26,7 @@ impl FSMEngine {
         }
     }
 
-    pub fn generate_legal_moves<T>(&self, tracker: T) -> Vec<ActionObservation> 
+    pub fn generate_legal_moves<T>(&self, tracker: &T) -> Vec<ActionObservation> 
     where
         T: CoupGeneration,
     {
@@ -61,6 +63,10 @@ impl FSMEngine {
             EngineState::AssassinateChallengerFailed(state) => tracker.on_assassinate_challenger_failed(&state, &self.state.game_data),
         }
     }
+
+    pub fn game_end(&self) -> bool {
+        self.state.engine_state == EngineState::End(End {})
+    }
 }
 impl CoupTraversal for FSMEngine {
     fn start_public(&mut self, player: usize) {
@@ -69,13 +75,10 @@ impl CoupTraversal for FSMEngine {
         self.state = GameState::start(player);
         self.history_state.push(self.state.engine_state.clone());
     }
-
-    fn start_private(&mut self, player: usize, cards: &[crate::history_public::Card; 2]) {
-        todo!();
-        self.history.clear();
-        self.history_state.clear();
-        self.state = GameState::start(player);
-        self.history_state.push(self.state.engine_state.clone());
+    /// Currently engine does not store private information, but tracker does
+    /// so default to public
+    fn start_private(&mut self, player: usize, _cards: &[crate::history_public::Card; 2]) {
+        self.start_public(player);
     }
 
     fn start_known(&mut self, cards: &Vec<Vec<Card>>) {
@@ -95,8 +98,10 @@ impl CoupTraversal for FSMEngine {
         self.push_ao_public(action);
     }
     /// Update's Engine's state with private information
+    /// Currently engine does not store private information, but tracker does
+    /// so default to public
     fn push_ao_private(&mut self, action: &ActionObservation) {
-        todo!()
+        self.push_ao_public(action);
     }
 
     fn push_ao_private_lazy(&mut self, action: &ActionObservation) {

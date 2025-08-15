@@ -1,5 +1,5 @@
 use crate::prob_manager::constants::MAX_GAME_LENGTH;
-use crate::prob_manager::engine::constants::{MAX_CARD_PERMS_ONE, MAX_PLAYERS_EXCL_PILE};
+use crate::prob_manager::engine::constants::MAX_CARD_PERMS_ONE;
 use crate::traits::prob_manager::coup_analysis::{CoupGeneration, CoupTraversal};
 use crate::prob_manager::engine::models_prelude::*;
 use crate::prob_manager::engine::models::game_state::GameData;
@@ -22,9 +22,8 @@ pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
 // TODO: Receive Collective Indicator vs All Final Actioners vs All Responses
 // TODO: Receive Action and decide the chance stuff
 // TODO: Create trait to process incoming moves!
-/// This is a class created purely for documentation purposes
-/// It outlines all the possible moves legal without considering any information
-/// other than coins a player has and their lives.
+// TODO: Consider making backtracking_prob_hybrid card_count_manager take history as an input
+/// This is a class outlines all the possible legal moves based on perfect information
 pub struct InformedTracker {
     history: Vec<ActionObservation>,
     public_constraints: Vec<Vec<Card>>,
@@ -450,5 +449,114 @@ impl CoupGeneration for InformedTracker {
         // In this case if the player_challenger == player_blocking, they can still discard Contessa if they have double Contessa
         // Although it should be [PRUNE] if player only has 1 Contessa
         self.discard(state.player_challenger)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::thread_rng;
+    use rand::seq::SliceRandom;
+
+    use crate::{history_public::{ActionObservation, Card}, prob_manager::{engine::{constants::{COST_ASSASSINATE, COST_COUP, COUNT_PER_CHARACTER, MAX_CARDS_IN_GAME}, fsm_engine::FSMEngine, models::{engine_state::EngineState, game_state::GameData}, models_prelude::End}, tracker::informed_tracker::InformedTracker}, traits::prob_manager::coup_analysis::CoupTraversal};
+    // Implement 100 random games and test if all items returned by CoupGeneration are valid
+    fn all_cards_legal(inferred_constraints: &Vec<Vec<Card>>, suggested_moves: &Vec<ActionObservation>) -> bool {
+        suggested_moves.iter().all(|action| {
+            match action {
+                ActionObservation::Discard { player_id, card, .. } => {
+                    card.iter().all(|c| inferred_constraints[*player_id].contains(c))
+                },
+                ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+                    inferred_constraints[*player_id].contains(reveal) 
+                    && inferred_constraints[6].contains(redraw)
+                },
+                ActionObservation::Tax { player_id } => {
+                    inferred_constraints[*player_id].contains(&Card::Duke) 
+                },
+                ActionObservation::Steal { player_id, .. } => {
+                    inferred_constraints[*player_id].contains(&Card::Captain)
+                },
+                ActionObservation::Assassinate { player_id, .. } => {
+                    inferred_constraints[*player_id].contains(&Card::Assassin)
+                },
+                ActionObservation::BlockSteal { player_id, .. } => {
+                    inferred_constraints[*player_id].contains(&Card::Ambassador)
+                    || inferred_constraints[*player_id].contains(&Card::Captain)
+                },
+                ActionObservation::BlockAssassinate { player_id, .. } => {
+                    inferred_constraints[*player_id].contains(&Card::Contessa)
+                },
+                ActionObservation::Exchange { player_id } => {
+                    inferred_constraints[*player_id].contains(&Card::Ambassador)
+                },
+                ActionObservation::ExchangeDraw { card , ..} => {
+                    inferred_constraints[6].contains(&card[0])
+                    || inferred_constraints[6].contains(&card[1])
+                },
+                ActionObservation::ExchangeChoice { player_id, relinquish } => {
+                    // This is a weak check...
+                    relinquish.iter().all(|c| {
+                    inferred_constraints[6].contains(&c)
+                    || inferred_constraints[*player_id].contains(&c)
+                    })
+                },
+                _ => true,
+            }
+        })
+    }
+    fn all_coins_legal(data: &GameData, suggested_moves: &Vec<ActionObservation>) -> bool {
+        suggested_moves.iter().all(|action| {
+            match action {
+                ActionObservation::Assassinate { player_id, .. } => {
+                    data.coins[*player_id] >= COST_ASSASSINATE
+                },
+                ActionObservation::Coup { player_id, .. } => {
+                    data.coins[*player_id] >= COST_COUP
+                },
+                _ => true,
+            }
+        })
+    }
+    fn all_cards_constraint_valid(public_constraints: &Vec<Vec<Card>>, inferred_constraints: &Vec<Vec<Card>>) -> bool {
+        let mut card_counts: [u8; 5] = [0; 5];
+        public_constraints.iter().flatten().for_each(|c| card_counts[*c as usize] += 1);
+        inferred_constraints.iter().flatten().for_each(|c| card_counts[*c as usize] += 1);
+        card_counts.iter().sum::<u8>() == MAX_CARDS_IN_GAME
+        && card_counts.iter().all(|count| *count == COUNT_PER_CHARACTER)
+    }
+    #[test]
+    fn test_random_games() {
+        const RANDOM_GAME_COUNT: usize = 1;
+        for _ in 0..RANDOM_GAME_COUNT {
+            let mut engine = FSMEngine::new();
+            let mut tracker = InformedTracker::new();
+            // TODO: RANDOMIZE
+            let starting_cards = vec![
+                vec![Card::Ambassador, Card::Ambassador], 
+                vec![Card::Ambassador, Card::Assassin], 
+                vec![Card::Assassin, Card::Assassin], 
+                vec![Card::Captain, Card::Captain], 
+                vec![Card::Captain, Card::Duke], 
+                vec![Card::Duke, Card::Duke], 
+                vec![Card::Contessa, Card::Contessa, Card::Contessa], 
+            ];
+            // TODO: RANDOMIZE
+            let player = 0;
+            engine.start_private(player, &[starting_cards[player][0], starting_cards[player][1]]);
+            tracker.start_known(&starting_cards);
+            while !engine.game_end() {
+                let suggested_moves =  engine.generate_legal_moves(&tracker);
+                assert!(all_cards_legal(&tracker.inferred_constraints, &suggested_moves));
+                assert!(all_coins_legal(&engine.state.game_data, &suggested_moves));
+                assert!(all_cards_constraint_valid(&tracker.public_constraints, &tracker.inferred_constraints));
+
+                let mut rng = thread_rng();
+                if let Some(action) = suggested_moves.choose(&mut rng) {
+                    engine.push_ao_private(action);
+                    tracker.push_ao_private(action);
+                } else {
+                    panic!("suggested_moves is empty");
+                }
+            }
+        }
     }
 }
