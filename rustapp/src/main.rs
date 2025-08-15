@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::Write;
 use std::io::{self};
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 use std::time::Instant;
-use log::{info, LevelFilter};
+use log::LevelFilter;
 use env_logger::{Builder, Env, Target};
 use rand::{Rng, thread_rng};
 use rand::prelude::SliceRandom;
@@ -11,7 +11,6 @@ use rustapp::pcmccfr::ReachProbability;
 use rustapp::history_public::{ActionObservation, History, AOName, Card};
 use rustapp::prob_manager::naive_prob::{NaiveProb};
 use rustapp::prob_manager::constraint::{GroupConstraint, CollectiveConstraint};
-use rustapp::cfr::explorer::{cfr_test, mccfr_test, cfr_prune_test, mccfr_prune_test, pmccfr_test};
 // QUICK TEMP: Exchange Draw showing 2 cards should prune the other groups? because they found out the pile has 2 cards
 //              Make Func to initialise past constraint history based on player perspective in naive_prob
 //              Integrate this by having an initial constraint history that can be loaded in
@@ -134,7 +133,7 @@ pub fn find_overflow(game_no: usize, rep_no: usize) {
 }
 pub fn test_satis(){
     logger(LOG_LEVEL);
-    let mut prob = NaiveProb::new();
+    let prob = NaiveProb::new();
 //     let mut colcon = CollectiveConstraint::new();
 //     colcon.add_public_constraint(3, Card::Duke);
 //     colcon.add_public_constraint(1, Card::Duke);
@@ -1395,8 +1394,8 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob = NaiveProb::new();
-    let mut total_wrong_legal: usize = 0;
-    let mut total_wrong_illegal: usize = 0;
+    let total_wrong_legal: usize = 0;
+    let total_wrong_illegal: usize = 0;
     let mut total_wrong_legal_discard_1: usize = 0;
     let mut total_wrong_illegal_discard_1: usize = 0;
     let mut total_wrong_legal_discard_2: usize = 0;
@@ -1415,9 +1414,9 @@ pub fn game_rnd_constraint(game_no: usize, log_bool: bool){
     let mut total_illegal_exchangedraw: usize = 0;
     let mut total_wrong_same_cards_exchangedraw: usize = 0;
     let mut total_already_illegal: usize = 0;
-    let mut total_wrong_legal_proper: usize = 0;
-    let mut total_wrong_illegal_proper: usize = 0;
-    let mut total_same: usize = 0;
+    let total_wrong_legal_proper: usize = 0;
+    let total_wrong_illegal_proper: usize = 0;
+    let total_same: usize = 0;
     let mut total_tries: usize = 0;
     let bool_know_priv_info: bool = true;
     while game < game_no {
@@ -1713,8 +1712,8 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob = NaiveProb::new();
-    let mut total_wrong_legal: usize = 0;
-    let mut total_wrong_illegal: usize = 0;
+    let total_wrong_legal: usize = 0;
+    let total_wrong_illegal: usize = 0;
     let mut total_wrong_legal_discard_1: usize = 0;
     let mut total_wrong_illegal_discard_1: usize = 0;
     let mut total_wrong_legal_discard_2: usize = 0;
@@ -1733,9 +1732,9 @@ pub fn error_farmer(game_no: usize, log_bool: bool){
     let mut total_illegal_exchangedraw: usize = 0;
     let mut total_wrong_same_cards_exchangedraw: usize = 0;
     let mut total_already_illegal: usize = 0;
-    let mut total_wrong_legal_proper: usize = 0;
-    let mut total_wrong_illegal_proper: usize = 0;
-    let mut total_same: usize = 0;
+    let total_wrong_legal_proper: usize = 0;
+    let total_wrong_illegal_proper: usize = 0;
+    let total_same: usize = 0;
     let mut total_tries: usize = 0;
     let bool_know_priv_info: bool = false;
     while game < game_no {
@@ -2028,8 +2027,8 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob = NaiveProb::new();
-    let mut total_wrong_legal: usize = 0;
-    let mut total_wrong_illegal: usize = 0;
+    let total_wrong_legal: usize = 0;
+    let total_wrong_illegal: usize = 0;
     let mut total_wrong_legal_discard_1: usize = 0;
     let mut total_wrong_illegal_discard_1: usize = 0;
     let mut total_wrong_legal_discard_2: usize = 0;
@@ -2048,9 +2047,9 @@ pub fn overflow_farmer(game_no: usize, log_bool: bool){
     let mut total_illegal_exchangedraw: usize = 0;
     let mut total_wrong_same_cards_exchangedraw: usize = 0;
     let mut total_already_illegal: usize = 0;
-    let mut total_wrong_legal_proper: usize = 0;
-    let mut total_wrong_illegal_proper: usize = 0;
-    let mut total_same: usize = 0;
+    let total_wrong_legal_proper: usize = 0;
+    let total_wrong_illegal_proper: usize = 0;
+    let total_same: usize = 0;
     let mut total_tries: usize = 0;
     let bool_know_priv_info: bool = true;
     while game < game_no {
@@ -2393,7 +2392,7 @@ pub fn test_impossible_state(game_no: usize, log_bool: bool){
                                 break;
                             }
                         } else {
-                            let chosen_move_legality: Option<String> = prob.can_player_have_cards(output.player_id(), &output.cards());
+                            let chosen_move_legality: Option<String> = prob.can_player_have_cards(output.player_id(), output.cards());
                             if chosen_move_legality.is_none() {
                                 log::trace!("Cant choose this move!");
                                 break;
@@ -2406,7 +2405,7 @@ pub fn test_impossible_state(game_no: usize, log_bool: bool){
                             break;
                         }
                     } else if output.name() == AOName::ExchangeDraw {
-                        let chosen_move_legality: Option<String> = prob.can_player_have_cards(output.player_id(), &output.cards());
+                        let chosen_move_legality: Option<String> = prob.can_player_have_cards(output.player_id(), output.cards());
                         if chosen_move_legality.is_none() {
                             log::trace!("Cant choose this move!");
                             break;

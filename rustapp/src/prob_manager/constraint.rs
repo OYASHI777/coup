@@ -3,9 +3,6 @@ use std::collections::{HashMap, HashSet};
 // use core::hash::Hasher;
 use std::hash::{Hash, Hasher};
 use std::usize;
-use rand::prelude::SliceRandom;
-use std::sync::Mutex;
-use rand::thread_rng;
 #[derive(Clone, Debug, Eq)]
 pub struct GroupConstraint {
     // String not &str as it will not be known at compile time
@@ -3281,7 +3278,7 @@ impl CollectiveConstraint{
 }
 
 mod constrainttest {
-    use crate::prob_manager::constraint::{CollectiveConstraint, GroupConstraint, Card};
+    
     #[test]
     fn test0() {
         let mut colcon = CollectiveConstraint::new();
