@@ -21,7 +21,16 @@ pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
 // TODO: Receive Action and decide the chance stuff
 // TODO: Create trait to process incoming moves!
 // TODO: Consider making backtracking_prob_hybrid card_count_manager take history as an input
-/// This is a class outlines all the possible legal moves based on perfect information
+/// This is a class outlines all the possible legal moves based on revealled cards? 
+/// Well the test is with perfect information (4), but it seems the implementation was really
+/// for a naive game (2) based on revealed cards only without card counting
+/// TODO: Split this into (4) & (2)
+///     - The test fails because its implemented as (2)
+/// TODO: 4 stages of info
+///     1) Uninformed -> Player lives & Coins
+///     2) Naive -> (1) + Dead Cards
+///     3) Counting -> (2) + Card counting
+///     4) Informed -> Perfect knowledge of all cards
 pub struct InformedTracker {
     history: Vec<ActionObservation>,
     public_constraints: Vec<Vec<Card>>,
