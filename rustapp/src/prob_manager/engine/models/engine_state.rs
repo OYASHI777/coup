@@ -5,7 +5,7 @@ use crate::prob_manager::engine::constants::GAIN_INCOME;
 
 use super::game_state::GameData;
 use crate::prob_manager::engine::models_prelude::*;
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum EngineState {
     // Assassin => (-3 Coins)
     // Coup => (-7 Coins)

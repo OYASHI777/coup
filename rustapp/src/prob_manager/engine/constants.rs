@@ -11,3 +11,5 @@ pub const MAX_CARD_PERMS_ONE: usize = 15;
 pub const MAX_PLAYERS_EXCL_PILE: usize = 6;
 pub const MAX_PLAYERS_INCL_PILE: usize = 7;
 pub const MAX_PLAYER_HAND_SIZE: [usize; 7] = [2, 2, 2, 2, 2, 2, 3];
+pub const MAX_CARDS_IN_GAME: u8 = 15;
+pub const COUNT_PER_CHARACTER: u8 = 3;

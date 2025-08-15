@@ -3,7 +3,7 @@ use crate::history_public::ActionObservation;
 use super::game_state::GameData;
 use super::engine_state::{CoupTransition, EngineState};
 use crate::prob_manager::engine::models_prelude::*;
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct TurnStart {
     pub player_turn: usize,
 }

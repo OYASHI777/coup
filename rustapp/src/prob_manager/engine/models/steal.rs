@@ -5,37 +5,37 @@ use super::game_state::GameData;
 use super::engine_state::EngineState;
 use super::turn_start::TurnStart;
 use super::engine_state::CoupTransition;
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct StealInvitesChallenge {
     pub player_turn: usize,
     pub player_blocking: usize,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct StealChallenged {
     pub player_turn: usize,
     pub player_blocking: usize,
     pub player_challenger: usize,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct StealChallengerFailed {
     pub player_turn: usize,
     pub player_blocking: usize,
     pub player_challenger: usize,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct StealInvitesBlock {
     pub player_turn: usize,
     pub player_blocking: usize,
     pub coins_stolen: u8,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct StealBlockInvitesChallenge {
     pub player_turn: usize,
     pub player_blocking: usize,
     pub card_blocker: Card,
     pub coins_stolen: u8,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct StealBlockChallenged {
     pub player_turn: usize,
     pub player_blocking: usize,
@@ -43,7 +43,7 @@ pub struct StealBlockChallenged {
     pub card_blocker: Card,
     pub coins_stolen: u8,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct StealBlockChallengerFailed {
     pub player_turn: usize,
     pub player_challenger: usize,

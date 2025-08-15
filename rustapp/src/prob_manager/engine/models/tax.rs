@@ -5,16 +5,16 @@ use super::turn_start::TurnStart;
 use super::engine_state::CoupTransition;
 use super::engine_state::EngineState;
 use super::game_state::GameData;
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct TaxInvitesChallenge {
     pub player_turn: usize,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct TaxChallenged {
     pub player_turn: usize,
     pub player_challenger: usize,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct TaxChallengerFailed {
     pub player_turn: usize,
     pub player_challenger: usize,

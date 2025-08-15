@@ -2,11 +2,11 @@ use crate::prob_manager::engine::constants::{STARTING_COINS, STARTING_INFLUENCE}
 use super::engine_state::EngineState;
 use super::turn_start::TurnStart;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct GameData {
-    influence: [u8; 6],
-    coins: [u8; 6],
-    players_alive: u8,
+    pub influence: [u8; 6],
+    pub coins: [u8; 6],
+    pub players_alive: u8,
 }
 impl GameData {
     pub fn new() -> Self {
@@ -84,7 +84,7 @@ impl GameData {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct GameState {
     pub game_data: GameData,
     pub engine_state: EngineState,
