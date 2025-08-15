@@ -3278,7 +3278,8 @@ impl CollectiveConstraint{
 }
 
 mod constrainttest {
-    
+    #[warn(unused_imports)]
+    use super::*;
     #[test]
     fn test0() {
         let mut colcon = CollectiveConstraint::new();
