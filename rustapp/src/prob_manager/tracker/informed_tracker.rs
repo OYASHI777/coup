@@ -816,7 +816,7 @@ mod tests {
     }
     #[test]
     fn test_random_games() {
-        const RANDOM_GAME_COUNT: usize = 1;
+        const RANDOM_GAME_COUNT: usize = 1000;
         for _ in 0..RANDOM_GAME_COUNT {
             let mut engine = FSMEngine::new();
             let mut tracker = InformedTracker::new();
