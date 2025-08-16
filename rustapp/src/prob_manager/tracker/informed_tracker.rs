@@ -646,16 +646,18 @@ impl CoupGeneration for InformedTracker {
         state: &AssassinateInvitesBlock,
         _data: &GameData,
     ) -> Vec<ActionObservation> {
-        vec![
-            ActionObservation::BlockAssassinate {
+        let mut output = Vec::with_capacity(2);
+        output.push(ActionObservation::BlockAssassinate {
                 player_id: state.player_blocking,
                 opposing_player_id: state.player_turn,
-            },
-            ActionObservation::BlockAssassinate {
+            });
+        if self.inferred_constraints[state.player_blocking].iter().any(|c| *c != Card::Contessa) {
+            output.push(ActionObservation::BlockAssassinate {
                 player_id: state.player_blocking,
                 opposing_player_id: state.player_blocking,
-            },
-        ]
+            });
+        }
+        output
     }
 
     fn on_assassinate_block_invites_challenge(

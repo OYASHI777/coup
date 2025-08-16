@@ -70,7 +70,7 @@ impl GameData {
         //     }
         // ).count() == 1
         debug_assert!(self.influence()[player] != 0, "We assume player is alive");
-        self.players_alive == 2 && self.influence()[player] < no_cards
+        self.players_alive == 2 && self.influence()[player] <= no_cards
     }
     /// Returns Coin amount zeroized for dead players
     pub fn coins_display(&self) -> [u8; 6] {
