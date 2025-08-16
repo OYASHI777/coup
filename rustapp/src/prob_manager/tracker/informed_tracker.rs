@@ -20,6 +20,9 @@ const THIS_VALUE_DOES_NOT_MATTER: u8 = 77; // When the state transitions to chal
 //          - [c] Chance node drawing interface
 //              - will need generic for UniqueMove (generation of all possible moves)
 //              - will need generic for Receiving move and providing random chance
+//      - Collective Challenge modes
+//          - All people available
+//          - All possible actions
 // TODO: Receive Collective Indicator vs All Final Actioners vs All Responses
 // TODO: Receive Action and decide the chance stuff
 // TODO: Create trait to process incoming moves!
@@ -63,6 +66,8 @@ impl InformedTracker {
             })
             .collect()
     }
+    // TODO: need different collective challenge modes...
+    //      - Currently only provides all eligible players..
     #[inline(always)]
     pub fn challenge_invite(&self, player: usize, data: &GameData) -> Vec<ActionObservation> {
         // participants here indicates the players alive that can block
