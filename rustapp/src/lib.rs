@@ -53,6 +53,7 @@ pub mod prob_manager {
     }
     pub mod tracker {
         pub mod informed_tracker;
+        pub mod naive_tracker;
         pub mod uninformed_tracker;
     }
     pub mod utils {
