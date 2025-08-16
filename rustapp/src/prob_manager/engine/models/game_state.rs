@@ -2,7 +2,7 @@ use crate::prob_manager::engine::constants::{STARTING_COINS, STARTING_INFLUENCE}
 use super::engine_state::EngineState;
 use super::turn_start::TurnStart;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct GameData {
     pub influence: [u8; 6],
     pub coins: [u8; 6],
@@ -84,7 +84,7 @@ impl GameData {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct GameState {
     pub game_data: GameData,
     pub engine_state: EngineState,

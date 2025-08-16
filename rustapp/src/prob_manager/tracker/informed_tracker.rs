@@ -814,6 +814,7 @@ mod tests {
                 &[starting_cards[player][0], starting_cards[player][1]],
             );
             tracker.start_known(&starting_cards);
+            // TODO: test if game actually ends
             while !engine.game_end() {
                 let suggested_moves = engine.generate_legal_moves(&tracker);
                 all_cards_legal(&tracker.inferred_constraints, &suggested_moves);

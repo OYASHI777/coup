@@ -5,44 +5,44 @@ use crate::history_public::ActionObservation;
 use super::engine_state::EngineState;
 use super::game_state::GameData;
 // TODO: [NOTE] Discard provided in legal moves should consider how many cards a player has alive
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct AssassinateInvitesChallenge {
     pub player_turn: usize,
     pub player_blocking: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct AssassinateInvitesBlock {
     pub player_turn: usize,
     pub player_blocking: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct AssassinateBlockInvitesChallenge {
     pub player_turn: usize,
     pub player_blocking: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct AssassinateBlockChallenged {
     pub player_turn: usize,
     pub player_blocking: usize,
     pub player_challenger: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct AssassinateBlockChallengerFailed {
     pub player_turn: usize,
     pub player_challenger: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct AssassinateSucceeded {
     pub player_turn: usize,
     pub player_blocking: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct AssassinateChallenged {
     pub player_turn: usize,
     pub player_blocking: usize,
     pub player_challenger: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct AssassinateChallengerFailed {
     pub player_turn: usize,
     pub player_blocking: usize,

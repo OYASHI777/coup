@@ -4,25 +4,25 @@ use super::turn_start::TurnStart;
 use super::engine_state::CoupTransition;
 use super::engine_state::EngineState;
 use super::game_state::GameData;
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ExchangeInvitesChallenge {
     pub player_turn: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ExchangeDrawing {
     pub player_turn: usize,
 }
 // TODO: Consider storing the drawn cards in here!
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ExchangeDrawn {
     pub player_turn: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ExchangeChallenged {
     pub player_turn: usize,
     pub player_challenger: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ExchangeChallengerFailed {
     pub player_turn: usize,
     pub player_challenger: usize,

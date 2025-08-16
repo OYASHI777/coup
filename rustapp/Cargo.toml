@@ -44,6 +44,10 @@ path = "src/main.rs"
 name = "card_count_validation"
 path = "src/bin/card_count_validation.rs"
 
+[[bin]]
+name = "fsm_val_rand"
+path = "src/bin/fsm_val_rand.rs"
+
 [build]
 target-dir = "D:/stuff/Code Project Folder/Coup AI/rustapp"
 

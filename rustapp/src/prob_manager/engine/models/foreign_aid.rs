@@ -5,22 +5,22 @@ use super::engine_state::CoupTransition;
 use super::engine_state::EngineState;
 use super::game_state::GameData;
 use super::turn_start::TurnStart;
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ForeignAidInvitesBlock {
     pub player_turn: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ForeignAidBlockInvitesChallenge {
     pub player_turn: usize,
     pub player_blocking: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ForeignAidBlockChallenged {
     pub player_turn: usize,
     pub player_blocking: usize,
     pub player_challenger: usize,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ForeignAidBlockChallengerFailed {
     pub player_turn: usize,
     pub player_challenger: usize,
