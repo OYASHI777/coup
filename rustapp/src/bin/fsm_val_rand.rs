@@ -9,7 +9,7 @@ use rustapp::{history_public::Card, prob_manager::{engine::fsm_engine::FSMEngine
 const LOG_FILE_NAME: &str = "./logs/fsm_val_rand.log";
 
 fn main() {
-    logger(LevelFilter::Info);
+    logger(LevelFilter::Trace);
 
     let game_no = 1;
     for _ in 0..game_no {
@@ -37,6 +37,7 @@ fn main() {
         log::info!("Game State, turn: {turn_no}");
         log::info!("FSM State {:?}", engine.state);
         log::info!("Details {:?}", engine.state);
+        log::info!("");
         while !engine.game_end() {
             let suggested_moves = engine.generate_legal_moves(&tracker);
 
@@ -47,7 +48,9 @@ fn main() {
             if let Some(action) = suggested_moves.choose(&mut rng) {
                 log::info!("Move chosen: {action:?}");
                 engine.push_ao_private(action);
+                log::trace!("engine push_ao done!");
                 tracker.push_ao_private(action);
+                log::trace!("tracker push_ao done!");
             } else {
                 panic!("suggested_moves is empty");
             }

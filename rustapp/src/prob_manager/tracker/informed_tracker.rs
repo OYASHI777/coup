@@ -295,7 +295,32 @@ impl CoupTraversal for InformedTracker {
 impl CoupGeneration for InformedTracker {
     fn on_turn_start(&self, state: &TurnStart, data: &GameData) -> Vec<ActionObservation> {
         match data.coins()[state.player_turn] {
-            0..=6 => {
+            0..=2 => {
+                let mut output = Vec::with_capacity(1 + 1 + 1 + 1 + 5 + 5);
+                output.push(ActionObservation::Income {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::ForeignAid {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::Tax {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::Exchange {
+                    player_id: state.player_turn,
+                });
+                output.extend(
+                    data.player_targets_steal(state.player_turn).map(|p| {
+                        ActionObservation::Steal {
+                            player_id: state.player_turn,
+                            opposing_player_id: p,
+                            amount: TEMP_DUMMY_STEAL_AMT,
+                        }
+                    }), // Steal amount is handled in engine not in move!
+                );
+                output
+            }
+            3..=6 => {
                 let mut output = Vec::with_capacity(1 + 1 + 1 + 1 + 5 + 5);
                 output.push(ActionObservation::Income {
                     player_id: state.player_turn,
