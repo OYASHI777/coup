@@ -54,7 +54,8 @@ fn main() {
             } else {
                 panic!("suggested_moves is empty");
             }
-            log::info!("FSM State {:?}", engine.state);
+            log::info!("FSM Public Constraints {:?}", tracker.public_constraints);
+            log::info!("FSM Inferred Constraints {:?}", tracker.inferred_constraints);
             log::info!("Details {:?}", engine.state);
             log::info!("");
         }

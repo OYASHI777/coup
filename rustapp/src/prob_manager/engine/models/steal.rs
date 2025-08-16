@@ -224,7 +224,7 @@ impl CoupTransition for StealInvitesBlock {
                 match player_id == opposing_player_id {
                     true => {
                         // pass on block
-                        debug_assert!(*opposing_player_id == self.player_turn, "Illegal Move!");
+                        debug_assert!(*opposing_player_id != self.player_turn, "Illegal Move!");
                         // game_data.influence[self.player_blocking] -= self.coins_stolen;
                         // game_data.influence[self.player_turn] += self.coins_stolen;
                         game_data.sub_influence(self.player_blocking, self.coins_stolen);

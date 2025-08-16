@@ -1,6 +1,6 @@
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::constants::MAX_GAME_LENGTH;
-use crate::prob_manager::engine::constants::MAX_CARD_PERMS_ONE;
+use crate::prob_manager::engine::constants::{DEFAULT_PLAYER_LIVES, MAX_CARD_PERMS_ONE};
 use crate::prob_manager::engine::models::game_state::GameData;
 use crate::prob_manager::engine::models_prelude::*;
 use crate::traits::prob_manager::coup_analysis::{CoupGeneration, CoupTraversal};
@@ -33,10 +33,11 @@ pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
 ///     2) Naive -> (1) + Dead Cards
 ///     3) Counting -> (2) + Card counting
 ///     4) Informed -> Perfect knowledge of all cards
+#[derive(Debug)]
 pub struct InformedTracker {
     history: Vec<ActionObservation>,
-    public_constraints: Vec<Vec<Card>>,
-    inferred_constraints: Vec<Vec<Card>>,
+    pub public_constraints: Vec<Vec<Card>>,
+    pub inferred_constraints: Vec<Vec<Card>>,
     card_counts: [u8; 5],
 }
 
@@ -685,27 +686,16 @@ impl CoupGeneration for InformedTracker {
         state: &AssassinateSucceeded,
         _data: &GameData,
     ) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(MAX_CARD_PERMS_ONE);
-        output.push(ActionObservation::Discard {
-            player_id: state.player_blocking,
-            card: [Card::Ambassador, Card::Ambassador],
-            no_cards: 1,
-        });
-        output.push(ActionObservation::Discard {
-            player_id: state.player_blocking,
-            card: [Card::Assassin, Card::Assassin],
-            no_cards: 1,
-        });
-        output.push(ActionObservation::Discard {
-            player_id: state.player_blocking,
-            card: [Card::Captain, Card::Captain],
-            no_cards: 1,
-        });
-        output.push(ActionObservation::Discard {
-            player_id: state.player_blocking,
-            card: [Card::Duke, Card::Duke],
-            no_cards: 1,
-        });
+        let mut output = Vec::with_capacity(DEFAULT_PLAYER_LIVES);
+        for card in self.inferred_constraints[state.player_blocking].iter().copied() {
+            if card != Card::Contessa {
+                output.push(ActionObservation::Discard {
+                    player_id: state.player_blocking,
+                    card: [card, card],
+                    no_cards: 1,
+                });
+            }
+        }
         output
     }
 
