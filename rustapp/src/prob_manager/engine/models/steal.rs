@@ -67,7 +67,7 @@ impl CoupTransition for StealInvitesChallenge {
                             StealInvitesBlock { 
                                 player_turn: self.player_turn, 
                                 player_blocking: self.player_blocking, 
-                                coins_stolen: game_data.influence()[self.player_blocking].min(GAIN_STEAL),
+                                coins_stolen: game_data.coins()[self.player_blocking].min(GAIN_STEAL),
                             }
                         )
                     },
@@ -173,7 +173,7 @@ impl CoupTransition for StealChallengerFailed {
                                 StealInvitesBlock { 
                                     player_turn: self.player_turn, 
                                     player_blocking: self.player_blocking, 
-                                    coins_stolen: game_data.influence()[self.player_blocking].min(GAIN_STEAL),
+                                    coins_stolen: game_data.coins()[self.player_blocking].min(GAIN_STEAL),
                                 }
                             )
                         }
@@ -188,7 +188,7 @@ impl CoupTransition for StealChallengerFailed {
                                 StealInvitesBlock { 
                                     player_turn: self.player_turn, 
                                     player_blocking: self.player_blocking, 
-                                    coins_stolen: game_data.influence()[self.player_blocking].min(GAIN_STEAL),
+                                    coins_stolen: game_data.coins()[self.player_blocking].min(GAIN_STEAL),
                                 }
                             )
                         },
@@ -225,10 +225,8 @@ impl CoupTransition for StealInvitesBlock {
                     true => {
                         // pass on block
                         debug_assert!(*opposing_player_id != self.player_turn, "Illegal Move!");
-                        // game_data.influence[self.player_blocking] -= self.coins_stolen;
-                        // game_data.influence[self.player_turn] += self.coins_stolen;
-                        game_data.sub_influence(self.player_blocking, self.coins_stolen);
-                        game_data.add_influence(self.player_turn, self.coins_stolen);
+                        game_data.sub_coins(self.player_blocking, self.coins_stolen);
+                        game_data.add_coins(self.player_turn, self.coins_stolen);
                         EngineState::TurnStart(
                             TurnStart { 
                                 player_turn: self.player_turn,

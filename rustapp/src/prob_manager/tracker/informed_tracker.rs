@@ -5,7 +5,8 @@ use crate::prob_manager::engine::models::game_state::GameData;
 use crate::prob_manager::engine::models_prelude::*;
 use crate::traits::prob_manager::coup_analysis::{CoupGeneration, CoupTraversal};
 
-pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
+// TODO: Clean amount stolen out from the ActionObservation
+const THIS_VALUE_DOES_NOT_MATTER: u8 = 77; // When the state transitions to challenge, amount stolen is not stored
 
 // TODO: Unique ExchangeDraw vs Agent Choice
 // TODO: Unique ExchangeDraw is implemented
@@ -315,7 +316,7 @@ impl CoupGeneration for InformedTracker {
                         ActionObservation::Steal {
                             player_id: state.player_turn,
                             opposing_player_id: p,
-                            amount: TEMP_DUMMY_STEAL_AMT,
+                            amount: THIS_VALUE_DOES_NOT_MATTER,
                         }
                     }), // Steal amount is handled in engine not in move!
                 );
@@ -340,7 +341,7 @@ impl CoupGeneration for InformedTracker {
                         ActionObservation::Steal {
                             player_id: state.player_turn,
                             opposing_player_id: p,
-                            amount: TEMP_DUMMY_STEAL_AMT,
+                            amount: THIS_VALUE_DOES_NOT_MATTER,
                         }
                     }), // Steal amount is handled in engine not in move!
                 );
@@ -371,7 +372,7 @@ impl CoupGeneration for InformedTracker {
                         ActionObservation::Steal {
                             player_id: state.player_turn,
                             opposing_player_id: p,
-                            amount: TEMP_DUMMY_STEAL_AMT,
+                            amount: THIS_VALUE_DOES_NOT_MATTER,
                         }
                     }), // Steal amount is handled in engine not in move!
                 );

@@ -1,5 +1,4 @@
 use std::fs::OpenOptions;
-use std::path::PathBuf;
 use std::io::Write;
 use env_logger::{Builder, Env, Target};
 use log::LevelFilter;
