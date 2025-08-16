@@ -554,11 +554,14 @@ impl CoupGeneration for InformedTracker {
         _data: &GameData,
     ) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(3);
-        for i in 0..self.inferred_constraints[6].len() as u8 {
-            for j in (i + 1)..self.inferred_constraints[6].len() as u8 {
+        for i in 0..self.inferred_constraints[6].len() {
+            for j in (i + 1)..self.inferred_constraints[6].len() {
                 let action = ActionObservation::ExchangeDraw {
                     player_id: state.player_turn,
-                    card: [Card::try_from(i).unwrap(), Card::try_from(j).unwrap()],
+                    card: [
+                        self.inferred_constraints[6][i],
+                        self.inferred_constraints[6][j],
+                    ],
                 };
                 if !output.contains(&action) {
                     output.push(action);
@@ -570,11 +573,14 @@ impl CoupGeneration for InformedTracker {
 
     fn on_exchange_drawn(&self, state: &ExchangeDrawn, _data: &GameData) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(6);
-        for i in 0..self.inferred_constraints[state.player_turn].len() as u8 {
-            for j in (i + 1)..self.inferred_constraints[state.player_turn].len() as u8 {
+        for i in 0..self.inferred_constraints[state.player_turn].len() {
+            for j in (i + 1)..self.inferred_constraints[state.player_turn].len() {
                 let action = ActionObservation::ExchangeChoice {
                     player_id: state.player_turn,
-                    relinquish: [Card::try_from(i).unwrap(), Card::try_from(j).unwrap()],
+                    relinquish: [
+                        self.inferred_constraints[state.player_turn][i],
+                        self.inferred_constraints[state.player_turn][j],
+                    ],
                 };
                 if !output.contains(&action) {
                     output.push(action);
@@ -719,72 +725,58 @@ mod tests {
     fn all_cards_legal(
         inferred_constraints: &Vec<Vec<Card>>,
         suggested_moves: &Vec<ActionObservation>,
-    ) -> bool {
-        suggested_moves.iter().all(|action| {
+    ) {
+        suggested_moves.iter().for_each(|action| {
             match action {
                 ActionObservation::Discard {
                     player_id, card, ..
-                } => card
+                } => assert!(card
                     .iter()
-                    .all(|c| inferred_constraints[*player_id].contains(c)),
+                    .all(|c| inferred_constraints[*player_id].contains(c))),
                 ActionObservation::RevealRedraw {
                     player_id,
                     reveal,
                     redraw,
                 } => {
-                    inferred_constraints[*player_id].contains(reveal)
-                        && inferred_constraints[6].contains(redraw)
-                }
-                ActionObservation::Tax { player_id } => {
-                    inferred_constraints[*player_id].contains(&Card::Duke)
-                }
-                ActionObservation::Steal { player_id, .. } => {
-                    inferred_constraints[*player_id].contains(&Card::Captain)
-                }
-                ActionObservation::Assassinate { player_id, .. } => {
-                    inferred_constraints[*player_id].contains(&Card::Assassin)
-                }
-                ActionObservation::BlockSteal { player_id, .. } => {
-                    inferred_constraints[*player_id].contains(&Card::Ambassador)
-                        || inferred_constraints[*player_id].contains(&Card::Captain)
-                }
-                ActionObservation::BlockAssassinate { player_id, .. } => {
-                    inferred_constraints[*player_id].contains(&Card::Contessa)
-                }
-                ActionObservation::Exchange { player_id } => {
-                    inferred_constraints[*player_id].contains(&Card::Ambassador)
+                    assert!(inferred_constraints[*player_id].contains(reveal));
+                    assert!(inferred_constraints[6].contains(redraw));
                 }
                 ActionObservation::ExchangeDraw { card, .. } => {
-                    inferred_constraints[6].contains(&card[0])
-                        || inferred_constraints[6].contains(&card[1])
+                    // This is a weak test.. it needs to have BOTH
+                    assert!(
+                        inferred_constraints[6].contains(&card[0])
+                            || inferred_constraints[6].contains(&card[1])
+                    );
                 }
                 ActionObservation::ExchangeChoice {
                     player_id,
                     relinquish,
                 } => {
                     // This is a weak check...
-                    relinquish.iter().all(|c| {
+                    assert!(relinquish.iter().all(|c| {
                         inferred_constraints[6].contains(&c)
                             || inferred_constraints[*player_id].contains(&c)
-                    })
+                    }));
                 }
-                _ => true,
+                _ => {}
             }
         })
     }
-    fn all_coins_legal(data: &GameData, suggested_moves: &Vec<ActionObservation>) -> bool {
-        suggested_moves.iter().all(|action| match action {
+    fn all_coins_legal(data: &GameData, suggested_moves: &Vec<ActionObservation>) {
+        suggested_moves.iter().for_each(|action| match action {
             ActionObservation::Assassinate { player_id, .. } => {
-                data.coins[*player_id] >= COST_ASSASSINATE
+                assert!(data.coins[*player_id] >= COST_ASSASSINATE)
             }
-            ActionObservation::Coup { player_id, .. } => data.coins[*player_id] >= COST_COUP,
-            _ => true,
+            ActionObservation::Coup { player_id, .. } => {
+                assert!(data.coins[*player_id] >= COST_COUP)
+            }
+            _ => {}
         })
     }
     fn all_cards_constraint_valid(
         public_constraints: &Vec<Vec<Card>>,
         inferred_constraints: &Vec<Vec<Card>>,
-    ) -> bool {
+    ) {
         let mut card_counts: [u8; 5] = [0; 5];
         public_constraints
             .iter()
@@ -794,10 +786,10 @@ mod tests {
             .iter()
             .flatten()
             .for_each(|c| card_counts[*c as usize] += 1);
-        card_counts.iter().sum::<u8>() == MAX_CARDS_IN_GAME
-            && card_counts
-                .iter()
-                .all(|count| *count == COUNT_PER_CHARACTER)
+        assert!(card_counts.iter().sum::<u8>() == MAX_CARDS_IN_GAME);
+        assert!(card_counts
+            .iter()
+            .all(|count| *count == COUNT_PER_CHARACTER));
     }
     #[test]
     fn test_random_games() {
@@ -824,15 +816,12 @@ mod tests {
             tracker.start_known(&starting_cards);
             while !engine.game_end() {
                 let suggested_moves = engine.generate_legal_moves(&tracker);
-                assert!(all_cards_legal(
-                    &tracker.inferred_constraints,
-                    &suggested_moves
-                ));
-                assert!(all_coins_legal(&engine.state.game_data, &suggested_moves));
-                assert!(all_cards_constraint_valid(
+                all_cards_legal(&tracker.inferred_constraints, &suggested_moves);
+                all_coins_legal(&engine.state.game_data, &suggested_moves);
+                all_cards_constraint_valid(
                     &tracker.public_constraints,
-                    &tracker.inferred_constraints
-                ));
+                    &tracker.inferred_constraints,
+                );
 
                 let mut rng = thread_rng();
                 if let Some(action) = suggested_moves.choose(&mut rng) {
