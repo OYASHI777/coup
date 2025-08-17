@@ -1,5 +1,7 @@
-use crate::{history_public::ActionObservation, prob_manager::engine::models::game_state::GameData};
 use super::Collator;
+use crate::{
+    history_public::ActionObservation, prob_manager::engine::models::game_state::GameData,
+};
 
 pub struct Indicate;
 
