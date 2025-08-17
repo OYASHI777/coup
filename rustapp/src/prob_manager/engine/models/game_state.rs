@@ -52,7 +52,7 @@ impl GameData {
     }
     /// Returns an iterator over all players alive and not player that have coins
     pub fn player_targets_steal(&self, player: usize) -> impl Iterator<Item = usize> + '_ {
-        self.coins
+        self.influence
             .iter()
             .enumerate()
             .zip(self.coins.iter())

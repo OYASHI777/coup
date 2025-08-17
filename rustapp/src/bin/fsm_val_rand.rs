@@ -8,7 +8,7 @@ use rustapp::{history_public::Card, prob_manager::{engine::fsm_engine::FSMEngine
 const LOG_FILE_NAME: &str = "./logs/fsm_val_rand.log";
 
 fn main() {
-    logger(LevelFilter::Info);
+    logger(LevelFilter::Trace);
 
     let game_no = 1;
     for _ in 0..game_no {
