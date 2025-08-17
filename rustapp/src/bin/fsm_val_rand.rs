@@ -10,7 +10,7 @@ const LOG_FILE_NAME: &str = "./logs/fsm_val_rand.log";
 fn main() {
     logger(LevelFilter::Info);
 
-    let game_no = 1000;
+    let game_no = 1;
     for _ in 0..game_no {
         let mut engine = FSMEngine::new();
         let mut tracker = InformedTracker::new();
@@ -36,27 +36,24 @@ fn main() {
         log::info!("Game State, turn: {turn_no}");
         log::info!("FSM State {:?}", engine.state);
         log::info!("Details {:?}", engine.state);
-        log::info!("");
         while !engine.game_end() {
             let suggested_moves = engine.generate_legal_moves(&tracker);
 
             turn_no += 1;
-            log::info!("Game State, turn: {turn_no}");
             log::info!("Suggested moves: {:?}", &suggested_moves);
             let mut rng = thread_rng();
             if let Some(action) = suggested_moves.choose(&mut rng) {
                 log::info!("Move chosen: {action:?}");
                 engine.push_ao_private(action);
-                log::trace!("engine push_ao done!");
                 tracker.push_ao_private(action);
-                log::trace!("tracker push_ao done!");
             } else {
                 panic!("suggested_moves is empty");
             }
+            log::info!("");
+            log::info!("Game State, turn: {turn_no}");
             log::info!("FSM Public Constraints {:?}", tracker.public_constraints);
             log::info!("FSM Inferred Constraints {:?}", tracker.inferred_constraints);
             log::info!("Details {:?}", engine.state);
-            log::info!("");
         }
     }
 
