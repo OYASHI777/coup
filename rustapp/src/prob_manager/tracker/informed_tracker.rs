@@ -1,8 +1,11 @@
+use std::marker::PhantomData;
+
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::constants::MAX_GAME_LENGTH;
 use crate::prob_manager::engine::constants::{DEFAULT_PLAYER_LIVES, MAX_CARD_PERMS_ONE};
 use crate::prob_manager::engine::models::game_state::GameData;
 use crate::prob_manager::engine::models_prelude::*;
+use crate::prob_manager::tracker::collater::Collator;
 use crate::traits::prob_manager::coup_analysis::{CoupGeneration, CoupTraversal};
 
 // TODO: Clean amount stolen out from the ActionObservation
@@ -20,7 +23,7 @@ const THIS_VALUE_DOES_NOT_MATTER: u8 = 77; // When the state transitions to chal
 //          - [c] Chance node drawing interface
 //              - will need generic for UniqueMove (generation of all possible moves)
 //              - will need generic for Receiving move and providing random chance
-//      - Collective Challenge modes
+//      - Collective Challenge modes [Boilerplate done]
 //          - All people available
 //          - All possible actions
 //      - Suggested Move Handler
@@ -40,20 +43,28 @@ const THIS_VALUE_DOES_NOT_MATTER: u8 = 77; // When the state transitions to chal
 ///     3) Counting -> (2) + Card counting
 ///     4) Informed -> Perfect knowledge of all cards
 #[derive(Debug)]
-pub struct InformedTracker {
+pub struct InformedTracker<C>
+where
+    C: Collator,
+{
     history: Vec<ActionObservation>,
     pub public_constraints: Vec<Vec<Card>>,
     pub inferred_constraints: Vec<Vec<Card>>,
     card_counts: [u8; 5],
+    marker_collator: PhantomData<C>,
 }
 
-impl InformedTracker {
+impl<C> InformedTracker<C>
+where
+    C: Collator,
+{
     pub fn new() -> Self {
-        InformedTracker {
+        InformedTracker::<C> {
             history: Vec::with_capacity(MAX_GAME_LENGTH),
             public_constraints: vec![Vec::with_capacity(2); 7],
             inferred_constraints: vec![Vec::with_capacity(4); 7],
             card_counts: [3; 5],
+            marker_collator: PhantomData,
         }
     }
     #[inline(always)]
@@ -67,19 +78,6 @@ impl InformedTracker {
                 no_cards: 1,
             })
             .collect()
-    }
-    // TODO: need different collective challenge modes...
-    //      - Currently only provides all eligible players..
-    #[inline(always)]
-    pub fn challenge_invite(&self, player: usize, data: &GameData) -> Vec<ActionObservation> {
-        // participants here indicates the players alive that can block
-        // final_actioner here is just a place holder
-        let participants = std::array::from_fn(|p| data.influence()[p] > 0);
-        vec![ActionObservation::CollectiveChallenge {
-            participants,
-            opposing_player_id: player,
-            final_actioner: player,
-        }]
     }
     pub fn block_invite(&self, player: usize, data: &GameData) -> Vec<ActionObservation> {
         // participants here indicates the players alive that can block
@@ -122,7 +120,10 @@ impl InformedTracker {
     }
 }
 
-impl CoupTraversal for InformedTracker {
+impl<C> CoupTraversal for InformedTracker<C>
+where
+    C: Collator,
+{
     fn start_public(&mut self, _player: usize) {
         unimplemented!();
     }
@@ -301,7 +302,10 @@ impl CoupTraversal for InformedTracker {
 
 // TODO: Add another trait for Coup move collection
 // TODO: Refactor Steal to register remove the amount!
-impl CoupGeneration for InformedTracker {
+impl<C> CoupGeneration for InformedTracker<C>
+where
+    C: Collator,
+{
     fn on_turn_start(&self, state: &TurnStart, data: &GameData) -> Vec<ActionObservation> {
         match data.coins()[state.player_turn] {
             0..=2 => {
@@ -431,7 +435,7 @@ impl CoupGeneration for InformedTracker {
         state: &ForeignAidBlockInvitesChallenge,
         data: &GameData,
     ) -> Vec<ActionObservation> {
-        self.challenge_invite(state.player_blocking, data)
+        C::challenge(state.player_blocking, data)
     }
 
     fn on_foreign_aid_block_challenged(
@@ -455,7 +459,7 @@ impl CoupGeneration for InformedTracker {
         state: &TaxInvitesChallenge,
         data: &GameData,
     ) -> Vec<ActionObservation> {
-        self.challenge_invite(state.player_turn, data)
+        C::challenge(state.player_turn, data)
     }
 
     fn on_tax_challenged(&self, state: &TaxChallenged, _data: &GameData) -> Vec<ActionObservation> {
@@ -475,7 +479,7 @@ impl CoupGeneration for InformedTracker {
         state: &StealInvitesChallenge,
         data: &GameData,
     ) -> Vec<ActionObservation> {
-        self.challenge_invite(state.player_turn, data)
+        C::challenge(state.player_turn, data)
     }
 
     fn on_steal_challenged(
@@ -524,7 +528,7 @@ impl CoupGeneration for InformedTracker {
         state: &StealBlockInvitesChallenge,
         data: &GameData,
     ) -> Vec<ActionObservation> {
-        self.challenge_invite(state.player_blocking, data)
+        C::challenge(state.player_blocking, data)
     }
 
     fn on_steal_block_challenged(
@@ -579,7 +583,7 @@ impl CoupGeneration for InformedTracker {
         state: &ExchangeInvitesChallenge,
         data: &GameData,
     ) -> Vec<ActionObservation> {
-        self.challenge_invite(state.player_turn, data)
+        C::challenge(state.player_turn, data)
     }
 
     fn on_exchange_drawing(
@@ -645,7 +649,7 @@ impl CoupGeneration for InformedTracker {
         state: &AssassinateInvitesChallenge,
         data: &GameData,
     ) -> Vec<ActionObservation> {
-        self.challenge_invite(state.player_turn, data)
+        C::challenge(state.player_turn, data)
     }
 
     fn on_assassinate_invites_block(
@@ -655,10 +659,13 @@ impl CoupGeneration for InformedTracker {
     ) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(2);
         output.push(ActionObservation::BlockAssassinate {
-                player_id: state.player_blocking,
-                opposing_player_id: state.player_turn,
-            });
-        if self.inferred_constraints[state.player_blocking].iter().any(|c| *c != Card::Contessa) {
+            player_id: state.player_blocking,
+            opposing_player_id: state.player_turn,
+        });
+        if self.inferred_constraints[state.player_blocking]
+            .iter()
+            .any(|c| *c != Card::Contessa)
+        {
             output.push(ActionObservation::BlockAssassinate {
                 player_id: state.player_blocking,
                 opposing_player_id: state.player_blocking,
@@ -672,7 +679,7 @@ impl CoupGeneration for InformedTracker {
         state: &AssassinateBlockInvitesChallenge,
         data: &GameData,
     ) -> Vec<ActionObservation> {
-        self.challenge_invite(state.player_blocking, data)
+        C::challenge(state.player_blocking, data)
     }
 
     fn on_assassinate_block_challenged(
@@ -697,7 +704,10 @@ impl CoupGeneration for InformedTracker {
         _data: &GameData,
     ) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(DEFAULT_PLAYER_LIVES);
-        for card in self.inferred_constraints[state.player_blocking].iter().copied() {
+        for card in self.inferred_constraints[state.player_blocking]
+            .iter()
+            .copied()
+        {
             if card != Card::Contessa {
                 output.push(ActionObservation::Discard {
                     player_id: state.player_blocking,
@@ -730,22 +740,19 @@ impl CoupGeneration for InformedTracker {
 
 #[cfg(test)]
 mod tests {
+    #[warn(unused_imports)]
+    use super::*;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
 
-    use crate::{
-        history_public::{ActionObservation, Card},
-        prob_manager::{
-            engine::{
-                constants::{COST_ASSASSINATE, COST_COUP, COUNT_PER_CHARACTER, MAX_CARDS_IN_GAME},
-                fsm_engine::FSMEngine,
-                models::{engine_state::EngineState, game_state::GameData},
-                models_prelude::End,
-            },
-            tracker::informed_tracker::InformedTracker,
+    use crate::prob_manager::{
+        engine::{
+            constants::{COST_ASSASSINATE, COST_COUP, COUNT_PER_CHARACTER, MAX_CARDS_IN_GAME},
+            fsm_engine::FSMEngine,
         },
-        traits::prob_manager::coup_analysis::CoupTraversal,
+        tracker::collater::Indicate,
     };
+
     // Implement 100 random games and test if all items returned by CoupGeneration are valid
     fn all_cards_legal(
         inferred_constraints: &Vec<Vec<Card>>,
@@ -821,7 +828,7 @@ mod tests {
         const RANDOM_GAME_COUNT: usize = 1000;
         for _ in 0..RANDOM_GAME_COUNT {
             let mut engine = FSMEngine::new();
-            let mut tracker = InformedTracker::new();
+            let mut tracker: InformedTracker<Indicate> = InformedTracker::new();
             // TODO: RANDOMIZE
             let starting_cards = vec![
                 vec![Card::Ambassador, Card::Ambassador],

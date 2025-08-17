@@ -1,4 +1,4 @@
-use crate::history_public::ActionObservation;
+use crate::{history_public::ActionObservation, prob_manager::engine::models::game_state::GameData};
 
 pub mod indicate;
 pub mod permute;
@@ -24,5 +24,5 @@ pub use unique::Unique;
 pub trait Collator {
     /// Returns a list of ActionObservation based on way
     /// challenges are handled
-    fn challenge(player: usize) -> Vec<ActionObservation>;
+    fn challenge(player: usize, data: &GameData) -> Vec<ActionObservation>;
 }
