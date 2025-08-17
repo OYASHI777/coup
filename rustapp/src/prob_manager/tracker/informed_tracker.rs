@@ -95,7 +95,7 @@ where
         // TODO: Consider Random Sample vs Single Sample vs Unique Samples
         let mut output = Vec::with_capacity(5);
         let mut player_cards = self.inferred_constraints[player].clone();
-        let mut pile_cards = self.inferred_constraints[player].clone();
+        let mut pile_cards = self.inferred_constraints[6].clone();
         player_cards.sort_unstable();
         player_cards.dedup();
         for card in player_cards.iter() {

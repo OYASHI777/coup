@@ -3,7 +3,7 @@ use std::io::Write;
 use env_logger::{Builder, Env, Target};
 use log::LevelFilter;
 use rand::{seq::SliceRandom, thread_rng};
-use rustapp::{history_public::Card, prob_manager::{engine::fsm_engine::FSMEngine, tracker::{collater::Indicate, informed_tracker::InformedTracker}}, traits::prob_manager::coup_analysis::CoupTraversal};
+use rustapp::{history_public::Card, prob_manager::{engine::fsm_engine::FSMEngine, tracker::{collater::{Indicate, Unique}, informed_tracker::InformedTracker}}, traits::prob_manager::coup_analysis::CoupTraversal};
 
 const LOG_FILE_NAME: &str = "./logs/fsm_val_rand.log";
 
@@ -13,7 +13,7 @@ fn main() {
     let game_no = 1;
     for _ in 0..game_no {
         let mut engine = FSMEngine::new();
-        let mut tracker: InformedTracker<Indicate> = InformedTracker::new();
+        let mut tracker: InformedTracker<Unique> = InformedTracker::new();
         // TODO: RANDOMIZE
         let starting_cards = vec![
             vec![Card::Ambassador, Card::Ambassador],
