@@ -23,6 +23,8 @@ const THIS_VALUE_DOES_NOT_MATTER: u8 = 77; // When the state transitions to chal
 //      - Collective Challenge modes
 //          - All people available
 //          - All possible actions
+//      - Suggested Move Handler
+//          - Somehow can accomodate different challenge types with an added interface?
 // TODO: Receive Collective Indicator vs All Final Actioners vs All Responses
 // TODO: Receive Action and decide the chance stuff
 // TODO: Create trait to process incoming moves!
