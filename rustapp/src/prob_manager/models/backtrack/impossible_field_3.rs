@@ -43,7 +43,7 @@ impl ImpossibleField3 {
     }
     #[inline(always)]
     const fn c3(n: u32) -> u32 {
-        n * (n - 1) * (n - 2) / 6
+        n * (n - 1) * (n - 2) / 4 
     }
 
     /// Generates a mask with all indices related to the card as true
