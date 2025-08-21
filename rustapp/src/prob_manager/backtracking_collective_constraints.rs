@@ -1,6 +1,6 @@
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::backtracking_prob::CoupConstraint;
-use crate::prob_manager::models::backtrack_metadata::BacktrackMetaData;
+use crate::prob_manager::models::backtrack::InfoArray;
 use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 use std::marker::Copy;
 
@@ -162,12 +162,12 @@ pub struct SignificantAction {
     move_no: usize, // move_no is seperate from the game move number
     player: u8,
     action_info: ActionInfo,
-    meta_data: BacktrackMetaData,
+    meta_data: InfoArray,
 }
 
 impl SignificantAction {
     pub fn initial(move_no: usize, player: u8, action_info: ActionInfo) -> Self {
-        let pd_metadata = BacktrackMetaData::initial();
+        let pd_metadata = InfoArray::initial();
         Self {
             move_no,
             player,
@@ -176,7 +176,7 @@ impl SignificantAction {
         }
     }
     pub fn start() -> Self {
-        let meta_data: BacktrackMetaData = BacktrackMetaData::start_public();
+        let meta_data: InfoArray = InfoArray::start_public();
         Self {
             move_no: 0,
             player: 77,
@@ -185,7 +185,7 @@ impl SignificantAction {
         }
     }
     pub fn start_inferred() -> Self {
-        let meta_data: BacktrackMetaData = BacktrackMetaData::start_public();
+        let meta_data: InfoArray = InfoArray::start_public();
         Self {
             move_no: 0,
             player: 77,
@@ -208,7 +208,7 @@ impl SignificantAction {
     pub fn action_info_mut(&mut self) -> &mut ActionInfo {
         &mut self.action_info
     }
-    pub fn meta_data(&self) -> &BacktrackMetaData {
+    pub fn meta_data(&self) -> &InfoArray {
         &self.meta_data
     }
     pub fn public_constraints(&self) -> &Vec<Vec<Card>> {
@@ -327,8 +327,8 @@ impl BackTrackCollectiveConstraint {
         log::trace!("regenerate_game_start");
         self.printlog();
     }
-    pub fn to_meta_data(&mut self) -> BacktrackMetaData {
-        BacktrackMetaData { 
+    pub fn to_meta_data(&mut self) -> InfoArray {
+        InfoArray { 
             public_constraints: self.public_constraints.clone(), 
             inferred_constraints: self.inferred_constraints.clone(), 
             impossible_constraints: self.impossible_constraints.clone(),

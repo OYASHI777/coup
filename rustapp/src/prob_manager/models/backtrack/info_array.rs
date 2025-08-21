@@ -1,7 +1,7 @@
 use crate::history_public::Card;
 
 #[derive(Clone, Debug)]
-pub struct BacktrackMetaData {
+pub struct InfoArray {
     pub public_constraints: Vec<Vec<Card>>,
     pub inferred_constraints: Vec<Vec<Card>>,
     pub impossible_constraints: [[bool; 5]; 7], // For each player store an array of bool where each index is a Card, this represents whether a player cannot have a card true => cannot
@@ -9,7 +9,7 @@ pub struct BacktrackMetaData {
     pub impossible_constraints_3: [[[bool; 5]; 5]; 5],
 }
 
-impl BacktrackMetaData {
+impl InfoArray {
     pub fn initial() -> Self {
         Self::start_public()
     }

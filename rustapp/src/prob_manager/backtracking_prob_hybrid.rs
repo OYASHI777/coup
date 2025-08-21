@@ -7,7 +7,7 @@
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 use crate::{history_public::{ActionObservation, Card}, traits::prob_manager::coup_analysis::CoupTraversal};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
-use crate::prob_manager::models::backtrack_metadata::BacktrackMetaData;
+use crate::prob_manager::models::backtrack::InfoArray;
 use super::constants::MAX_GAME_LENGTH;
 use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 use super::move_guard::MoveGuard;
@@ -16,11 +16,11 @@ use super::move_guard::MoveGuard;
 pub struct SignificantAction {
     player: u8,
     action_info: ActionInfo,
-    meta_data: BacktrackMetaData,
+    meta_data: InfoArray,
 }
 // TODO: Implement analysis for SignificantAction
 impl SignificantAction {
-    pub fn new(player: u8, action_info: ActionInfo, meta_data: BacktrackMetaData) -> Self {
+    pub fn new(player: u8, action_info: ActionInfo, meta_data: InfoArray) -> Self {
         Self{
             player,
             action_info,
@@ -39,7 +39,7 @@ impl SignificantAction {
     pub fn action_info_mut(&mut self) -> &mut ActionInfo {
         &mut self.action_info
     }
-    pub fn meta_data(&self) -> &BacktrackMetaData {
+    pub fn meta_data(&self) -> &InfoArray {
         &self.meta_data
     }
     pub fn public_constraints(&self) -> &Vec<Vec<Card>> {
@@ -126,10 +126,10 @@ impl SignificantAction {
     pub fn action_info_str(&self) -> String {
         format!("Player: {} {:?} public_constraints: {:?}, inferred_constraints: {:?}, impossible_constraints: {:?}", self.player, self.action_info, self.public_constraints(), self.inferred_constraints(), self.impossible_constraints())
     }
-    pub fn clone_public_meta_data(&self) -> BacktrackMetaData {
+    pub fn clone_public_meta_data(&self) -> InfoArray {
         self.meta_data.clone_public()
     }
-    pub fn clone_meta_data(&self) -> BacktrackMetaData {
+    pub fn clone_meta_data(&self) -> InfoArray {
         self.meta_data.clone()
     }
     pub fn printlog(&self) {
@@ -1249,7 +1249,7 @@ impl CoupTraversal for BackTrackCardCountManager {
         self.private_player = None;
         self.constraint_history.clear();
         self.move_no_history.clear();
-        let start_public = BacktrackMetaData::start_public();
+        let start_public = InfoArray::start_public();
         self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, start_public.clone()));
         self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_public));
         self.move_no_history.push(0);
@@ -1261,8 +1261,8 @@ impl CoupTraversal for BackTrackCardCountManager {
         self.private_player = Some(player);
         self.constraint_history.clear();
         self.move_no_history.clear();
-        let start_private = BacktrackMetaData::start_private(player, cards);
-        self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, BacktrackMetaData::start_public()));
+        let start_private = InfoArray::start_private(player, cards);
+        self.constraint_history.push(SignificantAction::new(7, ActionInfo::Start, InfoArray::start_public()));
         self.constraint_history.push(SignificantAction::new(7, ActionInfo::StartInferred, start_private));
         self.move_no_history.push(0);
         self.move_no_history.push(0);
