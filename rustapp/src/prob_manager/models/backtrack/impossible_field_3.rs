@@ -65,7 +65,7 @@ impl ImpossibleField3 {
             | 1 << Self::index(card, Card::Contessa, Card::Contessa)
     }
 
-    /// Branchless set.
+    /// Sets the impossibility state of a particular 3 card combination
     #[inline(always)]
     pub fn set(&mut self, i: Card, j: Card, k: Card, impossibility: bool) {
         let idx = Self::index(i, j, k);
@@ -74,7 +74,7 @@ impl ImpossibleField3 {
         self.0 = (self.0 & !mask) | bit;
     }
 
-    /// Branchless get.
+    /// Gets the impossibility state of a particular 3 card combination
     #[inline(always)]
     pub fn get(&self, i: Card, j: Card, k: Card) -> bool {
         ((self.0 >> Self::index(i, j, k)) & 1) == 1

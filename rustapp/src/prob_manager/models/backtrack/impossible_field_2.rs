@@ -18,6 +18,7 @@ impl ImpossibleField2 {
     pub fn zero() -> Self {
         Self(0)
     }
+
     /// Collision-free index for unordered pairs (i, j) with self-pairs allowed.
     pub const fn index(i: Card, j: Card) -> u8 {
         let ai = i as u8 + 1;
@@ -31,6 +32,7 @@ impl ImpossibleField2 {
         }
         p
     }
+
     /// Generates a mask with all indices related to the card as true
     pub const fn card_mask(card: Card) -> u32 {
         1 << ImpossibleField2::index(card, Card::Ambassador)
@@ -39,6 +41,7 @@ impl ImpossibleField2 {
             | 1 << ImpossibleField2::index(card, Card::Duke)
             | 1 << ImpossibleField2::index(card, Card::Contessa)
     }
+
     /// Sets the impossibility state of a particular 2 card combination
     pub fn set(&mut self, i: Card, j: Card, impossibility: bool) {
         let index = Self::index(i, j);
@@ -46,6 +49,7 @@ impl ImpossibleField2 {
         let bit = (impossibility as u32) << index;
         self.0 = (self.0 & !mask) | bit;
     }
+    
     /// Gets the impossibility state of a particular 2 card combination
     pub fn get(&self, i: Card, j: Card) -> bool {
         (self.0 >> Self::index(i, j)) & 1 == 1
