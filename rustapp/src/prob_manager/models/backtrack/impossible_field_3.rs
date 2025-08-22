@@ -16,13 +16,14 @@ impl ImpossibleField3 {
     pub const MASK_DUKE: u64 = Self::card_mask(Card::Duke);
     pub const MASK_CONTESSA: u64 = Self::card_mask(Card::Contessa);
 
-    #[inline(always)]
+    /// Initialises to all possible (None impossible)
+    #[inline]
     pub fn zero() -> Self {
         Self(0)
     }
 
     /// Collision-free index for unordered triples (i, j, k) with self-pairs allowed.
-    #[inline(always)]
+    #[inline]
     pub const fn index(i: u8, j: u8, k: u8) -> u8 {
         let (a, b) = if i <= j { (i, j) } else { (j, i) };
         let (b, c) = if b <= k { (b, k) } else { (k, b) };
@@ -35,11 +36,9 @@ impl ImpossibleField3 {
         Self::c3(b3) + Self::c2(b2) + b1
     }
 
-    #[inline(always)]
     const fn c2(n: u8) -> u8 {
         n * (n - 1) / 2
     }
-    #[inline(always)]
     const fn c3(n: u8) -> u8 {
         n * (n - 1) * (n - 2) / 4
     }
@@ -65,7 +64,7 @@ impl ImpossibleField3 {
     }
 
     /// Sets the impossibility state of a particular 3 card combination
-    #[inline(always)]
+    #[inline]
     pub fn set(&mut self, i: u8, j: u8, k: u8, impossibility: bool) {
         let idx = Self::index(i, j, k);
         let mask = 1u64 << idx;
@@ -74,15 +73,9 @@ impl ImpossibleField3 {
     }
 
     /// Gets the impossibility state of a particular 3 card combination
-    #[inline(always)]
+    #[inline]
     pub fn get(&self, i: u8, j: u8, k: u8) -> bool {
         ((self.0 >> Self::index(i, j, k)) & 1) == 1
-    }
-
-    /// (Optional helper) Return the raw storage (useful for tests/bit ops).
-    #[inline(always)]
-    pub fn bits(&self) -> u64 {
-        self.0
     }
 }
 

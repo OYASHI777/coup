@@ -16,11 +16,13 @@ impl ImpossibleField2 {
     pub const MASK_CONTESSA: u32 = Self::card_mask(Card::Contessa);
 
     /// Initialises to all possible (None impossible)
+    #[inline]
     pub fn zero() -> Self {
         Self(0)
     }
 
     /// Collision-free index for unordered pairs (i, j) with self-pairs allowed.
+    #[inline]
     pub const fn index(i: u8, j: u8) -> u8 {
         let ai = i + 1;
         let aj = j + 1;
@@ -45,6 +47,7 @@ impl ImpossibleField2 {
     }
 
     /// Sets the impossibility state of a particular 2 card combination
+    #[inline]
     pub fn set(&mut self, i: u8, j: u8, impossibility: bool) {
         let index = Self::index(i, j);
         let mask = 1 << index;
@@ -53,6 +56,7 @@ impl ImpossibleField2 {
     }
 
     /// Gets the impossibility state of a particular 2 card combination
+    #[inline]
     pub fn get(&self, i: u8, j: u8) -> bool {
         (self.0 >> Self::index(i, j)) & 1 == 1
     }

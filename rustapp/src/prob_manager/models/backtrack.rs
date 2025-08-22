@@ -1,3 +1,6 @@
+pub mod impossible_field_1;
+pub use impossible_field_1::ImpossibleField1;
+
 pub mod impossible_field_2;
 pub use impossible_field_2::ImpossibleField2;
 
