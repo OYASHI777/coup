@@ -390,7 +390,10 @@ impl CoupTransition for AssassinateChallengerFailed {
             // TODO: [OPTIMIZE] You can technically just return TurnStart if you have a check wrapper outside this!
             ActionObservation::Discard { player_id, no_cards, .. } => {
                 if *player_id == self.player_blocking {
-                    match game_data.influence()[self.player_blocking] < *no_cards as u8 {
+                    match game_data.influence()[self.player_blocking] <= *no_cards as u8 {
+                        true if game_data.game_will_be_won(*player_id, *no_cards as u8) => {
+                            EngineState::End(End { })
+                        },
                         true => {
                             // Player is dead already and cannot block
                             EngineState::TurnStart(

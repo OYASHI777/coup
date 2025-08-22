@@ -10,7 +10,7 @@ const LOG_FILE_NAME: &str = "./logs/fsm_val_rand.log";
 fn main() {
     logger(LevelFilter::Trace);
 
-    let game_no = 1;
+    let game_no = 10;
     for _ in 0..game_no {
         let mut engine = FSMEngine::new();
         let mut tracker: InformedTracker<Unique> = InformedTracker::new();
