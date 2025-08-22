@@ -14,8 +14,8 @@ impl Collator for Unique {
             .filter(|&i| inf[i] > 0) // keep only eligible players
             .map(|i| ActionObservation::CollectiveChallenge {
                 participants: [false; 6],
-                opposing_player_id: i,
-                final_actioner: player,
+                opposing_player_id: player,
+                final_actioner: i,
             })
             .collect()
     }
