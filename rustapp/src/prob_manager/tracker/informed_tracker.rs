@@ -192,7 +192,7 @@ where
                         self.inferred_constraints[6].push(*reveal);
                         self.inferred_constraints[*player_id].push(*redraw);
                     } else {
-                        debug_assert!(false, "Card not found!");
+                        debug_assert!(*reveal == *redraw, "Card not found!");
                     }
                 } else {
                     debug_assert!(false, "Card not found!");
