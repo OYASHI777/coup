@@ -2,7 +2,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use env_logger::{Builder, Env, Target};
 use log::LevelFilter;
-use rand::{seq::SliceRandom, thread_rng};
+use rand::{seq::SliceRandom, thread_rng, Rng};
 use rustapp::{history_public::Card, prob_manager::{engine::fsm_engine::FSMEngine, tracker::{collater::{Indicate, Unique}, informed_tracker::InformedTracker}}, traits::prob_manager::coup_analysis::CoupTraversal};
 
 const LOG_FILE_NAME: &str = "./logs/fsm_val_rand.log";
@@ -14,7 +14,7 @@ fn main() {
     for _ in 0..game_no {
         let mut engine = FSMEngine::new();
         let mut tracker: InformedTracker<Unique> = InformedTracker::new();
-        // TODO: RANDOMIZE
+        
         let starting_cards = vec![
             vec![Card::Ambassador, Card::Ambassador],
             vec![Card::Ambassador, Card::Assassin],
@@ -24,14 +24,15 @@ fn main() {
             vec![Card::Duke, Card::Duke],
             vec![Card::Contessa, Card::Contessa, Card::Contessa],
         ];
-        // TODO: RANDOMIZE
-        let player = 0;
+        let starting_cards = shuffled_same_shape(&starting_cards);
+
+        let mut rng = thread_rng();
+        let player = rng.gen_range(0..=5);
         engine.start_private(
             player,
             &[starting_cards[player][0], starting_cards[player][1]],
         );
         tracker.start_known(&starting_cards);
-        // TODO: test if game actually ends
         let mut turn_no = 0;
         log::info!("Game State, turn: {turn_no}");
         log::info!("FSM State {:?}", engine.state);
@@ -92,4 +93,21 @@ pub fn logger(level: LevelFilter) {
         .filter(None, level)
         .target(Target::Pipe(Box::new(log_file)))
         .init();
+}
+
+// Flatten -> shuffle -> regroup to the SAME shape as the input.
+fn shuffled_same_shape<T: Clone>(groups: &[Vec<T>]) -> Vec<Vec<T>> {
+    let sizes: Vec<usize> = groups.iter().map(|g| g.len()).collect();
+
+    let mut flat: Vec<T> = groups.iter().flat_map(|g| g.clone()).collect();
+
+    flat.shuffle(&mut thread_rng());
+
+    let mut out = Vec::with_capacity(sizes.len());
+    let mut idx = 0;
+    for sz in sizes {
+        out.push(flat[idx..idx + sz].to_vec());
+        idx += sz;
+    }
+    out
 }
