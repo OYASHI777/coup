@@ -20,9 +20,9 @@ impl ImpossibleField2 {
     }
 
     /// Collision-free index for unordered pairs (i, j) with self-pairs allowed.
-    pub const fn index(i: Card, j: Card) -> u8 {
-        let ai = i as u8 + 1;
-        let aj = j as u8 + 1;
+    pub const fn index(i: u8, j: u8) -> u8 {
+        let ai = i + 1;
+        let aj = j + 1;
         let p = ai * aj;
 
         // Case where (2, 2) which collides with (1, 4)
@@ -35,15 +35,16 @@ impl ImpossibleField2 {
 
     /// Generates a mask with all indices related to the card as true
     pub const fn card_mask(card: Card) -> u32 {
-        1 << ImpossibleField2::index(card, Card::Ambassador)
-            | 1 << ImpossibleField2::index(card, Card::Assassin)
-            | 1 << ImpossibleField2::index(card, Card::Captain)
-            | 1 << ImpossibleField2::index(card, Card::Duke)
-            | 1 << ImpossibleField2::index(card, Card::Contessa)
+        let card_i = card as u8;
+        1 << ImpossibleField2::index(card_i, Card::Ambassador as u8)
+            | 1 << ImpossibleField2::index(card_i, Card::Assassin as u8)
+            | 1 << ImpossibleField2::index(card_i, Card::Captain as u8)
+            | 1 << ImpossibleField2::index(card_i, Card::Duke as u8)
+            | 1 << ImpossibleField2::index(card_i, Card::Contessa as u8)
     }
 
     /// Sets the impossibility state of a particular 2 card combination
-    pub fn set(&mut self, i: Card, j: Card, impossibility: bool) {
+    pub fn set(&mut self, i: u8, j: u8, impossibility: bool) {
         let index = Self::index(i, j);
         let mask = 1 << index;
         let bit = (impossibility as u32) << index;
@@ -51,7 +52,7 @@ impl ImpossibleField2 {
     }
     
     /// Gets the impossibility state of a particular 2 card combination
-    pub fn get(&self, i: Card, j: Card) -> bool {
+    pub fn get(&self, i: u8, j: u8) -> bool {
         (self.0 >> Self::index(i, j)) & 1 == 1
     }
 }
@@ -60,18 +61,10 @@ impl ImpossibleField2 {
 mod tests {
     use super::*;
 
-    const CARDS: [Card; 5] = [
-        Card::Ambassador,
-        Card::Assassin,
-        Card::Captain,
-        Card::Duke,
-        Card::Contessa,
-    ];
-
     #[test]
     fn set_get_roundtrip() {
-        for &i in &CARDS {
-            for &j in &CARDS {
+        for i in 0..5 {
+            for j in 0..5 {
                 let mut f = ImpossibleField2::zero();
 
                 f.set(i, j, true);
@@ -85,8 +78,8 @@ mod tests {
 
     #[test]
     fn unordered() {
-        for &i in &CARDS {
-            for &j in &CARDS {
+        for i in 0..5 {
+            for j in 0..5 {
                 let mut f = ImpossibleField2::zero();
 
                 f.set(i, j, true);
@@ -98,13 +91,13 @@ mod tests {
 
     #[test]
     fn mask_set_correspondence() {
-        for &i in &CARDS {
+        for i in 0..5 {
             let mut f = ImpossibleField2::zero();
-            for &j in &CARDS {
+            for j in 0..5 {
                 f.set(i, j, true);
             }
 
-            let mask = match i {
+            let mask = match Card::try_from(i).unwrap() {
                 Card::Ambassador => ImpossibleField2::MASK_AMBASSADOR,
                 Card::Assassin => ImpossibleField2::MASK_ASSASSIN,
                 Card::Captain => ImpossibleField2::MASK_CAPTAIN,
@@ -118,18 +111,18 @@ mod tests {
 
     #[test]
     fn no_collision() {
-        for i in &CARDS {
-            for j in &CARDS {
+        for i in 0..5 {
+            for j in 0..5 {
                 let mut ij = vec![i, j];
                 ij.sort_unstable();
-                for k in &CARDS {
-                    for l in &CARDS {
+                for k in 0..5 {
+                    for l in 0..5 {
                         let mut kl = vec![k, l];
                         kl.sort_unstable();
                         if ij == kl {
                             continue;
                         }
-                        assert!(ImpossibleField2::index(*i, *j) != ImpossibleField2::index(*k, *l))
+                        assert!(ImpossibleField2::index(i, j) != ImpossibleField2::index(k, l))
                     }
                 }
             }

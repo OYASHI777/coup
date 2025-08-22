@@ -21,13 +21,9 @@ impl ImpossibleField3 {
 
     /// Collision-free index for unordered triples (i, j, k) with self-pairs allowed.
     #[inline(always)]
-    pub const fn index(i: Card, j: Card, k: Card) -> u32 {
-        let ai = i as u32;
-        let aj = j as u32;
-        let ak = k as u32;
-
-        let (a, b) = if ai <= aj { (ai, aj) } else { (aj, ai) };
-        let (b, c) = if b <= ak { (b, ak) } else { (ak, b) };
+    pub const fn index(i: u8, j: u8, k: u8) -> u8 {
+        let (a, b) = if i <= j { (i, j) } else { (j, i) };
+        let (b, c) = if b <= k { (b, k) } else { (k, b) };
         let (a, b) = if a <= b { (a, b) } else { (b, a) };
 
         let b1 = a;
@@ -38,36 +34,37 @@ impl ImpossibleField3 {
     }
 
     #[inline(always)]
-    const fn c2(n: u32) -> u32 {
+    const fn c2(n: u8) -> u8 {
         n * (n - 1) / 2
     }
     #[inline(always)]
-    const fn c3(n: u32) -> u32 {
+    const fn c3(n: u8) -> u8 {
         n * (n - 1) * (n - 2) / 4 
     }
 
     /// Generates a mask with all indices related to the card as true
     pub const fn card_mask(card: Card) -> u64 {
-        1 << Self::index(card, Card::Ambassador, Card::Ambassador)
-            | 1 << Self::index(card, Card::Ambassador, Card::Assassin)
-            | 1 << Self::index(card, Card::Ambassador, Card::Captain)
-            | 1 << Self::index(card, Card::Ambassador, Card::Duke)
-            | 1 << Self::index(card, Card::Ambassador, Card::Contessa)
-            | 1 << Self::index(card, Card::Assassin, Card::Assassin)
-            | 1 << Self::index(card, Card::Assassin, Card::Captain)
-            | 1 << Self::index(card, Card::Assassin, Card::Duke)
-            | 1 << Self::index(card, Card::Assassin, Card::Contessa)
-            | 1 << Self::index(card, Card::Captain, Card::Captain)
-            | 1 << Self::index(card, Card::Captain, Card::Duke)
-            | 1 << Self::index(card, Card::Captain, Card::Contessa)
-            | 1 << Self::index(card, Card::Duke, Card::Duke)
-            | 1 << Self::index(card, Card::Duke, Card::Contessa)
-            | 1 << Self::index(card, Card::Contessa, Card::Contessa)
+        let card_i = card as u8;
+        1 << Self::index(card_i, Card::Ambassador as u8, Card::Ambassador as u8)
+            | 1 << Self::index(card_i, Card::Ambassador as u8, Card::Assassin as u8)
+            | 1 << Self::index(card_i, Card::Ambassador as u8, Card::Captain as u8)
+            | 1 << Self::index(card_i, Card::Ambassador as u8, Card::Duke as u8)
+            | 1 << Self::index(card_i, Card::Ambassador as u8, Card::Contessa as u8)
+            | 1 << Self::index(card_i, Card::Assassin as u8, Card::Assassin as u8)
+            | 1 << Self::index(card_i, Card::Assassin as u8, Card::Captain as u8)
+            | 1 << Self::index(card_i, Card::Assassin as u8, Card::Duke as u8)
+            | 1 << Self::index(card_i, Card::Assassin as u8, Card::Contessa as u8)
+            | 1 << Self::index(card_i, Card::Captain as u8, Card::Captain as u8)
+            | 1 << Self::index(card_i, Card::Captain as u8, Card::Duke as u8)
+            | 1 << Self::index(card_i, Card::Captain as u8, Card::Contessa as u8)
+            | 1 << Self::index(card_i, Card::Duke as u8, Card::Duke as u8)
+            | 1 << Self::index(card_i, Card::Duke as u8, Card::Contessa as u8)
+            | 1 << Self::index(card_i, Card::Contessa as u8, Card::Contessa as u8)
     }
 
     /// Sets the impossibility state of a particular 3 card combination
     #[inline(always)]
-    pub fn set(&mut self, i: Card, j: Card, k: Card, impossibility: bool) {
+    pub fn set(&mut self, i: u8, j: u8, k: u8, impossibility: bool) {
         let idx = Self::index(i, j, k);
         let mask = 1u64 << idx;
         let bit = (impossibility as u64) << idx;
@@ -76,7 +73,7 @@ impl ImpossibleField3 {
 
     /// Gets the impossibility state of a particular 3 card combination
     #[inline(always)]
-    pub fn get(&self, i: Card, j: Card, k: Card) -> bool {
+    pub fn get(&self, i: u8, j: u8, k: u8) -> bool {
         ((self.0 >> Self::index(i, j, k)) & 1) == 1
     }
 
@@ -102,9 +99,9 @@ mod tests {
     #[test]
     fn set_get_roundtrip() {
         // Test every ordered triple (125) for robustness.
-        for &i in &CARDS {
-            for &j in &CARDS {
-                for &k in &CARDS {
+        for i in 0..5 {
+            for j in 0..5 {
+                for k in 0..5 {
                     let mut f = ImpossibleField3::zero();
 
                     f.set(i, j, k, true);
@@ -119,9 +116,9 @@ mod tests {
 
     #[test]
     fn unordered() {
-        for &i in &CARDS {
-            for &j in &CARDS {
-                for &k in &CARDS {
+        for i in 0..5 {
+            for j in 0..5 {
+                for k in 0..5 {
                     let mut f = ImpossibleField3::zero();
 
                     f.set(i, j, k, true);
@@ -138,15 +135,15 @@ mod tests {
 
     #[test]
     fn mask_set_correspondence() {
-        for &i in &CARDS {
+        for i in 0..5 {
             let mut f = ImpossibleField3::zero();
-            for &j in &CARDS {
-                for &k in &CARDS {
+            for j in 0..5 {
+                for k in 0..5 {
                     f.set(i, j, k, true);
                 }
             }
 
-            let mask = match i {
+            let mask = match Card::try_from(i).unwrap() {
                 Card::Ambassador => ImpossibleField3::MASK_AMBASSADOR,
                 Card::Assassin => ImpossibleField3::MASK_ASSASSIN,
                 Card::Captain => ImpossibleField3::MASK_CAPTAIN,
@@ -160,15 +157,15 @@ mod tests {
 
     #[test]
     fn setting_one_does_not_affect_others() {
-        for &i in &CARDS {
-            for &j in &CARDS {
-                for &k in &CARDS {
+        for i in 0..5 {
+            for j in 0..5 {
+                for k in 0..5 {
                     let mut f = ImpossibleField3::zero();
                     f.set(i, j, k, true);
 
-                    for &a in &CARDS {
-                        for &b in &CARDS {
-                            for &c in &CARDS {
+                    for a in 0..5 {
+                        for b in 0..5 {
+                            for c in 0..5 {
                                 let same = (a == i && b == j && c == k)
                                     || (a == i && b == k && c == j)
                                     || (a == j && b == i && c == k)
@@ -186,22 +183,22 @@ mod tests {
 
     #[test]
     fn no_collision() {
-        for i in &CARDS {
-            for j in &CARDS {
-                for k in &CARDS {
+        for i in 0..5 {
+            for j in 0..5 {
+                for k in 0..5 {
                     let mut ijk = vec![i, j, k];
                     ijk.sort_unstable();
-                    for l in &CARDS {
-                        for m in &CARDS {
-                            for n in &CARDS {
+                    for l in 0..5 {
+                        for m in 0..5 {
+                            for n in 0..5 {
                                 let mut lmn = vec![l, m, n];
                                 lmn.sort_unstable();
                                 if ijk == lmn {
                                     continue;
                                 }
                                 assert!(
-                                    ImpossibleField3::index(*i, *j, *k)
-                                        != ImpossibleField3::index(*l, *m, *n)
+                                    ImpossibleField3::index(i, j, k)
+                                        != ImpossibleField3::index(l, m, n)
                                 )
                             }
                         }
