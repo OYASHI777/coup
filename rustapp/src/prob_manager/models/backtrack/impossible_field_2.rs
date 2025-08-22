@@ -1,12 +1,13 @@
+use std::fmt::Debug;
+
 use crate::history_public::Card;
 
 /// A bitField that store impossibility boolean states for 2 card combinations
 ///
 /// The main benefit of this is being able to use MASKS to check if a particular
 /// card is completely impossible, without having to loop
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct ImpossibleField2(u32);
-//TODO: Print a better debug representation
 impl ImpossibleField2 {
     pub const MASK_AMBASSADOR: u32 = Self::card_mask(Card::Ambassador);
     pub const MASK_ASSASSIN: u32 = Self::card_mask(Card::Assassin);
@@ -50,10 +51,29 @@ impl ImpossibleField2 {
         let bit = (impossibility as u32) << index;
         self.0 = (self.0 & !mask) | bit;
     }
-    
+
     /// Gets the impossibility state of a particular 2 card combination
     pub fn get(&self, i: u8, j: u8) -> bool {
         (self.0 >> Self::index(i, j)) & 1 == 1
+    }
+}
+
+impl Debug for ImpossibleField2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut map = f.debug_map();
+        for i in 0..5 {
+            for j in i..5 {
+                map.entry(
+                    &format_args!(
+                        "({:?}, {:?})",
+                        Card::try_from(i).unwrap(),
+                        Card::try_from(j).unwrap()
+                    ),
+                    &self.get(i, j),
+                );
+            }
+        }
+        map.finish()
     }
 }
 

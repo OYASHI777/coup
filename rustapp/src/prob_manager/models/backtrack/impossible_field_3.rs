@@ -1,10 +1,12 @@
+use std::fmt::Debug;
+
 use crate::history_public::Card;
 
 /// A bitField that store impossibility boolean states for 3 card combinations
 ///
 /// The main benefit of this is being able to use MASKS to check if a particular
 /// card is completely impossible, without having to loop
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct ImpossibleField3(u64);
 
 impl ImpossibleField3 {
@@ -39,7 +41,7 @@ impl ImpossibleField3 {
     }
     #[inline(always)]
     const fn c3(n: u8) -> u8 {
-        n * (n - 1) * (n - 2) / 4 
+        n * (n - 1) * (n - 2) / 4
     }
 
     /// Generates a mask with all indices related to the card as true
@@ -84,17 +86,31 @@ impl ImpossibleField3 {
     }
 }
 
+impl Debug for ImpossibleField3 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut map = f.debug_map();
+        for i in 0..5 {
+            for j in i..5 {
+                for k in j..5 {
+                    map.entry(
+                        &format_args!(
+                            "({:?}, {:?}, {:?})",
+                            Card::try_from(i).unwrap(),
+                            Card::try_from(j).unwrap(),
+                            Card::try_from(k).unwrap()
+                        ),
+                        &self.get(i, j, k),
+                    );
+                }
+            }
+        }
+        map.finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const CARDS: [Card; 5] = [
-        Card::Ambassador,
-        Card::Assassin,
-        Card::Captain,
-        Card::Duke,
-        Card::Contessa,
-    ];
 
     #[test]
     fn set_get_roundtrip() {
