@@ -26,7 +26,10 @@ const THIS_VALUE_DOES_NOT_MATTER: u8 = 77; // When the state transitions to chal
 //      - Collective Challenge modes [Boilerplate done]
 //          - All people available
 //          - All possible actions
-//      - Suggested Move Handler
+//      - Move targetting players modes
+//          - All unique actions (for UI)
+//              - Controller can then compress and suggest Steal then choose Player
+//      - Suggested Move Handler (Controller)
 //          - Somehow can accomodate different challenge types with an added interface?
 // TODO: Receive Collective Indicator vs All Final Actioners vs All Responses
 // TODO: Receive Action and decide the chance stuff

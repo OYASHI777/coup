@@ -267,10 +267,8 @@ impl CoupTransition for StealInvitesBlock {
                     true => {
                         // pass on block
                         debug_assert!(*opposing_player_id == self.player_turn, "Illegal Move!");
-                        // game_data.influence[self.player_blocking] += self.coins_stolen;
-                        // game_data.influence[self.player_turn] -= self.coins_stolen;
-                        game_data.add_influence(self.player_blocking, self.coins_stolen);
-                        game_data.sub_influence(self.player_turn, self.coins_stolen);
+                        game_data.add_coins(self.player_blocking, self.coins_stolen);
+                        game_data.sub_coins(self.player_turn, self.coins_stolen);
                     },
                     false => {
                         // player_id blocked
@@ -358,10 +356,8 @@ impl CoupTransition for StealBlockChallenged {
                 )
             },
             ActionObservation::Discard { player_id, no_cards, .. } => {
-                // game_data.influence[self.player_blocking] -= self.coins_stolen;
-                // game_data.influence[self.player_turn] += self.coins_stolen;
-                game_data.sub_influence(self.player_blocking, self.coins_stolen);
-                game_data.add_influence(self.player_turn, self.coins_stolen);
+                game_data.sub_coins(self.player_blocking, self.coins_stolen);
+                game_data.add_coins(self.player_turn, self.coins_stolen);
                 match game_data.game_will_be_won(*player_id, *no_cards as u8) {
                     true => {
                         EngineState::End(End { })
@@ -386,10 +382,8 @@ impl CoupTransition for StealBlockChallenged {
             ActionObservation::RevealRedraw { .. } => {
             },
             ActionObservation::Discard { .. } => {
-                // game_data.influence[self.player_blocking] += self.coins_stolen;
-                // game_data.influence[self.player_turn] -= self.coins_stolen;
-                game_data.add_influence(self.player_blocking, self.coins_stolen);
-                game_data.sub_influence(self.player_turn, self.coins_stolen);
+                game_data.add_coins(self.player_blocking, self.coins_stolen);
+                game_data.sub_coins(self.player_turn, self.coins_stolen);
             },
             _ => {
                 debug_assert!(false, "Illegal Move!");
