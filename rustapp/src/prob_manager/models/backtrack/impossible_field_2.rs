@@ -24,6 +24,8 @@ impl ImpossibleField2 {
     /// Collision-free index for unordered pairs (i, j) with self-pairs allowed.
     #[inline]
     pub const fn index(i: u8, j: u8) -> u8 {
+        debug_assert!(i < 5);
+        debug_assert!(j < 5);
         let ai = i + 1;
         let aj = j + 1;
         let p = ai * aj;
@@ -49,6 +51,8 @@ impl ImpossibleField2 {
     /// Sets the impossibility state of a particular 2 card combination
     #[inline]
     pub fn set(&mut self, i: u8, j: u8, impossibility: bool) {
+        debug_assert!(i < 5);
+        debug_assert!(j < 5);
         let index = Self::index(i, j);
         let mask = 1 << index;
         let bit = (impossibility as u32) << index;
@@ -58,6 +62,8 @@ impl ImpossibleField2 {
     /// Gets the impossibility state of a particular 2 card combination
     #[inline]
     pub fn get(&self, i: u8, j: u8) -> bool {
+        debug_assert!(i < 5);
+        debug_assert!(j < 5);
         (self.0 >> Self::index(i, j)) & 1 == 1
     }
 }

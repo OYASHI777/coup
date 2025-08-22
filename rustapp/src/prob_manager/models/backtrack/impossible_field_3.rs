@@ -25,6 +25,9 @@ impl ImpossibleField3 {
     /// Collision-free index for unordered triples (i, j, k) with self-pairs allowed.
     #[inline]
     pub const fn index(i: u8, j: u8, k: u8) -> u8 {
+        debug_assert!(i < 5);
+        debug_assert!(j < 5);
+        debug_assert!(k < 5);
         let (a, b) = if i <= j { (i, j) } else { (j, i) };
         let (b, c) = if b <= k { (b, k) } else { (k, b) };
         let (a, b) = if a <= b { (a, b) } else { (b, a) };
@@ -66,6 +69,9 @@ impl ImpossibleField3 {
     /// Sets the impossibility state of a particular 3 card combination
     #[inline]
     pub fn set(&mut self, i: u8, j: u8, k: u8, impossibility: bool) {
+        debug_assert!(i < 5);
+        debug_assert!(j < 5);
+        debug_assert!(k < 5);
         let idx = Self::index(i, j, k);
         let mask = 1u64 << idx;
         let bit = (impossibility as u64) << idx;
@@ -75,6 +81,9 @@ impl ImpossibleField3 {
     /// Gets the impossibility state of a particular 3 card combination
     #[inline]
     pub fn get(&self, i: u8, j: u8, k: u8) -> bool {
+        debug_assert!(i < 5);
+        debug_assert!(j < 5);
+        debug_assert!(k < 5);
         ((self.0 >> Self::index(i, j, k)) & 1) == 1
     }
 }

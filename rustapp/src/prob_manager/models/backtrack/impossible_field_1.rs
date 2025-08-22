@@ -33,18 +33,20 @@ impl ImpossibleField1 {
         1 << Self::index(card as u8)
     }
 
-    /// Sets the impossibility state for a single card `i` (0..=4).
+    /// Sets the impossibility state for a single card
     #[inline]
     pub fn set(&mut self, i: u8, impossibility: bool) {
+        debug_assert!(i < 5);
         let index = Self::index(i);
         let mask = 1 << index;
         let bit = (impossibility as u8) << index;
         self.0 = (self.0 & !mask) | bit;
     }
-
-    /// Gets the impossibility state for a single card `i` (0..=4).
+    
+    /// Gets the impossibility state for a single card
     #[inline]
     pub fn get(&self, i: u8) -> bool {
+        debug_assert!(i < 5);
         (self.0 >> Self::index(i)) & 1 == 1
     }
 }
