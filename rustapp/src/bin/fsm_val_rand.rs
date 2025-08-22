@@ -6,15 +6,24 @@ use rand::{seq::SliceRandom, thread_rng, Rng};
 use rustapp::{history_public::Card, prob_manager::{engine::fsm_engine::FSMEngine, tracker::{collater::{Indicate, Unique}, informed_tracker::InformedTracker}}, traits::prob_manager::coup_analysis::CoupTraversal};
 
 const LOG_FILE_NAME: &str = "./logs/fsm_val_rand.log";
-
+const CLEAR_LOG: bool = false;
+const STORE_LOG: bool = false;
 fn main() {
-    logger(LevelFilter::Trace);
+    if STORE_LOG {
+        logger(LevelFilter::Warn);
+    }
 
-    let game_no = 1000000;
-    for _ in 0..game_no {
-        let _ = clear_log();
+    let game_no = 1000000000;
+    for i in 0..game_no {
+        if STORE_LOG && CLEAR_LOG {
+            let _ = clear_log();
+        }
+        if i % 10000 == 0 {
+            println!("Game_no: {i}");
+        }
         let mut engine = FSMEngine::new();
         let mut tracker: InformedTracker<Unique> = InformedTracker::new();
+        let mut replay = Vec::with_capacity(120);
         
         let starting_cards = vec![
             vec![Card::Ambassador, Card::Ambassador],
@@ -48,6 +57,7 @@ fn main() {
                 log::info!("Move chosen: {action:?}");
                 engine.push_ao_private(action);
                 tracker.push_ao_private(action);
+                replay.push(action.clone());
             } else {
                 panic!("suggested_moves is empty");
             }
@@ -57,6 +67,7 @@ fn main() {
             log::info!("FSM Inferred Constraints {:?}", tracker.inferred_constraints);
             log::info!("Details {:?}", engine.state);
         }
+        log::warn!("Replay: {:?}", replay);
     }
 
 }
