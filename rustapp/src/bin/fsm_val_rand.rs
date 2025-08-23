@@ -6,14 +6,14 @@ use rand::{seq::SliceRandom, thread_rng, Rng};
 use rustapp::{history_public::Card, prob_manager::{engine::fsm_engine::FSMEngine, tracker::{collater::{Indicate, Unique}, informed_tracker::InformedTracker}}, traits::prob_manager::coup_analysis::CoupTraversal};
 
 const LOG_FILE_NAME: &str = "./logs/fsm_val_rand.log";
-const CLEAR_LOG: bool = false;
-const STORE_LOG: bool = false;
+const CLEAR_LOG: bool = true;
+const STORE_LOG: bool = true;
 fn main() {
     if STORE_LOG {
-        logger(LevelFilter::Warn);
+        logger(LevelFilter::Info);
     }
 
-    let game_no = 1000000000;
+    let game_no = 1;
     for i in 0..game_no {
         if STORE_LOG && CLEAR_LOG {
             let _ = clear_log();

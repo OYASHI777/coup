@@ -28,14 +28,6 @@ itertools = "0.14.0"
 [dev-dependencies]
 criterion = {version = "0.5", features = ["html_reports"]}
 
-[[bench]]
-name = "my_benchmark"
-harness = false
-
-[[bench]]
-name = "constraint_benchmark"
-harness = false
-
 [[bin]]
 name = "rustapp"
 path = "src/main.rs"

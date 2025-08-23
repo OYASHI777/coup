@@ -63,18 +63,12 @@ pub mod prob_manager {
     pub mod backtracking_prob;
     pub mod backtracking_prob_hybrid;
     pub mod backtracking_collective_constraints;
-    // pub mod backtracking_collective_constraints_lazy;
-    // pub mod backtracking_collective_constraints_lite;
     pub mod brute_prob_generic;
-    // pub mod collective_constraint;
-    // pub mod compressed_group_constraint;
     pub mod constraint;
     mod constants;
     pub mod move_guard;
     pub mod naive_prob;
     pub mod naive_sampler;
-    // pub mod path_dependent_collective_constraint;
-    // pub mod path_dependent_prob;
 }
 pub mod history_public;
 pub mod string_utils;
