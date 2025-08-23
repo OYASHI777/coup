@@ -25,7 +25,7 @@ pub fn gen_unique_paths() {
             let _ = clear_log();
         }
     }
-    let game_no = 100;
+    let game_no = 10000000;
     let standard_turn_player = 0;
     let standard_target_player = 5;
     let standard_other_player = 1;

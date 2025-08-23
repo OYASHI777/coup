@@ -25,4 +25,7 @@ pub trait Collator {
     /// Returns a list of ActionObservation based on way
     /// challenges are handled
     fn challenge(player: usize, data: &GameData) -> Vec<ActionObservation>;
+    /// Returns a list of ActionObservation based on way
+    /// blocks are handled
+    fn block(player: usize, data: &GameData) -> Vec<ActionObservation>;
 }

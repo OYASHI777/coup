@@ -430,7 +430,7 @@ where
         state: &ForeignAidInvitesBlock,
         data: &GameData,
     ) -> Vec<ActionObservation> {
-        self.block_invite(state.player_turn, data)
+        C::block(state.player_turn, data)
     }
 
     fn on_foreign_aid_block_invites_challenge(
