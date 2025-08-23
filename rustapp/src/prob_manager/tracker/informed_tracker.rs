@@ -16,6 +16,9 @@ const THIS_VALUE_DOES_NOT_MATTER: u8 = 77; // When the state transitions to chal
 // Functionality needed:
 //      - CFR Traversal
 //          - [d] Create another that uses card counter
+//              - Make backtracking_prob_hybrid over InfoArray and InfoArrayBit
+//                  - Use some kind of indexing instead of passing out the array
+//                  - backtracking_prob_hybrid.generate_inferred_constraints() will require some iteration
 //      - Actual Game Traversal
 //          - [a] Check and modify legal moves accordingly
 //      - Agent interface (move ingress/egress to process chance stuff and round robin)
@@ -23,9 +26,6 @@ const THIS_VALUE_DOES_NOT_MATTER: u8 = 77; // When the state transitions to chal
 //          - [c] Chance node drawing interface
 //              - will need generic for UniqueMove (generation of all possible moves)
 //              - will need generic for Receiving move and providing random chance
-//      - Collective Challenge modes [Boilerplate done]
-//          - All people available
-//          - All possible actions
 //      - Move targetting players modes
 //          - All unique actions (for UI)
 //              - Controller can then compress and suggest Steal then choose Player

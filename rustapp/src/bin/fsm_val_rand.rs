@@ -9,6 +9,10 @@ const LOG_FILE_NAME: &str = "./logs/fsm_val_rand.log";
 const CLEAR_LOG: bool = true;
 const STORE_LOG: bool = true;
 fn main() {
+    rand_game();
+}
+
+pub fn rand_game() {
     if STORE_LOG {
         logger(LevelFilter::Info);
     }
@@ -69,8 +73,8 @@ fn main() {
         }
         log::warn!("Replay: {:?}", replay);
     }
-
 }
+
 pub fn clear_log() -> std::io::Result<()> {
     // Open file with truncate flag to clear contents
     OpenOptions::new()
