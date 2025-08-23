@@ -175,7 +175,7 @@ pub fn clean_action(action: ActionObservation, turn_player: usize,  target_playe
             ActionObservation::BlockSteal { 
                 player_id: allocate_player(player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
                 opposing_player_id: allocate_player(opposing_player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
-                card,
+                card: Card::Captain,
             }
         },
         ActionObservation::BlockAssassinate { player_id, opposing_player_id } => {
