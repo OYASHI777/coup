@@ -92,30 +92,54 @@ where
             final_actioner: player,
         }]
     }
-    // TODO: This current implementation provides all Unique moves,
-    // TODO: for actual gameplay it should be done in the move intake interface
     pub fn reveal_or_discard(&self, player: usize, card_reveal: Card) -> Vec<ActionObservation> {
-        // TODO: Consider Random Sample vs Single Sample vs Unique Samples
-        let mut output = Vec::with_capacity(5);
-        let mut player_cards = self.inferred_constraints[player].clone();
-        let mut pile_cards = self.inferred_constraints[6].clone();
-        player_cards.sort_unstable();
-        player_cards.dedup();
-        for card in player_cards.iter() {
-            if *card == card_reveal {
-                pile_cards.push(card_reveal);
-                pile_cards.sort_unstable();
-                pile_cards.dedup();
-                output.extend(pile_cards.iter().map(|c| ActionObservation::RevealRedraw {
-                    player_id: player,
-                    reveal: card_reveal,
-                    redraw: *c,
-                }));
-            } else {
+        let mut output = Vec::with_capacity(4);
+        if self.inferred_constraints[player].contains(&card_reveal) {
+            let mut pile_cards = self.inferred_constraints[6].clone();
+            pile_cards.push(card_reveal);
+            pile_cards.sort_unstable();
+            pile_cards.dedup();
+            output.extend(pile_cards.iter().map(|c| ActionObservation::RevealRedraw {
+                player_id: player,
+                reveal: card_reveal,
+                redraw: *c,
+            }));
+        } else {
+            for card in self.inferred_constraints[player].iter() {
                 output.push(ActionObservation::Discard {
                     player_id: player,
                     card: [*card; 2],
                     no_cards: 1,
+                })
+            }
+        }
+        output
+    }
+    pub fn reveal_or_discard_all(&self, player: usize, card_reveal: Card) -> Vec<ActionObservation> {
+        let mut output = Vec::with_capacity(4);
+        if self.inferred_constraints[player].contains(&card_reveal) {
+            let mut pile_cards = self.inferred_constraints[6].clone();
+            pile_cards.push(card_reveal);
+            pile_cards.sort_unstable();
+            pile_cards.dedup();
+            output.extend(pile_cards.iter().map(|c| ActionObservation::RevealRedraw {
+                player_id: player,
+                reveal: card_reveal,
+                redraw: *c,
+            }));
+        } else {
+            // Discard all
+            if self.inferred_constraints[player].len() == 1 {
+                output.push(ActionObservation::Discard { 
+                    player_id: player, 
+                    card: [self.inferred_constraints[player][0]; 2], 
+                    no_cards: 1, 
+                })
+            } else {
+                output.push(ActionObservation::Discard { 
+                    player_id: player, 
+                    card: [self.inferred_constraints[player][0], self.inferred_constraints[player][1]], 
+                    no_cards: 2, 
                 })
             }
         }
@@ -660,6 +684,7 @@ where
         state: &AssassinateInvitesBlock,
         _data: &GameData,
     ) -> Vec<ActionObservation> {
+        // TODO: Consider if this should be BlockAssassinate + Discard?
         let mut output = Vec::with_capacity(2);
         output.push(ActionObservation::BlockAssassinate {
             player_id: state.player_blocking,
@@ -690,7 +715,7 @@ where
         state: &AssassinateBlockChallenged,
         _data: &GameData,
     ) -> Vec<ActionObservation> {
-        self.reveal_or_discard(state.player_blocking, Card::Contessa)
+        self.reveal_or_discard_all(state.player_blocking, Card::Contessa)
     }
 
     fn on_assassinate_block_challenger_failed(
