@@ -102,7 +102,7 @@ pub enum AOResult {
     Failure,
     Pass,
 }
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ActionObservation {
     EmptyAO,
     // Challenge Status before collation
