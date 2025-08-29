@@ -15,12 +15,14 @@ pub struct StealChallenged {
     pub player_turn: usize,
     pub player_blocking: usize,
     pub player_challenger: usize,
+    pub coins_stolen: u8,
 }
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct StealChallengerFailed {
     pub player_turn: usize,
     pub player_blocking: usize,
     pub player_challenger: usize,
+    pub coins_stolen: u8,
 }
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct StealInvitesBlock {
@@ -77,6 +79,7 @@ impl CoupTransition for StealInvitesChallenge {
                                 player_turn: self.player_turn, 
                                 player_blocking: self.player_blocking, 
                                 player_challenger: *final_actioner,
+                                coins_stolen: game_data.coins()[self.player_blocking].min(GAIN_STEAL),
                             }
                         )
                     },
@@ -113,6 +116,7 @@ impl CoupTransition for StealChallenged {
                         player_turn: self.player_turn, 
                         player_blocking: self.player_blocking, 
                         player_challenger: self.player_challenger,
+                        coins_stolen: self.coins_stolen,
                     }
                 )
             },
