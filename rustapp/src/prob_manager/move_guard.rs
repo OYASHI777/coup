@@ -1,4 +1,4 @@
-use crate::{history_public::Card, prob_manager::engine::constants::MAX_PLAYER_HAND_SIZE};
+use crate::{history_public::Card, prob_manager::engine::constants::{MAX_CARD_PERMS_ONE, MAX_PLAYER_HAND_SIZE}};
 
 /// This aids in resetting inferred constraint after card swaps between players
 pub struct MoveGuard;
@@ -155,6 +155,45 @@ impl MoveGuard {
         if removed_discard {
             public_constraint[player].push(card);
         }
+        false
+    }
+    /// Ensures a player's hand contains at least the cards in needed
+    #[inline(always)]
+    pub fn with_needed_cards_present(public_constraint: &mut Vec<Vec<Card>>, inferred_constraint: &mut Vec<Vec<Card>>, player: usize, needed: &[Card], f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool) -> bool {
+        let mut have: [u8; MAX_CARD_PERMS_ONE] = [0; MAX_CARD_PERMS_ONE];
+        for &x in inferred_constraint[player].iter() {
+            have[x as usize] += 1;
+        }
+
+        let mut need: [u8; MAX_CARD_PERMS_ONE] = [0; MAX_CARD_PERMS_ONE];
+        for &c in needed {
+            need[c as usize] += 1;
+        }
+
+        // Compute deficits: deficit = max(0, need - have)
+        let mut added: [u8; MAX_CARD_PERMS_ONE] = [0; MAX_CARD_PERMS_ONE];
+        for i in 0..MAX_CARD_PERMS_ONE {
+            let deficit = if need[i] > have[i] { need[i] - have[i] } else { 0 };
+            inferred_constraint[player].extend(std::iter::repeat(Card::try_from(i as u8).unwrap()).take(deficit as usize));
+            added[i] = deficit;
+        }
+
+        if f(public_constraint, inferred_constraint) {
+            return true;
+        }
+
+        // Rollback exactly what we added
+        for (i, count) in added.iter().enumerate() {
+            let card = Card::try_from(i as u8).unwrap();
+            for _ in 0..*count as usize {
+                if let Some(pos) = inferred_constraint[player].iter().rposition(|x| *x == card)  {
+                    inferred_constraint[player].swap_remove(pos);
+                } else {
+                    debug_assert!(false, "rollback: expected to find an added card");
+                }
+            }
+        }
+
         false
     }
 }

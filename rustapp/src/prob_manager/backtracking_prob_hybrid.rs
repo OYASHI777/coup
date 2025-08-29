@@ -747,53 +747,15 @@ impl BackTrackCardCountManager {
             ActionInfo::ExchangeDraw { draw } => {
                 if !draw.is_empty() {
                     // Assumes draw is always 2 cards
-                    let current_count_0 = inferred_constraints[6].iter().filter(|c| **c == draw[0]).count();
-                    if draw[0] == draw[1] {
-                        match current_count_0 {
-                            0 => {
-                                inferred_constraints[6].push(draw[0]);
-                                inferred_constraints[6].push(draw[0]);
-                                response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
-                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
-                                    inferred_constraints[6].swap_remove(pos);
-                                }
-                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
-                                    inferred_constraints[6].swap_remove(pos);
-                                }
-                            },
-                            1 => {
-                                inferred_constraints[6].push(draw[0]);
-                                response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
-                                if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
-                                    inferred_constraints[6].swap_remove(pos);
-                                }
-                            },
-                            2
-                            |3 => {
-                                response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
-                            },
-                            _ => debug_assert!(false, "you should not be here!"),
-                        }
-                    } else {
-                        let bool_contains_card_1 = inferred_constraints[6].contains(&draw[1]);
-                        if current_count_0 < 1 {
-                            inferred_constraints[6].push(draw[0]);
-                        }
-                        if !bool_contains_card_1 {
-                            inferred_constraints[6].push(draw[1]);
-                        }
-                        response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
-                        if current_count_0 < 1 {
-                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
-                                inferred_constraints[6].swap_remove(pos);
-                            }
-                        }
-                        if !bool_contains_card_1 {
-                            if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[1]) {
-                                inferred_constraints[6].swap_remove(pos);
-                            }
-                        }
-                    }
+                    response = MoveGuard::with_needed_cards_present(
+                        public_constraints,
+                        inferred_constraints,
+                        6,
+                        draw,
+                        |pub_con, inf_con| {
+                            self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
+                        },
+                    );
                 } else {
                     // [REQUIRED FOR LAZY EVAL] Although ExchangeChoice skips over this
                     // When we use lazy evaluation on previous moves, 
