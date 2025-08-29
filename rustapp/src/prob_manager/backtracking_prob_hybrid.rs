@@ -1168,65 +1168,15 @@ impl BackTrackCardCountManager {
     /// Recursion case for exchange with private information
     pub fn recurse_variants_exchange_private(&self, index_loop: usize, player_loop: usize, draw: &Vec<Card>, relinquish: &Vec<Card>, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
         log::trace!("In recurse_variants_exchange_private!");
-        // MoveGuard::swap_run_reset(
-        //     public_constraints,
-        //     inferred_constraints,
-        //     player_loop, 
-        //     6, 
-        //     &[draw[0], draw[1]], 
-        //     &[relinquish[0], relinquish[1]],
-        //     |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
-        // )
-        let (mut bool_rm_pile_rel_0, mut bool_rm_pile_rel_1, mut bool_rm_player_draw_0, mut bool_rm_player_draw_1) = (false, false, false, false);
-        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == relinquish[0]) {
-            inferred_constraints[6].swap_remove(pos);
-            bool_rm_pile_rel_0 = true;
-        }
-        inferred_constraints[player_loop].push(relinquish[0]);
-        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == relinquish[1]) {
-            inferred_constraints[6].swap_remove(pos);
-            bool_rm_pile_rel_1 = true;
-        }
-        inferred_constraints[player_loop].push(relinquish[1]);
-        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == draw[0]) {
-            inferred_constraints[player_loop].swap_remove(pos);
-            bool_rm_player_draw_0 = true;
-        }
-        inferred_constraints[6].push(draw[0]);
-        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == draw[1]) {
-            inferred_constraints[player_loop].swap_remove(pos);
-            bool_rm_player_draw_1 = true;
-        }
-        inferred_constraints[6].push(draw[1]);
-        // Remove this to check if able to add illegal moves! for simulation
-        if inferred_constraints[player_loop].len() < 3 && inferred_constraints[6].len() < 4 &&  self.possible_to_have_cards_recurse(index_loop - 2, public_constraints, inferred_constraints) {
-            return true;
-        }
-        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[1]) {
-            inferred_constraints[6].swap_remove(pos);
-        }
-        if bool_rm_player_draw_1 {
-            inferred_constraints[player_loop].push(draw[1]);
-        }
-        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == draw[0]) {
-            inferred_constraints[6].swap_remove(pos);
-        }
-        if bool_rm_player_draw_0 {
-            inferred_constraints[player_loop].push(draw[0]);
-        }
-        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == relinquish[1]) {
-            inferred_constraints[player_loop].swap_remove(pos);
-        }
-        if bool_rm_pile_rel_1 {
-            inferred_constraints[6].push(relinquish[1]);
-        }
-        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == relinquish[0]) {
-            inferred_constraints[player_loop].swap_remove(pos);
-        }
-        if bool_rm_pile_rel_0 {
-            inferred_constraints[6].push(relinquish[0]);
-        }
-        false
+        MoveGuard::ordered_swap_run_reset(
+            public_constraints,
+            inferred_constraints,
+            player_loop, 
+            6, 
+            &[relinquish[0], relinquish[1]],
+            &[draw[0], draw[1]], 
+            |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
+        )
     }
 }
 

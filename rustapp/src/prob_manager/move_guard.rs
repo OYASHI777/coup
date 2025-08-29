@@ -13,10 +13,10 @@ impl MoveGuard {
     ///     - removed from BOTH
     ///     - then added to BOTH
     /// NOT
-    ///     - removed from a
-    ///     - added to b
-    ///     - then removed from b
-    ///     - then added to a
+    ///     - removed from b
+    ///     - added to a
+    ///     - then removed from a
+    ///     - then added to b
     pub fn swap_run_clone_back(public_constraint: &mut Vec<Vec<Card>>, inferred_constraint: &mut Vec<Vec<Card>>, player_a: usize, player_b: usize, a_to_b: &[Card], b_to_a: &[Card], f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool) -> bool {
         let backup_player_a = inferred_constraint[player_a].clone();
         let backup_player_b = inferred_constraint[player_b].clone();
@@ -46,10 +46,10 @@ impl MoveGuard {
     ///     - removed from BOTH
     ///     - then added to BOTH
     /// NOT
-    ///     - removed from a
-    ///     - added to b
-    ///     - then removed from b
-    ///     - then added to a
+    ///     - removed from b
+    ///     - added to a
+    ///     - then removed from a
+    ///     - then added to b
     pub fn swap_run_swap_back(public_constraint: &mut Vec<Vec<Card>>, inferred_constraint: &mut Vec<Vec<Card>>, player_a: usize, player_b: usize, a_to_b: &[Card], b_to_a: &[Card], f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool) -> bool {
         let mut moved_from_a_to_b: Vec<Card> = Vec::with_capacity(a_to_b.len());
         let mut moved_from_b_to_a: Vec<Card> = Vec::with_capacity(b_to_a.len());
@@ -86,8 +86,56 @@ impl MoveGuard {
         inferred_constraint[player_a].extend(moved_from_a_to_b.iter());
         false
     }
-    pub fn ordered_swap_run_reset() {
-        todo!()
+    /// Here it is intended that the cards are 
+    ///     - removed from b
+    ///     - added to a
+    ///     - then removed from a
+    ///     - then added to b
+    /// NOT
+    ///     - removed from BOTH
+    ///     - then added to BOTH
+    pub fn ordered_swap_run_reset(public_constraint: &mut Vec<Vec<Card>>, inferred_constraint: &mut Vec<Vec<Card>>, player_a: usize, player_b: usize, a_to_b: &[Card], b_to_a: &[Card], f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool) -> bool {
+        let mut removed_from_b: Vec<Card> = Vec::with_capacity(b_to_a.len());
+        let mut removed_from_a: Vec<Card> = Vec::with_capacity(a_to_b.len());
+        for &c in a_to_b {
+            if let Some(pos) = inferred_constraint[player_b].iter().rposition(|x| *x == c) {
+                inferred_constraint[player_b].swap_remove(pos);
+                removed_from_b.push(c);
+            }
+            inferred_constraint[player_a].push(c);
+        }
+        for &c in b_to_a {
+            if let Some(pos) = inferred_constraint[player_a].iter().rposition(|x| *x == c) {
+                inferred_constraint[player_a].swap_remove(pos);
+                removed_from_a.push(c);
+            }
+            inferred_constraint[player_b].push(c);
+        }
+        if public_constraint[player_a].len() + inferred_constraint[player_a].len()
+            <= MAX_PLAYER_HAND_SIZE[player_a]
+            && public_constraint[player_b].len() + inferred_constraint[player_b].len()
+            <= MAX_PLAYER_HAND_SIZE[player_b]
+            && f(public_constraint, inferred_constraint)
+        {
+            return true;
+        }
+        for &c in b_to_a.iter().rev() {
+            if let Some(pos) = inferred_constraint[player_b].iter().rposition(|x| *x == c) {
+                inferred_constraint[player_b].swap_remove(pos); // always remove what we pushed
+            }
+        }
+        for &c in removed_from_a.iter().rev() {
+            inferred_constraint[player_a].push(c);
+        }
+        for &c in a_to_b.iter().rev() {
+            if let Some(pos) = inferred_constraint[player_a].iter().rposition(|x| *x == c) {
+                inferred_constraint[player_a].swap_remove(pos); // always remove what we pushed
+            }
+        }
+        for &c in removed_from_b.iter().rev() {
+            inferred_constraint[player_b].push(c);
+        }
+        false
     }
     #[inline(always)]
     pub fn discard(public_constraint: &mut Vec<Vec<Card>>, inferred_constraint: &mut Vec<Vec<Card>>, player: usize, card: Card, f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool) -> bool {
