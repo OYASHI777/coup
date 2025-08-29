@@ -232,6 +232,12 @@ impl BackTrackCardCountManager {
             move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
         }
     }
+    /// Buffer for doing backtracking with
+    pub fn create_buffer() -> (Vec<Vec<Card>>, Vec<Vec<Card>>) {
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(4); 7];
+        (public_constraints, inferred_constraints)
+    }
     /// Logs the constraint's log
     pub fn printlog(&self) {
         log::trace!("{}", format!("Constraint History Len{}", self.constraint_history.len()));
@@ -292,6 +298,7 @@ impl BackTrackCardCountManager {
         let history_index = self.constraint_history.len() - 1;
         // TODO: [OPTIMIZE] consider total dead cards inferred etc...
         let mut cards: [u8; 5] = [0; 5];
+        let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
         for player_of_interest in 0..7 {
             if self.latest_constraint_mut().public_constraints()[player_of_interest].len() == 2 {
                 self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest] = [true; 5];
@@ -300,7 +307,9 @@ impl BackTrackCardCountManager {
             for card in 0..5 {
                 cards[card] = 1;
                 log::trace!("generate_impossible_constraints 1 card : {:?}", card);
-                self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest][card] = self.impossible_to_have_cards_general(history_index, player_of_interest, &cards);
+                self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest][card] = self.impossible_to_have_cards_general(history_index, player_of_interest, &cards, &mut public_constraints, &mut inferred_constraints);
+                public_constraints.iter_mut().for_each(|v| v.clear());
+                inferred_constraints.iter_mut().for_each(|v| v.clear());
                 cards[card] = 0;
             }
         }
@@ -326,7 +335,9 @@ impl BackTrackCardCountManager {
                     cards[card_a] += 1;
                     cards[card_b] += 1;
                     log::trace!("generate_impossible_constraints 2 card : {:?}, {:?}", card_a, card_b);
-                    let output = self.impossible_to_have_cards_general(history_index, player_of_interest, &cards);
+                    let output = self.impossible_to_have_cards_general(history_index, player_of_interest, &cards, &mut public_constraints, &mut inferred_constraints);
+                    public_constraints.iter_mut().for_each(|v| v.clear());
+                    inferred_constraints.iter_mut().for_each(|v| v.clear());
                     // OPTIMIZE lmao...
                     self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest][card_a][card_b] = output;
                     self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest][card_b][card_a] = output;
@@ -358,7 +369,9 @@ impl BackTrackCardCountManager {
                     cards[card_b] += 1;
                     cards[card_c] += 1;
                     log::trace!("generate_impossible_constraints 3 card : {:?}, {:?}, {:?}", card_a, card_b, card_c);
-                    let output = self.impossible_to_have_cards_general(history_index, 6, &cards);
+                    let output = self.impossible_to_have_cards_general(history_index, 6, &cards, &mut public_constraints, &mut inferred_constraints);
+                    public_constraints.iter_mut().for_each(|v| v.clear());
+                    inferred_constraints.iter_mut().for_each(|v| v.clear());
                     // OPTIMIZE lmao...
                     self.latest_constraint_mut().impossible_constraints_3_mut()[card_a][card_b][card_c] = output;
                     self.latest_constraint_mut().impossible_constraints_3_mut()[card_a][card_c][card_b] = output;
@@ -450,17 +463,17 @@ impl BackTrackCardCountManager {
     }
     /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards at start of turn
     /// Assuming we won't be using this for ambassador?
-    pub fn impossible_to_have_cards_general(&self, index_lookback: usize, player_of_interest: usize, cards: &[u8; 5]) -> bool {
+    pub fn impossible_to_have_cards_general(&self, index_lookback: usize, player_of_interest: usize, cards: &[u8; 5], public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
         log::trace!("impossible_to_have_cards player_of_interest: {}, cards: {:?}", player_of_interest, cards);
         debug_assert!(player_of_interest != 6 && cards.iter().sum::<u8>() <= 2 || player_of_interest == 6 && cards.iter().sum::<u8>() <= 3, "cards too long!");
-        let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
-        let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(4); 7];
+        // let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
+        // let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(4); 7];
         for (card_num, card_count) in cards.iter().enumerate() {
             for _ in 0..*card_count {
                 inferred_constraints[player_of_interest].push(Card::try_from(card_num as u8).unwrap());
             }
         }
-        !self.possible_to_have_cards_recurse(index_lookback, &mut public_constraints, &mut inferred_constraints)
+        !self.possible_to_have_cards_recurse(index_lookback, public_constraints, inferred_constraints)
     }
     /// returns false if possible
     /// Traces the game tree in reverse (from latest move to earliest move) by backtracking
@@ -1351,7 +1364,8 @@ impl CoupPossibilityAnalysis for BackTrackCardCountManager
     fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool {
         let mut cards = [0u8; 5];
         cards[card as usize] += 1;
-        !self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards)
+        let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
+        !self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards, &mut public_constraints, &mut inferred_constraints)
     }
 
     fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool {
@@ -1363,7 +1377,8 @@ impl CoupPossibilityAnalysis for BackTrackCardCountManager
         for card in cards.iter() {
             cards_input[*card as usize] += 1;
         }
-        !self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards_input)
+        let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
+        !self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards_input, &mut public_constraints, &mut inferred_constraints)
     }
     fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         match action_observation {
