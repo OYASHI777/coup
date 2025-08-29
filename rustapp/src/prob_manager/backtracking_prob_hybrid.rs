@@ -487,7 +487,7 @@ impl BackTrackCardCountManager {
                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
                 let mut removed_discard = false;
                 if let Some(pos) = public_constraints[player_loop].iter().rposition(|c| *c == *discard) {
-                    public_constraints.swap_remove(pos);
+                    public_constraints[player_loop].swap_remove(pos);
                     removed_discard = true;
                 }
                 inferred_constraints[player_loop].push(*discard);
