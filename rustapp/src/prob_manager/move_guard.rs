@@ -89,6 +89,7 @@ impl MoveGuard {
     pub fn ordered_swap_run_reset() {
         todo!()
     }
+    #[inline(always)]
     pub fn discard(public_constraint: &mut Vec<Vec<Card>>, inferred_constraint: &mut Vec<Vec<Card>>, player: usize, card: Card, f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool) -> bool {
         let mut removed_discard = false;
         if let Some(pos) = public_constraint[player].iter().rposition(|c| *c == card) {
@@ -97,13 +98,15 @@ impl MoveGuard {
             removed_discard = true;
         }
         inferred_constraint[player].push(card);
-        let output = f(public_constraint, inferred_constraint);
+        if f(public_constraint, inferred_constraint) {
+            return true
+        }
         if let Some(pos) = inferred_constraint[player].iter().rposition(|c| *c == card) {
             inferred_constraint[player].swap_remove(pos);
         }
         if removed_discard {
             public_constraint[player].push(card);
         }
-        output
+        false
     }
 }

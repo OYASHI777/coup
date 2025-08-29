@@ -485,20 +485,7 @@ impl BackTrackCardCountManager {
                 log::trace!("Before Discard");
                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
-                let mut removed_discard = false;
-                if let Some(pos) = public_constraints[player_loop].iter().rposition(|c| *c == *discard) {
-                    public_constraints[player_loop].swap_remove(pos);
-                    removed_discard = true;
-                }
-                inferred_constraints[player_loop].push(*discard);
-                response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
-                if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *discard) {
-                    inferred_constraints[player_loop].swap_remove(pos);
-                }
-                if removed_discard {
-                    public_constraints[player_loop].push(*discard);
-                }
-                return response;
+                return MoveGuard::discard(public_constraints, inferred_constraints, player_loop, *discard, |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)});
             },
             ActionInfo::RevealRedraw { reveal, redraw, relinquish } => {
                 // Check if will burst before pushing
