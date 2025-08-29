@@ -7,13 +7,14 @@ Coup is an imperfect information social deduction game, that pits players agains
 **Game Rules**: [Official Rulebook](https://www.qugs.org/rules/r131357.pdf)
 
 ## Features
-🟢 **Basic game simulation**  
+🟡 **Basic game simulation**  
   - 🟢 Handles full Coup game flow  
-  - ⚪ Better game design architecture instead of many branches  
+  - 🟡 Better game design architecture instead of many branches  
+  - 🟡 Cleaning up my garbage old code  
   
-🟡 **Card counting mechanism for pruning search**  
+🟢 **Card counting mechanism for pruning search**  
   - 🟢 Create brute force tracker for validation  
-  - 🟡 Create memoized card counter for quicker querying of impossible states  
+  - 🟢 Create card counter for quicker querying of impossible states  
   - ⚪ Front-end visualization  
 
 ⚪ **State Probability Tracker**  
