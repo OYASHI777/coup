@@ -164,6 +164,8 @@ impl CoupTransition for StealChallengerFailed {
                         },
                         true => {
                             // Player is dead already and cannot block
+                            game_data.sub_coins(self.player_blocking, self.coins_stolen);
+                            game_data.add_coins(self.player_turn, self.coins_stolen);
                             EngineState::TurnStart(
                                 TurnStart { 
                                     player_turn: self.player_turn,
@@ -204,14 +206,26 @@ impl CoupTransition for StealChallengerFailed {
         }
     }
 
-    fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
+    fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         debug_assert!(
             match action {
                 ActionObservation::Discard { .. } => true,
                 _ => false,
             },
             "Illegal Move!"
-        )
+        );
+        match action {
+            ActionObservation::Discard{ player_id, .. } => {
+                match *player_id == self.player_blocking {
+                    true => {
+                        game_data.add_coins(self.player_blocking, self.coins_stolen);
+                        game_data.sub_coins(self.player_turn, self.coins_stolen);
+                    },
+                    false => (),
+                }
+            },
+            _ => (),
+        }
     }
 }
 impl CoupTransition for StealInvitesBlock {
