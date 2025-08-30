@@ -5,7 +5,7 @@
 // Tried instead to save into hashmap and store in bson
 
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
-use crate::{history_public::{ActionObservation, Card}, prob_manager::engine::constants::{INDEX_PILE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_NUM_PER_CARD, MAX_PLAYER_HAND_SIZE}, traits::prob_manager::coup_analysis::CoupTraversal};
+use crate::{history_public::{ActionObservation, Card}, prob_manager::engine::constants::{INDEX_PILE, MAX_CARDS_DISCARD, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_PLAYERS_INCL_PILE, MAX_NUM_PER_CARD}, traits::prob_manager::coup_analysis::CoupTraversal};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
 use crate::prob_manager::models::backtrack::InfoArray;
 use super::constants::MAX_GAME_LENGTH;
@@ -54,25 +54,25 @@ impl SignificantAction {
     pub fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
         self.meta_data.set_inferred_constraints(inferred_constraints)
     }
-    pub fn impossible_constraints(&self) -> &[[bool; 5]; 7] {
+    pub fn impossible_constraints(&self) -> &[[bool; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE] {
         self.meta_data.impossible_constraints()
     }
-    pub fn impossible_constraints_mut(&mut self) -> &mut [[bool; 5]; 7] {
+    pub fn impossible_constraints_mut(&mut self) -> &mut [[bool; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE] {
         self.meta_data.impossible_constraints_mut()
     }
-    pub fn impossible_constraints_2(&self) -> &[[[bool; 5]; 5]; 7] {
+    pub fn impossible_constraints_2(&self) -> &[[[bool; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE] {
         self.meta_data.impossible_constraints_2()
     }
-    pub fn impossible_constraints_2_mut(&mut self) -> &mut [[[bool; 5]; 5]; 7] {
+    pub fn impossible_constraints_2_mut(&mut self) -> &mut [[[bool; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE] {
         self.meta_data.impossible_constraints_2_mut()
     }
-    pub fn impossible_constraints_3(&self) -> &[[[bool; 5]; 5]; 5] {
+    pub fn impossible_constraints_3(&self) -> &[[[bool; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE] {
         self.meta_data.impossible_constraints_3()
     }
-    pub fn impossible_constraints_3_mut(&mut self) -> &mut [[[bool; 5]; 5]; 5] {
+    pub fn impossible_constraints_3_mut(&mut self) -> &mut [[[bool; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE] {
         self.meta_data.impossible_constraints_3_mut()
     }
-    pub fn set_impossible_constraints(&mut self, impossible_constraints: &[[bool; 5]; 7]) {
+    pub fn set_impossible_constraints(&mut self, impossible_constraints: &[[bool; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE]) {
         self.meta_data.set_impossible_constraints(impossible_constraints);
     }
     pub fn add_inferred_constraints(&mut self, player_id: usize, card: Card)  {
@@ -87,9 +87,9 @@ impl SignificantAction {
         if !self.meta_data.inferred_constraints[player_id].contains(&card) {
             self.meta_data.inferred_constraints[player_id].push(card);
             debug_assert!(player_id < INDEX_PILE 
-                && self.meta_data.inferred_constraints[player_id].len() < 3 
+                && self.meta_data.inferred_constraints[player_id].len() <= MAX_HAND_SIZE_PLAYER 
                 || player_id == INDEX_PILE 
-                && self.meta_data.inferred_constraints[player_id].len() < 4, 
+                && self.meta_data.inferred_constraints[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE, 
                 "bad push");
             return true;
         }
@@ -159,15 +159,15 @@ impl CoupPossibilityAnalysis for SignificantAction
         self.meta_data.inferred_constraints()
     }
 
-    fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7] {
+    fn player_impossible_constraints(&mut self) -> &[[bool; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE] {
         self.meta_data.impossible_constraints()
     }
 
-    fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7] {
+    fn player_impossible_constraints_paired(&mut self) -> &[[[bool; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE] {
         self.meta_data.impossible_constraints_2()
     }
 
-    fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5] {
+    fn player_impossible_constraints_triple(&mut self) -> &[[[bool; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE] {
         self.meta_data.impossible_constraints_3()
     }
 
@@ -234,8 +234,8 @@ impl BackTrackCardCountManager {
     }
     /// Buffer for doing backtracking with
     pub fn create_buffer() -> (Vec<Vec<Card>>, Vec<Vec<Card>>) {
-        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
-        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(4); 7];
+        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); MAX_PLAYERS_INCL_PILE];
+        let inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(4); MAX_PLAYERS_INCL_PILE];
         (public_constraints, inferred_constraints)
     }
     /// Logs the constraint's log
@@ -259,7 +259,7 @@ impl BackTrackCardCountManager {
         self.constraint_history.last_mut().unwrap()
     }
     /// Updated for discard
-    pub fn add_move_discard(&mut self, player_id: usize, cards: &[Card; 2], no_cards: usize) {
+    pub fn add_move_discard(&mut self, player_id: usize, cards: &[Card; MAX_CARDS_DISCARD], no_cards: usize) {
         // Assumes no_cards is either 1 or 2 only
         let action_info = ActionInfo::Discard { discard: cards[0] };
         let mut significant_action = SignificantAction::new(player_id as u8, action_info, self.constraint_history.last().unwrap().clone_public_meta_data());
@@ -297,14 +297,14 @@ impl BackTrackCardCountManager {
     pub fn generate_impossible_constraints(&mut self) {
         let history_index = self.constraint_history.len() - 1;
         // TODO: [OPTIMIZE] consider total dead cards inferred etc...
-        let mut cards: [u8; 5] = [0; 5];
+        let mut cards: [u8; MAX_CARD_PERMS_ONE] = [0; MAX_CARD_PERMS_ONE];
         let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
-        for player_of_interest in 0..7 {
+        for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
             if self.latest_constraint_mut().public_constraints()[player_of_interest].len() == 2 {
                 self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest] = [true; 5];
                 continue;
             }
-            for card in 0..5 {
+            for card in 0..MAX_CARD_PERMS_ONE {
                 cards[card] = 1;
                 log::trace!("generate_impossible_constraints 1 card : {:?}", card);
                 self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest][card] = self.impossible_to_have_cards_general(history_index, player_of_interest, &cards, &mut public_constraints, &mut inferred_constraints);
@@ -313,14 +313,14 @@ impl BackTrackCardCountManager {
                 cards[card] = 0;
             }
         }
-        for player_of_interest in 0..7 {
+        for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
             if self.latest_constraint_mut().public_constraints()[player_of_interest].len() > 0 {
                 self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest] = [[true; 5]; 5];
                 continue;
             }
-            for card_a in 0..5 {
+            for card_a in 0..MAX_CARD_PERMS_ONE {
                 if self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest][card_a] {
-                    self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest][card_a] = [true; 5];
+                    self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest][card_a] = [true; MAX_CARD_PERMS_ONE];
                     self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest][0][card_a] = true;
                     self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest][1][card_a] = true;
                     self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest][2][card_a] = true;
@@ -328,7 +328,7 @@ impl BackTrackCardCountManager {
                     self.latest_constraint_mut().impossible_constraints_2_mut()[player_of_interest][4][card_a] = true;
                     continue;
                 }
-                for card_b in card_a..5 {
+                for card_b in card_a..MAX_CARD_PERMS_ONE {
                     if self.latest_constraint_mut().impossible_constraints_mut()[player_of_interest][card_b] {
                         continue;
                     }
@@ -346,22 +346,22 @@ impl BackTrackCardCountManager {
                 }
             }
         }
-        for card_a in 0..5 {
+        for card_a in 0..MAX_CARD_PERMS_ONE {
             if self.latest_constraint_mut().impossible_constraints_mut()[INDEX_PILE][card_a] {
-                self.latest_constraint_mut().impossible_constraints_3_mut()[card_a] = [[true; 5]; 5];
-                for i in 0..5 {
-                    for j in 0..5 {
+                self.latest_constraint_mut().impossible_constraints_3_mut()[card_a] = [[true; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE];
+                for i in 0..MAX_CARD_PERMS_ONE {
+                    for j in 0..MAX_CARD_PERMS_ONE {
                         self.latest_constraint_mut().impossible_constraints_3_mut()[i][j][card_a] = true;
                         self.latest_constraint_mut().impossible_constraints_3_mut()[i][card_a][j] = true;
                     }
                 }
                 continue;
             }
-            for card_b in card_a..5 {
+            for card_b in card_a..MAX_CARD_PERMS_ONE {
                 if self.latest_constraint_mut().impossible_constraints_mut()[INDEX_PILE][card_b] {
                     continue;
                 }
-                for card_c in card_b..5 {
+                for card_c in card_b..MAX_CARD_PERMS_ONE {
                     if self.latest_constraint_mut().impossible_constraints_mut()[INDEX_PILE][card_c] {
                         continue;
                     }
@@ -399,20 +399,20 @@ impl BackTrackCardCountManager {
                     }
                 }
                 // if 1 card not impossible and all the rest impossible
-                let mut must_have_card: [u8; 5] = [3; 5];
-                'outer: for card_num_a in 0..5 {
-                    for card_num_b in card_num_a..5 {
+                let mut must_have_card: [u8; MAX_CARD_PERMS_ONE] = [3; MAX_CARD_PERMS_ONE];
+                'outer: for card_num_a in 0..MAX_CARD_PERMS_ONE {
+                    for card_num_b in card_num_a..MAX_CARD_PERMS_ONE {
                         // AA AB BB
                         // means nothing, I need to check if all have A or all have B
                         // need count lol
                         if self.latest_constraint_mut().impossible_constraints_2_mut()[player][card_num_a][card_num_b] {
                             continue;
                         }
-                        let mut next = [0u8; 5];
+                        let mut next = [0u8; MAX_CARD_PERMS_ONE];
                         next[card_num_a] += 1;
                         next[card_num_b] += 1;
                         must_have_card.iter_mut().zip(next.iter()).for_each(|(m, n)| *m = (*m).min(*n));
-                        if must_have_card == [0; 5] {
+                        if must_have_card == [0; MAX_CARD_PERMS_ONE] {
                             break 'outer;
                         }
                     }
@@ -431,22 +431,22 @@ impl BackTrackCardCountManager {
                 }
             }
         }
-        let mut must_have_card: [u8; 5] = [3; 5];
-        for card_num_a in 0..5 {
-            for card_num_b in card_num_a..5 {
-                for card_num_c in card_num_b..5 {
+        let mut must_have_card: [u8; MAX_CARD_PERMS_ONE] = [3; MAX_CARD_PERMS_ONE];
+        for card_num_a in 0..MAX_CARD_PERMS_ONE {
+            for card_num_b in card_num_a..MAX_CARD_PERMS_ONE {
+                for card_num_c in card_num_b..MAX_CARD_PERMS_ONE {
                     // AA AB BB
                     // means nothing, I need to check if all have A or all have B
                     // need count lol
                     if self.latest_constraint_mut().impossible_constraints_3_mut()[card_num_a][card_num_b][card_num_c] {
                         continue;
                     }
-                    let mut next = [0u8; 5];
+                    let mut next = [0u8; MAX_CARD_PERMS_ONE];
                     next[card_num_a] += 1;
                     next[card_num_b] += 1;
                     next[card_num_c] += 1;
                     must_have_card.iter_mut().zip(next.iter()).for_each(|(m, n)| *m = (*m).min(*n));
-                    if must_have_card == [0; 5] {
+                    if must_have_card == [0; MAX_CARD_PERMS_ONE] {
                         return
                         // break 'outer;
                     }
@@ -463,7 +463,7 @@ impl BackTrackCardCountManager {
     }
     /// Does Backtracking to determine if at a particular point that particular player could not have had some set of cards at start of turn
     /// Assuming we won't be using this for ambassador?
-    pub fn impossible_to_have_cards_general(&self, index_lookback: usize, player_of_interest: usize, cards: &[u8; 5], public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
+    pub fn impossible_to_have_cards_general(&self, index_lookback: usize, player_of_interest: usize, cards: &[u8; MAX_CARD_PERMS_ONE], public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
         log::trace!("impossible_to_have_cards player_of_interest: {}, cards: {:?}", player_of_interest, cards);
         debug_assert!(player_of_interest != INDEX_PILE && cards.iter().sum::<u8>() <= 2 || player_of_interest == INDEX_PILE && cards.iter().sum::<u8>() <= 3, "cards too long!");
         for (card_num, card_count) in cards.iter().enumerate() {
@@ -506,7 +506,7 @@ impl BackTrackCardCountManager {
                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
                         
-                        response = MoveGuard::ordered_swap(public_constraints, inferred_constraints, INDEX_PILE, player_loop, &[*redraw_i], &[*reveal], |pub_con, inf_con| {
+                        response = MoveGuard::swap_ordered(public_constraints, inferred_constraints, INDEX_PILE, player_loop, &[*redraw_i], &[*reveal], |pub_con, inf_con| {
                             self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
                         });
                     },
@@ -517,7 +517,7 @@ impl BackTrackCardCountManager {
                                 // relinquish_i == *reveal always
                                 // Case 0: player redrew card != reveal
                                 // Case 1: player redrew card == reveal (reveal from pile)
-                                if inferred_constraints[INDEX_PILE].len() == 3
+                                if inferred_constraints[INDEX_PILE].len() == MAX_HAND_SIZE_PILE
                                 && !inferred_constraints[INDEX_PILE].contains(&reveal) {
                                     // This state cannot be arrive after the reveal_redraw
                                     return false;
@@ -528,7 +528,7 @@ impl BackTrackCardCountManager {
                 
                                 if inferred_constraints[player_loop].is_empty() {
                                     log::trace!("inferred_constraints[player_loop].is_empty(): {:?}", inferred_constraints[player_loop]);
-                                    let _ = MoveGuard::ordered_swap(
+                                    let _ = MoveGuard::swap_ordered(
                                         public_constraints,
                                         inferred_constraints,
                                         player_loop,
@@ -559,7 +559,7 @@ impl BackTrackCardCountManager {
                                     log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
                 
                                     if inferred_constraints[player_loop].len() < 2 {
-                                        if MoveGuard::ordered_swap(
+                                        if MoveGuard::swap_ordered(
                                             public_constraints,
                                             inferred_constraints,
                                             player_loop,
@@ -582,7 +582,7 @@ impl BackTrackCardCountManager {
                                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
                 
-                                        if MoveGuard::ordered_swap(
+                                        if MoveGuard::swap_ordered(
                                             public_constraints,
                                             inferred_constraints,
                                             player_loop,
@@ -599,14 +599,14 @@ impl BackTrackCardCountManager {
                                 }
                             },
                             None => {
-                                if inferred_constraints[player_loop].len() + inferred_constraints[INDEX_PILE].len() == 5 
+                                if inferred_constraints[player_loop].len() + inferred_constraints[INDEX_PILE].len() == MAX_HAND_SIZE_PLAYER + MAX_HAND_SIZE_PILE 
                                 && !inferred_constraints[player_loop].contains(&reveal)
                                 && !inferred_constraints[INDEX_PILE].contains(&reveal) {
                                     // This state cannot be arrive after the reveal_redraw
                                     return false;
                                 }
                                 if inferred_constraints[player_loop].is_empty() {
-                                    return MoveGuard::ordered_swap(
+                                    return MoveGuard::swap_ordered(
                                         public_constraints,
                                         inferred_constraints,
                                         player_loop,
@@ -630,7 +630,7 @@ impl BackTrackCardCountManager {
 
                                 for card_player in iter_cards.iter() {
                                     if *card_player != *reveal || inferred_constraints[INDEX_PILE].contains(&reveal) {
-                                        if MoveGuard::ordered_swap(
+                                        if MoveGuard::swap_ordered(
                                             public_constraints,
                                             inferred_constraints,
                                             player_loop,
@@ -650,7 +650,7 @@ impl BackTrackCardCountManager {
                                         }
                                     }
 
-                                    if MoveGuard::ordered_swap(
+                                    if MoveGuard::swap_ordered(
                                         public_constraints,
                                         inferred_constraints,
                                         INDEX_PILE,
@@ -714,16 +714,16 @@ impl BackTrackCardCountManager {
             ActionInfo::StartInferred => {
                 // TODO: OPTIMIZE this is only needed if bool_know_priv_info is true
                 let mut buffer: Vec<(usize, Card)> = Vec::with_capacity(3);
-                for player in 0..7 as usize {
-                    let mut card_counts_req = [0u8; 5];
-                    let mut card_counts_cur = [0u8; 5];
+                for player in 0..MAX_PLAYERS_INCL_PILE {
+                    let mut card_counts_req = [0u8; MAX_CARD_PERMS_ONE];
+                    let mut card_counts_cur = [0u8; MAX_CARD_PERMS_ONE];
                     for card_start in self.constraint_history[index_loop].inferred_constraints()[player].iter() {
                         card_counts_req[*card_start as usize] += 1;
                     }
                     for card_start in inferred_constraints[player].iter() {
                         card_counts_cur[*card_start as usize] += 1;
                     }
-                    for card_num_to_add in 0..5 {
+                    for card_num_to_add in 0..MAX_CARD_PERMS_ONE {
                         if card_counts_req[card_num_to_add] > card_counts_cur[card_num_to_add] {
                             for _ in 0..(card_counts_req[card_num_to_add] - card_counts_cur[card_num_to_add]) {
                                 let card_add = Card::try_from(card_num_to_add as u8).unwrap();
@@ -765,12 +765,12 @@ impl BackTrackCardCountManager {
             }
         }
         for player in 0..INDEX_PILE {
-            if public_constraints[player].len() + inferred_constraints[player].len() > 2 {
+            if public_constraints[player].len() + inferred_constraints[player].len() > MAX_HAND_SIZE_PLAYER {
                 log::trace!("is_valid_combination player {} has too many cards", player);
                 return false
             }
         }
-        if public_constraints[INDEX_PILE].len() + inferred_constraints[INDEX_PILE].len() > 3 {
+        if public_constraints[INDEX_PILE].len() + inferred_constraints[INDEX_PILE].len() > MAX_HAND_SIZE_PILE {
             log::trace!("is_valid_combination pile has too many cards");
             return false
         }
@@ -832,8 +832,8 @@ impl BackTrackCardCountManager {
         let mut iter_cards_pile = inferred_constraints[INDEX_PILE].clone();
         iter_cards_pile.sort_unstable();
         iter_cards_pile.dedup();
-        let mut player_count = [0u8; 5];
-        let mut pile_count = [0u8; 5];
+        let mut player_count = [0u8; MAX_CARD_PERMS_ONE];
+        let mut pile_count = [0u8; MAX_CARD_PERMS_ONE];
         inferred_constraints[player_loop].iter().for_each(|c| player_count[*c as usize] += 1);
         inferred_constraints[INDEX_PILE].iter().for_each(|c| pile_count[*c as usize] += 1);
 
@@ -1064,7 +1064,7 @@ impl BackTrackCardCountManager {
     /// Recursion case for exchange with private information
     pub fn recurse_variants_exchange_private(&self, index_loop: usize, player_loop: usize, draw: &Vec<Card>, relinquish: &Vec<Card>, public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
         log::trace!("In recurse_variants_exchange_private!");
-        MoveGuard::ordered_swap(
+        MoveGuard::swap_ordered(
             public_constraints,
             inferred_constraints,
             player_loop, 
@@ -1090,7 +1090,7 @@ impl CoupTraversal for BackTrackCardCountManager {
         self.move_no = 1;
     }
 
-    fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
+    fn start_private(&mut self, player: usize, cards: &[Card; MAX_HAND_SIZE_PLAYER]) {
         self.private_player = Some(player);
         self.constraint_history.clear();
         self.move_no_history.clear();
@@ -1283,7 +1283,7 @@ impl CoupPossibilityAnalysis for BackTrackCardCountManager
     }
     
     fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool {
-        let mut cards = [0u8; 5];
+        let mut cards = [0u8; MAX_CARD_PERMS_ONE];
         cards[card as usize] += 1;
         let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
         !self.impossible_to_have_cards_general(self.constraint_history.len() - 1, player as usize, &cards, &mut public_constraints, &mut inferred_constraints)
@@ -1294,7 +1294,7 @@ impl CoupPossibilityAnalysis for BackTrackCardCountManager
     }
     fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool {
         // TODO: [OPTIMIZE] check if latest state is updated! 
-        let mut cards_input = [0u8; 5];
+        let mut cards_input = [0u8; MAX_CARD_PERMS_ONE];
         for card in cards.iter() {
             cards_input[*card as usize] += 1;
         }
@@ -1334,7 +1334,7 @@ impl CoupPossibilityAnalysis for BackTrackCardCountManager
             },
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
                 let player_dead = self.public_constraints()[*player_id].len() as u8;
-                let mut required = [0u8; 5];
+                let mut required = [0u8; MAX_CARD_PERMS_ONE];
                 relinquish.iter().for_each(|c| required[*c as usize] += 1); 
                 // println!("relinquish: {:?}", relinquish);
                 // println!("required: {:?}", required);
@@ -1352,7 +1352,7 @@ impl CoupPossibilityAnalysis for BackTrackCardCountManager
                 } else {
                     // if updated {..} just check the state
                     let mut cards = Vec::with_capacity(2);
-                    for c in 0..5 {
+                    for c in 0..MAX_CARD_PERMS_ONE {
                         for _ in 0..required[c] {
                             cards.push(Card::try_from(c as u8).unwrap());
                         }

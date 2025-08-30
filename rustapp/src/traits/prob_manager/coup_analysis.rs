@@ -1,4 +1,5 @@
 use crate::history_public::{ActionObservation, Card};
+use crate::prob_manager::engine::constants::MAX_HAND_SIZE_PLAYER;
 use crate::prob_manager::engine::models::game_state::GameData;
 use crate::prob_manager::engine::models_prelude::*;
 
@@ -7,7 +8,7 @@ pub trait CoupTraversal {
     /// Starts a game with public information
     fn start_public(&mut self, player: usize);
     /// Starts a game with private information
-    fn start_private(&mut self, player: usize, cards: &[Card; 2]);
+    fn start_private(&mut self, player: usize, cards: &[Card; MAX_HAND_SIZE_PLAYER]);
     /// Starts a game with all cards known
     fn start_known(&mut self, cards: &Vec<Vec<Card>>);
     /// Adds an Action with only public information

@@ -15,6 +15,7 @@ pub const MAX_HAND_SIZE_PLAYER: usize = 2;
 pub const MAX_HAND_SIZE_PILE: usize = 3;
 pub const MAX_CARDS_IN_GAME: u8 = 15;
 pub const MAX_NUM_PER_CARD: u8 = 3;
+pub const MAX_CARDS_DISCARD: usize = 2;
 pub const INDEX_PILE: usize = 6;
 pub const COUNT_PER_CHARACTER: u8 = 3;
 pub const DEFAULT_PLAYER_LIVES: usize = 2;

@@ -7,86 +7,16 @@ use crate::{
 pub struct MoveGuard;
 
 impl MoveGuard {
+    /// Here it is intended that the cards are
+    ///     - removed from BOTH
+    ///     - then added to BOTH
+    /// NOT
+    ///     - removed from b
+    ///     - added to a
+    ///     - then removed from a
+    ///     - then added to b
     #[inline(always)]
     pub fn swap(
-        public_constraint: &mut Vec<Vec<Card>>,
-        inferred_constraint: &mut Vec<Vec<Card>>,
-        player_a: usize,
-        player_b: usize,
-        a_to_b: &[Card],
-        b_to_a: &[Card],
-        f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool,
-    ) -> bool {
-        Self::swap_run_swap_back(
-            public_constraint,
-            inferred_constraint,
-            player_a,
-            player_b,
-            a_to_b,
-            b_to_a,
-            f,
-        )
-    }
-    /// Here it is intended that the cards are
-    ///     - removed from BOTH
-    ///     - then added to BOTH
-    /// NOT
-    ///     - removed from b
-    ///     - added to a
-    ///     - then removed from a
-    ///     - then added to b
-    #[inline(always)]
-    pub fn swap_run_clone_back(
-        public_constraint: &mut Vec<Vec<Card>>,
-        inferred_constraint: &mut Vec<Vec<Card>>,
-        player_a: usize,
-        player_b: usize,
-        a_to_b: &[Card],
-        b_to_a: &[Card],
-        f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool,
-    ) -> bool {
-        let backup_player_a = inferred_constraint[player_a].clone();
-        let backup_player_b = inferred_constraint[player_b].clone();
-        for c in a_to_b.iter() {
-            if let Some(pos) = inferred_constraint[player_a]
-                .iter()
-                .rposition(|card| card == c)
-            {
-                let card = inferred_constraint[player_a].swap_remove(pos);
-                inferred_constraint[player_b].push(card);
-            }
-        }
-        for c in b_to_a.iter() {
-            if let Some(pos) = inferred_constraint[player_b]
-                .iter()
-                .rposition(|card| card == c)
-            {
-                let card = inferred_constraint[player_b].swap_remove(pos);
-                inferred_constraint[player_a].push(card);
-            }
-        }
-        if public_constraint[player_a].len() + inferred_constraint[player_a].len()
-            <= MAX_PLAYER_HAND_SIZE[player_a]
-            && public_constraint[player_b].len() + inferred_constraint[player_b].len()
-                <= MAX_PLAYER_HAND_SIZE[player_b]
-            && f(public_constraint, inferred_constraint)
-        {
-            return true;
-        }
-        inferred_constraint[player_a] = backup_player_a;
-        inferred_constraint[player_b] = backup_player_b;
-        false
-    }
-    /// Here it is intended that the cards are
-    ///     - removed from BOTH
-    ///     - then added to BOTH
-    /// NOT
-    ///     - removed from b
-    ///     - added to a
-    ///     - then removed from a
-    ///     - then added to b
-    #[inline(always)]
-    pub fn swap_run_swap_back(
         public_constraint: &mut Vec<Vec<Card>>,
         inferred_constraint: &mut Vec<Vec<Card>>,
         player_a: usize,
@@ -154,7 +84,7 @@ impl MoveGuard {
     ///     - removed from BOTH
     ///     - then added to BOTH
     #[inline(always)]
-    pub fn ordered_swap(
+    pub fn swap_ordered(
         public_constraint: &mut Vec<Vec<Card>>,
         inferred_constraint: &mut Vec<Vec<Card>>,
         player_a: usize,
