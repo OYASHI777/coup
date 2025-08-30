@@ -1,3 +1,5 @@
+use arrayvec::ArrayVec;
+
 use crate::{
     history_public::Card,
     prob_manager::engine::constants::{MAX_CARD_PERMS_ONE, MAX_PLAYER_HAND_SIZE},
@@ -25,15 +27,18 @@ impl MoveGuard {
         b_to_a: &[Card],
         f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool,
     ) -> bool {
-        let mut moved_from_a_to_b: Vec<Card> = Vec::with_capacity(a_to_b.len());
-        let mut moved_from_b_to_a: Vec<Card> = Vec::with_capacity(b_to_a.len());
+        let mut moved_from_a_to_b: ArrayVec<Card, 2> = ArrayVec::new();
+        let mut moved_from_b_to_a: ArrayVec<Card, 2> = ArrayVec::new();
         for c in a_to_b.iter() {
             if let Some(pos) = inferred_constraint[player_a]
                 .iter()
                 .rposition(|card| card == c)
             {
                 let card = inferred_constraint[player_a].swap_remove(pos);
-                moved_from_a_to_b.push(card);
+                // SAFETY: This is fine as we know it never exceeds the cap
+                unsafe {
+                    moved_from_a_to_b.push_unchecked(card);
+                }
             }
         }
         for c in b_to_a.iter() {
@@ -42,7 +47,10 @@ impl MoveGuard {
                 .rposition(|card| card == c)
             {
                 let card = inferred_constraint[player_b].swap_remove(pos);
-                moved_from_b_to_a.push(card);
+                // SAFETY: This is fine as we know it never exceeds the cap
+                unsafe {
+                    moved_from_b_to_a.push_unchecked(card);
+                }
             }
         }
         inferred_constraint[player_b].extend(moved_from_a_to_b.iter());
@@ -93,19 +101,25 @@ impl MoveGuard {
         b_to_a: &[Card],
         f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool,
     ) -> bool {
-        let mut removed_from_b: Vec<Card> = Vec::with_capacity(b_to_a.len());
-        let mut removed_from_a: Vec<Card> = Vec::with_capacity(a_to_b.len());
+        let mut removed_from_b: ArrayVec<Card, 2> = ArrayVec::new();
+        let mut removed_from_a: ArrayVec<Card, 2> = ArrayVec::new();
         for &c in a_to_b {
             if let Some(pos) = inferred_constraint[player_b].iter().rposition(|x| *x == c) {
                 inferred_constraint[player_b].swap_remove(pos);
-                removed_from_b.push(c);
+                // SAFETY: This is fine as we know it never exceeds the cap
+                unsafe {
+                    removed_from_b.push_unchecked(c);
+                }
             }
             inferred_constraint[player_a].push(c);
         }
         for &c in b_to_a {
             if let Some(pos) = inferred_constraint[player_a].iter().rposition(|x| *x == c) {
                 inferred_constraint[player_a].swap_remove(pos);
-                removed_from_a.push(c);
+                // SAFETY: This is fine as we know it never exceeds the cap
+                unsafe {
+                    removed_from_a.push_unchecked(c);
+                }
             }
             inferred_constraint[player_b].push(c);
         }
