@@ -4,17 +4,18 @@ pub mod traits {
         pub mod coup_analysis;
     }
 }
-pub mod cfr {
-    pub mod explorer;
-    mod best_response_policy;
-    pub mod keys;
-    mod mixed_strategy_policy;
-    mod policy_handler;
-    mod action_serialiser;
-    mod value_function;
-    mod inference_buffer;
-    pub mod reach_prob;
-}
+// TEMP REMOVED TO NOT SEE WARNINGS
+// pub mod cfr {
+//     pub mod explorer;
+//     mod best_response_policy;
+//     pub mod keys;
+//     mod mixed_strategy_policy;
+//     mod policy_handler;
+//     mod action_serialiser;
+//     mod value_function;
+//     mod inference_buffer;
+//     pub mod reach_prob;
+// }
 pub mod prob_manager {
     pub mod engine {
         pub mod models {
@@ -66,8 +67,9 @@ pub mod prob_manager {
     pub mod constraint;
     mod constants;
     pub mod move_guard;
-    pub mod naive_prob;
-    pub mod naive_sampler;
+    // TEMP REMOVED TO NOT SEE WARNINGS
+    // pub mod naive_prob;
+    // pub mod naive_sampler;
 }
 pub mod history_public;
 pub mod string_utils;
