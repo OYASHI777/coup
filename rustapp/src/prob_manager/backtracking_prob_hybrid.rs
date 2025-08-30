@@ -466,8 +466,6 @@ impl BackTrackCardCountManager {
     pub fn impossible_to_have_cards_general(&self, index_lookback: usize, player_of_interest: usize, cards: &[u8; 5], public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
         log::trace!("impossible_to_have_cards player_of_interest: {}, cards: {:?}", player_of_interest, cards);
         debug_assert!(player_of_interest != INDEX_PILE && cards.iter().sum::<u8>() <= 2 || player_of_interest == INDEX_PILE && cards.iter().sum::<u8>() <= 3, "cards too long!");
-        // let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
-        // let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(4); 7];
         for (card_num, card_count) in cards.iter().enumerate() {
             for _ in 0..*card_count {
                 inferred_constraints[player_of_interest].push(Card::try_from(card_num as u8).unwrap());
