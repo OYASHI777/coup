@@ -8,7 +8,7 @@ pub struct MoveGuard;
 
 impl MoveGuard {
     #[inline(always)]
-    pub fn swap_run_reset(
+    pub fn swap(
         public_constraint: &mut Vec<Vec<Card>>,
         inferred_constraint: &mut Vec<Vec<Card>>,
         player_a: usize,
@@ -27,7 +27,6 @@ impl MoveGuard {
             f,
         )
     }
-    #[inline(always)]
     /// Here it is intended that the cards are
     ///     - removed from BOTH
     ///     - then added to BOTH
@@ -36,6 +35,7 @@ impl MoveGuard {
     ///     - added to a
     ///     - then removed from a
     ///     - then added to b
+    #[inline(always)]
     pub fn swap_run_clone_back(
         public_constraint: &mut Vec<Vec<Card>>,
         inferred_constraint: &mut Vec<Vec<Card>>,
@@ -77,7 +77,6 @@ impl MoveGuard {
         inferred_constraint[player_b] = backup_player_b;
         false
     }
-    #[inline(always)]
     /// Here it is intended that the cards are
     ///     - removed from BOTH
     ///     - then added to BOTH
@@ -86,6 +85,7 @@ impl MoveGuard {
     ///     - added to a
     ///     - then removed from a
     ///     - then added to b
+    #[inline(always)]
     pub fn swap_run_swap_back(
         public_constraint: &mut Vec<Vec<Card>>,
         inferred_constraint: &mut Vec<Vec<Card>>,
@@ -153,7 +153,8 @@ impl MoveGuard {
     /// NOT
     ///     - removed from BOTH
     ///     - then added to BOTH
-    pub fn ordered_swap_run_reset(
+    #[inline(always)]
+    pub fn ordered_swap(
         public_constraint: &mut Vec<Vec<Card>>,
         inferred_constraint: &mut Vec<Vec<Card>>,
         player_a: usize,
@@ -203,6 +204,82 @@ impl MoveGuard {
             inferred_constraint[player_b].push(c);
         }
         false
+    }
+    #[inline(always)]
+    pub fn reveal_none_pull_only_run_reset(
+        public_constraint: &mut Vec<Vec<Card>>,
+        inferred_constraint: &mut Vec<Vec<Card>>,
+        player: usize,
+        pile: usize,   // usually 6
+        reveal: Card,
+        f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool,
+    ) -> bool {
+        let mut removed_reveal_from_pile = false;
+        if let Some(pos) = inferred_constraint[pile].iter().rposition(|c| *c == reveal) {
+            inferred_constraint[pile].swap_remove(pos);
+            removed_reveal_from_pile = true;
+        }
+        inferred_constraint[player].push(reveal); // always push
+
+        let ok = f(public_constraint, inferred_constraint);
+
+        if let Some(pos) = inferred_constraint[player].iter().rposition(|c| *c == reveal) {
+            inferred_constraint[player].swap_remove(pos);
+        }
+        if removed_reveal_from_pile {
+            inferred_constraint[pile].push(reveal);
+        }
+
+        ok
+    }
+    #[inline(always)]
+    pub fn reveal_none_swap_then_pull_run_reset(
+        public_constraint: &mut Vec<Vec<Card>>,
+        inferred_constraint: &mut Vec<Vec<Card>>,
+        player: usize,
+        pile: usize,   // usually 6
+        reveal: Card,
+        swap_card: Card,
+        f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool,
+    ) -> bool {
+        // forward: player -> pile (swap_card)
+        let mut removed_swap_from_player = false;
+        if let Some(pos) = inferred_constraint[player]
+            .iter()
+            .position(|c| *c == swap_card) // match your original .position()
+        {
+            inferred_constraint[player].swap_remove(pos);
+            removed_swap_from_player = true;
+        }
+        inferred_constraint[pile].push(swap_card); // always push
+
+        // forward: pile -> player (reveal)
+        let mut removed_reveal_from_pile = false;
+        if let Some(pos) = inferred_constraint[pile].iter().rposition(|c| *c == reveal) {
+            inferred_constraint[pile].swap_remove(pos);
+            removed_reveal_from_pile = true;
+        }
+        inferred_constraint[player].push(reveal); // always push
+
+        // user function
+        let ok = f(public_constraint, inferred_constraint);
+
+        // rollback (reverse order)
+        if let Some(pos) = inferred_constraint[player].iter().rposition(|c| *c == reveal) {
+            inferred_constraint[player].swap_remove(pos);
+        }
+        if removed_reveal_from_pile {
+            inferred_constraint[pile].push(reveal);
+        }
+
+        if let Some(pos) = inferred_constraint[pile].iter().rposition(|c| *c == swap_card) {
+            inferred_constraint[pile].swap_remove(pos);
+        }
+        if removed_swap_from_player {
+            inferred_constraint[player].push(swap_card);
+        }
+
+        ok
     }
     #[inline(always)]
     pub fn discard(
