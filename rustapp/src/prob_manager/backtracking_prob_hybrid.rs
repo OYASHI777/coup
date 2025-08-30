@@ -569,14 +569,10 @@ impl BackTrackCardCountManager {
                                             &[*reveal],
                                             &[],
                                             |pub_con, inf_con| {
-                                                if inf_con.iter()
+                                                inf_con.iter()
                                                     .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
-                                                    .sum::<u8>() < 4
-                                                {
-                                                    self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
-                                                } else {
-                                                    false
-                                                }
+                                                    .sum::<u8>() <= MAX_NUM_PER_CARD
+                                                && self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
                                             },
                                         ) {
                                             return true
@@ -621,15 +617,11 @@ impl BackTrackCardCountManager {
                                         &[],
                                         |pub_con, inf_con| {
                                             // keep your acceptance gates exactly as-is:
-                                            if inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
-                                                && inf_con.iter()
-                                                    .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
-                                                    .sum::<u8>() <= MAX_NUM_PER_CARD
-                                            {
-                                                self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
-                                            } else {
-                                                false
-                                            }
+                                            inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                            && inf_con.iter()
+                                                .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
+                                                .sum::<u8>() <= MAX_NUM_PER_CARD
+                                            && self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
                                         },
                                     );
                                 }
@@ -648,16 +640,12 @@ impl BackTrackCardCountManager {
                                             &[*reveal],
                                             &[],
                                             |pub_con, inf_con| {
-                                                if inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
-                                                    && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
-                                                    && inf_con.iter()
-                                                        .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
-                                                        .sum::<u8>() <= MAX_NUM_PER_CARD
-                                                {
-                                                    self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
-                                                } else {
-                                                    false
-                                                }
+                                                inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                                && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                                && inf_con.iter()
+                                                    .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
+                                                    .sum::<u8>() <= MAX_NUM_PER_CARD
+                                                && self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
                                             },
                                         ) {
                                             return true
@@ -672,17 +660,13 @@ impl BackTrackCardCountManager {
                                         &[*card_player],
                                         &[*reveal],
                                         |pub_con, inf_con| {
-                                            if inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
-                                                && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
-                                                && inf_con
-                                                    .iter()
-                                                    .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
-                                                    .sum::<u8>() <= MAX_NUM_PER_CARD
-                                            {
-                                                self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
-                                            } else {
-                                                false
-                                            }
+                                            inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                            && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                            && inf_con
+                                                .iter()
+                                                .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
+                                                .sum::<u8>() <= MAX_NUM_PER_CARD
+                                            && self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
                                         },
                                     ) {
                                         return true
