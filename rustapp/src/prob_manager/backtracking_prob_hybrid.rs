@@ -736,14 +736,13 @@ impl BackTrackCardCountManager {
                     }
                 }
                 
-                response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
+                if self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints) {
+                    return true
+                }
                 for (player_remove, card_remove) in buffer.iter() {
                     if let Some(pos) = inferred_constraints[*player_remove].iter().rposition(|c| *c == *card_remove) {
                         inferred_constraints[*player_remove].swap_remove(pos);
                     }
-                }
-                if response {
-                    return true;
                 }
             },
             ActionInfo::Start => {
