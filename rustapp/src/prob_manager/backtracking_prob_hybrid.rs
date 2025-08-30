@@ -626,7 +626,7 @@ impl BackTrackCardCountManager {
                                     return false;
                                 }
                                 if inferred_constraints[player_loop].is_empty() {
-                                    response = MoveGuard::ordered_swap(
+                                    return MoveGuard::ordered_swap(
                                         public_constraints,
                                         inferred_constraints,
                                         player_loop,
@@ -646,7 +646,6 @@ impl BackTrackCardCountManager {
                                             }
                                         },
                                     );
-                                    return response;
                                 }
 
                                 let mut iter_cards = inferred_constraints[player_loop].clone();
