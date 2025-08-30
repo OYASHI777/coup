@@ -507,31 +507,10 @@ impl BackTrackCardCountManager {
                         log::trace!("Before Reveal Redraw");
                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
-                
-                        let (mut removed_redraw, mut removed_reveal) = (false, false);
-                        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *redraw_i) {
-                            inferred_constraints[player_loop].swap_remove(pos);
-                            removed_redraw = true;
-                        } 
-                        inferred_constraints[6].push(*redraw_i);
-                        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *reveal) {
-                            inferred_constraints[6].swap_remove(pos);
-                            removed_reveal = true;
-                        } 
-                        inferred_constraints[player_loop].push(*reveal);
-                        response = self.possible_to_have_cards_recurse(index_loop - 1, public_constraints, inferred_constraints);
-                        if let Some(pos) = inferred_constraints[player_loop].iter().rposition(|c| *c == *reveal) {
-                            inferred_constraints[player_loop].swap_remove(pos);
-                        }
-                        if removed_reveal {
-                            inferred_constraints[6].push(*reveal);
-                        }
-                        if let Some(pos) = inferred_constraints[6].iter().rposition(|c| *c == *redraw_i) {
-                            inferred_constraints[6].swap_remove(pos);
-                        }
-                        if removed_redraw {
-                            inferred_constraints[player_loop].push(*redraw_i);
-                        }
+                        
+                        response = MoveGuard::ordered_swap_run_reset(public_constraints, inferred_constraints, 6, player_loop, &[*redraw_i], &[*reveal], |pub_con, inf_con| {
+                            self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
+                        });
                     },
                     None => {
                         match relinquish {
