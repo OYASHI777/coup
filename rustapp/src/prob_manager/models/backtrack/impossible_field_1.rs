@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::history_public::Card;
+use crate::{history_public::Card, prob_manager::engine::constants::MAX_CARD_PERMS_ONE};
 
 /// A bitField that store impossibility boolean states for 1 card combinations
 ///
@@ -24,7 +24,7 @@ impl ImpossibleField1 {
     /// Collision-free index
     #[inline]
     pub const fn index(i: u8) -> u8 {
-        debug_assert!(i < 5);
+        debug_assert!(i < MAX_CARD_PERMS_ONE as u8);
         i
     }
 
@@ -36,7 +36,7 @@ impl ImpossibleField1 {
     /// Sets the impossibility state for a single card
     #[inline]
     pub fn set(&mut self, i: u8, impossibility: bool) {
-        debug_assert!(i < 5);
+        debug_assert!(i < MAX_CARD_PERMS_ONE as u8);
         let index = Self::index(i);
         let mask = 1 << index;
         let bit = (impossibility as u8) << index;
@@ -46,7 +46,7 @@ impl ImpossibleField1 {
     /// Gets the impossibility state for a single card
     #[inline]
     pub fn get(&self, i: u8) -> bool {
-        debug_assert!(i < 5);
+        debug_assert!(i < MAX_CARD_PERMS_ONE as u8);
         (self.0 >> Self::index(i)) & 1 == 1
     }
 }
@@ -54,7 +54,7 @@ impl ImpossibleField1 {
 impl Debug for ImpossibleField1 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut map = f.debug_map();
-        for i in 0u8..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
             map.entry(
                 &format_args!("{:?}", Card::try_from(i).unwrap()),
                 &self.get(i),
@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn set_get_roundtrip() {
-        for i in 0u8..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
             let mut f = ImpossibleField1::zero();
 
             f.set(i, true);
@@ -83,7 +83,7 @@ mod tests {
 
     #[test]
     fn mask_set_correspondence() {
-        for i in 0u8..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
             let mut f = ImpossibleField1::zero();
             f.set(i, true);
 
@@ -101,8 +101,8 @@ mod tests {
 
     #[test]
     fn no_collision() {
-        for i in 0u8..5 {
-            for j in 0u8..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
+            for j in 0..MAX_CARD_PERMS_ONE as u8 {
                 if i == j { continue; }
                 assert!(ImpossibleField1::index(i) != ImpossibleField1::index(j));
             }

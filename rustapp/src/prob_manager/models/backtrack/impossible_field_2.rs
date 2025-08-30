@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::history_public::Card;
+use crate::{history_public::Card, prob_manager::engine::constants::MAX_CARD_PERMS_ONE};
 
 /// A bitField that store impossibility boolean states for 2 card combinations
 ///
@@ -24,8 +24,8 @@ impl ImpossibleField2 {
     /// Collision-free index for unordered pairs (i, j) with self-pairs allowed.
     #[inline]
     pub const fn index(i: u8, j: u8) -> u8 {
-        debug_assert!(i < 5);
-        debug_assert!(j < 5);
+        debug_assert!(i < MAX_CARD_PERMS_ONE as u8);
+        debug_assert!(j < MAX_CARD_PERMS_ONE as u8);
         let ai = i + 1;
         let aj = j + 1;
         let p = ai * aj;
@@ -51,8 +51,8 @@ impl ImpossibleField2 {
     /// Sets the impossibility state of a particular 2 card combination
     #[inline]
     pub fn set(&mut self, i: u8, j: u8, impossibility: bool) {
-        debug_assert!(i < 5);
-        debug_assert!(j < 5);
+        debug_assert!(i < MAX_CARD_PERMS_ONE as u8);
+        debug_assert!(j < MAX_CARD_PERMS_ONE as u8);
         let index = Self::index(i, j);
         let mask = 1 << index;
         let bit = (impossibility as u32) << index;
@@ -62,8 +62,8 @@ impl ImpossibleField2 {
     /// Gets the impossibility state of a particular 2 card combination
     #[inline]
     pub fn get(&self, i: u8, j: u8) -> bool {
-        debug_assert!(i < 5);
-        debug_assert!(j < 5);
+        debug_assert!(i < MAX_CARD_PERMS_ONE as u8);
+        debug_assert!(j < MAX_CARD_PERMS_ONE as u8);
         (self.0 >> Self::index(i, j)) & 1 == 1
     }
 }
@@ -71,8 +71,8 @@ impl ImpossibleField2 {
 impl Debug for ImpossibleField2 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut map = f.debug_map();
-        for i in 0..5 {
-            for j in i..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
+            for j in i..MAX_CARD_PERMS_ONE as u8 {
                 map.entry(
                     &format_args!(
                         "({:?}, {:?})",
@@ -93,8 +93,8 @@ mod tests {
 
     #[test]
     fn set_get_roundtrip() {
-        for i in 0..5 {
-            for j in 0..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
+            for j in 0..MAX_CARD_PERMS_ONE as u8 {
                 let mut f = ImpossibleField2::zero();
 
                 f.set(i, j, true);
@@ -108,8 +108,8 @@ mod tests {
 
     #[test]
     fn unordered() {
-        for i in 0..5 {
-            for j in 0..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
+            for j in 0..MAX_CARD_PERMS_ONE as u8 {
                 let mut f = ImpossibleField2::zero();
 
                 f.set(i, j, true);
@@ -121,9 +121,9 @@ mod tests {
 
     #[test]
     fn mask_set_correspondence() {
-        for i in 0..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
             let mut f = ImpossibleField2::zero();
-            for j in 0..5 {
+            for j in 0..MAX_CARD_PERMS_ONE as u8 {
                 f.set(i, j, true);
             }
 
@@ -141,12 +141,12 @@ mod tests {
 
     #[test]
     fn no_collision() {
-        for i in 0..5 {
-            for j in 0..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
+            for j in 0..MAX_CARD_PERMS_ONE as u8 {
                 let mut ij = vec![i, j];
                 ij.sort_unstable();
-                for k in 0..5 {
-                    for l in 0..5 {
+                for k in 0..MAX_CARD_PERMS_ONE as u8 {
+                    for l in 0..MAX_CARD_PERMS_ONE as u8 {
                         let mut kl = vec![k, l];
                         kl.sort_unstable();
                         if ij == kl {

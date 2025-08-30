@@ -1,9 +1,13 @@
 use std::{hash::Hasher};
 
 use crate::history_public::Card;
+use crate::prob_manager::engine::constants::{INDEX_PILE, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_PLAYERS_EXCL_PILE, MAX_PLAYERS_INCL_PILE};
 use crate::prob_manager::utils::permutation_generator::gen_table_combinations;
 
 use crate::traits::prob_manager::card_state::CardPermState;
+
+const BITS_PER_CARD: usize = 3;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct CardStateu64(u64);
 impl std::hash::Hash for CardStateu64 {
@@ -13,7 +17,7 @@ impl std::hash::Hash for CardStateu64 {
 }
 impl std::fmt::Display for CardStateu64 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        for i in 0..7 as usize {
+        for i in 0..MAX_PLAYERS_INCL_PILE {
             let mut cards = self.get_player_cards_unsorted(i);
             cards.sort_unstable();
             for card in cards.iter() {
@@ -25,7 +29,7 @@ impl std::fmt::Display for CardStateu64 {
 }
 impl std::fmt::Debug for CardStateu64 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        for i in 0..7 as usize {
+        for i in 0..MAX_PLAYERS_INCL_PILE {
             let mut cards = self.get_player_cards_unsorted(i);
             cards.sort_unstable();
             for card in cards.iter() {
@@ -43,22 +47,22 @@ impl CardStateu64 {
     }
     /// Returns the cards a player has (unsorted)
     pub fn get_player_cards_unsorted(&self, player_id: usize) -> Vec<Card> {
-        debug_assert!(player_id < 7, "Invalid player ID");
-        let shift = player_id * 6;
+        debug_assert!(player_id < MAX_PLAYERS_INCL_PILE, "Invalid player ID");
+        let shift = player_id * BITS_PER_CARD * MAX_HAND_SIZE_PLAYER;
 
         let mut player_cards = Vec::with_capacity(4); // 4 reqquired for the ExchangeChoice
-        if player_id < 6 {
+        if player_id < MAX_PLAYERS_EXCL_PILE {
             let mask = 0b111111;
             let player_bits = (self.0 >> shift) & mask;
-            for i in 0..2 {
-                let card_value = (player_bits >> (i * 3)) & 0b111;
+            for i in 0..MAX_HAND_SIZE_PLAYER {
+                let card_value = (player_bits >> (i * BITS_PER_CARD)) & 0b111;
                 player_cards.push(Card::try_from(card_value as u8).unwrap());
             }
         } else {
             let mask = 0b111111111;
             let player_bits = (self.0 >> shift) & mask;
-            for i in 0..3 {
-                let card_value = (player_bits >> (i * 3)) & 0b111;
+            for i in 0..MAX_HAND_SIZE_PILE {
+                let card_value = (player_bits >> (i * BITS_PER_CARD)) & 0b111;
                 player_cards.push(Card::try_from(card_value as u8).unwrap());
             }
         }
@@ -66,8 +70,8 @@ impl CardStateu64 {
     }
     /// Sets the cards for a particular player
     pub fn set_player_cards(&mut self, player_id: usize, cards: &[Card]) {
-        debug_assert!(player_id < 7, "Invalid player ID");
-        let shift = player_id * 6;
+        debug_assert!(player_id < MAX_PLAYERS_INCL_PILE, "Invalid player ID");
+        let shift = player_id * BITS_PER_CARD * MAX_HAND_SIZE_PLAYER;
         let mask = match player_id {
             0 => 0b111111,
             1 => 0b111111,
@@ -80,7 +84,7 @@ impl CardStateu64 {
         };
         let mut encoded_cards: u64 = 0;
         for (i, card) in cards.iter().enumerate() {
-            encoded_cards |= (*card as u64) << (i*3); 
+            encoded_cards |= (*card as u64) << (i * BITS_PER_CARD); 
         }
         self.0 &= !(mask << shift);
         self.0 |= (encoded_cards as u64) << shift;
@@ -191,16 +195,16 @@ impl CardPermState for CardStateu64 {
         }
         counter
     }
-    fn player_card_counts(&self, player_id: usize) -> [u8; 5] {
+    fn player_card_counts(&self, player_id: usize) -> [u8; MAX_CARD_PERMS_ONE] {
         let cards = self.get_player_cards_unsorted(player_id);
-        let mut output = [0; 5];
+        let mut output = [0; MAX_CARD_PERMS_ONE];
         for card_player in cards.iter() {
             output[*card_player as usize] += 1
         }
         output
     }
     fn mix_one_card(&self, player_id: usize, player_other: usize, card: Card) -> Vec<Self> {
-        debug_assert!(player_id < 7 && player_other < 7, "Invalid player IDs");
+        debug_assert!(player_id < MAX_PLAYERS_INCL_PILE && player_other < MAX_PLAYERS_INCL_PILE, "Invalid player IDs");
         // Get player cards
         let mut player_cards = self.get_player_cards_unsorted(player_id);
         let other_cards = self.get_player_cards_unsorted(player_other);
@@ -245,11 +249,11 @@ impl CardPermState for CardStateu64 {
     }
 
     fn mix_multiple_chars_with_player6(&self, player_id: usize, player_dead_cards: &[Card]) -> Vec<Self> {
-        debug_assert!(player_id < 6, "Only players 0-5 can swap with player 6");
+        debug_assert!(player_id < MAX_PLAYERS_EXCL_PILE, "Only players 0-5 can swap with player 6");
 
         // Get player cards
         let mut player_cards = self.get_player_cards_unsorted(player_id);
-        let player6_cards = self.get_player_cards_unsorted(6);
+        let player6_cards = self.get_player_cards_unsorted(INDEX_PILE);
 
         // Remove "dead" cards from player
         for dead_card in player_dead_cards {
@@ -262,7 +266,7 @@ impl CardPermState for CardStateu64 {
         let mut combined_cards = player_cards.clone();
         combined_cards.extend_from_slice(&player6_cards);
 
-        let player_count = player_cards.len(); // Typically 2 cards if player_id < 6
+        let player_count = player_cards.len(); // Typically 2 cards if player_id < INDEX_PILE
 
         // Generate all ways to reassign the total cards
         let combinations = Self::combinations(&combined_cards, player_count);
@@ -273,7 +277,7 @@ impl CardPermState for CardStateu64 {
             new_player_cards.extend_from_slice(&combo_for_player);
             new_player_cards.sort_unstable();
 
-            // The leftover cards go to player 6
+            // The leftover cards go to player INDEX_PILE
             let mut new_player6_cards = combined_cards.clone();
             for &card in &combo_for_player {
                 if let Some(pos) = new_player6_cards.iter().position(|&x| x == card) {
@@ -285,7 +289,7 @@ impl CardPermState for CardStateu64 {
             // Create a new state with the redistributed cards
             let mut new_state = *self;
             new_state.set_player_cards(player_id, &new_player_cards);
-            new_state.set_player_cards(6, &new_player6_cards);
+            new_state.set_player_cards(INDEX_PILE, &new_player6_cards);
 
             results.push(new_state);
         }

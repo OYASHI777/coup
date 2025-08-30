@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::history_public::Card;
+use crate::{history_public::Card, prob_manager::engine::constants::MAX_CARD_PERMS_ONE};
 
 /// A bitField that store impossibility boolean states for 3 card combinations
 ///
@@ -25,9 +25,9 @@ impl ImpossibleField3 {
     /// Collision-free index for unordered triples (i, j, k) with self-pairs allowed.
     #[inline]
     pub const fn index(i: u8, j: u8, k: u8) -> u8 {
-        debug_assert!(i < 5);
-        debug_assert!(j < 5);
-        debug_assert!(k < 5);
+        debug_assert!(i < MAX_CARD_PERMS_ONE as u8);
+        debug_assert!(j < MAX_CARD_PERMS_ONE as u8);
+        debug_assert!(k < MAX_CARD_PERMS_ONE as u8);
         let (a, b) = if i <= j { (i, j) } else { (j, i) };
         let (b, c) = if b <= k { (b, k) } else { (k, b) };
         let (a, b) = if a <= b { (a, b) } else { (b, a) };
@@ -69,9 +69,9 @@ impl ImpossibleField3 {
     /// Sets the impossibility state of a particular 3 card combination
     #[inline]
     pub fn set(&mut self, i: u8, j: u8, k: u8, impossibility: bool) {
-        debug_assert!(i < 5);
-        debug_assert!(j < 5);
-        debug_assert!(k < 5);
+        debug_assert!(i < MAX_CARD_PERMS_ONE as u8);
+        debug_assert!(j < MAX_CARD_PERMS_ONE as u8);
+        debug_assert!(k < MAX_CARD_PERMS_ONE as u8);
         let idx = Self::index(i, j, k);
         let mask = 1u64 << idx;
         let bit = (impossibility as u64) << idx;
@@ -81,9 +81,9 @@ impl ImpossibleField3 {
     /// Gets the impossibility state of a particular 3 card combination
     #[inline]
     pub fn get(&self, i: u8, j: u8, k: u8) -> bool {
-        debug_assert!(i < 5);
-        debug_assert!(j < 5);
-        debug_assert!(k < 5);
+        debug_assert!(i < MAX_CARD_PERMS_ONE as u8);
+        debug_assert!(j < MAX_CARD_PERMS_ONE as u8);
+        debug_assert!(k < MAX_CARD_PERMS_ONE as u8);
         ((self.0 >> Self::index(i, j, k)) & 1) == 1
     }
 }
@@ -91,9 +91,9 @@ impl ImpossibleField3 {
 impl Debug for ImpossibleField3 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut map = f.debug_map();
-        for i in 0..5 {
-            for j in i..5 {
-                for k in j..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
+            for j in i..MAX_CARD_PERMS_ONE as u8 {
+                for k in j..MAX_CARD_PERMS_ONE as u8 {
                     map.entry(
                         &format_args!(
                             "({:?}, {:?}, {:?})",
@@ -117,9 +117,9 @@ mod tests {
     #[test]
     fn set_get_roundtrip() {
         // Test every ordered triple (125) for robustness.
-        for i in 0..5 {
-            for j in 0..5 {
-                for k in 0..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
+            for j in 0..MAX_CARD_PERMS_ONE as u8 {
+                for k in 0..MAX_CARD_PERMS_ONE as u8 {
                     let mut f = ImpossibleField3::zero();
 
                     f.set(i, j, k, true);
@@ -134,9 +134,9 @@ mod tests {
 
     #[test]
     fn unordered() {
-        for i in 0..5 {
-            for j in 0..5 {
-                for k in 0..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
+            for j in 0..MAX_CARD_PERMS_ONE as u8 {
+                for k in 0..MAX_CARD_PERMS_ONE as u8 {
                     let mut f = ImpossibleField3::zero();
 
                     f.set(i, j, k, true);
@@ -153,10 +153,10 @@ mod tests {
 
     #[test]
     fn mask_set_correspondence() {
-        for i in 0..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
             let mut f = ImpossibleField3::zero();
-            for j in 0..5 {
-                for k in 0..5 {
+            for j in 0..MAX_CARD_PERMS_ONE as u8 {
+                for k in 0..MAX_CARD_PERMS_ONE as u8 {
                     f.set(i, j, k, true);
                 }
             }
@@ -175,15 +175,15 @@ mod tests {
 
     #[test]
     fn setting_one_does_not_affect_others() {
-        for i in 0..5 {
-            for j in 0..5 {
-                for k in 0..5 {
+        for i in 0..MAX_CARD_PERMS_ONE as u8 {
+            for j in 0..MAX_CARD_PERMS_ONE as u8 {
+                for k in 0..MAX_CARD_PERMS_ONE as u8 {
                     let mut f = ImpossibleField3::zero();
                     f.set(i, j, k, true);
 
-                    for a in 0..5 {
-                        for b in 0..5 {
-                            for c in 0..5 {
+                    for a in 0..MAX_CARD_PERMS_ONE as u8 {
+                        for b in 0..MAX_CARD_PERMS_ONE as u8 {
+                            for c in 0..MAX_CARD_PERMS_ONE as u8 {
                                 let same = (a == i && b == j && c == k)
                                     || (a == i && b == k && c == j)
                                     || (a == j && b == i && c == k)
