@@ -157,10 +157,13 @@ impl MoveGuard {
         card: Card,
         f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool,
     ) -> bool {
-        let mut removed_discard = false;
+        let mut removed: ArrayVec<Card, 1> = ArrayVec::new();
         if let Some(pos) = public_constraint[player].iter().rposition(|c| *c == card) {
             public_constraint[player].swap_remove(pos);
-            removed_discard = true;
+            // SAFETY: This is fine as we know it never exceeds the cap
+            unsafe {
+                removed.push_unchecked(card);
+            }
         }
         inferred_constraint[player].push(card);
         if f(public_constraint, inferred_constraint) {
@@ -169,8 +172,8 @@ impl MoveGuard {
         if let Some(pos) = inferred_constraint[player].iter().rposition(|c| *c == card) {
             inferred_constraint[player].swap_remove(pos);
         }
-        if removed_discard {
-            public_constraint[player].push(card);
+        for &c in removed.iter() {
+            public_constraint[player].push(c);
         }
         false
     }
