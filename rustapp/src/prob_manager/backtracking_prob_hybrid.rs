@@ -5,7 +5,7 @@
 // Tried instead to save into hashmap and store in bson
 
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
-use crate::{history_public::{ActionObservation, Card}, traits::prob_manager::coup_analysis::CoupTraversal};
+use crate::{history_public::{ActionObservation, Card}, prob_manager::engine::constants::{INDEX_PILE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_NUM_PER_CARD, MAX_PLAYER_HAND_SIZE}, traits::prob_manager::coup_analysis::CoupTraversal};
 use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
 use crate::prob_manager::models::backtrack::InfoArray;
 use super::constants::MAX_GAME_LENGTH;
@@ -728,9 +728,9 @@ impl BackTrackCardCountManager {
                                 //     }
 
                                 // NEW
-                                if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5 
+                                if inferred_constraints[player_loop].len() + inferred_constraints[INDEX_PILE].len() == 5 
                                 && !inferred_constraints[player_loop].contains(&reveal)
-                                && !inferred_constraints[6].contains(&reveal) {
+                                && !inferred_constraints[INDEX_PILE].contains(&reveal) {
                                     // This state cannot be arrive after the reveal_redraw
                                     return false;
                                 }
@@ -739,14 +739,14 @@ impl BackTrackCardCountManager {
                                         public_constraints,
                                         inferred_constraints,
                                         player_loop,
-                                        6,
+                                        INDEX_PILE,
                                         *reveal,
                                         |pub_con, inf_con| {
                                             // keep your acceptance gates exactly as-is:
-                                            if inf_con[player_loop].len() < 3
+                                            if inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                                 && inf_con.iter()
                                                     .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
-                                                    .sum::<u8>() < 4
+                                                    .sum::<u8>() <= MAX_NUM_PER_CARD
                                             {
                                                 self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
                                             } else {
@@ -756,61 +756,59 @@ impl BackTrackCardCountManager {
                                     );
                                     return response;
                                 }
-                                // Case B: iterate unique cards in player's bag — “Card Source was not from Pile”
+
                                 let mut iter_cards = inferred_constraints[player_loop].clone();
                                 iter_cards.sort_unstable();
                                 iter_cards.dedup();
 
                                 for card_player in iter_cards.iter() {
-                                    // Condition identical to your code:
-                                    if *card_player != *reveal || inferred_constraints[6].contains(&reveal) {
-                                        let ok = MoveGuard::reveal_none_pull_only_run_reset(
+                                    if *card_player != *reveal || inferred_constraints[INDEX_PILE].contains(&reveal) {
+                                        if MoveGuard::reveal_none_pull_only_run_reset(
                                             public_constraints,
                                             inferred_constraints,
                                             player_loop,
-                                            6,
+                                            INDEX_PILE,
                                             *reveal,
                                             |pub_con, inf_con| {
-                                                if inf_con[player_loop].len() < 3
-                                                    && inf_con[6].len() < 4
+                                                if inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                                    && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                                     && inf_con.iter()
                                                         .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
-                                                        .sum::<u8>() < 4
+                                                        .sum::<u8>() <= MAX_NUM_PER_CARD
                                                 {
                                                     self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
                                                 } else {
                                                     false
                                                 }
                                             },
-                                        );
-                                        if ok { return true; }
+                                        ) {
+                                            return true
+                                        }
                                     }
 
-                                    // (Case C “from pile” requires a second guard that swaps `card_player` A→B
-                                    // then pulls `reveal` B→A; we can add that next if you want.)
-                                    let ok = MoveGuard::reveal_none_swap_then_pull_run_reset(
+                                    if MoveGuard::reveal_none_swap_then_pull_run_reset(
                                         public_constraints,
                                         inferred_constraints,
                                         player_loop,
-                                        6,           // pile
+                                        INDEX_PILE,
                                         *reveal,
                                         *card_player,
                                         |pub_con, inf_con| {
-                                            // Keep the exact acceptance gates identical to your original:
-                                            if inf_con[player_loop].len() < 3
-                                                && inf_con[6].len() < 4
+                                            if inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                                && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                                 && inf_con
                                                     .iter()
                                                     .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
-                                                    .sum::<u8>() < 4
+                                                    .sum::<u8>() <= MAX_NUM_PER_CARD
                                             {
                                                 self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
                                             } else {
                                                 false
                                             }
                                         },
-                                    );
-                                    if ok { return true; }
+                                    ) {
+                                        return true
+                                    }
                                 }
                             },
                         }
