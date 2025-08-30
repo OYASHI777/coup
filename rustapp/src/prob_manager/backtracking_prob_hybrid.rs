@@ -786,13 +786,13 @@ impl BackTrackCardCountManager {
                                         }
                                     }
 
-                                    if MoveGuard::reveal_none_swap_then_pull_run_reset(
+                                    if MoveGuard::ordered_swap(
                                         public_constraints,
                                         inferred_constraints,
-                                        player_loop,
                                         INDEX_PILE,
-                                        *reveal,
-                                        *card_player,
+                                        player_loop,
+                                        &[*card_player],
+                                        &[*reveal],
                                         |pub_con, inf_con| {
                                             if inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                                 && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
