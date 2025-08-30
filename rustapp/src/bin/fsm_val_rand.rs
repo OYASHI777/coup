@@ -5,8 +5,7 @@ use log::LevelFilter;
 use rand::{seq::SliceRandom, thread_rng, Rng};
 use rustapp::history_public::ActionObservation;
 use rustapp::prob_manager::engine::models::engine_state::EngineState;
-use rustapp::prob_manager::engine::models_prelude::TurnStart;
-use rustapp::{history_public::Card, prob_manager::{engine::fsm_engine::FSMEngine, tracker::{collater::{Indicate, Unique}, informed_tracker::InformedTracker}}, traits::prob_manager::coup_analysis::CoupTraversal};
+use rustapp::{history_public::Card, prob_manager::{engine::fsm_engine::FSMEngine, tracker::{collater::Unique, informed_tracker::InformedTracker}}, traits::prob_manager::coup_analysis::CoupTraversal};
 
 const LOG_FILE_NAME: &str = "./logs/fsm_val_rand.log";
 const CLEAR_LOG: bool = true;
@@ -157,21 +156,21 @@ pub fn clean_action(action: ActionObservation, turn_player: usize,  target_playe
                 opposing_player_id: allocate_player(opposing_player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player),
             }
         },
-        ActionObservation::CollectiveChallenge { participants, opposing_player_id, final_actioner } => {
+        ActionObservation::CollectiveChallenge { opposing_player_id, final_actioner, .. } => {
             ActionObservation::CollectiveChallenge { 
                 participants: [false; 6], 
                 opposing_player_id: allocate_player(opposing_player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
                 final_actioner: allocate_player(final_actioner, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
             }
         },
-        ActionObservation::CollectiveBlock { participants, opposing_player_id, final_actioner } => {
+        ActionObservation::CollectiveBlock { opposing_player_id, final_actioner, .. } => {
             ActionObservation::CollectiveBlock { 
                 participants: [false; 6], 
                 opposing_player_id: allocate_player(opposing_player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
                 final_actioner: allocate_player(final_actioner, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player),
             }
         },
-        ActionObservation::BlockSteal { player_id, opposing_player_id, card } => {
+        ActionObservation::BlockSteal { player_id, opposing_player_id, .. } => {
             ActionObservation::BlockSteal { 
                 player_id: allocate_player(player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
                 opposing_player_id: allocate_player(opposing_player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
@@ -184,14 +183,14 @@ pub fn clean_action(action: ActionObservation, turn_player: usize,  target_playe
                 opposing_player_id: allocate_player(opposing_player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player),
             }
         },
-        ActionObservation::Discard { player_id, card, no_cards } => {
+        ActionObservation::Discard { player_id, no_cards, .. } => {
             ActionObservation::Discard { 
                 player_id: allocate_player(player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
                 card: [standard_card; 2], 
                 no_cards,
             }
         },
-        ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
+        ActionObservation::RevealRedraw { player_id, reveal, .. } => {
             ActionObservation::RevealRedraw { 
                 player_id: allocate_player(player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
                 reveal, 
@@ -203,13 +202,13 @@ pub fn clean_action(action: ActionObservation, turn_player: usize,  target_playe
                 player_id: allocate_player(player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player),
             }
         },
-        ActionObservation::ExchangeDraw { player_id, card } => {
+        ActionObservation::ExchangeDraw { player_id, .. } => {
             ActionObservation::ExchangeDraw { 
                 player_id: allocate_player(player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
                 card: [standard_card; 2],
             }
         },
-        ActionObservation::ExchangeChoice { player_id, relinquish } => {
+        ActionObservation::ExchangeChoice { player_id, .. } => {
             ActionObservation::ExchangeChoice { 
                 player_id: allocate_player(player_id, turn_player, target_player, standard_turn_player, standard_other_player, standard_target_player), 
                 relinquish: [standard_card; 2],

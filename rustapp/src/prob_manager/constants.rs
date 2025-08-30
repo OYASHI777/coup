@@ -3,7 +3,6 @@ use lazy_static::lazy_static; //This allows us to declare "constant" dynamic var
 
 // A list of constants
 pub const TOKENS: &str = "AAABBBCCCDDDEEE";
-pub const PLAYER_HAND_SIZE: i32 = 2;
 
 // MAX CAPACITY is the maximum possible states that cards can be distributed given the player knows 2 cards!
 // max(78060, 107940) => see test1 in unittests

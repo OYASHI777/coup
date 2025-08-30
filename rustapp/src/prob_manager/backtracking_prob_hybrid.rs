@@ -6,7 +6,7 @@
 
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 use crate::{history_public::{ActionObservation, Card}, prob_manager::engine::constants::{INDEX_PILE, MAX_CARDS_DISCARD, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_PLAYERS_INCL_PILE, MAX_NUM_PER_CARD}, traits::prob_manager::coup_analysis::CoupTraversal};
-use super::backtracking_collective_constraints::{ActionInfo, ActionInfoName};
+use super::models::backtrack::{ActionInfo, ActionInfoName};
 use crate::prob_manager::models::backtrack::InfoArray;
 use super::constants::MAX_GAME_LENGTH;
 use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
@@ -1102,7 +1102,7 @@ impl CoupTraversal for BackTrackCardCountManager {
         self.move_no = 1;
     }
 
-    fn start_known(&mut self, cards: &Vec<Vec<Card>>) {
+    fn start_known(&mut self, _cards: &Vec<Vec<Card>>) {
         unimplemented!()
     }
 

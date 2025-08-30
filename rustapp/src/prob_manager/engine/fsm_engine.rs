@@ -81,7 +81,7 @@ impl CoupTraversal for FSMEngine {
         self.start_public(player);
     }
 
-    fn start_known(&mut self, cards: &Vec<Vec<Card>>) {
+    fn start_known(&mut self, _cards: &Vec<Vec<Card>>) {
         unimplemented!()
     }
 
@@ -104,7 +104,7 @@ impl CoupTraversal for FSMEngine {
         self.push_ao_public(action);
     }
 
-    fn push_ao_private_lazy(&mut self, action: &ActionObservation) {
+    fn push_ao_private_lazy(&mut self, _action: &ActionObservation) {
         todo!()
     }
 

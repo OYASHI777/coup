@@ -9,7 +9,7 @@ impl Collator for Permute {
         todo!()
     }
     
-    fn block(player: usize, data: &GameData) -> Vec<crate::history_public::ActionObservation> {
+    fn block(_player: usize, _data: &GameData) -> Vec<crate::history_public::ActionObservation> {
         todo!()
     }
 }

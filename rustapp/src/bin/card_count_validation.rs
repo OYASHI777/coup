@@ -2,7 +2,7 @@ use log::LevelFilter;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
-use rustapp::prob_manager::backtracking_collective_constraints::{ActionInfo};
+use rustapp::prob_manager::models::backtrack::{ActionInfo};
 use rustapp::prob_manager::brute_prob_generic::{BruteCardCountManagerGeneric};
 use rustapp::prob_manager::models::card_state_u64::CardStateu64;
 use rustapp::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
@@ -20,12 +20,11 @@ pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";
 // TODO: [REFACTOR] Lite to take history instead of store again and again
 fn main() {
     let game_no = 1000000;
-    let log_bool = true;
+    // let log_bool = true;
     let bool_know_priv_info = true;
     let bool_skip_exchange = false;
     let bool_lazy =  true;
     let print_frequency: usize = 100;
-    let print_frequency_fast: usize = 5000;
     let min_dead_check: usize = 0;
     let num_threads = 12; 
     game_rnd_constraint_bt_mt(num_threads, game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, bool_lazy);
@@ -270,7 +269,7 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
             }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, private_player);
-            let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
+            let (_player, action_obs, _action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
                 println!("public constraints: {:?}", prob.validated_public_constraints());
@@ -333,7 +332,8 @@ pub fn game_rnd_constraint_bt2_st_new(game_no: usize, bool_know_priv_info: bool,
                     println!("test im 2: {:?}", test_impossible_constraints_2);
                     println!("{}", hh.get_replay_history_braindead());
                     panic!();
-                    break;
+                    // break;
+
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     // panic!("Inferred to many items!")
@@ -447,7 +447,7 @@ pub fn game_rnd_constraint_bt2_st_lazy(game_no: usize, bool_know_priv_info: bool
             }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, private_player);
-            let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
+            let (_player, action_obs, _action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
                 println!("public constraints: {:?}", prob.sorted_public_constraints().clone());
@@ -592,7 +592,7 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
             // new_moves.retain(|m| m.name() != AOName::Exchange);
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, Some(private_player));
-            let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
+            let (player, action_obs, _action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
                 println!("public constraints: {:?}", prob.validated_public_constraints());
@@ -641,7 +641,7 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint_bt(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
                     panic!("Illegal move played somewhere above!");
-                    break;
+                    // break;
                 }
                 if bool_test_over_inferred {
                     // what we are testing inferred too many things
@@ -649,7 +649,8 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint_bt(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
                     panic!("Inferred constraints do not match!");
-                    break;
+                    // break;
+
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     // panic!("Inferred to many items!")
@@ -662,7 +663,7 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint_bt(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
                     panic!("Inferred constraints do not match!");
-                    break;
+                    // break;
                 }
                 if !pass_impossible_constraints {
                     // println!("vali: {:?}", validated_impossible_constraints);
@@ -672,7 +673,8 @@ pub fn game_rnd_constraint_bt_st_debug(game_no: usize, bool_know_priv_info: bool
                     replay_game_constraint_bt(replay, bool_know_priv_info, private_player, &starting_hand, log_bool);
                     panic!("Impossible Constraints Failed!");
                     
-                    break;
+                    // break;
+
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                 }
@@ -1211,7 +1213,7 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
             }
             // TODO: [FIX] generate_legal_moves_with_card_constraints to determine legal Choices given hand and ExchangeDraw
             let result = generate_legal_moves_with_card_constraints(&hh, &mut new_moves, &mut prob, private_player);
-            let (player, action_obs, action_info) = result.unwrap_or_else(|_| {
+            let (_player, action_obs, _action_info) = result.unwrap_or_else(|_| {
                 println!("{}", hh.get_replay_history_braindead());
                 println!("new_moves: {:?}", new_moves);
                 println!("public constraints: {:?}", prob.validated_public_constraints());
@@ -1250,8 +1252,8 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
                 let pass_public_constraints: bool = validated_public_constraints == test_public_constraints;
                 let pass_inferred_constraints: bool = validated_inferred_constraints == test_inferred_constraints;
                 let pass_impossible_constraints: bool = validated_impossible_constraints == test_impossible_constraints;
-                let pass_impossible_constraints_2: bool = validated_impossible_constraints_2 == test_impossible_constraints_2;
-                let pass_impossible_constraints_3: bool = validated_impossible_constraints_3 == test_impossible_constraints_3;
+                let _pass_impossible_constraints_2: bool = validated_impossible_constraints_2 == test_impossible_constraints_2;
+                let _pass_impossible_constraints_3: bool = validated_impossible_constraints_3 == test_impossible_constraints_3;
                 let bool_test_over_inferred: bool = validated_inferred_constraints.iter().zip(test_inferred_constraints.iter()).any(|(val, test)| {
                     test.iter().any(|item| !val.contains(item)) || test.len() > val.len()
                 });
@@ -1267,7 +1269,8 @@ pub fn game_rnd(game_no: usize, bool_know_priv_info: bool, bool_skip_exchange: b
                     println!("test im 2: {:?}", test_impossible_constraints_2);
                     println!("{}", hh.get_replay_history_braindead());
                     panic!();
-                    break;
+                    // break;
+
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     // panic!("Inferred to many items!")

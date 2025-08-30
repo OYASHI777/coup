@@ -384,7 +384,7 @@ impl CoupGeneration for UninformedTracker {
     fn on_steal_invites_block(
         &self,
         state: &StealInvitesBlock,
-        data: &GameData,
+        _data: &GameData,
     ) -> Vec<ActionObservation> {
         vec![
             ActionObservation::BlockSteal {

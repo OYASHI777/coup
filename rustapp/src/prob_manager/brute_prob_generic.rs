@@ -578,7 +578,7 @@ where
         self.set_impossible_constraints_3();
     }
 
-    fn start_known(&mut self, cards: &Vec<Vec<Card>>) {
+    fn start_known(&mut self, _cards: &Vec<Vec<Card>>) {
         unimplemented!()
     }
 

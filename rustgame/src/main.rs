@@ -1,3 +1,7 @@
+// THIS WHOLE CRATE LIKELY WILL BE DEPRECATED EVENTUALLY
+// IGNORING WARNINGS TO MAKE DEVELOPMENT EASIER
+#![allow(warnings)]
+
 mod models;
 mod game;
 mod player;

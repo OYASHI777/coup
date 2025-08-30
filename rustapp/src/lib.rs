@@ -60,11 +60,14 @@ pub mod prob_manager {
     pub mod utils {
         pub mod permutation_generator;
     }
-    pub mod backtracking_prob;
+    // TO BE DEPRECATED
+    // pub mod backtracking_prob;
     pub mod backtracking_prob_hybrid;
-    pub mod backtracking_collective_constraints;
+    // TO BE DEPRECATED
+    // pub mod backtracking_collective_constraints;
     pub mod brute_prob_generic;
-    pub mod constraint;
+    // TO BE DEPRECATED
+    // pub mod constraint;
     mod constants;
     pub mod move_guard;
     // TEMP REMOVED TO NOT SEE WARNINGS

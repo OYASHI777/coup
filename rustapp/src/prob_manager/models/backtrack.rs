@@ -1,3 +1,6 @@
+pub mod action_info;
+pub use action_info::{ActionInfo, ActionInfoName};
+
 pub mod impossible_field_1;
 pub use impossible_field_1::ImpossibleField1;
 

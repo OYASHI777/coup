@@ -324,6 +324,7 @@ impl Gamestate {
     pub fn add_coins(&mut self, player_id: usize, amount: u8) {
         self.coins[player_id] += amount;
     }
+    #[allow(unused)]
     pub fn set_influence(&mut self, player_id: usize, amount: u8) {
         self.influence[player_id] = amount;
     }
