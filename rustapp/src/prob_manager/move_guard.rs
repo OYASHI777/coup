@@ -206,33 +206,6 @@ impl MoveGuard {
         false
     }
     #[inline(always)]
-    pub fn reveal_none_pull_only_run_reset(
-        public_constraint: &mut Vec<Vec<Card>>,
-        inferred_constraint: &mut Vec<Vec<Card>>,
-        player: usize,
-        pile: usize,   // usually 6
-        reveal: Card,
-        f: impl FnOnce(&mut Vec<Vec<Card>>, &mut Vec<Vec<Card>>) -> bool,
-    ) -> bool {
-        let mut removed_reveal_from_pile = false;
-        if let Some(pos) = inferred_constraint[pile].iter().rposition(|c| *c == reveal) {
-            inferred_constraint[pile].swap_remove(pos);
-            removed_reveal_from_pile = true;
-        }
-        inferred_constraint[player].push(reveal); // always push
-
-        let ok = f(public_constraint, inferred_constraint);
-
-        if let Some(pos) = inferred_constraint[player].iter().rposition(|c| *c == reveal) {
-            inferred_constraint[player].swap_remove(pos);
-        }
-        if removed_reveal_from_pile {
-            inferred_constraint[pile].push(reveal);
-        }
-
-        ok
-    }
-    #[inline(always)]
     pub fn discard(
         public_constraint: &mut Vec<Vec<Card>>,
         inferred_constraint: &mut Vec<Vec<Card>>,

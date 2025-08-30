@@ -735,12 +735,13 @@ impl BackTrackCardCountManager {
                                     return false;
                                 }
                                 if inferred_constraints[player_loop].is_empty() {
-                                    response = MoveGuard::reveal_none_pull_only_run_reset(
+                                    response = MoveGuard::ordered_swap(
                                         public_constraints,
                                         inferred_constraints,
                                         player_loop,
                                         INDEX_PILE,
-                                        *reveal,
+                                        &[*reveal],
+                                        &[],
                                         |pub_con, inf_con| {
                                             // keep your acceptance gates exactly as-is:
                                             if inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
@@ -763,12 +764,13 @@ impl BackTrackCardCountManager {
 
                                 for card_player in iter_cards.iter() {
                                     if *card_player != *reveal || inferred_constraints[INDEX_PILE].contains(&reveal) {
-                                        if MoveGuard::reveal_none_pull_only_run_reset(
+                                        if MoveGuard::ordered_swap(
                                             public_constraints,
                                             inferred_constraints,
                                             player_loop,
                                             INDEX_PILE,
-                                            *reveal,
+                                            &[*reveal],
+                                            &[],
                                             |pub_con, inf_con| {
                                                 if inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                                     && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
