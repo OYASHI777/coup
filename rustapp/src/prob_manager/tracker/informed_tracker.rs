@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::constants::MAX_GAME_LENGTH;
-use crate::prob_manager::engine::constants::{DEFAULT_PLAYER_LIVES, MAX_CARD_PERMS_ONE};
+use crate::prob_manager::engine::constants::{DEFAULT_PLAYER_LIVES, INDEX_PILE, MAX_CARDS_DISCARD, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PLAYER, MAX_PLAYERS_INCL_PILE};
 use crate::prob_manager::engine::models::game_state::GameData;
 use crate::prob_manager::engine::models_prelude::*;
 use crate::prob_manager::tracker::collater::Collator;
@@ -53,7 +53,7 @@ where
     history: Vec<ActionObservation>,
     pub public_constraints: Vec<Vec<Card>>,
     pub inferred_constraints: Vec<Vec<Card>>,
-    card_counts: [u8; 5],
+    card_counts: [u8; MAX_CARD_PERMS_ONE],
     marker_collator: PhantomData<C>,
 }
 
@@ -64,9 +64,9 @@ where
     pub fn new() -> Self {
         InformedTracker::<C> {
             history: Vec::with_capacity(MAX_GAME_LENGTH),
-            public_constraints: vec![Vec::with_capacity(2); 7],
-            inferred_constraints: vec![Vec::with_capacity(4); 7],
-            card_counts: [3; 5],
+            public_constraints: vec![Vec::with_capacity(2); MAX_PLAYERS_INCL_PILE],
+            inferred_constraints: vec![Vec::with_capacity(4); MAX_PLAYERS_INCL_PILE],
+            card_counts: [3; MAX_CARD_PERMS_ONE],
             marker_collator: PhantomData,
         }
     }
@@ -95,7 +95,7 @@ where
     pub fn reveal_or_discard(&self, player: usize, card_reveal: Card) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(4);
         if self.inferred_constraints[player].contains(&card_reveal) {
-            let mut pile_cards = self.inferred_constraints[6].clone();
+            let mut pile_cards = self.inferred_constraints[INDEX_PILE].clone();
             pile_cards.push(card_reveal);
             pile_cards.sort_unstable();
             pile_cards.dedup();
@@ -118,7 +118,7 @@ where
     pub fn reveal_or_discard_all(&self, player: usize, card_reveal: Card) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(4);
         if self.inferred_constraints[player].contains(&card_reveal) {
-            let mut pile_cards = self.inferred_constraints[6].clone();
+            let mut pile_cards = self.inferred_constraints[INDEX_PILE].clone();
             pile_cards.push(card_reveal);
             pile_cards.sort_unstable();
             pile_cards.dedup();
@@ -132,7 +132,7 @@ where
             if self.inferred_constraints[player].len() == 1 {
                 output.push(ActionObservation::Discard { 
                     player_id: player, 
-                    card: [self.inferred_constraints[player][0]; 2], 
+                    card: [self.inferred_constraints[player][0]; MAX_CARDS_DISCARD], 
                     no_cards: 1, 
                 })
             } else {
@@ -155,7 +155,7 @@ where
         unimplemented!();
     }
 
-    fn start_private(&mut self, _player: usize, _cards: &[Card; 2]) {
+    fn start_private(&mut self, _player: usize, _cards: &[Card; MAX_HAND_SIZE_PLAYER]) {
         unimplemented!();
     }
 
@@ -207,7 +207,7 @@ where
                     .iter()
                     .rposition(|c| *c == *reveal)
                 {
-                    if let Some(pos_j) = self.inferred_constraints[6]
+                    if let Some(pos_j) = self.inferred_constraints[INDEX_PILE]
                         .iter()
                         .rposition(|c| *c == *redraw)
                     {
@@ -240,7 +240,7 @@ where
                         .rposition(|c| *c == *d)
                     {
                         self.inferred_constraints[*player_id].swap_remove(pos);
-                        self.inferred_constraints[6].push(*d);
+                        self.inferred_constraints[INDEX_PILE].push(*d);
                     }
                 }
             }
@@ -278,7 +278,7 @@ where
                     reveal,
                     redraw,
                 } => {
-                    if let Some(pos_i) = self.inferred_constraints[6]
+                    if let Some(pos_i) = self.inferred_constraints[INDEX_PILE]
                         .iter()
                         .rposition(|c| *c == reveal)
                     {
@@ -286,10 +286,10 @@ where
                             .iter()
                             .rposition(|c| *c == redraw)
                         {
-                            self.inferred_constraints[6].swap_remove(pos_i);
+                            self.inferred_constraints[INDEX_PILE].swap_remove(pos_i);
                             self.inferred_constraints[player_id].swap_remove(pos_j);
                             self.inferred_constraints[player_id].push(reveal);
-                            self.inferred_constraints[6].push(redraw);
+                            self.inferred_constraints[INDEX_PILE].push(redraw);
                         } else {
                             debug_assert!(false, "Card not found!");
                         }
@@ -304,7 +304,7 @@ where
                             .rposition(|c| *c == *d)
                         {
                             self.inferred_constraints[player_id].swap_remove(pos);
-                            self.inferred_constraints[6].push(*d);
+                            self.inferred_constraints[INDEX_PILE].push(*d);
                         }
                     }
                 }
@@ -314,9 +314,9 @@ where
                 } => {
                     for d in relinquish.iter() {
                         if let Some(pos) =
-                            self.inferred_constraints[6].iter().rposition(|c| *c == *d)
+                            self.inferred_constraints[INDEX_PILE].iter().rposition(|c| *c == *d)
                         {
-                            self.inferred_constraints[6].swap_remove(pos);
+                            self.inferred_constraints[INDEX_PILE].swap_remove(pos);
                             self.inferred_constraints[player_id].push(*d);
                         }
                     }
@@ -564,7 +564,7 @@ where
         _data: &GameData,
     ) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
-        let mut pile_cards = self.inferred_constraints[6].clone();
+        let mut pile_cards = self.inferred_constraints[INDEX_PILE].clone();
         pile_cards.sort_unstable();
         pile_cards.dedup();
         if self.inferred_constraints[state.player_blocking].contains(&state.card_blocker) {
@@ -589,7 +589,7 @@ where
                 .filter_map(|player_card| {
                     (*player_card != state.card_blocker).then_some(ActionObservation::Discard {
                         player_id: state.player_blocking,
-                        card: [*player_card; 2],
+                        card: [*player_card; MAX_CARDS_DISCARD],
                         no_cards: 1,
                     })
                 }),
@@ -619,13 +619,13 @@ where
         _data: &GameData,
     ) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(3);
-        for i in 0..self.inferred_constraints[6].len() {
-            for j in (i + 1)..self.inferred_constraints[6].len() {
+        for i in 0..self.inferred_constraints[INDEX_PILE].len() {
+            for j in (i + 1)..self.inferred_constraints[INDEX_PILE].len() {
                 let action = ActionObservation::ExchangeDraw {
                     player_id: state.player_turn,
                     card: [
-                        self.inferred_constraints[6][i],
-                        self.inferred_constraints[6][j],
+                        self.inferred_constraints[INDEX_PILE][i],
+                        self.inferred_constraints[INDEX_PILE][j],
                     ],
                 };
                 if !output.contains(&action) {
@@ -739,7 +739,7 @@ where
             if card != Card::Contessa {
                 output.push(ActionObservation::Discard {
                     player_id: state.player_blocking,
-                    card: [card, card],
+                    card: [card; MAX_CARDS_DISCARD],
                     no_cards: 1,
                 });
             }
@@ -799,13 +799,13 @@ mod tests {
                     redraw,
                 } => {
                     assert!(inferred_constraints[*player_id].contains(reveal));
-                    assert!(inferred_constraints[6].contains(redraw));
+                    assert!(inferred_constraints[INDEX_PILE].contains(redraw));
                 }
                 ActionObservation::ExchangeDraw { card, .. } => {
                     // This is a weak test.. it needs to have BOTH
                     assert!(
-                        inferred_constraints[6].contains(&card[0])
-                            || inferred_constraints[6].contains(&card[1])
+                        inferred_constraints[INDEX_PILE].contains(&card[0])
+                            || inferred_constraints[INDEX_PILE].contains(&card[1])
                     );
                 }
                 ActionObservation::ExchangeChoice {
@@ -814,7 +814,7 @@ mod tests {
                 } => {
                     // This is a weak check...
                     assert!(relinquish.iter().all(|c| {
-                        inferred_constraints[6].contains(&c)
+                        inferred_constraints[INDEX_PILE].contains(&c)
                             || inferred_constraints[*player_id].contains(&c)
                     }));
                 }
@@ -837,7 +837,7 @@ mod tests {
         public_constraints: &Vec<Vec<Card>>,
         inferred_constraints: &Vec<Vec<Card>>,
     ) {
-        let mut card_counts: [u8; 5] = [0; 5];
+        let mut card_counts: [u8; MAX_CARD_PERMS_ONE] = [0; MAX_CARD_PERMS_ONE];
         public_constraints
             .iter()
             .flatten()
