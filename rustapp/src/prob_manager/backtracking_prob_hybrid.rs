@@ -77,18 +77,18 @@ impl SignificantAction {
     }
     pub fn add_inferred_constraints(&mut self, player_id: usize, card: Card)  {
         self.meta_data.inferred_constraints[player_id].push(card);
-        debug_assert!(player_id < 6 
+        debug_assert!(player_id < INDEX_PILE 
             && self.meta_data.inferred_constraints[player_id].len() < 3 
-            || player_id == 6 
+            || player_id == INDEX_PILE 
             && self.meta_data.inferred_constraints[player_id].len() < 4, 
             "bad push");
     }
     pub fn check_add_inferred_constraints(&mut self, player_id: usize, card: Card) -> bool {
         if !self.meta_data.inferred_constraints[player_id].contains(&card) {
             self.meta_data.inferred_constraints[player_id].push(card);
-            debug_assert!(player_id < 6 
+            debug_assert!(player_id < INDEX_PILE 
                 && self.meta_data.inferred_constraints[player_id].len() < 3 
-                || player_id == 6 
+                || player_id == INDEX_PILE 
                 && self.meta_data.inferred_constraints[player_id].len() < 4, 
                 "bad push");
             return true;
@@ -180,13 +180,13 @@ impl CoupPossibilityAnalysis for SignificantAction
     }
 
     fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool {
-        if player < 6 {
+        if player < INDEX_PILE {
             if cards.len() == 2 {
                 return !self.meta_data.impossible_constraints_2()[player][cards[0] as usize][cards[1] as usize]
             } else if cards.len() == 1 {
                 return self.player_can_have_card_alive(player, cards[0])
             }
-        } else if player == 6 {
+        } else if player == INDEX_PILE {
             if cards.len() == 1 {
                 return self.player_can_have_card_alive(player, cards[0])
             } else if cards.len() == 2 {
@@ -347,7 +347,7 @@ impl BackTrackCardCountManager {
             }
         }
         for card_a in 0..5 {
-            if self.latest_constraint_mut().impossible_constraints_mut()[6][card_a] {
+            if self.latest_constraint_mut().impossible_constraints_mut()[INDEX_PILE][card_a] {
                 self.latest_constraint_mut().impossible_constraints_3_mut()[card_a] = [[true; 5]; 5];
                 for i in 0..5 {
                     for j in 0..5 {
@@ -358,18 +358,18 @@ impl BackTrackCardCountManager {
                 continue;
             }
             for card_b in card_a..5 {
-                if self.latest_constraint_mut().impossible_constraints_mut()[6][card_b] {
+                if self.latest_constraint_mut().impossible_constraints_mut()[INDEX_PILE][card_b] {
                     continue;
                 }
                 for card_c in card_b..5 {
-                    if self.latest_constraint_mut().impossible_constraints_mut()[6][card_c] {
+                    if self.latest_constraint_mut().impossible_constraints_mut()[INDEX_PILE][card_c] {
                         continue;
                     }
                     cards[card_a] += 1;
                     cards[card_b] += 1;
                     cards[card_c] += 1;
                     log::trace!("generate_impossible_constraints 3 card : {:?}, {:?}, {:?}", card_a, card_b, card_c);
-                    let output = self.impossible_to_have_cards_general(history_index, 6, &cards, &mut public_constraints, &mut inferred_constraints);
+                    let output = self.impossible_to_have_cards_general(history_index, INDEX_PILE, &cards, &mut public_constraints, &mut inferred_constraints);
                     public_constraints.iter_mut().for_each(|v| v.clear());
                     inferred_constraints.iter_mut().for_each(|v| v.clear());
                     // OPTIMIZE lmao...
@@ -389,7 +389,7 @@ impl BackTrackCardCountManager {
     /// Generates based on impossible_constraints
     pub fn generate_inferred_constraints(&mut self) {
         self.latest_constraint_mut().inferred_constraints_mut().iter_mut().for_each(|v| v.clear());
-        for player in 0..6 {
+        for player in 0..INDEX_PILE {
             if self.latest_constraint_mut().public_constraints()[player].len() == 0 {
                 if self.latest_constraint_mut().impossible_constraints_mut()[player].iter().map(|b| !*b as u8).sum::<u8>() == 1 {
                     if let Some(card_num) = self.latest_constraint_mut().impossible_constraints_mut()[player].iter().position(|b| !*b) {
@@ -457,7 +457,7 @@ impl BackTrackCardCountManager {
             for _ in 0..*card_count {
                 log::trace!("generate_inferred_constraints must_have_card: {:?}", must_have_card);
                 log::trace!("generate_inferred_constraints pushing: {:?}", Card::try_from(card_num as u8).unwrap());
-                self.latest_constraint_mut().inferred_constraints_mut()[6].push(Card::try_from(card_num as u8).unwrap());
+                self.latest_constraint_mut().inferred_constraints_mut()[INDEX_PILE].push(Card::try_from(card_num as u8).unwrap());
             }
         } 
     }
@@ -465,7 +465,7 @@ impl BackTrackCardCountManager {
     /// Assuming we won't be using this for ambassador?
     pub fn impossible_to_have_cards_general(&self, index_lookback: usize, player_of_interest: usize, cards: &[u8; 5], public_constraints: &mut Vec<Vec<Card>>, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
         log::trace!("impossible_to_have_cards player_of_interest: {}, cards: {:?}", player_of_interest, cards);
-        debug_assert!(player_of_interest != 6 && cards.iter().sum::<u8>() <= 2 || player_of_interest == 6 && cards.iter().sum::<u8>() <= 3, "cards too long!");
+        debug_assert!(player_of_interest != INDEX_PILE && cards.iter().sum::<u8>() <= 2 || player_of_interest == INDEX_PILE && cards.iter().sum::<u8>() <= 3, "cards too long!");
         // let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 7];
         // let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(4); 7];
         for (card_num, card_count) in cards.iter().enumerate() {
@@ -508,7 +508,7 @@ impl BackTrackCardCountManager {
                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
                         
-                        response = MoveGuard::ordered_swap(public_constraints, inferred_constraints, 6, player_loop, &[*redraw_i], &[*reveal], |pub_con, inf_con| {
+                        response = MoveGuard::ordered_swap(public_constraints, inferred_constraints, INDEX_PILE, player_loop, &[*redraw_i], &[*reveal], |pub_con, inf_con| {
                             self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
                         });
                     },
@@ -519,8 +519,8 @@ impl BackTrackCardCountManager {
                                 // relinquish_i == *reveal always
                                 // Case 0: player redrew card != reveal
                                 // Case 1: player redrew card == reveal (reveal from pile)
-                                if inferred_constraints[6].len() == 3
-                                && !inferred_constraints[6].contains(&reveal) {
+                                if inferred_constraints[INDEX_PILE].len() == 3
+                                && !inferred_constraints[INDEX_PILE].contains(&reveal) {
                                     // This state cannot be arrive after the reveal_redraw
                                     return false;
                                 }
@@ -687,7 +687,7 @@ impl BackTrackCardCountManager {
                     response = MoveGuard::with_needed_cards_present(
                         public_constraints,
                         inferred_constraints,
-                        6,
+                        INDEX_PILE,
                         draw,
                         |pub_con, inf_con| {
                             self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
@@ -767,17 +767,17 @@ impl BackTrackCardCountManager {
                 return false
             }
         }
-        for player in 0..6 {
+        for player in 0..INDEX_PILE {
             if public_constraints[player].len() + inferred_constraints[player].len() > 2 {
                 log::trace!("is_valid_combination player {} has too many cards", player);
                 return false
             }
         }
-        if public_constraints[6].len() + inferred_constraints[6].len() > 3 {
+        if public_constraints[INDEX_PILE].len() + inferred_constraints[INDEX_PILE].len() > 3 {
             log::trace!("is_valid_combination pile has too many cards");
             return false
         }
-        for player in 0..7 {
+        for player in 0..=INDEX_PILE {
             if inferred_constraints[player].len() == 1 && self.constraint_history[index_loop].impossible_constraints()[player][inferred_constraints[player][0] as usize]{
                 return false
             }
@@ -785,14 +785,14 @@ impl BackTrackCardCountManager {
                 return false
             }
         }
-        if inferred_constraints[6].len() == 3 && self.constraint_history[index_loop].impossible_constraints_3()[inferred_constraints[6][0] as usize][inferred_constraints[6][1] as usize][inferred_constraints[6][2] as usize]{
+        if inferred_constraints[INDEX_PILE].len() == 3 && self.constraint_history[index_loop].impossible_constraints_3()[inferred_constraints[INDEX_PILE][0] as usize][inferred_constraints[INDEX_PILE][1] as usize][inferred_constraints[INDEX_PILE][2] as usize]{
             return false
         }
         // =================== Required to test inferred at Start! ======================
         // This is Implemented in recursion
         // But this is the general form that can be used to check any particular state
         // if let ActionInfo::StartInferred{ .. } = self.constraint_history[index_loop].action_info() {
-        //     for player in 0..6 {
+        //     for player in 0..INDEX_PILE {
         //         let mut current_card_counts: [u8; 5] = [0; 5];
         //         inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
                 
@@ -808,7 +808,7 @@ impl BackTrackCardCountManager {
         //             return false
         //         }
         //     }
-        //     let player = 6;
+        //     let player = INDEX_PILE;
         //     let mut current_card_counts: [u8; 5] = [0; 5];
         //     inferred_constraints[player].iter().for_each(|c| current_card_counts[*c as usize] += 1);
             
@@ -832,13 +832,13 @@ impl BackTrackCardCountManager {
         let mut iter_cards_player = inferred_constraints[player_loop].clone();
         iter_cards_player.sort_unstable();
         iter_cards_player.dedup();
-        let mut iter_cards_pile = inferred_constraints[6].clone();
+        let mut iter_cards_pile = inferred_constraints[INDEX_PILE].clone();
         iter_cards_pile.sort_unstable();
         iter_cards_pile.dedup();
         let mut player_count = [0u8; 5];
         let mut pile_count = [0u8; 5];
         inferred_constraints[player_loop].iter().for_each(|c| player_count[*c as usize] += 1);
-        inferred_constraints[6].iter().for_each(|c| pile_count[*c as usize] += 1);
+        inferred_constraints[INDEX_PILE].iter().for_each(|c| pile_count[*c as usize] += 1);
 
         // 0 player_to_pile move, 0 pile_to_player move
         log::trace!("Before Exchange Same");
@@ -849,14 +849,14 @@ impl BackTrackCardCountManager {
             return true;
         }
         // 1 player_to_pile move, 0 pile_to_player move
-        if inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 0{
+        if inferred_constraints[INDEX_PILE].len() < 3 && inferred_constraints[player_loop].len() > 0{
             for card_player in iter_cards_player.iter() {
             // move to pile
                 if MoveGuard::swap(
                     public_constraints,
                     inferred_constraints,
                     player_loop, 
-                    6, 
+                    INDEX_PILE, 
                     &[*card_player], 
                     &[],
                     |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
@@ -866,14 +866,14 @@ impl BackTrackCardCountManager {
             }
         }
         // 0 player_to_pile move, 1 pile_to_player move
-        if inferred_constraints[player_loop].len() < 2 && inferred_constraints[6].len() > 0{
+        if inferred_constraints[player_loop].len() < 2 && inferred_constraints[INDEX_PILE].len() > 0{
             for card_pile in iter_cards_pile.iter() {
             // move to player
                 if MoveGuard::swap(
                     public_constraints,
                     inferred_constraints,
                     player_loop, 
-                    6, 
+                    INDEX_PILE, 
                     &[], 
                     &[*card_pile],
                     |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
@@ -883,7 +883,7 @@ impl BackTrackCardCountManager {
             }
         }
         // 1 player_to_pile move, 1 pile_to_player move
-        if inferred_constraints[player_loop].len() > 0 && inferred_constraints[6].len() > 0 {
+        if inferred_constraints[player_loop].len() > 0 && inferred_constraints[INDEX_PILE].len() > 0 {
             for card_player in iter_cards_player.iter() {
                 for card_pile in iter_cards_pile.iter() {
                     if card_player == card_pile {
@@ -896,7 +896,7 @@ impl BackTrackCardCountManager {
                         public_constraints,
                         inferred_constraints,
                         player_loop, 
-                        6, 
+                        INDEX_PILE, 
                         &[*card_player], 
                         &[*card_pile],
                         |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
@@ -908,7 +908,7 @@ impl BackTrackCardCountManager {
         }
         if player_lives > 1 {
             // 2 player_to_pile move, 0 pile_to_player move
-            if inferred_constraints[player_loop].len() == 2 && inferred_constraints[6].len() < 2 {
+            if inferred_constraints[player_loop].len() == 2 && inferred_constraints[INDEX_PILE].len() < 2 {
                 log::trace!("Before Exchange 2 player_to_pile 0 pile_to_player");
                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
@@ -916,7 +916,7 @@ impl BackTrackCardCountManager {
                     public_constraints,
                     inferred_constraints,
                     player_loop, 
-                    6, 
+                    INDEX_PILE, 
                     &[inferred_constraints[player_loop][0], inferred_constraints[player_loop][1]], 
                     &[],
                     |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
@@ -925,7 +925,7 @@ impl BackTrackCardCountManager {
                 }
             }
             // 0 player_to_pile move, 2 pile_to_player move
-            if inferred_constraints[player_loop].len() == 0 && inferred_constraints[6].len() > 1 {
+            if inferred_constraints[player_loop].len() == 0 && inferred_constraints[INDEX_PILE].len() > 1 {
                 for index_pile_to_player_0 in 0..iter_cards_pile.len() {
                     for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
                         if index_pile_to_player_0 == index_pile_to_player_1 && pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2 {
@@ -938,7 +938,7 @@ impl BackTrackCardCountManager {
                             public_constraints,
                             inferred_constraints,
                             player_loop, 
-                            6, 
+                            INDEX_PILE, 
                             &[], 
                             &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
                             |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
@@ -949,7 +949,7 @@ impl BackTrackCardCountManager {
                 }
             }
             // 2 player_to_pile move, 1 pile_to_player move
-            if inferred_constraints[6].len() > 0 && inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 1 {
+            if inferred_constraints[INDEX_PILE].len() > 0 && inferred_constraints[INDEX_PILE].len() < 3 && inferred_constraints[player_loop].len() > 1 {
                 for card_pile in iter_cards_pile.iter() {
                     for index_player_to_pile_0 in 0..iter_cards_player.len() {
                         // TODO: Shift index_player_to_pile == case shift here
@@ -973,7 +973,7 @@ impl BackTrackCardCountManager {
                                 public_constraints,
                                 inferred_constraints,
                                 player_loop, 
-                                6, 
+                                INDEX_PILE, 
                                 &[iter_cards_player[index_player_to_pile_0], iter_cards_player[index_player_to_pile_1]], 
                                 &[*card_pile],
                                 |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
@@ -985,7 +985,7 @@ impl BackTrackCardCountManager {
                 }
             }
             // 1 player_to_pile move, 2 pile_to_player move
-            if inferred_constraints[player_loop].len() == 1 && inferred_constraints[6].len() > 1{
+            if inferred_constraints[player_loop].len() == 1 && inferred_constraints[INDEX_PILE].len() > 1{
                 for card_player in iter_cards_player.iter() {
                     for index_pile_to_player_0 in 0..iter_cards_pile.len() {
                         if iter_cards_pile[index_pile_to_player_0] == *card_player {
@@ -1008,7 +1008,7 @@ impl BackTrackCardCountManager {
                                 public_constraints,
                                 inferred_constraints,
                                 player_loop, 
-                                6, 
+                                INDEX_PILE, 
                                 &[*card_player], 
                                 &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
                                 |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
@@ -1020,7 +1020,7 @@ impl BackTrackCardCountManager {
                 }
             }
             // 2 player_to_pile move, 2 pile_to_player move
-            if inferred_constraints[player_loop].len() > 1 && inferred_constraints[6].len() > 1 {
+            if inferred_constraints[player_loop].len() > 1 && inferred_constraints[INDEX_PILE].len() > 1 {
                 for index_player_to_pile_0 in 0..iter_cards_player.len() {
                     for index_player_to_pile_1 in index_player_to_pile_0..iter_cards_player.len() {
                         if index_player_to_pile_0 == index_player_to_pile_1 && player_count[iter_cards_player[index_player_to_pile_0] as usize] < 2 {
@@ -1049,7 +1049,7 @@ impl BackTrackCardCountManager {
                                     public_constraints,
                                     inferred_constraints,
                                     player_loop, 
-                                    6, 
+                                    INDEX_PILE, 
                                     &[iter_cards_player[index_player_to_pile_0], iter_cards_player[index_player_to_pile_1]], 
                                     &[iter_cards_pile[index_pile_to_player_0], iter_cards_pile[index_pile_to_player_1]],
                                     |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
@@ -1071,7 +1071,7 @@ impl BackTrackCardCountManager {
             public_constraints,
             inferred_constraints,
             player_loop, 
-            6, 
+            INDEX_PILE, 
             &[relinquish[0], relinquish[1]],
             &[draw[0], draw[1]], 
             |pub_con, inf_con| {self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)}
@@ -1330,10 +1330,10 @@ impl CoupPossibilityAnalysis for BackTrackCardCountManager
             },
             ActionObservation::RevealRedraw { player_id, reveal, redraw } => {
                 self.player_can_have_card_alive_lazy(*player_id, *reveal)
-                && (*reveal == *redraw || self.player_can_have_card_alive_lazy(6, *redraw))
+                && (*reveal == *redraw || self.player_can_have_card_alive_lazy(INDEX_PILE, *redraw))
             },
             ActionObservation::ExchangeDraw { card, .. } => {
-                self.player_can_have_cards_alive_lazy(6, card)
+                self.player_can_have_cards_alive_lazy(INDEX_PILE, card)
             },
             ActionObservation::ExchangeChoice { player_id, relinquish } => {
                 let player_dead = self.public_constraints()[*player_id].len() as u8;
