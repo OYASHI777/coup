@@ -1,1 +1,663 @@
-// Add CFR Tracker here
+use std::marker::PhantomData;
+
+use crate::history_public::{ActionObservation, Card};
+use crate::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager;
+use crate::prob_manager::constants::MAX_GAME_LENGTH;
+use crate::prob_manager::engine::constants::{
+    DEFAULT_PLAYER_LIVES, INDEX_PILE, MAX_CARDS_DISCARD, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PLAYER,
+};
+use crate::prob_manager::engine::models::game_state::GameData;
+use crate::prob_manager::engine::models_prelude::*;
+use crate::prob_manager::models::backtrack::info_array::InfoArray;
+use crate::prob_manager::tracker::collater::Collator;
+use crate::traits::prob_manager::coup_analysis::{CoupGeneration, CoupTraversal};
+
+const THIS_VALUE_DOES_NOT_MATTER: u8 = 77; // When the state transitions to challenge, amount stolen is not stored
+
+/// Card counting tracker that uses public information only to track card counts
+/// and generate appropriate moves using backtracking probability analysis.
+/// Uses BackTrackCardCountManager for sophisticated card counting and probability inference.
+pub struct CardCountTracker<C>
+where
+    C: Collator,
+{
+    history: Vec<ActionObservation>,
+    pub backtracking_hybrid_prob: BackTrackCardCountManager<InfoArray>,
+    card_counts: [u8; MAX_CARD_PERMS_ONE],
+    marker_collator: PhantomData<C>,
+}
+
+impl<C> CardCountTracker<C>
+where
+    C: Collator,
+{
+    pub fn new() -> Self {
+        CardCountTracker::<C> {
+            history: Vec::with_capacity(MAX_GAME_LENGTH),
+            backtracking_hybrid_prob: BackTrackCardCountManager::new(),
+            card_counts: [3; MAX_CARD_PERMS_ONE], // 3 of each card initially
+            marker_collator: PhantomData,
+        }
+    }
+
+    #[inline(always)]
+    pub fn discard(&self, player: usize) -> Vec<ActionObservation> {
+        // Check all possible cards to see if the player could have them
+        let mut possible_discards = Vec::with_capacity(MAX_CARD_PERMS_ONE);
+
+        // Get a mutable reference to check constraints
+        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+
+        // Check each card type to see if the player could possibly have it
+        for card_value in 0..MAX_CARD_PERMS_ONE {
+            let card = Card::try_from(card_value as u8).unwrap();
+            // Check if the player can have this card based on current constraints
+            if !latest_constraint.get_impossible_constraint(player, card_value) {
+                possible_discards.push(ActionObservation::Discard {
+                    player_id: player,
+                    card: [card, card],
+                    no_cards: 1,
+                });
+            }
+        }
+
+        possible_discards
+    }
+
+    pub fn block_invite(&self, player: usize, data: &GameData) -> Vec<ActionObservation> {
+        // participants here indicates the players alive that can block
+        // final_actioner here is just a place holder
+        let participants = std::array::from_fn(|p| data.influence()[p] > 0);
+        vec![ActionObservation::CollectiveBlock {
+            participants,
+            opposing_player_id: player,
+            final_actioner: player,
+        }]
+    }
+
+    pub fn reveal_or_discard(&self, player: usize, card_reveal: Card) -> Vec<ActionObservation> {
+        let mut output = Vec::with_capacity(4);
+        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+
+        if latest_constraint.inferred_constraints()[player].contains(&card_reveal) {
+            let mut pile_cards = latest_constraint.inferred_constraints()[INDEX_PILE].clone();
+            pile_cards.push(card_reveal);
+            pile_cards.sort_unstable();
+            pile_cards.dedup();
+            output.extend(pile_cards.iter().map(|c| ActionObservation::RevealRedraw {
+                player_id: player,
+                reveal: card_reveal,
+                redraw: *c,
+            }));
+        } else {
+            // If they don't have the card, they must discard what they do have
+            for card in latest_constraint.inferred_constraints()[player].iter() {
+                output.push(ActionObservation::Discard {
+                    player_id: player,
+                    card: [*card; 2],
+                    no_cards: 1,
+                })
+            }
+        }
+        output
+    }
+
+    pub fn reveal_or_discard_all(
+        &self,
+        player: usize,
+        card_reveal: Card,
+    ) -> Vec<ActionObservation> {
+        let mut output = Vec::with_capacity(4);
+        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+
+        if latest_constraint.inferred_constraints()[player].contains(&card_reveal) {
+            let mut pile_cards = latest_constraint.inferred_constraints()[INDEX_PILE].clone();
+            pile_cards.push(card_reveal);
+            pile_cards.sort_unstable();
+            pile_cards.dedup();
+            output.extend(pile_cards.iter().map(|c| ActionObservation::RevealRedraw {
+                player_id: player,
+                reveal: card_reveal,
+                redraw: *c,
+            }));
+        } else {
+            // Discard all cards
+            let player_cards = &latest_constraint.inferred_constraints()[player];
+            if player_cards.len() == 1 {
+                output.push(ActionObservation::Discard {
+                    player_id: player,
+                    card: [player_cards[0]; MAX_CARDS_DISCARD],
+                    no_cards: 1,
+                })
+            } else if player_cards.len() == 2 {
+                output.push(ActionObservation::Discard {
+                    player_id: player,
+                    card: [player_cards[0], player_cards[1]],
+                    no_cards: 2,
+                })
+            }
+        }
+        output
+    }
+
+    /// Updates card counts based on public information
+    fn update_card_counts(&mut self, action: &ActionObservation) {
+        match action {
+            ActionObservation::Discard { card, no_cards, .. } => {
+                for i in 0..*no_cards {
+                    if self.card_counts[card[i] as usize] > 0 {
+                        self.card_counts[card[i] as usize] -= 1;
+                    }
+                }
+            }
+            _ => {} // Other actions don't affect public card counts directly
+        }
+    }
+}
+
+impl<C> CoupTraversal for CardCountTracker<C>
+where
+    C: Collator,
+{
+    fn start_public(&mut self, player: usize) {
+        // Reset state for public game start
+        self.history.clear();
+        self.card_counts = [3; MAX_CARD_PERMS_ONE];
+        self.backtracking_hybrid_prob = BackTrackCardCountManager::new();
+        // Delegate to the backtracking manager's start method
+        self.backtracking_hybrid_prob.start_public(player);
+    }
+
+    fn start_private(&mut self, _player: usize, _cards: &[Card; MAX_HAND_SIZE_PLAYER]) {
+        unimplemented!(
+            "Card count tracker uses public information only and does not support private information!"
+        );
+    }
+
+    fn start_known(&mut self, player_cards: &Vec<Vec<Card>>) {
+        // Reset state for known game start
+        self.history.clear();
+        self.card_counts = [3; MAX_CARD_PERMS_ONE];
+        self.backtracking_hybrid_prob = BackTrackCardCountManager::new();
+        // Delegate to the backtracking manager's start method
+        self.backtracking_hybrid_prob.start_known(player_cards);
+    }
+
+    fn push_ao_public(&mut self, action: &ActionObservation) {
+        self.history.push(action.clone());
+        self.update_card_counts(action);
+        // Delegate to the backtracking manager
+        self.backtracking_hybrid_prob.push_ao_public(action);
+    }
+
+    fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
+        self.history.push(action.clone());
+        self.update_card_counts(action);
+        // Delegate to the backtracking manager
+        self.backtracking_hybrid_prob.push_ao_public_lazy(action);
+    }
+
+    fn push_ao_private(&mut self, _action: &ActionObservation) {
+        unimplemented!(
+            "Card count tracker uses public information only and does not support private actions!"
+        );
+    }
+
+    fn push_ao_private_lazy(&mut self, _action: &ActionObservation) {
+        unimplemented!(
+            "Card count tracker uses public information only and does not support private actions!"
+        );
+    }
+
+    fn pop(&mut self) {
+        if let Some(action) = self.history.pop() {
+            // Reverse the card count updates
+            match action {
+                ActionObservation::Discard { card, no_cards, .. } => {
+                    for i in 0..no_cards {
+                        self.card_counts[card[i] as usize] += 1;
+                    }
+                }
+                _ => {}
+            }
+            // Delegate to the backtracking manager
+            self.backtracking_hybrid_prob.pop();
+        }
+    }
+}
+
+impl<C> CoupGeneration for CardCountTracker<C>
+where
+    C: Collator,
+{
+    fn on_turn_start(&self, state: &TurnStart, data: &GameData) -> Vec<ActionObservation> {
+        match data.coins()[state.player_turn] {
+            0..=2 => {
+                let mut output = Vec::with_capacity(1 + 1 + 1 + 1 + 5 + 5);
+                output.push(ActionObservation::Income {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::ForeignAid {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::Tax {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::Exchange {
+                    player_id: state.player_turn,
+                });
+                output.extend(data.player_targets_steal(state.player_turn).map(|p| {
+                    ActionObservation::Steal {
+                        player_id: state.player_turn,
+                        opposing_player_id: p,
+                        amount: THIS_VALUE_DOES_NOT_MATTER,
+                    }
+                }));
+                output
+            }
+            3..=6 => {
+                let mut output = Vec::with_capacity(1 + 1 + 1 + 1 + 5 + 5);
+                output.push(ActionObservation::Income {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::ForeignAid {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::Tax {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::Exchange {
+                    player_id: state.player_turn,
+                });
+                output.extend(data.player_targets_steal(state.player_turn).map(|p| {
+                    ActionObservation::Steal {
+                        player_id: state.player_turn,
+                        opposing_player_id: p,
+                        amount: THIS_VALUE_DOES_NOT_MATTER,
+                    }
+                }));
+                output.extend(data.player_targets_alive(state.player_turn).map(|p| {
+                    ActionObservation::Assassinate {
+                        player_id: state.player_turn,
+                        opposing_player_id: p,
+                    }
+                }));
+                output
+            }
+            7..=9 => {
+                let mut output = Vec::with_capacity(1 + 1 + 1 + 1 + 5 + 5 + 5);
+                output.push(ActionObservation::Income {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::ForeignAid {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::Tax {
+                    player_id: state.player_turn,
+                });
+                output.push(ActionObservation::Exchange {
+                    player_id: state.player_turn,
+                });
+                output.extend(data.player_targets_steal(state.player_turn).map(|p| {
+                    ActionObservation::Steal {
+                        player_id: state.player_turn,
+                        opposing_player_id: p,
+                        amount: THIS_VALUE_DOES_NOT_MATTER,
+                    }
+                }));
+                output.extend(data.player_targets_alive(state.player_turn).map(|p| {
+                    ActionObservation::Assassinate {
+                        player_id: state.player_turn,
+                        opposing_player_id: p,
+                    }
+                }));
+                output.extend(data.player_targets_alive(state.player_turn).map(|p| {
+                    ActionObservation::Coup {
+                        player_id: state.player_turn,
+                        opposing_player_id: p,
+                    }
+                }));
+                output
+            }
+            10.. => {
+                let mut output = Vec::with_capacity(5);
+                output.extend(data.player_targets_alive(state.player_turn).map(|p| {
+                    ActionObservation::Coup {
+                        player_id: state.player_turn,
+                        opposing_player_id: p,
+                    }
+                }));
+                output
+            }
+        }
+    }
+
+    fn on_end(&self, _state: &End, _data: &GameData) -> Vec<ActionObservation> {
+        vec![]
+    }
+
+    fn on_coup_hit(&self, state: &CoupHit, _data: &GameData) -> Vec<ActionObservation> {
+        self.discard(state.player_hit)
+    }
+
+    fn on_foreign_aid_invites_block(
+        &self,
+        state: &ForeignAidInvitesBlock,
+        data: &GameData,
+    ) -> Vec<ActionObservation> {
+        C::block(state.player_turn, data)
+    }
+
+    fn on_foreign_aid_block_invites_challenge(
+        &self,
+        state: &ForeignAidBlockInvitesChallenge,
+        data: &GameData,
+    ) -> Vec<ActionObservation> {
+        C::challenge(state.player_blocking, data)
+    }
+
+    fn on_foreign_aid_block_challenged(
+        &self,
+        state: &ForeignAidBlockChallenged,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.reveal_or_discard(state.player_blocking, Card::Duke)
+    }
+
+    fn on_foreign_aid_block_challenger_failed(
+        &self,
+        state: &ForeignAidBlockChallengerFailed,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.discard(state.player_challenger)
+    }
+
+    fn on_tax_invites_challenge(
+        &self,
+        state: &TaxInvitesChallenge,
+        data: &GameData,
+    ) -> Vec<ActionObservation> {
+        C::challenge(state.player_turn, data)
+    }
+
+    fn on_tax_challenged(&self, state: &TaxChallenged, _data: &GameData) -> Vec<ActionObservation> {
+        self.reveal_or_discard(state.player_turn, Card::Duke)
+    }
+
+    fn on_tax_challenger_failed(
+        &self,
+        state: &TaxChallengerFailed,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.discard(state.player_challenger)
+    }
+
+    fn on_steal_invites_challenge(
+        &self,
+        state: &StealInvitesChallenge,
+        data: &GameData,
+    ) -> Vec<ActionObservation> {
+        C::challenge(state.player_turn, data)
+    }
+
+    fn on_steal_challenged(
+        &self,
+        state: &StealChallenged,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.reveal_or_discard(state.player_turn, Card::Captain)
+    }
+
+    fn on_steal_challenger_failed(
+        &self,
+        state: &StealChallengerFailed,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.discard(state.player_challenger)
+    }
+
+    fn on_steal_invites_block(
+        &self,
+        state: &StealInvitesBlock,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        vec![
+            ActionObservation::BlockSteal {
+                player_id: state.player_blocking,
+                opposing_player_id: state.player_turn,
+                card: Card::Ambassador,
+            },
+            ActionObservation::BlockSteal {
+                player_id: state.player_blocking,
+                opposing_player_id: state.player_turn,
+                card: Card::Captain,
+            },
+            // This represents not Blocking
+            ActionObservation::BlockSteal {
+                player_id: state.player_blocking,
+                opposing_player_id: state.player_blocking,
+                card: Card::Captain,
+            },
+        ]
+    }
+
+    fn on_steal_block_invites_challenge(
+        &self,
+        state: &StealBlockInvitesChallenge,
+        data: &GameData,
+    ) -> Vec<ActionObservation> {
+        C::challenge(state.player_blocking, data)
+    }
+
+    fn on_steal_block_challenged(
+        &self,
+        state: &StealBlockChallenged,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
+        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+        let mut pile_cards = latest_constraint.inferred_constraints()[INDEX_PILE].clone();
+        pile_cards.sort_unstable();
+        pile_cards.dedup();
+
+        if latest_constraint.inferred_constraints()[state.player_blocking]
+            .contains(&state.card_blocker)
+        {
+            if !pile_cards.contains(&state.card_blocker) {
+                output.push(ActionObservation::RevealRedraw {
+                    player_id: state.player_blocking,
+                    reveal: state.card_blocker,
+                    redraw: state.card_blocker,
+                });
+            }
+            for card in pile_cards.iter() {
+                output.push(ActionObservation::RevealRedraw {
+                    player_id: state.player_blocking,
+                    reveal: state.card_blocker,
+                    redraw: *card,
+                });
+            }
+        }
+        output.extend(
+            latest_constraint.inferred_constraints()[state.player_blocking]
+                .iter()
+                .filter_map(|player_card| {
+                    (*player_card != state.card_blocker).then_some(ActionObservation::Discard {
+                        player_id: state.player_blocking,
+                        card: [*player_card; MAX_CARDS_DISCARD],
+                        no_cards: 1,
+                    })
+                }),
+        );
+        output
+    }
+
+    fn on_steal_block_challenger_failed(
+        &self,
+        state: &StealBlockChallengerFailed,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.discard(state.player_challenger)
+    }
+
+    fn on_exchange_invites_challenge(
+        &self,
+        state: &ExchangeInvitesChallenge,
+        data: &GameData,
+    ) -> Vec<ActionObservation> {
+        C::challenge(state.player_turn, data)
+    }
+
+    fn on_exchange_drawing(
+        &self,
+        state: &ExchangeDrawing,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        let mut output = Vec::with_capacity(3);
+        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+        let pile_constraints = &latest_constraint.inferred_constraints()[INDEX_PILE];
+
+        for i in 0..pile_constraints.len() {
+            for j in (i + 1)..pile_constraints.len() {
+                let action = ActionObservation::ExchangeDraw {
+                    player_id: state.player_turn,
+                    card: [pile_constraints[i], pile_constraints[j]],
+                };
+                if !output.contains(&action) {
+                    output.push(action);
+                }
+            }
+        }
+        output
+    }
+
+    fn on_exchange_drawn(&self, state: &ExchangeDrawn, _data: &GameData) -> Vec<ActionObservation> {
+        let mut output = Vec::with_capacity(6);
+        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+        let player_constraints = &latest_constraint.inferred_constraints()[state.player_turn];
+
+        for i in 0..player_constraints.len() {
+            for j in (i + 1)..player_constraints.len() {
+                let action = ActionObservation::ExchangeChoice {
+                    player_id: state.player_turn,
+                    relinquish: [player_constraints[i], player_constraints[j]],
+                };
+                if !output.contains(&action) {
+                    output.push(action);
+                }
+            }
+        }
+        output
+    }
+
+    fn on_exchange_challenged(
+        &self,
+        state: &ExchangeChallenged,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.reveal_or_discard(state.player_turn, Card::Ambassador)
+    }
+
+    fn on_exchange_challenger_failed(
+        &self,
+        state: &ExchangeChallengerFailed,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.discard(state.player_challenger)
+    }
+
+    fn on_assassinate_invites_challenge(
+        &self,
+        state: &AssassinateInvitesChallenge,
+        data: &GameData,
+    ) -> Vec<ActionObservation> {
+        C::challenge(state.player_turn, data)
+    }
+
+    fn on_assassinate_invites_block(
+        &self,
+        state: &AssassinateInvitesBlock,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        let mut output = Vec::with_capacity(2);
+        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+
+        output.push(ActionObservation::BlockAssassinate {
+            player_id: state.player_blocking,
+            opposing_player_id: state.player_turn,
+        });
+        if latest_constraint.inferred_constraints()[state.player_blocking]
+            .iter()
+            .any(|c| *c != Card::Contessa)
+        {
+            output.push(ActionObservation::BlockAssassinate {
+                player_id: state.player_blocking,
+                opposing_player_id: state.player_blocking,
+            });
+        }
+        output
+    }
+
+    fn on_assassinate_block_invites_challenge(
+        &self,
+        state: &AssassinateBlockInvitesChallenge,
+        data: &GameData,
+    ) -> Vec<ActionObservation> {
+        C::challenge(state.player_blocking, data)
+    }
+
+    fn on_assassinate_block_challenged(
+        &self,
+        state: &AssassinateBlockChallenged,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.reveal_or_discard_all(state.player_blocking, Card::Contessa)
+    }
+
+    fn on_assassinate_block_challenger_failed(
+        &self,
+        state: &AssassinateBlockChallengerFailed,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.discard(state.player_challenger)
+    }
+
+    fn on_assassinate_succeeded(
+        &self,
+        state: &AssassinateSucceeded,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        let mut output = Vec::with_capacity(DEFAULT_PLAYER_LIVES);
+        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+
+        for card in latest_constraint.inferred_constraints()[state.player_blocking]
+            .iter()
+            .copied()
+        {
+            if card != Card::Contessa {
+                output.push(ActionObservation::Discard {
+                    player_id: state.player_blocking,
+                    card: [card; MAX_CARDS_DISCARD],
+                    no_cards: 1,
+                });
+            }
+        }
+        output
+    }
+
+    fn on_assassinate_challenged(
+        &self,
+        state: &AssassinateChallenged,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.reveal_or_discard(state.player_turn, Card::Assassin)
+    }
+
+    fn on_assassinate_challenger_failed(
+        &self,
+        state: &AssassinateChallengerFailed,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        self.discard(state.player_challenger)
+    }
+}

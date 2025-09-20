@@ -47,6 +47,7 @@ pub mod prob_manager {
         pub mod recursion_fn;
     }
     pub mod tracker {
+        pub mod card_count_tracker;
         pub mod collater;
         pub mod informed_tracker;
         pub mod uninformed_tracker;
