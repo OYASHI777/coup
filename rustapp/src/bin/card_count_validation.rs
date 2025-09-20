@@ -4,7 +4,9 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
 use rustapp::prob_manager::brute_prob_generic::BruteCardCountManagerGeneric;
-use rustapp::prob_manager::models::backtrack::{ActionInfo, InfoArray};
+use rustapp::prob_manager::models::backtrack::{
+    ActionInfo, InfoArray, InfoArrayBits, InfoArrayTrait,
+};
 use rustapp::prob_manager::models::card_state_u64::CardStateu64;
 use rustapp::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
 use std::fs::OpenOptions;
@@ -43,10 +45,10 @@ fn main() {
     // test_variant_recurse();
 }
 pub fn benchmarks() {
-    game_rnd_constraint_bt_bench(10000, false);
-    game_rnd_constraint_bt_bench_lazy(100000, false);
-    game_rnd_constraint_bt_bench(10000, true);
-    game_rnd_constraint_bt_bench_lazy(100000, true);
+    game_rnd_constraint_bt_bench::<InfoArray>(10000, false);
+    game_rnd_constraint_bt_bench_lazy::<InfoArray>(100000, false);
+    game_rnd_constraint_bt_bench::<InfoArray>(10000, true);
+    game_rnd_constraint_bt_bench_lazy::<InfoArray>(100000, true);
 }
 // TODO: Move to collective_constraint when finalized
 pub fn test_variant_recurse() {
@@ -1184,10 +1186,10 @@ pub fn retain_legal_moves_with_card_constraints(
     }
     new_moves.retain(|ao| is_legal(history, ao, prob, private_player));
 }
-pub fn game_rnd_constraint_bt_bench(game_no: usize, bool_know_priv_info: bool) {
+pub fn game_rnd_constraint_bt_bench<I: InfoArrayTrait>(game_no: usize, bool_know_priv_info: bool) {
     let mut game: usize = 0;
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager<
-        InfoArray,
+        I,
     > = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     let mut actions_processed: u128 = 0;
     let start_time = Instant::now();
@@ -1267,10 +1269,13 @@ pub fn game_rnd_constraint_bt_bench(game_no: usize, bool_know_priv_info: bool) {
         process_per_action_us
     );
 }
-pub fn game_rnd_constraint_bt_bench_lazy(game_no: usize, bool_know_priv_info: bool) {
+pub fn game_rnd_constraint_bt_bench_lazy<I: InfoArrayTrait>(
+    game_no: usize,
+    bool_know_priv_info: bool,
+) {
     let mut game: usize = 0;
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager<
-        InfoArray,
+        I,
     > = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     let mut actions_processed: u128 = 0;
     let start_time = Instant::now();
