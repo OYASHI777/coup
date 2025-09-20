@@ -1,7 +1,10 @@
-use std::{hash::Hasher};
+use std::hash::Hasher;
 
 use crate::history_public::Card;
-use crate::prob_manager::engine::constants::{INDEX_PILE, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_PLAYERS_EXCL_PILE, MAX_PLAYERS_INCL_PILE};
+use crate::prob_manager::engine::constants::{
+    INDEX_PILE, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER,
+    MAX_PLAYERS_EXCL_PILE, MAX_PLAYERS_INCL_PILE,
+};
 use crate::prob_manager::utils::permutation_generator::gen_table_combinations;
 
 use crate::traits::prob_manager::card_state::CardPermState;
@@ -79,12 +82,12 @@ impl CardStateu64 {
             3 => 0b111111,
             4 => 0b111111,
             5 => 0b111111,
-            6 => 0b111111111, 
+            6 => 0b111111111,
             _ => unreachable!(),
         };
         let mut encoded_cards: u64 = 0;
         for (i, card) in cards.iter().enumerate() {
-            encoded_cards |= (*card as u64) << (i * BITS_PER_CARD); 
+            encoded_cards |= (*card as u64) << (i * BITS_PER_CARD);
         }
         self.0 &= !(mask << shift);
         self.0 |= (encoded_cards as u64) << shift;
@@ -92,28 +95,28 @@ impl CardStateu64 {
     // A small helper to generate all combinations of `k` elements from a slice.
     pub fn combinations<T: Clone>(arr: &[T], k: usize) -> Vec<Vec<T>> {
         let mut result = Vec::with_capacity(10); // Its always < 10
-    
+
         // A helper function that takes indices and builds the corresponding combination
         fn push_combination<T: Clone>(indices: &[usize], arr: &[T], result: &mut Vec<Vec<T>>) {
             let combo = indices.iter().map(|&i| arr[i].clone()).collect();
             result.push(combo);
         }
-    
+
         if k > arr.len() {
             return result; // no combinations possible if k > arr.len()
         }
-    
+
         // We'll store the "current combination" indices in `indices`
         let mut indices: Vec<usize> = (0..k).collect(); // initial combination: [0, 1, ..., k-1]
-    
+
         // Push the first combination
         // push_combination(&indices, arr, &mut result);
-    
+
         // Generate subsequent combinations in lexicographic order
         loop {
             // We'll try to increment from the rightmost position
             let mut i = k - 1;
-    
+
             // Move `i` leftward until we find a position we can increment
             while indices[i] == i + arr.len() - k {
                 if i == 0 {
@@ -122,15 +125,15 @@ impl CardStateu64 {
                 }
                 i -= 1;
             }
-    
+
             // Increment the current position
             indices[i] += 1;
-    
+
             // Then reset all subsequent positions
             for j in i + 1..k {
                 indices[j] = indices[j - 1] + 1;
             }
-    
+
             // Push the updated combination
             push_combination(&indices, arr, &mut result);
         }
@@ -155,7 +158,10 @@ impl CardPermState for CardStateu64 {
     fn gen_table_combinations() -> Vec<Self> {
         // This is a lazy unoptimized implementation as it's only intended to be called once at start of program
         let all_states: Vec<String> = gen_table_combinations(TOKENS, &BAG_SIZES);
-        let output = all_states.iter().map(|state| Self::from_str(state)).collect();
+        let output = all_states
+            .iter()
+            .map(|state| Self::from_str(state))
+            .collect();
         log::info!("all_states: {:?}", output);
         output
     }
@@ -191,7 +197,7 @@ impl CardPermState for CardStateu64 {
         for card_player in cards.iter() {
             if card == *card_player {
                 counter += 1;
-            } 
+            }
         }
         counter
     }
@@ -204,11 +210,14 @@ impl CardPermState for CardStateu64 {
         output
     }
     fn mix_one_card(&self, player_id: usize, player_other: usize, card: Card) -> Vec<Self> {
-        debug_assert!(player_id < MAX_PLAYERS_INCL_PILE && player_other < MAX_PLAYERS_INCL_PILE, "Invalid player IDs");
+        debug_assert!(
+            player_id < MAX_PLAYERS_INCL_PILE && player_other < MAX_PLAYERS_INCL_PILE,
+            "Invalid player IDs"
+        );
         // Get player cards
         let mut player_cards = self.get_player_cards_unsorted(player_id);
         let other_cards = self.get_player_cards_unsorted(player_other);
-        
+
         // If `player_id` doesn't have `card`, return empty result
         if !player_cards.contains(&card) {
             return vec![];
@@ -248,8 +257,15 @@ impl CardPermState for CardStateu64 {
         result
     }
 
-    fn mix_multiple_chars_with_player6(&self, player_id: usize, player_dead_cards: &[Card]) -> Vec<Self> {
-        debug_assert!(player_id < MAX_PLAYERS_EXCL_PILE, "Only players 0-5 can swap with player 6");
+    fn mix_multiple_chars_with_player6(
+        &self,
+        player_id: usize,
+        player_dead_cards: &[Card],
+    ) -> Vec<Self> {
+        debug_assert!(
+            player_id < MAX_PLAYERS_EXCL_PILE,
+            "Only players 0-5 can swap with player 6"
+        );
 
         // Get player cards
         let mut player_cards = self.get_player_cards_unsorted(player_id);
@@ -296,8 +312,14 @@ impl CardPermState for CardStateu64 {
 
         results
     }
-    
-    fn player_swap_cards(&self, player_i: usize, player_j: usize, card_i: Card, card_j: Card) -> Option<Self> {
+
+    fn player_swap_cards(
+        &self,
+        player_i: usize,
+        player_j: usize,
+        card_i: Card,
+        card_j: Card,
+    ) -> Option<Self> {
         let mut new_state = self.clone();
         let mut player_i_cards = self.get_player_cards_unsorted(player_i);
         let mut player_j_cards = self.get_player_cards_unsorted(player_j);
@@ -312,7 +334,15 @@ impl CardPermState for CardStateu64 {
         }
         None
     }
-    fn player_swap_cards_draw_relinquish(&self, player_drawing: usize, player_drawn: usize, player_drawing_dead_cards: &[Card], player_drawn_dead_cards: &[Card], draw: &[Card], relinquish: &[Card]) -> Option<Self> {
+    fn player_swap_cards_draw_relinquish(
+        &self,
+        player_drawing: usize,
+        player_drawn: usize,
+        player_drawing_dead_cards: &[Card],
+        player_drawn_dead_cards: &[Card],
+        draw: &[Card],
+        relinquish: &[Card],
+    ) -> Option<Self> {
         let mut new_state = self.clone();
         let mut player_drawing_cards = self.get_player_cards_unsorted(player_drawing);
         let mut player_drawn_cards = self.get_player_cards_unsorted(player_drawn);
@@ -342,13 +372,19 @@ impl CardPermState for CardStateu64 {
             return None;
         }
         player_drawing_cards.push(draw[1]);
-        if let Some(pos) = player_drawing_cards.iter().position(|c| *c == relinquish[0]) {
+        if let Some(pos) = player_drawing_cards
+            .iter()
+            .position(|c| *c == relinquish[0])
+        {
             player_drawing_cards.swap_remove(pos);
         } else {
             return None;
         }
         player_drawn_cards.push(relinquish[0]);
-        if let Some(pos) = player_drawing_cards.iter().position(|c| *c == relinquish[1]) {
+        if let Some(pos) = player_drawing_cards
+            .iter()
+            .position(|c| *c == relinquish[1])
+        {
             player_drawing_cards.swap_remove(pos);
         } else {
             return None;
@@ -367,7 +403,7 @@ impl CardPermState for CardStateu64 {
             new_state.set_player_cards(player_drawing, &player_drawing_cards);
             new_state.set_player_cards(player_drawn, &player_drawn_cards);
             return Some(new_state);
-        } 
+        }
         None
     }
 }

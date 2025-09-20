@@ -10,7 +10,7 @@ pub fn unique_sorted_string(tokens: &str) -> Vec<char> {
     // Sorts
     chars.sort_unstable();
     // Returns as a String
-    return chars
+    return chars;
 }
 
 pub fn filter_string_less_than(unique_sorted_string: &Vec<char>, char_max: &char) -> Vec<char> {
@@ -30,7 +30,7 @@ pub fn filter_string_less_than(unique_sorted_string: &Vec<char>, char_max: &char
         return Vec::new();
     }
     if unique_sorted_string[l] == *char_max {
-        return unique_sorted_string[..(l+1)].to_vec();
+        return unique_sorted_string[..(l + 1)].to_vec();
     }
     while l < r {
         mid = (l + r) / 2;
@@ -79,7 +79,11 @@ pub fn filter_string_more_than(unique_sorted_string: &Vec<char>, char_min: &char
     return unique_sorted_string[l..].to_vec();
 }
 
-pub fn filter_string_within(unique_sorted_string: &Vec<char>, char_min: &char, char_max: &char) -> Vec<char> {
+pub fn filter_string_within(
+    unique_sorted_string: &Vec<char>,
+    char_min: &char,
+    char_max: &char,
+) -> Vec<char> {
     let output: Vec<char> = filter_string_less_than(unique_sorted_string, char_max);
     return filter_string_more_than(&output, char_min);
 }
@@ -92,9 +96,9 @@ pub fn sort_str(string: &str) -> String {
     return sorted_string;
 }
 
-pub fn remove_chars(string: &str, chars_to_remove: &str) -> String{
+pub fn remove_chars(string: &str, chars_to_remove: &str) -> String {
     let mut result_string = string.to_string();
-    for char_to_remove in chars_to_remove.chars(){
+    for char_to_remove in chars_to_remove.chars() {
         if let Some(index) = result_string.find(char_to_remove) {
             result_string.remove(index);
         }
@@ -105,7 +109,7 @@ pub fn remove_chars(string: &str, chars_to_remove: &str) -> String{
 pub fn replace_chars(string: &str, chars_to_remove: &str, char_to_replace: &str) -> String {
     //replaces and sorts string
     let mut result_string = string.to_string();
-    for char_to_remove in chars_to_remove.chars(){
+    for char_to_remove in chars_to_remove.chars() {
         if let Some(index) = result_string.find(char_to_remove) {
             result_string.remove(index);
         }
@@ -115,7 +119,6 @@ pub fn replace_chars(string: &str, chars_to_remove: &str, char_to_replace: &str)
     temp.sort_unstable();
     result_string = temp.into_iter().collect();
     return result_string;
-
 }
 
 pub fn contains_all_chars(string1: &str, string2: &str) -> bool {

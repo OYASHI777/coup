@@ -1,6 +1,6 @@
-use crate::prob_manager::engine::constants::{STARTING_COINS, STARTING_INFLUENCE};
 use super::engine_state::EngineState;
 use super::turn_start::TurnStart;
+use crate::prob_manager::engine::constants::{STARTING_COINS, STARTING_INFLUENCE};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct GameData {
@@ -10,9 +10,9 @@ pub struct GameData {
 }
 impl GameData {
     pub fn new() -> Self {
-        GameData { 
-            influence: STARTING_INFLUENCE, 
-            coins: STARTING_COINS, 
+        GameData {
+            influence: STARTING_INFLUENCE,
+            coins: STARTING_COINS,
             players_alive: 6,
         }
     }
@@ -39,16 +39,18 @@ impl GameData {
     /// Returns an iterator over all players alive
     pub fn players_alive(&self) -> impl Iterator<Item = usize> + '_ {
         self.influence
-        .iter()
-        .enumerate()
-        .filter_map(|(player, influence)| (*influence > 0).then_some(player))
+            .iter()
+            .enumerate()
+            .filter_map(|(player, influence)| (*influence > 0).then_some(player))
     }
     /// Returns an iterator over all players alive and not player
     pub fn player_targets_alive(&self, player: usize) -> impl Iterator<Item = usize> + '_ {
         self.influence
-        .iter()
-        .enumerate()
-        .filter_map(move |(opposing_player, influence)| (*influence > 0 && opposing_player != player).then_some(opposing_player))
+            .iter()
+            .enumerate()
+            .filter_map(move |(opposing_player, influence)| {
+                (*influence > 0 && opposing_player != player).then_some(opposing_player)
+            })
     }
     /// Returns an iterator over all players alive and not player that have coins
     pub fn player_targets_steal(&self, player: usize) -> impl Iterator<Item = usize> + '_ {
@@ -56,7 +58,10 @@ impl GameData {
             .iter()
             .enumerate()
             .zip(self.coins.iter())
-            .filter_map(move |((opposing_player, influence), coins)| (*influence > 0 && *coins > 0 && opposing_player != player).then_some(opposing_player))
+            .filter_map(move |((opposing_player, influence), coins)| {
+                (*influence > 0 && *coins > 0 && opposing_player != player)
+                    .then_some(opposing_player)
+            })
     }
     /// Checks if game will be won after a player loses no_cards
     pub fn game_will_be_won(&self, player: usize, no_cards: u8) -> bool {
@@ -75,11 +80,10 @@ impl GameData {
     /// Returns Coin amount zeroized for dead players
     pub fn coins_display(&self) -> [u8; 6] {
         let mut output = self.coins.clone();
-        self.influence.iter().enumerate().for_each(
-            |(p, l)| {
-                output[p] = output[p] * (*l > 0) as u8
-            }
-        );
+        self.influence
+            .iter()
+            .enumerate()
+            .for_each(|(p, l)| output[p] = output[p] * (*l > 0) as u8);
         output
     }
 }
@@ -92,23 +96,15 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(player_turn: usize) -> Self {
-        GameState { 
+        GameState {
             game_data: GameData::new(),
-            engine_state: EngineState::TurnStart(
-                TurnStart{ 
-                    player_turn,
-                }
-            ),
+            engine_state: EngineState::TurnStart(TurnStart { player_turn }),
         }
     }
     pub fn start(player_turn: usize) -> Self {
-        GameState { 
+        GameState {
             game_data: GameData::new(),
-            engine_state: EngineState::TurnStart(
-                TurnStart{ 
-                    player_turn,
-                }
-            ),
+            engine_state: EngineState::TurnStart(TurnStart { player_turn }),
         }
     }
     pub fn influence(&self) -> &[u8; 6] {

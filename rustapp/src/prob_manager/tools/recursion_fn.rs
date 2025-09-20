@@ -1,34 +1,44 @@
-use log::LevelFilter;
 use crate::history_public::Card;
+use env_logger::{Builder, Env, Target};
+use itertools::Itertools;
+use log::LevelFilter;
 use std::collections::HashSet;
 use std::fs::OpenOptions;
 use std::io::Write;
-use env_logger::{Builder, Env, Target};
-use itertools::Itertools;
 pub struct RecursionTest;
 
 impl RecursionTest {
-    pub fn return_variants_reveal_redraw(reveal: Card, redraw: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+    pub fn return_variants_reveal_redraw(
+        reveal: Card,
+        redraw: Card,
+        player_loop: usize,
+        inferred_constraints: &Vec<Vec<Card>>,
+    ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::new();
         let mut temp = inferred_constraints.clone();
         if let Some(pos) = temp[player_loop].iter().position(|c| *c == redraw) {
             temp[player_loop].swap_remove(pos);
-        } 
+        }
         temp[6].push(redraw);
         if let Some(pos) = temp[6].iter().position(|c| *c == reveal) {
             temp[6].swap_remove(pos);
-        } 
+        }
         temp[player_loop].push(reveal);
         if temp[6].len() < 4 && temp[player_loop].len() < 3 {
             variants.push(temp);
         }
-        return variants
+        return variants;
     }
-    pub fn return_variants_reveal_redraw_none(reveal: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+    pub fn return_variants_reveal_redraw_none(
+        reveal: Card,
+        player_loop: usize,
+        inferred_constraints: &Vec<Vec<Card>>,
+    ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
-        if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5 
-        && !inferred_constraints[player_loop].contains(&reveal)
-        && !inferred_constraints[6].contains(&reveal) {
+        if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5
+            && !inferred_constraints[player_loop].contains(&reveal)
+            && !inferred_constraints[6].contains(&reveal)
+        {
             // This state cannot be arrive after the reveal_redraw
             return Vec::with_capacity(0);
         }
@@ -40,17 +50,22 @@ impl RecursionTest {
             .iter()
             .copied()
             .map(|c| (player_loop, c))
-            .chain(
-                inferred_constraints[6]
-                    .iter()
-                    .copied()
-                    .map(|c| (6, c)),
-            )
+            .chain(inferred_constraints[6].iter().copied().map(|c| (6, c)))
             .collect();
         // TODO: Consider moving this out of this function
         // Self::build_variants_reveal_redraw_none(reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
-        Self::build_variants_reveal_redraw_none_opt(reveal, &source_cards, 0, player_loop, 6, 0, 0, &inferred_constraints, &mut variants);
-        return variants
+        Self::build_variants_reveal_redraw_none_opt(
+            reveal,
+            &source_cards,
+            0,
+            player_loop,
+            6,
+            0,
+            0,
+            &inferred_constraints,
+            &mut variants,
+        );
+        return variants;
     }
     /// Builds possible previous inferred_constraint states
     /// All cards have a source
@@ -59,9 +74,9 @@ impl RecursionTest {
     /// - player after revealing then redrawing the same
     /// - pile after revealing then redrawing different
     /// - player after revealing then redrawing different
-    /// 
+    ///
     /// Not trying that many cases here as some of them just lead to more specific sets that will already be covered
-    /// e.g. 
+    /// e.g.
     /// src: [[Ambassador], [], [], [], [], [], [Assassin, Ambassador]], [Ambassador, Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
     /// dest: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
     /// the second is a more specific case of the first item in src
@@ -72,12 +87,12 @@ impl RecursionTest {
         player_loop: usize,
         pile_index: usize,
         player_to_pile_count: u8, // dst -> src
-        pile_to_player_count: u8, // dst -> src 
+        pile_to_player_count: u8, // dst -> src
         current: &Vec<Vec<Card>>,
         variants: &mut Vec<Vec<Vec<Card>>>,
     ) {
         // build an intermediate state
-        // src: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin, Ambassador]], 
+        // src: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin, Ambassador]],
         // dest: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
         // This is ok, but Im thinking u technically don't need this cos it will be searched by
         // TODO: OPTIMIZE and remove subsets
@@ -100,13 +115,18 @@ impl RecursionTest {
             // Player redrew same card
             // Not exactly right as player_to_pile could be a non ambassador
             // Add if player_to_pile is 0
-            if !source_constraints[player_loop].contains(&reveal)
-            { // TESTING OPTIMIZE
+            if !source_constraints[player_loop].contains(&reveal) {
+                // TESTING OPTIMIZE
                 source_constraints[player_loop].push(reveal);
             }
-            if source_constraints[player_loop].len() < 3  
-            && source_constraints[pile_index].len() < 4 
-            && source_constraints.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+            if source_constraints[player_loop].len() < 3
+                && source_constraints[pile_index].len() < 4
+                && source_constraints
+                    .iter()
+                    .map(|v| v.iter().filter(|c| **c == reveal).count() as u8)
+                    .sum::<u8>()
+                    < 4
+            {
                 variants.push(source_constraints);
             }
             return;
@@ -115,23 +135,43 @@ impl RecursionTest {
         // CASE: player Card did not come from pile after reveal
         // CASE: pile Card did not come from player after reveal
         // ADDITIONALLY: if player reveal and redrew the same card, it is considered seperate cards
-        Self::build_variants_reveal_redraw_none_opt(reveal, cards, idx + 1, player_loop, pile_index, player_to_pile_count, pile_to_player_count, current, variants);
+        Self::build_variants_reveal_redraw_none_opt(
+            reveal,
+            cards,
+            idx + 1,
+            player_loop,
+            pile_index,
+            player_to_pile_count,
+            pile_to_player_count,
+            current,
+            variants,
+        );
         // Destructure this card's source and value
         let (dst, card) = cards[idx];
         // OPTIMIZE: probably could just run this as the ONLY case for reveal redraw as the other case will be a more specific case of this
-        // CASE: Card originally left player hand and returned to player and is the same unique card 
+        // CASE: Card originally left player hand and returned to player and is the same unique card
         // T                :  [C0]    []
         // T after reveal   :  []    [C0]
         // T + 1            :  [C0]    []
         if dst == player_loop && card == reveal {
             // No need to add reveal anymore
-            Self::build_variants_reveal_redraw_none_opt(reveal, cards, cards.len(), player_loop, pile_index, 1, 1, current, variants);
-            return
-        } 
+            Self::build_variants_reveal_redraw_none_opt(
+                reveal,
+                cards,
+                cards.len(),
+                player_loop,
+                pile_index,
+                1,
+                1,
+                current,
+                variants,
+            );
+            return;
+        }
 
         let is_player_card = dst == player_loop;
         let could_have_swapped = if is_player_card {
-            player_to_pile_count < 1 
+            player_to_pile_count < 1
             // Testing OPTIMIZE: exclude all other reveal redraw same cards
             // && card != reveal
         } else {
@@ -146,21 +186,36 @@ impl RecursionTest {
             } else {
                 (player_loop, player_to_pile_count, pile_to_player_count + 1)
             };
-            
+
             let mut new_constraints = current.clone();
             if let Some(pos) = new_constraints[dst].iter().position(|&c| c == card) {
                 new_constraints[dst].swap_remove(pos);
                 new_constraints[src].push(card);
-                Self::build_variants_reveal_redraw_none_opt(reveal, cards, idx + 1, player_loop, pile_index, new_player_to_pile_count, new_pile_to_player_count, &new_constraints, variants);
+                Self::build_variants_reveal_redraw_none_opt(
+                    reveal,
+                    cards,
+                    idx + 1,
+                    player_loop,
+                    pile_index,
+                    new_player_to_pile_count,
+                    new_pile_to_player_count,
+                    &new_constraints,
+                    variants,
+                );
             }
         }
     }
     // TODO: modify inferred_constraints and recurse when no longer testing this
-    pub fn return_variants_reveal_redraw_none_opt(reveal: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+    pub fn return_variants_reveal_redraw_none_opt(
+        reveal: Card,
+        player_loop: usize,
+        inferred_constraints: &Vec<Vec<Card>>,
+    ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
-        if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5 
-        && !inferred_constraints[player_loop].contains(&reveal)
-        && !inferred_constraints[6].contains(&reveal) {
+        if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5
+            && !inferred_constraints[player_loop].contains(&reveal)
+            && !inferred_constraints[6].contains(&reveal)
+        {
             // This state cannot be arrive after the reveal_redraw
             return Vec::with_capacity(0);
         }
@@ -176,7 +231,12 @@ impl RecursionTest {
             temp[player_loop] = player_hand.clone();
             temp[6] = pile_hand.clone();
             if temp[player_loop].len() < 3
-            && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                && temp
+                    .iter()
+                    .map(|v| v.iter().filter(|c| **c == reveal).count() as u8)
+                    .sum::<u8>()
+                    < 4
+            {
                 // TODO: Recurse here in other version
                 variants.push(temp);
             }
@@ -199,7 +259,7 @@ impl RecursionTest {
                 let mut temp = inferred_constraints.clone();
                 temp[player_loop] = player_hand.clone();
                 temp[6] = pile_hand.clone();
-    
+
                 if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
                     player_hand.swap_remove(pos);
                 }
@@ -207,9 +267,14 @@ impl RecursionTest {
                     pile_hand.push(reveal);
                 }
                 // Probably need push only if certain conditions met
-                if temp[player_loop].len() < 3  
-                && temp[6].len() < 4 
-                && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                if temp[player_loop].len() < 3
+                    && temp[6].len() < 4
+                    && temp
+                        .iter()
+                        .map(|v| v.iter().filter(|c| **c == reveal).count() as u8)
+                        .sum::<u8>()
+                        < 4
+                {
                     // TODO: Recurse here in other version
                     variants.push(temp);
                 }
@@ -246,9 +311,14 @@ impl RecursionTest {
             temp[6] = pile_hand.clone();
 
             // Probably need push only if certain conditions met
-            if temp[player_loop].len() < 3  
-            && temp[6].len() < 4 
-            && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+            if temp[player_loop].len() < 3
+                && temp[6].len() < 4
+                && temp
+                    .iter()
+                    .map(|v| v.iter().filter(|c| **c == reveal).count() as u8)
+                    .sum::<u8>()
+                    < 4
+            {
                 // TODO: Recurse here in other version
                 variants.push(temp);
             }
@@ -276,10 +346,14 @@ impl RecursionTest {
             //     log::warn!("failed 2 to pop pile hand properly");
             // }
         }
-        return variants
+        return variants;
     }
     // TODO: modify inferred_constraints and recurse when no longer testing this
-    pub fn return_variants_exchange_opt(player_lives: u8, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+    pub fn return_variants_exchange_opt(
+        player_lives: u8,
+        player_loop: usize,
+        inferred_constraints: &Vec<Vec<Card>>,
+    ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
         let mut iter_cards_player = inferred_constraints[player_loop].clone();
         iter_cards_player.sort_unstable();
@@ -289,14 +363,17 @@ impl RecursionTest {
         iter_cards_pile.dedup();
         let mut player_count = [0u8; 5];
         let mut pile_count = [0u8; 5];
-        inferred_constraints[player_loop].iter().for_each(|c| player_count[*c as usize] += 1);
-        inferred_constraints[6].iter().for_each(|c| pile_count[*c as usize] += 1);
+        inferred_constraints[player_loop]
+            .iter()
+            .for_each(|c| player_count[*c as usize] += 1);
+        inferred_constraints[6]
+            .iter()
+            .for_each(|c| pile_count[*c as usize] += 1);
         // let mut redraw_count = [0u8; 5];
         // let mut relinquish_count = [0u8; 5];
         // redraw.iter().for_each(|c| redraw_count[*c as usize] += 1);
         // relinquish.iter().for_each(|c| relinquish_count[*c as usize] += 1);
 
-        
         // Can maybe consider all possible unique moves characterized by player_to_pile and pile_to_player
         // redraw_count and relinquish_count define the degree of freedom for both of those
         // the possible choices that can be player_to_pile depend on whats in player_hand
@@ -309,9 +386,9 @@ impl RecursionTest {
         // 0 player_to_pile move, 0 pile_to_player move
         variants.push(inferred_constraints.clone());
         // 1 player_to_pile move, 0 pile_to_player move
-        if inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 0{
+        if inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 0 {
             for card_player in iter_cards_player.iter() {
-            // move to pile
+                // move to pile
                 let mut player_hand = inferred_constraints[player_loop].clone();
                 let mut pile_hand = inferred_constraints[6].clone();
                 if let Some(pos) = player_hand.iter().rposition(|c| *c == *card_player) {
@@ -325,9 +402,9 @@ impl RecursionTest {
             }
         }
         // 0 player_to_pile move, 1 pile_to_player move
-        if inferred_constraints[player_loop].len() < 2 && inferred_constraints[6].len() > 0{
+        if inferred_constraints[player_loop].len() < 2 && inferred_constraints[6].len() > 0 {
             for card_pile in iter_cards_pile.iter() {
-            // move to player
+                // move to player
                 let mut player_hand = inferred_constraints[player_loop].clone();
                 let mut pile_hand = inferred_constraints[6].clone();
                 if let Some(pos) = pile_hand.iter().rposition(|c| *c == *card_pile) {
@@ -383,15 +460,23 @@ impl RecursionTest {
             if inferred_constraints[player_loop].len() == 0 && inferred_constraints[6].len() > 1 {
                 for index_pile_to_player_0 in 0..iter_cards_pile.len() {
                     for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
-                        if index_pile_to_player_0 == index_pile_to_player_1 && pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2 {
+                        if index_pile_to_player_0 == index_pile_to_player_1
+                            && pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2
+                        {
                             continue; // Ensure enough cards to move
                         }
                         let mut player_hand = inferred_constraints[player_loop].clone();
                         let mut pile_hand = inferred_constraints[6].clone();
-                        if let Some(pos) = pile_hand.iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                        if let Some(pos) = pile_hand
+                            .iter()
+                            .rposition(|c| *c == iter_cards_pile[index_pile_to_player_0])
+                        {
                             pile_hand.swap_remove(pos);
                         }
-                        if let Some(pos) = pile_hand.iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                        if let Some(pos) = pile_hand
+                            .iter()
+                            .rposition(|c| *c == iter_cards_pile[index_pile_to_player_1])
+                        {
                             pile_hand.swap_remove(pos);
                         }
                         player_hand.push(iter_cards_pile[index_pile_to_player_0]);
@@ -404,29 +489,43 @@ impl RecursionTest {
                 }
             }
             // 2 player_to_pile move, 1 pile_to_player move
-            if inferred_constraints[6].len() > 0 && inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 1 {
+            if inferred_constraints[6].len() > 0
+                && inferred_constraints[6].len() < 3
+                && inferred_constraints[player_loop].len() > 1
+            {
                 for card_pile in iter_cards_pile.iter() {
                     for index_player_to_pile_0 in 0..iter_cards_player.len() {
                         // TODO: Shift index_player_to_pile == case shift here
                         if iter_cards_player[index_player_to_pile_0] == *card_pile {
                             continue; // Avoid duplicates
                         }
-                        for index_player_to_pile_1 in index_player_to_pile_0..iter_cards_player.len() {
+                        for index_player_to_pile_1 in
+                            index_player_to_pile_0..iter_cards_player.len()
+                        {
                             // Check DF
                             if iter_cards_player[index_player_to_pile_1] == *card_pile {
                                 continue; // Avoid duplicates
                             }
-                            if index_player_to_pile_0 == index_player_to_pile_1 && player_count[iter_cards_player[index_player_to_pile_0] as usize] < 2 {
+                            if index_player_to_pile_0 == index_player_to_pile_1
+                                && player_count[iter_cards_player[index_player_to_pile_0] as usize]
+                                    < 2
+                            {
                                 // Checks that player has enough cards to move out
                                 // TODO: OPTIMIZE Can shift this out of for loop actually
-                                continue // Ensure enough cards to move
+                                continue; // Ensure enough cards to move
                             }
                             let mut player_hand = inferred_constraints[player_loop].clone();
                             let mut pile_hand = inferred_constraints[6].clone();
-                            if let Some(pos) = player_hand.iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
+                            if let Some(pos) = player_hand
+                                .iter()
+                                .rposition(|c| *c == iter_cards_player[index_player_to_pile_0])
+                            {
                                 player_hand.swap_remove(pos);
                             }
-                            if let Some(pos) = player_hand.iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
+                            if let Some(pos) = player_hand
+                                .iter()
+                                .rposition(|c| *c == iter_cards_player[index_player_to_pile_1])
+                            {
                                 player_hand.swap_remove(pos);
                             }
                             if let Some(pos) = pile_hand.iter().rposition(|c| *c == *card_pile) {
@@ -444,31 +543,42 @@ impl RecursionTest {
                 }
             }
             // 1 player_to_pile move, 2 pile_to_player move
-            if inferred_constraints[player_loop].len() == 1 && inferred_constraints[6].len() > 1{
+            if inferred_constraints[player_loop].len() == 1 && inferred_constraints[6].len() > 1 {
                 for card_player in iter_cards_player.iter() {
                     for index_pile_to_player_0 in 0..iter_cards_pile.len() {
                         if iter_cards_pile[index_pile_to_player_0] == *card_player {
                             continue; // Avoid Duplicates
                         }
-                        for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
+                        for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len()
+                        {
                             // Check DF
                             if iter_cards_pile[index_pile_to_player_1] == *card_player {
                                 continue; // Avoid Duplicates
                             }
-                            if index_pile_to_player_0 == index_pile_to_player_1 && (pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2) {
+                            if index_pile_to_player_0 == index_pile_to_player_1
+                                && (pile_count[iter_cards_pile[index_pile_to_player_0] as usize]
+                                    < 2)
+                            {
                                 // Checks that player has enough cards to move out
                                 // TODO: OPTIMIZE Can shift this out of for loop actually
-                                continue // Ensure enough cards to move
+                                continue; // Ensure enough cards to move
                             }
                             let mut player_hand = inferred_constraints[player_loop].clone();
                             let mut pile_hand = inferred_constraints[6].clone();
-                            if let Some(pos) = pile_hand.iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                            if let Some(pos) = pile_hand
+                                .iter()
+                                .rposition(|c| *c == iter_cards_pile[index_pile_to_player_0])
+                            {
                                 pile_hand.swap_remove(pos);
                             }
-                            if let Some(pos) = pile_hand.iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                            if let Some(pos) = pile_hand
+                                .iter()
+                                .rposition(|c| *c == iter_cards_pile[index_pile_to_player_1])
+                            {
                                 pile_hand.swap_remove(pos);
                             }
-                            if let Some(pos) = player_hand.iter().rposition(|c| *c == *card_player) {
+                            if let Some(pos) = player_hand.iter().rposition(|c| *c == *card_player)
+                            {
                                 player_hand.swap_remove(pos);
                             }
                             player_hand.push(iter_cards_pile[index_pile_to_player_0]);
@@ -486,37 +596,65 @@ impl RecursionTest {
             if inferred_constraints[player_loop].len() > 1 && inferred_constraints[6].len() > 1 {
                 for index_player_to_pile_0 in 0..iter_cards_player.len() {
                     for index_player_to_pile_1 in index_player_to_pile_0..iter_cards_player.len() {
-                        if index_player_to_pile_0 == index_player_to_pile_1 && player_count[iter_cards_player[index_player_to_pile_0] as usize] < 2 {
+                        if index_player_to_pile_0 == index_player_to_pile_1
+                            && player_count[iter_cards_player[index_player_to_pile_0] as usize] < 2
+                        {
                             // Checks that player has enough cards to move out
                             // TODO: OPTIMIZE Can shift this out of for loop actually
-                            continue // Ensure enough cards to move
+                            continue; // Ensure enough cards to move
                         }
                         // Check DF
                         for index_pile_to_player_0 in 0..iter_cards_pile.len() {
-                            if iter_cards_pile[index_pile_to_player_0] == iter_cards_player[index_player_to_pile_0] || iter_cards_pile[index_pile_to_player_0] == iter_cards_player[index_player_to_pile_1] {
+                            if iter_cards_pile[index_pile_to_player_0]
+                                == iter_cards_player[index_player_to_pile_0]
+                                || iter_cards_pile[index_pile_to_player_0]
+                                    == iter_cards_player[index_player_to_pile_1]
+                            {
                                 continue; // Avoid Duplicates
                             }
-                            for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
-                                if iter_cards_pile[index_pile_to_player_1] == iter_cards_player[index_player_to_pile_0] || iter_cards_pile[index_pile_to_player_1] == iter_cards_player[index_player_to_pile_1] {
+                            for index_pile_to_player_1 in
+                                index_pile_to_player_0..iter_cards_pile.len()
+                            {
+                                if iter_cards_pile[index_pile_to_player_1]
+                                    == iter_cards_player[index_player_to_pile_0]
+                                    || iter_cards_pile[index_pile_to_player_1]
+                                        == iter_cards_player[index_player_to_pile_1]
+                                {
                                     continue; // Avoid Duplicates
                                 }
-                                if index_pile_to_player_0 == index_pile_to_player_1 && (pile_count[iter_cards_pile[index_pile_to_player_0] as usize] < 2) {
+                                if index_pile_to_player_0 == index_pile_to_player_1
+                                    && (pile_count
+                                        [iter_cards_pile[index_pile_to_player_0] as usize]
+                                        < 2)
+                                {
                                     // Checks that player has enough cards to move out
                                     // TODO: OPTIMIZE Can shift this out of for loop actually
-                                    continue // Ensure enough cards to move
+                                    continue; // Ensure enough cards to move
                                 }
                                 let mut player_hand = inferred_constraints[player_loop].clone();
                                 let mut pile_hand = inferred_constraints[6].clone();
-                                if let Some(pos) = pile_hand.iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_0]) {
+                                if let Some(pos) = pile_hand
+                                    .iter()
+                                    .rposition(|c| *c == iter_cards_pile[index_pile_to_player_0])
+                                {
                                     pile_hand.swap_remove(pos);
                                 }
-                                if let Some(pos) = pile_hand.iter().rposition(|c| *c == iter_cards_pile[index_pile_to_player_1]) {
+                                if let Some(pos) = pile_hand
+                                    .iter()
+                                    .rposition(|c| *c == iter_cards_pile[index_pile_to_player_1])
+                                {
                                     pile_hand.swap_remove(pos);
                                 }
-                                if let Some(pos) = player_hand.iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_0]) {
+                                if let Some(pos) = player_hand
+                                    .iter()
+                                    .rposition(|c| *c == iter_cards_player[index_player_to_pile_0])
+                                {
                                     player_hand.swap_remove(pos);
                                 }
-                                if let Some(pos) = player_hand.iter().rposition(|c| *c == iter_cards_player[index_player_to_pile_1]) {
+                                if let Some(pos) = player_hand
+                                    .iter()
+                                    .rposition(|c| *c == iter_cards_player[index_player_to_pile_1])
+                                {
                                     player_hand.swap_remove(pos);
                                 }
                                 player_hand.push(iter_cards_pile[index_pile_to_player_0]);
@@ -527,7 +665,7 @@ impl RecursionTest {
                                 temp[player_loop] = player_hand.clone();
                                 temp[6] = pile_hand.clone();
                                 variants.push(temp);
-                            } 
+                            }
                         }
                     }
                 }
@@ -535,7 +673,12 @@ impl RecursionTest {
         }
         variants
     }
-    pub fn return_variants_exchange_private_3(player_loop: usize, draw: &Vec<Card>, relinquish: &Vec<Card>, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+    pub fn return_variants_exchange_private_3(
+        player_loop: usize,
+        draw: &Vec<Card>,
+        relinquish: &Vec<Card>,
+        inferred_constraints: &Vec<Vec<Card>>,
+    ) -> Vec<Vec<Vec<Card>>> {
         // TODO: [REFACTOR] maybe only need draw and relinquish?
         // TODO: [REFACTOR] I think this case might handle all cases?
         // TODO: [REFACTOR] I think don't need hand?
@@ -568,10 +711,13 @@ impl RecursionTest {
         }
         variants
     }
-    pub fn return_variants_reveal_relinquish_opt(reveal: Card, player_loop: usize, inferred_constraints: &Vec<Vec<Card>>) -> Vec<Vec<Vec<Card>>> {
+    pub fn return_variants_reveal_relinquish_opt(
+        reveal: Card,
+        player_loop: usize,
+        inferred_constraints: &Vec<Vec<Card>>,
+    ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
-        if inferred_constraints[6].len() == 3
-        && !inferred_constraints[6].contains(&reveal) {
+        if inferred_constraints[6].len() == 3 && !inferred_constraints[6].contains(&reveal) {
             // This state cannot be arrive after the reveal_redraw
             return Vec::with_capacity(0);
         }
@@ -587,7 +733,12 @@ impl RecursionTest {
             temp[player_loop] = player_hand.clone();
             temp[6] = pile_hand.clone();
             if temp[player_loop].len() < 3
-            && temp.iter().map(|v| v.iter().filter(|c| **c == reveal).count() as u8).sum::<u8>() < 4{
+                && temp
+                    .iter()
+                    .map(|v| v.iter().filter(|c| **c == reveal).count() as u8)
+                    .sum::<u8>()
+                    < 4
+            {
                 // TODO: Recurse here in other version
                 variants.push(temp);
             }
@@ -606,14 +757,14 @@ impl RecursionTest {
                     bool_move_from_pile_to_player = true;
                 }
                 player_hand.push(reveal);
-                
+
                 let mut temp = inferred_constraints.clone();
                 temp[player_loop] = player_hand.clone();
                 temp[6] = pile_hand.clone();
-                
+
                 // TODO: Recurse here in other version
                 variants.push(temp);
-                
+
                 if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
                     player_hand.swap_remove(pos);
                 }
@@ -621,7 +772,7 @@ impl RecursionTest {
                     pile_hand.push(reveal);
                 }
             }
-            
+
             // Card Source was from Pile
             if *card_player != reveal {
                 let mut bool_move_from_pile_to_player = false;
@@ -667,10 +818,10 @@ impl RecursionTest {
             //     let mut temp = inferred_constraints.clone();
             //     temp[player_loop] = player_hand.clone();
             //     temp[6] = pile_hand.clone();
-    
+
             //     // TODO: Recurse here in other version
             //     variants.push(temp);
-    
+
             //     if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
             //         player_hand.swap_remove(pos);
             //     }
@@ -688,10 +839,7 @@ impl RecursionTest {
         }
         variants
     }
-    pub fn gen_variants(
-        card_types: &[Card],
-        max_cards: usize,
-    ) -> Vec<Vec<Card>> {
+    pub fn gen_variants(card_types: &[Card], max_cards: usize) -> Vec<Vec<Card>> {
         let mut variants = Vec::new();
         // for each possible hand size 0..=max_cards
         for size in 0..=max_cards {
@@ -718,7 +866,7 @@ impl RecursionTest {
     // TODO: use a utility logger
     pub fn logger(log_file_name: &str, level: LevelFilter) {
         // Clear log file before initializing logger
-        
+
         let _ = Self::clear_log(log_file_name);
         let log_file = OpenOptions::new()
             .create(true)
@@ -726,7 +874,6 @@ impl RecursionTest {
             .append(true)
             .open(log_file_name)
             .expect("Failed to open log file");
-
 
         Builder::from_env(Env::default().default_filter_or("info"))
             .format(|buf, record| {
@@ -746,27 +893,53 @@ impl RecursionTest {
         Self::logger(log_file_name, LevelFilter::Info);
         let mut test_inferred_constraints: HashSet<Vec<Vec<Card>>> = HashSet::new();
         for player_hand in Self::gen_variants(&vec![Card::Ambassador, Card::Assassin], 2) {
-            'outer: for pile_hand in Self::gen_variants(&vec![Card::Ambassador, Card::Assassin, Card::Captain], 3) {
-                for card in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa] {
-                    if player_hand.iter().filter(|c| **c == card).count() + pile_hand.iter().filter(|c| **c == card).count() > 3 {
+            'outer: for pile_hand in
+                Self::gen_variants(&vec![Card::Ambassador, Card::Assassin, Card::Captain], 3)
+            {
+                for card in [
+                    Card::Ambassador,
+                    Card::Assassin,
+                    Card::Captain,
+                    Card::Duke,
+                    Card::Contessa,
+                ] {
+                    if player_hand.iter().filter(|c| **c == card).count()
+                        + pile_hand.iter().filter(|c| **c == card).count()
+                        > 3
+                    {
                         continue 'outer;
                     }
-                    test_inferred_constraints.insert(vec![player_hand.clone(), vec![], vec![], vec![], vec![], vec![], pile_hand.clone()]);
+                    test_inferred_constraints.insert(vec![
+                        player_hand.clone(),
+                        vec![],
+                        vec![],
+                        vec![],
+                        vec![],
+                        vec![],
+                        pile_hand.clone(),
+                    ]);
                 }
             }
         }
         // let mut symmetric_keys: HashSet<[u8; 10]> = HashSet::with_capacity(200);
         'outer: for item in test_inferred_constraints.iter() {
             for card_num in 0..5 {
-                if item.iter().map(|v| v.iter().filter(|c| **c as usize == card_num).count() as u8).sum::<u8>() > 3 {
+                if item
+                    .iter()
+                    .map(|v| v.iter().filter(|c| **c as usize == card_num).count() as u8)
+                    .sum::<u8>()
+                    > 3
+                {
                     continue 'outer;
                 }
             }
             // let reveal = Self::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);
             // log::info!("src rr none: {:?}", reveal);
-            let redraw = Self::return_variants_reveal_redraw(Card::Ambassador, Card::Assassin, 0, item);
+            let redraw =
+                Self::return_variants_reveal_redraw(Card::Ambassador, Card::Assassin, 0, item);
             log::info!("src rr draw: {:?}", redraw);
-            let redraw = Self::return_variants_reveal_redraw(Card::Ambassador, Card::Ambassador, 0, item);
+            let redraw =
+                Self::return_variants_reveal_redraw(Card::Ambassador, Card::Ambassador, 0, item);
             log::info!("src rr same: {:?}", redraw);
             // let relin = Self::return_variants_reveal_relinquish_opt(Card::Ambassador, 0, item);
             // log::info!("src rr rel: {:?}", relin);
@@ -775,7 +948,7 @@ impl RecursionTest {
             // let exchange_2 = Self::return_variants_exchange_opt(2, 0, item);
             // log::info!("src ex two: {:?}", exchange_2);
             // WRite a test for all cases, generate some start state, go fwd, then go bwd, then check if bwd generated item includes start state
-            
+
             // === START EXCHANGE CHOICE ===
             // let mut hand_count: [u8; 5] = [0; 5];
             // item[0].iter().for_each(|c| hand_count[*c as usize] += 1);
@@ -847,7 +1020,7 @@ impl RecursionTest {
             //                 if degrees_of_freedom_used + hand_plus_pile_count.iter().sum::<u8>() > 5{
             //                     continue 'inner;
             //                 }
-            //                 // destination hand must be  
+            //                 // destination hand must be
             //                 let draw = vec![Card::try_from(i).unwrap(), Card::try_from(j).unwrap()];
             //                 let relinquish = vec![Card::try_from(k).unwrap(), Card::try_from(l).unwrap()];
             //                 let exchange_private = Self::return_variants_exchange_private_3(0, &draw, &relinquish,item);
@@ -876,7 +1049,6 @@ impl RecursionTest {
             //     log::warn!("redraw relin failed constraint check");
             // }
             log::info!("dest: {:?}", item);
-
         }
         // for item in test_inferred_constraints.iter() {
         //     let cc = PathDependentCollectiveConstraint::return_variants_reveal_redraw_none_opt(Card::Ambassador, 0, item);

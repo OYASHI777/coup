@@ -8,7 +8,6 @@ use std::collections::{HashMap, HashSet};
 pub struct ReachProbability {
     // Either one of these
     // Use 1 if we do not care between Not possible and not reached states (according to current BR profile)
-
     player_reach: Vec<HashSet<String>>,
     // Use 2 if we need to use the Not possible states and Not reached (according to current BR profile) states separately
     // player_reach2: Vec<HashMap<String, bool>>,
@@ -23,14 +22,20 @@ impl ReachProbability {
     pub fn initialise() -> Self {
         let mut player_reach: Vec<HashSet<String>> = Vec::with_capacity(6);
         let mut player_reach_vec: Vec<Vec<String>> = Vec::with_capacity(6);
-        let card_arr: [&str; 15] = ["AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE", "EE"];
+        let card_arr: [&str; 15] = [
+            "AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE",
+            "EE",
+        ];
         for _ in 0..6 {
             let mut player_set: HashSet<String> = HashSet::with_capacity(15); // Change later
-            for card_str in card_arr.iter(){
+            for card_str in card_arr.iter() {
                 player_set.insert(card_str.to_string());
             }
             player_reach.push(player_set);
-            let player_vec: Vec<String> = card_arr.iter().map(|&card_str| card_str.to_string()).collect();
+            let player_vec: Vec<String> = card_arr
+                .iter()
+                .map(|&card_str| card_str.to_string())
+                .collect();
             player_reach_vec.push(player_vec);
         }
         Self {
@@ -75,11 +80,11 @@ impl ReachProbability {
             println!("Player {}: {:?}", idx, set);
         }
     }
-    pub fn wrong_naive_prune(&self ) -> bool {
+    pub fn wrong_naive_prune(&self) -> bool {
         // This is wrong because it prunes even when a player has 1. We still want to search if someone has 1.
         // Naive_prune checks if pi_-i (s_i) = 0
         // This is the probability that under the BR policy, any players will play to the current state
-            // assuming your actions play towards the current state
+        // assuming your actions play towards the current state
         // This is important if for some state, a player has reach prob of 0, and pi_-i(s_i) == 0, we prune the node!
         // This is the reach probability of being in the current state for each player
         //      Player
@@ -90,33 +95,33 @@ impl ReachProbability {
         // BB [1, 1, 0, 0, 1, 1]
         // BC [0, 0, 1, 0, 0, 0]
         // CC [1, 0, 1, 1, 0, 1]
-        // naive prune returns true if there is some combination of valid hands eg. "AAABBBCCCDDDEEE" that is valid, 
-            // and all players in that have a reach probability of 1
-            // In a best response policy, players play their best moves only so they are either 1 or 0 as in above
-            // The reachprob is thus stored as a HashSet of hands that have 1 as value for some player.
+        // naive prune returns true if there is some combination of valid hands eg. "AAABBBCCCDDDEEE" that is valid,
+        // and all players in that have a reach probability of 1
+        // In a best response policy, players play their best moves only so they are either 1 or 0 as in above
+        // The reachprob is thus stored as a HashSet of hands that have 1 as value for some player.
         // A combination of hands is valid if they satisfy the constraints of the game:
-            // For Coup: this just means there cannot be more than 3 of each card
+        // For Coup: this just means there cannot be more than 3 of each card
 
         // This takes max Time: of 200ms and min time of 6µs (1st item is true)
-            // This is actually alright as in the case of 200ms we save more future time of check leaf nodes
-            // This is also rarely the case as it would involve 15 states for each player leading to unreachable states, which is unrealistic
+        // This is actually alright as in the case of 200ms we save more future time of check leaf nodes
+        // This is also rarely the case as it would involve 15 states for each player leading to unreachable states, which is unrealistic
         // The extreme case almost never happens as impossible states are slowly removed due to public info like discard etc.
         // Ive only seen 16ms at worst
         // IF everyone has roughly 9 hands its still 3.2µs
-        
-        // In general this will take a long time if the product of the number of states for all player is high, 
-        // and the node will not be reached (and so we have to prune) 
-        // But in practice to construct such a thing is hard
-            // Having more states => more likely that a reach exists => low run time
-        // Also in practice the number of states wont be high
-            // At some turn, for the player choosing the next action
-            // for each state, they choose a Best Response (BR) which is just one action a
-            // If that action is chosen, the next history's reach probability for that state is 1 else 0 or and Impossible case
-            // So for some reach probability, the states in the HashSet will only be those whose best response in the previous round is to choose that action
-            // Given many actions, it is unlikely that there are many that are 1 in the first place
-            // Might also need to store a HashMap<> with the zeroes for seperability but the prune remains the same (i think)
 
-        // Normally you would check if they would play to the next state, 
+        // In general this will take a long time if the product of the number of states for all player is high,
+        // and the node will not be reached (and so we have to prune)
+        // But in practice to construct such a thing is hard
+        // Having more states => more likely that a reach exists => low run time
+        // Also in practice the number of states wont be high
+        // At some turn, for the player choosing the next action
+        // for each state, they choose a Best Response (BR) which is just one action a
+        // If that action is chosen, the next history's reach probability for that state is 1 else 0 or and Impossible case
+        // So for some reach probability, the states in the HashSet will only be those whose best response in the previous round is to choose that action
+        // Given many actions, it is unlikely that there are many that are 1 in the first place
+        // Might also need to store a HashMap<> with the zeroes for seperability but the prune remains the same (i think)
+
+        // Normally you would check if they would play to the next state,
         // but You can just create the next reach_prob by transitioning it
         // and run this function So its the same
 
@@ -128,14 +133,13 @@ impl ReachProbability {
         card_count.insert("D".to_string(), 0);
         card_count.insert("E".to_string(), 0);
         return self.recur_check(&mut card_count, 0);
-
     }
     pub fn recur_check(&self, card_count: &mut HashMap<String, usize>, player_id: usize) -> bool {
-        println!("card_count in node {} {:?}", player_id , card_count);
+        println!("card_count in node {} {:?}", player_id, card_count);
         if player_id == 5 {
-            'hand: for hand in &self.player_reach[player_id]{
+            'hand: for hand in &self.player_reach[player_id] {
                 let mut temp_hm: HashMap<String, usize> = HashMap::new();
-                for letter in hand.chars(){
+                for letter in hand.chars() {
                     *temp_hm.entry(letter.to_string()).or_insert(0) += 1;
                 }
                 for letter in hand.chars() {
@@ -149,9 +153,9 @@ impl ReachProbability {
             }
             return false;
         }
-        'hand: for hand in &self.player_reach[player_id]{
+        'hand: for hand in &self.player_reach[player_id] {
             let mut temp_hm: HashMap<String, usize> = HashMap::new();
-            for letter in hand.chars(){
+            for letter in hand.chars() {
                 *temp_hm.entry(letter.to_string()).or_insert(0) += 1;
             }
             for letter in hand.chars() {
@@ -161,8 +165,8 @@ impl ReachProbability {
                 }
             }
             // Updating letters if ok
-            for letter in hand.chars(){
-                if let Some(count) = card_count.get_mut(&letter.to_string()){
+            for letter in hand.chars() {
+                if let Some(count) = card_count.get_mut(&letter.to_string()) {
                     *count += 1;
                 } else {
                     panic!("card not found!");
@@ -173,23 +177,27 @@ impl ReachProbability {
                 return true;
             }
             // Reset and try next
-            for letter in hand.chars(){
-                if let Some(count) = card_count.get_mut(&letter.to_string()){
+            for letter in hand.chars() {
+                if let Some(count) = card_count.get_mut(&letter.to_string()) {
                     *count -= 1
                 } else {
                     panic!("card not found!");
                 }
-            } 
+            }
         }
         false
     }
-    pub fn info_state_recur_check(&self, card_count: &mut HashMap<String, usize>, id_vec: &Vec<usize>) -> bool {
+    pub fn info_state_recur_check(
+        &self,
+        card_count: &mut HashMap<String, usize>,
+        id_vec: &Vec<usize>,
+    ) -> bool {
         println!("card_count in node {:?}", card_count);
         let player_id = id_vec[0];
         if id_vec.len() == 1 {
-            'hand: for hand in &self.player_reach[player_id]{
+            'hand: for hand in &self.player_reach[player_id] {
                 let mut temp_hm: HashMap<String, usize> = HashMap::new();
-                for letter in hand.chars(){
+                for letter in hand.chars() {
                     *temp_hm.entry(letter.to_string()).or_insert(0) += 1;
                 }
                 for letter in hand.chars() {
@@ -206,9 +214,9 @@ impl ReachProbability {
         // Remove once only at the start
         let mut next_vec: Vec<usize> = id_vec.clone();
         next_vec.swap_remove(0);
-        'hand: for hand in &self.player_reach[player_id]{
+        'hand: for hand in &self.player_reach[player_id] {
             let mut temp_hm: HashMap<String, usize> = HashMap::new();
-            for letter in hand.chars(){
+            for letter in hand.chars() {
                 *temp_hm.entry(letter.to_string()).or_insert(0) += 1;
             }
             for letter in hand.chars() {
@@ -218,8 +226,8 @@ impl ReachProbability {
                 }
             }
             // Updating letters if ok
-            for letter in hand.chars(){
-                if let Some(count) = card_count.get_mut(&letter.to_string()){
+            for letter in hand.chars() {
+                if let Some(count) = card_count.get_mut(&letter.to_string()) {
                     *count += 1;
                 } else {
                     panic!("card not found!");
@@ -230,13 +238,13 @@ impl ReachProbability {
                 return true;
             }
             // Reset and try next
-            for letter in hand.chars(){
-                if let Some(count) = card_count.get_mut(&letter.to_string()){
+            for letter in hand.chars() {
+                if let Some(count) = card_count.get_mut(&letter.to_string()) {
                     *count -= 1
                 } else {
                     panic!("card not found!");
                 }
-            } 
+            }
         }
         false
     }
@@ -257,7 +265,7 @@ impl ReachProbability {
         card_count.insert("C".to_string(), 0);
         card_count.insert("D".to_string(), 0);
         card_count.insert("E".to_string(), 0);
-        for letter in hand.chars(){
+        for letter in hand.chars() {
             *card_count.entry(letter.to_string()).or_insert(0) += 1;
         }
         return self.info_state_recur_check(&mut card_count, &other_player_vec);
@@ -266,20 +274,24 @@ impl ReachProbability {
         // Checks if all states have reach prob of 0 or are not possible to reach
         // This is basically that all states do not have a prob of one, stored in player_reach
         // This is pruned because no player, in any infostate, in the Best Response Policy would ever play to this state
-        for hashset in self.player_reach.iter(){
-            if !hashset.is_empty(){
+        for hashset in self.player_reach.iter() {
+            if !hashset.is_empty() {
                 return false;
             }
         }
         true
     }
-    pub fn info_state_recur_check_vec(&self, card_count: &mut HashMap<String, usize>, id_vec: &Vec<usize>) -> bool {
+    pub fn info_state_recur_check_vec(
+        &self,
+        card_count: &mut HashMap<String, usize>,
+        id_vec: &Vec<usize>,
+    ) -> bool {
         println!("card_count in node {:?}", card_count);
         let player_id = id_vec[0];
         if id_vec.len() == 1 {
-            'hand: for hand in &self.player_reach_vec[player_id]{
+            'hand: for hand in &self.player_reach_vec[player_id] {
                 let mut temp_hm: HashMap<String, usize> = HashMap::new();
-                for letter in hand.chars(){
+                for letter in hand.chars() {
                     *temp_hm.entry(letter.to_string()).or_insert(0) += 1;
                 }
                 for letter in hand.chars() {
@@ -293,9 +305,9 @@ impl ReachProbability {
         }
         let mut next_vec: Vec<usize> = id_vec.clone();
         next_vec.swap_remove(0);
-        'hand: for hand in &self.player_reach_vec[player_id]{
+        'hand: for hand in &self.player_reach_vec[player_id] {
             let mut temp_hm: HashMap<String, usize> = HashMap::new();
-            for letter in hand.chars(){
+            for letter in hand.chars() {
                 *temp_hm.entry(letter.to_string()).or_insert(0) += 1;
             }
             for letter in hand.chars() {
@@ -303,8 +315,8 @@ impl ReachProbability {
                     continue 'hand;
                 }
             }
-            for letter in hand.chars(){
-                if let Some(count) = card_count.get_mut(&letter.to_string()){
+            for letter in hand.chars() {
+                if let Some(count) = card_count.get_mut(&letter.to_string()) {
                     *count += 1;
                 } else {
                     panic!("card not found!");
@@ -313,13 +325,13 @@ impl ReachProbability {
             if self.info_state_recur_check(card_count, &next_vec) {
                 return true;
             }
-            for letter in hand.chars(){
-                if let Some(count) = card_count.get_mut(&letter.to_string()){
+            for letter in hand.chars() {
+                if let Some(count) = card_count.get_mut(&letter.to_string()) {
                     *count -= 1
                 } else {
                     panic!("card not found!");
                 }
-            } 
+            }
         }
         false
     }
@@ -332,16 +344,15 @@ impl ReachProbability {
             }
         }
         let mut card_count: HashMap<String, usize> = HashMap::new();
-        for letter in "ABCDE".chars(){
+        for letter in "ABCDE".chars() {
             card_count.insert(letter.to_string(), 0);
         }
-        for letter in hand.chars(){
+        for letter in hand.chars() {
             *card_count.entry(letter.to_string()).or_insert(0) += 1;
         }
         return self.info_state_recur_check(&mut card_count, &other_player_vec);
     }
 }
-
 
 // struct PCMCCFR {
 //     state_reach_probability: Vec<HashMap<String, >>

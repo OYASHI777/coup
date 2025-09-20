@@ -27,7 +27,7 @@ pub enum EngineState {
     ForeignAidBlockChallengerFailed(ForeignAidBlockChallengerFailed),
     // No Challenge => TurnStart/TurnStartCoup/ForcedCoup (+3 Coins)
     // Challenge => TaxChallenged
-    TaxInvitesChallenge(TaxInvitesChallenge), 
+    TaxInvitesChallenge(TaxInvitesChallenge),
     // Challenged RevealRedraw => TaxChallengerFailed (+3 Coins)
     // Challenged Discard (Not Duke)=> TurnStart/TurnStartCoup/ForcedCoup
     TaxChallenged(TaxChallenged),
@@ -94,22 +94,30 @@ pub enum EngineState {
 pub trait CoupTransition {
     fn state_enter_update(&mut self, game_data: &mut GameData);
     fn state_enter_reverse(&mut self, game_data: &mut GameData);
-    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState;
+    fn state_leave_update(
+        &self,
+        action: &ActionObservation,
+        game_data: &mut GameData,
+    ) -> EngineState;
     fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData);
     fn action_update(action: &ActionObservation, game_data: &mut GameData) {
         match action {
             ActionObservation::Income { player_id } => {
                 game_data.add_coins(*player_id, GAIN_INCOME);
-            },
+            }
             ActionObservation::Assassinate { player_id, .. } => {
                 game_data.sub_coins(*player_id, COST_ASSASSINATE);
-            },
+            }
             ActionObservation::Coup { player_id, .. } => {
                 game_data.sub_coins(*player_id, COST_COUP);
-            },
-            ActionObservation::Discard { player_id, no_cards, .. } => {
+            }
+            ActionObservation::Discard {
+                player_id,
+                no_cards,
+                ..
+            } => {
                 game_data.sub_influence(*player_id, *no_cards as u8);
-            },
+            }
             _ => {}
         }
     }
@@ -117,16 +125,20 @@ pub trait CoupTransition {
         match action {
             ActionObservation::Income { player_id } => {
                 game_data.sub_coins(*player_id, GAIN_INCOME);
-            },
+            }
             ActionObservation::Assassinate { player_id, .. } => {
                 game_data.add_coins(*player_id, COST_ASSASSINATE);
-            },
+            }
             ActionObservation::Coup { player_id, .. } => {
                 game_data.add_coins(*player_id, COST_COUP);
-            },
-            ActionObservation::Discard { player_id, no_cards, .. } => {
+            }
+            ActionObservation::Discard {
+                player_id,
+                no_cards,
+                ..
+            } => {
                 game_data.add_influence(*player_id, *no_cards as u8);
-            },
+            }
             _ => {}
         }
     }
@@ -138,33 +150,87 @@ impl CoupTransition for EngineState {
             EngineState::TurnStart(turn_start) => turn_start.state_enter_update(game_data),
             EngineState::End(end) => end.state_enter_update(game_data),
             EngineState::CoupHit(coup_hit) => coup_hit.state_enter_update(game_data),
-            EngineState::ForeignAidInvitesBlock(foreign_aid_invites_block) => foreign_aid_invites_block.state_enter_update(game_data),
-            EngineState::ForeignAidBlockInvitesChallenge(foreign_aid_block_invites_challenge) => foreign_aid_block_invites_challenge.state_enter_update(game_data),
-            EngineState::ForeignAidBlockChallenged(foreign_aid_block_challenged) => foreign_aid_block_challenged.state_enter_update(game_data),
-            EngineState::ForeignAidBlockChallengerFailed(foreign_aid_block_challenger_failed) => foreign_aid_block_challenger_failed.state_enter_update(game_data),
-            EngineState::TaxInvitesChallenge(tax_invites_challenge) => tax_invites_challenge.state_enter_update(game_data),
-            EngineState::TaxChallenged(tax_challenged) => tax_challenged.state_enter_update(game_data),
-            EngineState::TaxChallengerFailed(tax_challenger_failed) => tax_challenger_failed.state_enter_update(game_data),
-            EngineState::StealInvitesChallenge(steal_invites_challenge) => steal_invites_challenge.state_enter_update(game_data),
-            EngineState::StealChallenged(steal_challenged) => steal_challenged.state_enter_update(game_data),
-            EngineState::StealChallengerFailed(steal_challenger_failed) => steal_challenger_failed.state_enter_update(game_data),
-            EngineState::StealInvitesBlock(steal_invites_block) => steal_invites_block.state_enter_update(game_data),
-            EngineState::StealBlockInvitesChallenge(steal_block_invites_challenge) => steal_block_invites_challenge.state_enter_update(game_data),
-            EngineState::StealBlockChallenged(steal_block_challenged) => steal_block_challenged.state_enter_update(game_data),
-            EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => steal_block_challenger_failed.state_enter_update(game_data),
-            EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => exchange_invites_challenge.state_enter_update(game_data),
-            EngineState::ExchangeDrawing(exchange_drawing) => exchange_drawing.state_enter_update(game_data),
-            EngineState::ExchangeDrawn(exchange_drawn) => exchange_drawn.state_enter_update(game_data),
-            EngineState::ExchangeChallenged(exchange_challenged) => exchange_challenged.state_enter_update(game_data),
-            EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => exchange_challenger_failed.state_enter_update(game_data),
-            EngineState::AssassinateInvitesChallenge(assassinate_invites_challenge) => assassinate_invites_challenge.state_enter_update(game_data),
-            EngineState::AssassinateInvitesBlock(assassinate_invites_block) => assassinate_invites_block.state_enter_update(game_data),
-            EngineState::AssassinateBlockInvitesChallenge(assassinate_block_invites_challenge) => assassinate_block_invites_challenge.state_enter_update(game_data),
-            EngineState::AssassinateBlockChallenged(assassinate_block_challenged) => assassinate_block_challenged.state_enter_update(game_data),
-            EngineState::AssassinateBlockChallengerFailed(assassinate_block_challenger_failed) => assassinate_block_challenger_failed.state_enter_update(game_data),
-            EngineState::AssassinateSucceeded(assassinate_succeeded) => assassinate_succeeded.state_enter_update(game_data),
-            EngineState::AssassinateChallenged(assassinate_challenged) => assassinate_challenged.state_enter_update(game_data),
-            EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => assassinate_challenger_failed.state_enter_update(game_data),
+            EngineState::ForeignAidInvitesBlock(foreign_aid_invites_block) => {
+                foreign_aid_invites_block.state_enter_update(game_data)
+            }
+            EngineState::ForeignAidBlockInvitesChallenge(foreign_aid_block_invites_challenge) => {
+                foreign_aid_block_invites_challenge.state_enter_update(game_data)
+            }
+            EngineState::ForeignAidBlockChallenged(foreign_aid_block_challenged) => {
+                foreign_aid_block_challenged.state_enter_update(game_data)
+            }
+            EngineState::ForeignAidBlockChallengerFailed(foreign_aid_block_challenger_failed) => {
+                foreign_aid_block_challenger_failed.state_enter_update(game_data)
+            }
+            EngineState::TaxInvitesChallenge(tax_invites_challenge) => {
+                tax_invites_challenge.state_enter_update(game_data)
+            }
+            EngineState::TaxChallenged(tax_challenged) => {
+                tax_challenged.state_enter_update(game_data)
+            }
+            EngineState::TaxChallengerFailed(tax_challenger_failed) => {
+                tax_challenger_failed.state_enter_update(game_data)
+            }
+            EngineState::StealInvitesChallenge(steal_invites_challenge) => {
+                steal_invites_challenge.state_enter_update(game_data)
+            }
+            EngineState::StealChallenged(steal_challenged) => {
+                steal_challenged.state_enter_update(game_data)
+            }
+            EngineState::StealChallengerFailed(steal_challenger_failed) => {
+                steal_challenger_failed.state_enter_update(game_data)
+            }
+            EngineState::StealInvitesBlock(steal_invites_block) => {
+                steal_invites_block.state_enter_update(game_data)
+            }
+            EngineState::StealBlockInvitesChallenge(steal_block_invites_challenge) => {
+                steal_block_invites_challenge.state_enter_update(game_data)
+            }
+            EngineState::StealBlockChallenged(steal_block_challenged) => {
+                steal_block_challenged.state_enter_update(game_data)
+            }
+            EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => {
+                steal_block_challenger_failed.state_enter_update(game_data)
+            }
+            EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => {
+                exchange_invites_challenge.state_enter_update(game_data)
+            }
+            EngineState::ExchangeDrawing(exchange_drawing) => {
+                exchange_drawing.state_enter_update(game_data)
+            }
+            EngineState::ExchangeDrawn(exchange_drawn) => {
+                exchange_drawn.state_enter_update(game_data)
+            }
+            EngineState::ExchangeChallenged(exchange_challenged) => {
+                exchange_challenged.state_enter_update(game_data)
+            }
+            EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => {
+                exchange_challenger_failed.state_enter_update(game_data)
+            }
+            EngineState::AssassinateInvitesChallenge(assassinate_invites_challenge) => {
+                assassinate_invites_challenge.state_enter_update(game_data)
+            }
+            EngineState::AssassinateInvitesBlock(assassinate_invites_block) => {
+                assassinate_invites_block.state_enter_update(game_data)
+            }
+            EngineState::AssassinateBlockInvitesChallenge(assassinate_block_invites_challenge) => {
+                assassinate_block_invites_challenge.state_enter_update(game_data)
+            }
+            EngineState::AssassinateBlockChallenged(assassinate_block_challenged) => {
+                assassinate_block_challenged.state_enter_update(game_data)
+            }
+            EngineState::AssassinateBlockChallengerFailed(assassinate_block_challenger_failed) => {
+                assassinate_block_challenger_failed.state_enter_update(game_data)
+            }
+            EngineState::AssassinateSucceeded(assassinate_succeeded) => {
+                assassinate_succeeded.state_enter_update(game_data)
+            }
+            EngineState::AssassinateChallenged(assassinate_challenged) => {
+                assassinate_challenged.state_enter_update(game_data)
+            }
+            EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => {
+                assassinate_challenger_failed.state_enter_update(game_data)
+            }
         }
     }
     fn state_enter_reverse(&mut self, game_data: &mut GameData) {
@@ -172,67 +238,179 @@ impl CoupTransition for EngineState {
             EngineState::TurnStart(turn_start) => turn_start.state_enter_reverse(game_data),
             EngineState::End(end) => end.state_enter_reverse(game_data),
             EngineState::CoupHit(coup_hit) => coup_hit.state_enter_reverse(game_data),
-            EngineState::ForeignAidInvitesBlock(foreign_aid_invites_block) => foreign_aid_invites_block.state_enter_reverse(game_data),
-            EngineState::ForeignAidBlockInvitesChallenge(foreign_aid_block_invites_challenge) => foreign_aid_block_invites_challenge.state_enter_reverse(game_data),
-            EngineState::ForeignAidBlockChallenged(foreign_aid_block_challenged) => foreign_aid_block_challenged.state_enter_reverse(game_data),
-            EngineState::ForeignAidBlockChallengerFailed(foreign_aid_block_challenger_failed) => foreign_aid_block_challenger_failed.state_enter_reverse(game_data),
-            EngineState::TaxInvitesChallenge(tax_invites_challenge) => tax_invites_challenge.state_enter_reverse(game_data),
-            EngineState::TaxChallenged(tax_challenged) => tax_challenged.state_enter_reverse(game_data),
-            EngineState::TaxChallengerFailed(tax_challenger_failed) => tax_challenger_failed.state_enter_reverse(game_data),
-            EngineState::StealInvitesChallenge(steal_invites_challenge) => steal_invites_challenge.state_enter_reverse(game_data),
-            EngineState::StealChallenged(steal_challenged) => steal_challenged.state_enter_reverse(game_data),
-            EngineState::StealChallengerFailed(steal_challenger_failed) => steal_challenger_failed.state_enter_reverse(game_data),
-            EngineState::StealInvitesBlock(steal_invites_block) => steal_invites_block.state_enter_reverse(game_data),
-            EngineState::StealBlockInvitesChallenge(steal_block_invites_challenge) => steal_block_invites_challenge.state_enter_reverse(game_data),
-            EngineState::StealBlockChallenged(steal_block_challenged) => steal_block_challenged.state_enter_reverse(game_data),
-            EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => steal_block_challenger_failed.state_enter_reverse(game_data),
-            EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => exchange_invites_challenge.state_enter_reverse(game_data),
-            EngineState::ExchangeDrawing(exchange_drawing) => exchange_drawing.state_enter_reverse(game_data),
-            EngineState::ExchangeDrawn(exchange_drawn) => exchange_drawn.state_enter_reverse(game_data),
-            EngineState::ExchangeChallenged(exchange_challenged) => exchange_challenged.state_enter_reverse(game_data),
-            EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => exchange_challenger_failed.state_enter_reverse(game_data),
-            EngineState::AssassinateInvitesChallenge(assassinate_invites_challenge) => assassinate_invites_challenge.state_enter_reverse(game_data),
-            EngineState::AssassinateInvitesBlock(assassinate_invites_block) => assassinate_invites_block.state_enter_reverse(game_data),
-            EngineState::AssassinateBlockInvitesChallenge(assassinate_block_invites_challenge) => assassinate_block_invites_challenge.state_enter_reverse(game_data),
-            EngineState::AssassinateBlockChallenged(assassinate_block_challenged) => assassinate_block_challenged.state_enter_reverse(game_data),
-            EngineState::AssassinateBlockChallengerFailed(assassinate_block_challenger_failed) => assassinate_block_challenger_failed.state_enter_reverse(game_data),
-            EngineState::AssassinateSucceeded(assassinate_succeeded) => assassinate_succeeded.state_enter_reverse(game_data),
-            EngineState::AssassinateChallenged(assassinate_challenged) => assassinate_challenged.state_enter_reverse(game_data),
-            EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => assassinate_challenger_failed.state_enter_reverse(game_data),
+            EngineState::ForeignAidInvitesBlock(foreign_aid_invites_block) => {
+                foreign_aid_invites_block.state_enter_reverse(game_data)
+            }
+            EngineState::ForeignAidBlockInvitesChallenge(foreign_aid_block_invites_challenge) => {
+                foreign_aid_block_invites_challenge.state_enter_reverse(game_data)
+            }
+            EngineState::ForeignAidBlockChallenged(foreign_aid_block_challenged) => {
+                foreign_aid_block_challenged.state_enter_reverse(game_data)
+            }
+            EngineState::ForeignAidBlockChallengerFailed(foreign_aid_block_challenger_failed) => {
+                foreign_aid_block_challenger_failed.state_enter_reverse(game_data)
+            }
+            EngineState::TaxInvitesChallenge(tax_invites_challenge) => {
+                tax_invites_challenge.state_enter_reverse(game_data)
+            }
+            EngineState::TaxChallenged(tax_challenged) => {
+                tax_challenged.state_enter_reverse(game_data)
+            }
+            EngineState::TaxChallengerFailed(tax_challenger_failed) => {
+                tax_challenger_failed.state_enter_reverse(game_data)
+            }
+            EngineState::StealInvitesChallenge(steal_invites_challenge) => {
+                steal_invites_challenge.state_enter_reverse(game_data)
+            }
+            EngineState::StealChallenged(steal_challenged) => {
+                steal_challenged.state_enter_reverse(game_data)
+            }
+            EngineState::StealChallengerFailed(steal_challenger_failed) => {
+                steal_challenger_failed.state_enter_reverse(game_data)
+            }
+            EngineState::StealInvitesBlock(steal_invites_block) => {
+                steal_invites_block.state_enter_reverse(game_data)
+            }
+            EngineState::StealBlockInvitesChallenge(steal_block_invites_challenge) => {
+                steal_block_invites_challenge.state_enter_reverse(game_data)
+            }
+            EngineState::StealBlockChallenged(steal_block_challenged) => {
+                steal_block_challenged.state_enter_reverse(game_data)
+            }
+            EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => {
+                steal_block_challenger_failed.state_enter_reverse(game_data)
+            }
+            EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => {
+                exchange_invites_challenge.state_enter_reverse(game_data)
+            }
+            EngineState::ExchangeDrawing(exchange_drawing) => {
+                exchange_drawing.state_enter_reverse(game_data)
+            }
+            EngineState::ExchangeDrawn(exchange_drawn) => {
+                exchange_drawn.state_enter_reverse(game_data)
+            }
+            EngineState::ExchangeChallenged(exchange_challenged) => {
+                exchange_challenged.state_enter_reverse(game_data)
+            }
+            EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => {
+                exchange_challenger_failed.state_enter_reverse(game_data)
+            }
+            EngineState::AssassinateInvitesChallenge(assassinate_invites_challenge) => {
+                assassinate_invites_challenge.state_enter_reverse(game_data)
+            }
+            EngineState::AssassinateInvitesBlock(assassinate_invites_block) => {
+                assassinate_invites_block.state_enter_reverse(game_data)
+            }
+            EngineState::AssassinateBlockInvitesChallenge(assassinate_block_invites_challenge) => {
+                assassinate_block_invites_challenge.state_enter_reverse(game_data)
+            }
+            EngineState::AssassinateBlockChallenged(assassinate_block_challenged) => {
+                assassinate_block_challenged.state_enter_reverse(game_data)
+            }
+            EngineState::AssassinateBlockChallengerFailed(assassinate_block_challenger_failed) => {
+                assassinate_block_challenger_failed.state_enter_reverse(game_data)
+            }
+            EngineState::AssassinateSucceeded(assassinate_succeeded) => {
+                assassinate_succeeded.state_enter_reverse(game_data)
+            }
+            EngineState::AssassinateChallenged(assassinate_challenged) => {
+                assassinate_challenged.state_enter_reverse(game_data)
+            }
+            EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => {
+                assassinate_challenger_failed.state_enter_reverse(game_data)
+            }
         }
     }
-    fn state_leave_update(&self, action: &ActionObservation, game_data: &mut GameData) -> EngineState {
+    fn state_leave_update(
+        &self,
+        action: &ActionObservation,
+        game_data: &mut GameData,
+    ) -> EngineState {
         match self {
             EngineState::TurnStart(turn_start) => turn_start.state_leave_update(action, game_data),
             EngineState::End(end) => end.state_leave_update(action, game_data),
             EngineState::CoupHit(coup_hit) => coup_hit.state_leave_update(action, game_data),
-            EngineState::ForeignAidInvitesBlock(foreign_aid_invites_block) => foreign_aid_invites_block.state_leave_update(action, game_data),
-            EngineState::ForeignAidBlockInvitesChallenge(foreign_aid_block_invites_challenge) => foreign_aid_block_invites_challenge.state_leave_update(action, game_data),
-            EngineState::ForeignAidBlockChallenged(foreign_aid_block_challenged) => foreign_aid_block_challenged.state_leave_update(action, game_data),
-            EngineState::ForeignAidBlockChallengerFailed(foreign_aid_block_challenger_failed) => foreign_aid_block_challenger_failed.state_leave_update(action, game_data),
-            EngineState::TaxInvitesChallenge(tax_invites_challenge) => tax_invites_challenge.state_leave_update(action, game_data),
-            EngineState::TaxChallenged(tax_challenged) => tax_challenged.state_leave_update(action, game_data),
-            EngineState::TaxChallengerFailed(tax_challenger_failed) => tax_challenger_failed.state_leave_update(action, game_data),
-            EngineState::StealInvitesChallenge(steal_invites_challenge) => steal_invites_challenge.state_leave_update(action, game_data),
-            EngineState::StealChallenged(steal_challenged) => steal_challenged.state_leave_update(action, game_data),
-            EngineState::StealChallengerFailed(steal_challenger_failed) => steal_challenger_failed.state_leave_update(action, game_data),
-            EngineState::StealInvitesBlock(steal_invites_block) => steal_invites_block.state_leave_update(action, game_data),
-            EngineState::StealBlockInvitesChallenge(steal_block_invites_challenge) => steal_block_invites_challenge.state_leave_update(action, game_data),
-            EngineState::StealBlockChallenged(steal_block_challenged) => steal_block_challenged.state_leave_update(action, game_data),
-            EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => steal_block_challenger_failed.state_leave_update(action, game_data),
-            EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => exchange_invites_challenge.state_leave_update(action, game_data),
-            EngineState::ExchangeDrawing(exchange_drawing) => exchange_drawing.state_leave_update(action, game_data),
-            EngineState::ExchangeDrawn(exchange_drawn) => exchange_drawn.state_leave_update(action, game_data),
-            EngineState::ExchangeChallenged(exchange_challenged) => exchange_challenged.state_leave_update(action, game_data),
-            EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => exchange_challenger_failed.state_leave_update(action, game_data),
-            EngineState::AssassinateInvitesChallenge(assassinate_invites_challenge) => assassinate_invites_challenge.state_leave_update(action, game_data),
-            EngineState::AssassinateInvitesBlock(assassinate_invites_block) => assassinate_invites_block.state_leave_update(action, game_data),
-            EngineState::AssassinateBlockInvitesChallenge(assassinate_block_invites_challenge) => assassinate_block_invites_challenge.state_leave_update(action, game_data),
-            EngineState::AssassinateBlockChallenged(assassinate_block_challenged) => assassinate_block_challenged.state_leave_update(action, game_data),
-            EngineState::AssassinateBlockChallengerFailed(assassinate_block_challenger_failed) => assassinate_block_challenger_failed.state_leave_update(action, game_data),
-            EngineState::AssassinateSucceeded(assassinate_succeeded) => assassinate_succeeded.state_leave_update(action, game_data),
-            EngineState::AssassinateChallenged(assassinate_challenged) => assassinate_challenged.state_leave_update(action, game_data),
-            EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => assassinate_challenger_failed.state_leave_update(action, game_data),
+            EngineState::ForeignAidInvitesBlock(foreign_aid_invites_block) => {
+                foreign_aid_invites_block.state_leave_update(action, game_data)
+            }
+            EngineState::ForeignAidBlockInvitesChallenge(foreign_aid_block_invites_challenge) => {
+                foreign_aid_block_invites_challenge.state_leave_update(action, game_data)
+            }
+            EngineState::ForeignAidBlockChallenged(foreign_aid_block_challenged) => {
+                foreign_aid_block_challenged.state_leave_update(action, game_data)
+            }
+            EngineState::ForeignAidBlockChallengerFailed(foreign_aid_block_challenger_failed) => {
+                foreign_aid_block_challenger_failed.state_leave_update(action, game_data)
+            }
+            EngineState::TaxInvitesChallenge(tax_invites_challenge) => {
+                tax_invites_challenge.state_leave_update(action, game_data)
+            }
+            EngineState::TaxChallenged(tax_challenged) => {
+                tax_challenged.state_leave_update(action, game_data)
+            }
+            EngineState::TaxChallengerFailed(tax_challenger_failed) => {
+                tax_challenger_failed.state_leave_update(action, game_data)
+            }
+            EngineState::StealInvitesChallenge(steal_invites_challenge) => {
+                steal_invites_challenge.state_leave_update(action, game_data)
+            }
+            EngineState::StealChallenged(steal_challenged) => {
+                steal_challenged.state_leave_update(action, game_data)
+            }
+            EngineState::StealChallengerFailed(steal_challenger_failed) => {
+                steal_challenger_failed.state_leave_update(action, game_data)
+            }
+            EngineState::StealInvitesBlock(steal_invites_block) => {
+                steal_invites_block.state_leave_update(action, game_data)
+            }
+            EngineState::StealBlockInvitesChallenge(steal_block_invites_challenge) => {
+                steal_block_invites_challenge.state_leave_update(action, game_data)
+            }
+            EngineState::StealBlockChallenged(steal_block_challenged) => {
+                steal_block_challenged.state_leave_update(action, game_data)
+            }
+            EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => {
+                steal_block_challenger_failed.state_leave_update(action, game_data)
+            }
+            EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => {
+                exchange_invites_challenge.state_leave_update(action, game_data)
+            }
+            EngineState::ExchangeDrawing(exchange_drawing) => {
+                exchange_drawing.state_leave_update(action, game_data)
+            }
+            EngineState::ExchangeDrawn(exchange_drawn) => {
+                exchange_drawn.state_leave_update(action, game_data)
+            }
+            EngineState::ExchangeChallenged(exchange_challenged) => {
+                exchange_challenged.state_leave_update(action, game_data)
+            }
+            EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => {
+                exchange_challenger_failed.state_leave_update(action, game_data)
+            }
+            EngineState::AssassinateInvitesChallenge(assassinate_invites_challenge) => {
+                assassinate_invites_challenge.state_leave_update(action, game_data)
+            }
+            EngineState::AssassinateInvitesBlock(assassinate_invites_block) => {
+                assassinate_invites_block.state_leave_update(action, game_data)
+            }
+            EngineState::AssassinateBlockInvitesChallenge(assassinate_block_invites_challenge) => {
+                assassinate_block_invites_challenge.state_leave_update(action, game_data)
+            }
+            EngineState::AssassinateBlockChallenged(assassinate_block_challenged) => {
+                assassinate_block_challenged.state_leave_update(action, game_data)
+            }
+            EngineState::AssassinateBlockChallengerFailed(assassinate_block_challenger_failed) => {
+                assassinate_block_challenger_failed.state_leave_update(action, game_data)
+            }
+            EngineState::AssassinateSucceeded(assassinate_succeeded) => {
+                assassinate_succeeded.state_leave_update(action, game_data)
+            }
+            EngineState::AssassinateChallenged(assassinate_challenged) => {
+                assassinate_challenged.state_leave_update(action, game_data)
+            }
+            EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => {
+                assassinate_challenger_failed.state_leave_update(action, game_data)
+            }
         }
     }
     // TODO: Remove all panics where not needed, pop can be trust based or use debug_assert!
@@ -241,33 +419,87 @@ impl CoupTransition for EngineState {
             EngineState::TurnStart(turn_start) => turn_start.state_leave_reverse(action, game_data),
             EngineState::End(end) => end.state_leave_reverse(action, game_data),
             EngineState::CoupHit(coup_hit) => coup_hit.state_leave_reverse(action, game_data),
-            EngineState::ForeignAidInvitesBlock(foreign_aid_invites_block) => foreign_aid_invites_block.state_leave_reverse(action, game_data),
-            EngineState::ForeignAidBlockInvitesChallenge(foreign_aid_block_invites_challenge) => foreign_aid_block_invites_challenge.state_leave_reverse(action, game_data),
-            EngineState::ForeignAidBlockChallenged(foreign_aid_block_challenged) => foreign_aid_block_challenged.state_leave_reverse(action, game_data),
-            EngineState::ForeignAidBlockChallengerFailed(foreign_aid_block_challenger_failed) => foreign_aid_block_challenger_failed.state_leave_reverse(action, game_data),
-            EngineState::TaxInvitesChallenge(tax_invites_challenge) => tax_invites_challenge.state_leave_reverse(action, game_data),
-            EngineState::TaxChallenged(tax_challenged) => tax_challenged.state_leave_reverse(action, game_data),
-            EngineState::TaxChallengerFailed(tax_challenger_failed) => tax_challenger_failed.state_leave_reverse(action, game_data),
-            EngineState::StealInvitesChallenge(steal_invites_challenge) => steal_invites_challenge.state_leave_reverse(action, game_data),
-            EngineState::StealChallenged(steal_challenged) => steal_challenged.state_leave_reverse(action, game_data),
-            EngineState::StealChallengerFailed(steal_challenger_failed) => steal_challenger_failed.state_leave_reverse(action, game_data),
-            EngineState::StealInvitesBlock(steal_invites_block) => steal_invites_block.state_leave_reverse(action, game_data),
-            EngineState::StealBlockInvitesChallenge(steal_block_invites_challenge) => steal_block_invites_challenge.state_leave_reverse(action, game_data),
-            EngineState::StealBlockChallenged(steal_block_challenged) => steal_block_challenged.state_leave_reverse(action, game_data),
-            EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => steal_block_challenger_failed.state_leave_reverse(action, game_data),
-            EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => exchange_invites_challenge.state_leave_reverse(action, game_data),
-            EngineState::ExchangeDrawing(exchange_drawing) => exchange_drawing.state_leave_reverse(action, game_data),
-            EngineState::ExchangeDrawn(exchange_drawn) => exchange_drawn.state_leave_reverse(action, game_data),
-            EngineState::ExchangeChallenged(exchange_challenged) => exchange_challenged.state_leave_reverse(action, game_data),
-            EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => exchange_challenger_failed.state_leave_reverse(action, game_data),
-            EngineState::AssassinateInvitesChallenge(assassinate_invites_challenge) => assassinate_invites_challenge.state_leave_reverse(action, game_data),
-            EngineState::AssassinateInvitesBlock(assassinate_invites_block) => assassinate_invites_block.state_leave_reverse(action, game_data),
-            EngineState::AssassinateBlockInvitesChallenge(assassinate_block_invites_challenge) => assassinate_block_invites_challenge.state_leave_reverse(action, game_data),
-            EngineState::AssassinateBlockChallenged(assassinate_block_challenged) => assassinate_block_challenged.state_leave_reverse(action, game_data),
-            EngineState::AssassinateBlockChallengerFailed(assassinate_block_challenger_failed) => assassinate_block_challenger_failed.state_leave_reverse(action, game_data),
-            EngineState::AssassinateSucceeded(assassinate_succeeded) => assassinate_succeeded.state_leave_reverse(action, game_data),
-            EngineState::AssassinateChallenged(assassinate_challenged) => assassinate_challenged.state_leave_reverse(action, game_data),
-            EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => assassinate_challenger_failed.state_leave_reverse(action, game_data),
+            EngineState::ForeignAidInvitesBlock(foreign_aid_invites_block) => {
+                foreign_aid_invites_block.state_leave_reverse(action, game_data)
+            }
+            EngineState::ForeignAidBlockInvitesChallenge(foreign_aid_block_invites_challenge) => {
+                foreign_aid_block_invites_challenge.state_leave_reverse(action, game_data)
+            }
+            EngineState::ForeignAidBlockChallenged(foreign_aid_block_challenged) => {
+                foreign_aid_block_challenged.state_leave_reverse(action, game_data)
+            }
+            EngineState::ForeignAidBlockChallengerFailed(foreign_aid_block_challenger_failed) => {
+                foreign_aid_block_challenger_failed.state_leave_reverse(action, game_data)
+            }
+            EngineState::TaxInvitesChallenge(tax_invites_challenge) => {
+                tax_invites_challenge.state_leave_reverse(action, game_data)
+            }
+            EngineState::TaxChallenged(tax_challenged) => {
+                tax_challenged.state_leave_reverse(action, game_data)
+            }
+            EngineState::TaxChallengerFailed(tax_challenger_failed) => {
+                tax_challenger_failed.state_leave_reverse(action, game_data)
+            }
+            EngineState::StealInvitesChallenge(steal_invites_challenge) => {
+                steal_invites_challenge.state_leave_reverse(action, game_data)
+            }
+            EngineState::StealChallenged(steal_challenged) => {
+                steal_challenged.state_leave_reverse(action, game_data)
+            }
+            EngineState::StealChallengerFailed(steal_challenger_failed) => {
+                steal_challenger_failed.state_leave_reverse(action, game_data)
+            }
+            EngineState::StealInvitesBlock(steal_invites_block) => {
+                steal_invites_block.state_leave_reverse(action, game_data)
+            }
+            EngineState::StealBlockInvitesChallenge(steal_block_invites_challenge) => {
+                steal_block_invites_challenge.state_leave_reverse(action, game_data)
+            }
+            EngineState::StealBlockChallenged(steal_block_challenged) => {
+                steal_block_challenged.state_leave_reverse(action, game_data)
+            }
+            EngineState::StealBlockChallengerFailed(steal_block_challenger_failed) => {
+                steal_block_challenger_failed.state_leave_reverse(action, game_data)
+            }
+            EngineState::ExchangeInvitesChallenge(exchange_invites_challenge) => {
+                exchange_invites_challenge.state_leave_reverse(action, game_data)
+            }
+            EngineState::ExchangeDrawing(exchange_drawing) => {
+                exchange_drawing.state_leave_reverse(action, game_data)
+            }
+            EngineState::ExchangeDrawn(exchange_drawn) => {
+                exchange_drawn.state_leave_reverse(action, game_data)
+            }
+            EngineState::ExchangeChallenged(exchange_challenged) => {
+                exchange_challenged.state_leave_reverse(action, game_data)
+            }
+            EngineState::ExchangeChallengerFailed(exchange_challenger_failed) => {
+                exchange_challenger_failed.state_leave_reverse(action, game_data)
+            }
+            EngineState::AssassinateInvitesChallenge(assassinate_invites_challenge) => {
+                assassinate_invites_challenge.state_leave_reverse(action, game_data)
+            }
+            EngineState::AssassinateInvitesBlock(assassinate_invites_block) => {
+                assassinate_invites_block.state_leave_reverse(action, game_data)
+            }
+            EngineState::AssassinateBlockInvitesChallenge(assassinate_block_invites_challenge) => {
+                assassinate_block_invites_challenge.state_leave_reverse(action, game_data)
+            }
+            EngineState::AssassinateBlockChallenged(assassinate_block_challenged) => {
+                assassinate_block_challenged.state_leave_reverse(action, game_data)
+            }
+            EngineState::AssassinateBlockChallengerFailed(assassinate_block_challenger_failed) => {
+                assassinate_block_challenger_failed.state_leave_reverse(action, game_data)
+            }
+            EngineState::AssassinateSucceeded(assassinate_succeeded) => {
+                assassinate_succeeded.state_leave_reverse(action, game_data)
+            }
+            EngineState::AssassinateChallenged(assassinate_challenged) => {
+                assassinate_challenged.state_leave_reverse(action, game_data)
+            }
+            EngineState::AssassinateChallengerFailed(assassinate_challenger_failed) => {
+                assassinate_challenger_failed.state_leave_reverse(action, game_data)
+            }
         }
     }
 }

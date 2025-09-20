@@ -1,4 +1,6 @@
-use crate::{history_public::ActionObservation, prob_manager::engine::models::game_state::GameData};
+use crate::{
+    history_public::ActionObservation, prob_manager::engine::models::game_state::GameData,
+};
 
 pub mod indicate;
 pub mod permute;
@@ -9,9 +11,9 @@ pub use permute::Permute;
 pub use unique::Unique;
 
 /// Generates suggested moves based for challenges
-/// 
+///
 /// Options:
-/// 
+///
 /// 1) `Indicate`
 ///     Indicates people eligible to challenge
 ///     Returns `CollectiveChallenge { participants: [true, true, true, true, true, true], opposing_player_id: player, final_actioner: player }`

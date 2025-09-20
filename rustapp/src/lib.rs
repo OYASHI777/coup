@@ -32,13 +32,7 @@ pub mod prob_manager {
         }
         pub mod models_prelude {
             pub use super::models::{
-                assassinate::*,
-                coup::*,
-                end::*,
-                exchange::*,
-                foreign_aid::*,
-                steal::*,
-                tax::*,
+                assassinate::*, coup::*, end::*, exchange::*, foreign_aid::*, steal::*, tax::*,
                 turn_start::*,
             };
         }
@@ -75,5 +69,5 @@ pub mod prob_manager {
     // pub mod naive_sampler;
 }
 pub mod history_public;
-pub mod string_utils;
 pub mod pcmccfr;
+pub mod string_utils;

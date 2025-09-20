@@ -1,6 +1,7 @@
 use super::Collator;
 use crate::{
-    history_public::ActionObservation, prob_manager::engine::{constants::MAX_PLAYERS_EXCL_PILE, models::game_state::GameData},
+    history_public::ActionObservation,
+    prob_manager::engine::{constants::MAX_PLAYERS_EXCL_PILE, models::game_state::GameData},
 };
 
 /// Returns a `CollectiveChallenge` for each eligible player
@@ -20,7 +21,7 @@ impl Collator for Unique {
             })
             .collect()
     }
-    
+
     fn block(player: usize, data: &GameData) -> Vec<ActionObservation> {
         let inf = data.influence();
         (0..MAX_PLAYERS_EXCL_PILE)

@@ -2,7 +2,10 @@ use std::marker::PhantomData;
 
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::constants::MAX_GAME_LENGTH;
-use crate::prob_manager::engine::constants::{DEFAULT_PLAYER_LIVES, INDEX_PILE, MAX_CARDS_DISCARD, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PLAYER, MAX_PLAYERS_INCL_PILE};
+use crate::prob_manager::engine::constants::{
+    DEFAULT_PLAYER_LIVES, INDEX_PILE, MAX_CARDS_DISCARD, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PLAYER,
+    MAX_PLAYERS_INCL_PILE,
+};
 use crate::prob_manager::engine::models::game_state::GameData;
 use crate::prob_manager::engine::models_prelude::*;
 use crate::prob_manager::tracker::collater::Collator;
@@ -115,7 +118,11 @@ where
         }
         output
     }
-    pub fn reveal_or_discard_all(&self, player: usize, card_reveal: Card) -> Vec<ActionObservation> {
+    pub fn reveal_or_discard_all(
+        &self,
+        player: usize,
+        card_reveal: Card,
+    ) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(4);
         if self.inferred_constraints[player].contains(&card_reveal) {
             let mut pile_cards = self.inferred_constraints[INDEX_PILE].clone();
@@ -130,16 +137,19 @@ where
         } else {
             // Discard all
             if self.inferred_constraints[player].len() == 1 {
-                output.push(ActionObservation::Discard { 
-                    player_id: player, 
-                    card: [self.inferred_constraints[player][0]; MAX_CARDS_DISCARD], 
-                    no_cards: 1, 
+                output.push(ActionObservation::Discard {
+                    player_id: player,
+                    card: [self.inferred_constraints[player][0]; MAX_CARDS_DISCARD],
+                    no_cards: 1,
                 })
             } else {
-                output.push(ActionObservation::Discard { 
-                    player_id: player, 
-                    card: [self.inferred_constraints[player][0], self.inferred_constraints[player][1]], 
-                    no_cards: 2, 
+                output.push(ActionObservation::Discard {
+                    player_id: player,
+                    card: [
+                        self.inferred_constraints[player][0],
+                        self.inferred_constraints[player][1],
+                    ],
+                    no_cards: 2,
                 })
             }
         }
@@ -313,8 +323,9 @@ where
                     relinquish,
                 } => {
                     for d in relinquish.iter() {
-                        if let Some(pos) =
-                            self.inferred_constraints[INDEX_PILE].iter().rposition(|c| *c == *d)
+                        if let Some(pos) = self.inferred_constraints[INDEX_PILE]
+                            .iter()
+                            .rposition(|c| *c == *d)
                         {
                             self.inferred_constraints[INDEX_PILE].swap_remove(pos);
                             self.inferred_constraints[player_id].push(*d);

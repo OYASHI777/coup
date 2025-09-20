@@ -224,15 +224,15 @@ where
         self.latest_constraint_mut().sorted_inferred_constraints()
     }
 
-    fn player_impossible_constraints(&mut self) -> &[[bool; 5]; 7] {
+    fn player_impossible_constraints(&mut self) -> [[bool; 5]; 7] {
         self.latest_constraint_mut().player_impossible_constraints()
     }
 
-    fn player_impossible_constraints_paired(&mut self) -> &[[[bool; 5]; 5]; 7] {
+    fn player_impossible_constraints_paired(&mut self) -> [[[bool; 5]; 5]; 7] {
         self.latest_constraint_mut().player_impossible_constraints_paired()
     }
 
-    fn player_impossible_constraints_triple(&mut self) -> &[[[bool; 5]; 5]; 5] {
+    fn player_impossible_constraints_triple(&mut self) -> [[[bool; 5]; 5]; 5] {
         self.latest_constraint_mut().player_impossible_constraints_triple()
     }
 

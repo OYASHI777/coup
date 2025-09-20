@@ -15,7 +15,7 @@ impl Collator for Indicate {
             final_actioner: player,
         }]
     }
-    
+
     fn block(player: usize, data: &GameData) -> Vec<ActionObservation> {
         let participants = std::array::from_fn(|p| data.influence()[p] > 0);
         vec![ActionObservation::CollectiveBlock {
