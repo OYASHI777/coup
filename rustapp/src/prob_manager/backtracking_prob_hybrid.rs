@@ -183,34 +183,19 @@ impl<T: InfoArrayTrait> SignificantAction<T> {
         self.meta_data.clone()
     }
     pub fn printlog(&self) {
+        log::info!("Public Constraints: {:?}", self.public_constraints());
+        log::info!("Inferred Constraints: {:?}", self.inferred_constraints());
         log::info!(
-            "{}",
-            format!("Public Constraints: {:?}", self.public_constraints())
+            "Impossible Constraints: {}",
+            self.meta_data.format_impossible_constraints()
         );
         log::info!(
-            "{}",
-            format!("Inferred Constraints: {:?}", self.inferred_constraints())
+            "Impossible Constraints 2: {}",
+            self.meta_data.format_impossible_constraints_2()
         );
         log::info!(
-            "{}",
-            format!(
-                "Impossible Constraints: {}",
-                self.meta_data.format_impossible_constraints()
-            )
-        );
-        log::info!(
-            "{}",
-            format!(
-                "Impossible Constraints 2: {}",
-                self.meta_data.format_impossible_constraints_2()
-            )
-        );
-        log::info!(
-            "{}",
-            format!(
-                "Impossible Constraints 3: {}",
-                self.meta_data.format_impossible_constraints_3()
-            )
+            "Impossible Constraints 3: {}",
+            self.meta_data.format_impossible_constraints_3()
         );
     }
 }
@@ -326,24 +311,24 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     }
     /// Buffer for doing backtracking with
     pub fn create_buffer() -> (Vec<Vec<Card>>, Vec<Vec<Card>>) {
-        let public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); MAX_PLAYERS_INCL_PILE];
-        let inferred_constraints: Vec<Vec<Card>> =
-            vec![Vec::with_capacity(4); MAX_PLAYERS_INCL_PILE];
+        let public_constraints: Vec<Vec<Card>> = (0..MAX_PLAYERS_INCL_PILE)
+            .map(|_| Vec::with_capacity(2))
+            .collect();
+        let inferred_constraints: Vec<Vec<Card>> = (0..MAX_PLAYERS_INCL_PILE)
+            .map(|_| Vec::with_capacity(4))
+            .collect();
         (public_constraints, inferred_constraints)
     }
     pub fn clear_buffer(
-        public_constraints: &mut Vec<Vec<Card>>,
-        inferred_constraints: &mut Vec<Vec<Card>>,
+        public_constraints: &mut [Vec<Card>],
+        inferred_constraints: &mut [Vec<Card>],
     ) {
         public_constraints.iter_mut().for_each(|v| v.clear());
         inferred_constraints.iter_mut().for_each(|v| v.clear());
     }
     /// Logs the constraint's log
     pub fn printlog(&self) {
-        log::trace!(
-            "{}",
-            format!("Constraint History Len{}", self.constraint_history.len())
-        );
+        log::trace!("Constraint History Len{}", self.constraint_history.len());
         log::trace!("history_move_no: {:?}", self.move_no_history);
         log::trace!("move_no: {:?}", self.move_no);
         if let Some(constraint) = self.constraint_history.last() {
@@ -454,7 +439,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             }
         }
         for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
-            if self.latest_constraint_mut().public_constraints()[player_of_interest].len() > 0 {
+            if !self.latest_constraint_mut().public_constraints()[player_of_interest].is_empty() {
                 self.latest_constraint_mut()
                     .set_all_impossible_constraints_2(player_of_interest, true);
                 continue;
@@ -562,7 +547,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             .iter_mut()
             .for_each(|v| v.clear());
         for player in 0..INDEX_PILE {
-            if self.latest_constraint_mut().public_constraints()[player].len() == 0 {
+            if self.latest_constraint_mut().public_constraints()[player].is_empty() {
                 if self
                     .latest_constraint_mut()
                     .meta_data
@@ -612,22 +597,21 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                             .push(Card::try_from(card_num as u8).unwrap());
                     }
                 }
-            } else if self.latest_constraint_mut().public_constraints()[player].len() == 1 {
-                if self
+            } else if self.latest_constraint_mut().public_constraints()[player].len() == 1
+                && self
                     .latest_constraint_mut()
                     .meta_data
                     .count_possible_single_constraints(player)
                     == 1
+            {
+                if let Some(card_num) = self
+                    .latest_constraint_mut()
+                    .meta_data
+                    .find_only_possible_single_constraint(player)
                 {
-                    if let Some(card_num) = self
-                        .latest_constraint_mut()
-                        .meta_data
-                        .find_only_possible_single_constraint(player)
-                    {
-                        self.latest_constraint_mut().inferred_constraints_mut()[player]
-                            .push(Card::try_from(card_num as u8).unwrap());
-                        continue;
-                    }
+                    self.latest_constraint_mut().inferred_constraints_mut()[player]
+                        .push(Card::try_from(card_num as u8).unwrap());
+                    continue;
                 }
             }
         }
@@ -798,7 +782,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 // Case 0: player redrew card != reveal
                                 // Case 1: player redrew card == reveal (reveal from pile)
                                 if inferred_constraints[INDEX_PILE].len() == MAX_HAND_SIZE_PILE
-                                    && !inferred_constraints[INDEX_PILE].contains(&reveal)
+                                    && !inferred_constraints[INDEX_PILE].contains(reveal)
                                 {
                                     // This state cannot be arrive after the reveal_redraw
                                     return false;
@@ -851,8 +835,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                                     log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
 
-                                    if inferred_constraints[player_loop].len() < 2 {
-                                        if MoveGuard::swap_ordered(
+                                    if inferred_constraints[player_loop].len() < 2
+                                        && MoveGuard::swap_ordered(
                                             public_constraints,
                                             inferred_constraints,
                                             player_loop,
@@ -874,9 +858,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                         inf_con,
                                                     )
                                             },
-                                        ) {
-                                            return true;
-                                        }
+                                        )
+                                    {
+                                        return true;
                                     }
                                     // Card Source was from Pile
                                     if *card_player != *reveal {
@@ -908,8 +892,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 if inferred_constraints[player_loop].len()
                                     + inferred_constraints[INDEX_PILE].len()
                                     == MAX_HAND_SIZE_PLAYER + MAX_HAND_SIZE_PILE
-                                    && !inferred_constraints[player_loop].contains(&reveal)
-                                    && !inferred_constraints[INDEX_PILE].contains(&reveal)
+                                    && !inferred_constraints[player_loop].contains(reveal)
+                                    && !inferred_constraints[INDEX_PILE].contains(reveal)
                                 {
                                     // This state cannot be arrive after the reveal_redraw
                                     return false;
@@ -947,10 +931,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 iter_cards.dedup();
 
                                 for card_player in iter_cards.iter() {
-                                    if *card_player != *reveal
-                                        || inferred_constraints[INDEX_PILE].contains(&reveal)
-                                    {
-                                        if MoveGuard::swap_ordered(
+                                    if (*card_player != *reveal
+                                        || inferred_constraints[INDEX_PILE].contains(reveal))
+                                        && MoveGuard::swap_ordered(
                                             public_constraints,
                                             inferred_constraints,
                                             player_loop,
@@ -977,9 +960,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                         inf_con,
                                                     )
                                             },
-                                        ) {
-                                            return true;
-                                        }
+                                        )
+                                    {
+                                        return true;
                                     }
 
                                     if MoveGuard::swap_ordered(
@@ -1280,7 +1263,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             return true;
         }
         // 1 player_to_pile move, 0 pile_to_player move
-        if inferred_constraints[INDEX_PILE].len() < 3 && inferred_constraints[player_loop].len() > 0
+        if inferred_constraints[INDEX_PILE].len() < 3
+            && !inferred_constraints[player_loop].is_empty()
         {
             for card_player in iter_cards_player.iter() {
                 // move to pile
@@ -1300,7 +1284,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             }
         }
         // 0 player_to_pile move, 1 pile_to_player move
-        if inferred_constraints[player_loop].len() < 2 && inferred_constraints[INDEX_PILE].len() > 0
+        if inferred_constraints[player_loop].len() < 2
+            && !inferred_constraints[INDEX_PILE].is_empty()
         {
             for card_pile in iter_cards_pile.iter() {
                 // move to player
@@ -1320,7 +1305,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             }
         }
         // 1 player_to_pile move, 1 pile_to_player move
-        if inferred_constraints[player_loop].len() > 0 && inferred_constraints[INDEX_PILE].len() > 0
+        if !inferred_constraints[player_loop].is_empty()
+            && !inferred_constraints[INDEX_PILE].is_empty()
         {
             for card_player in iter_cards_player.iter() {
                 for card_pile in iter_cards_pile.iter() {
@@ -1372,7 +1358,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                 }
             }
             // 0 player_to_pile move, 2 pile_to_player move
-            if inferred_constraints[player_loop].len() == 0
+            if inferred_constraints[player_loop].is_empty()
                 && inferred_constraints[INDEX_PILE].len() > 1
             {
                 for index_pile_to_player_0 in 0..iter_cards_pile.len() {
@@ -1409,7 +1395,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                 }
             }
             // 2 player_to_pile move, 1 pile_to_player move
-            if inferred_constraints[INDEX_PILE].len() > 0
+            if !inferred_constraints[INDEX_PILE].is_empty()
                 && inferred_constraints[INDEX_PILE].len() < 3
                 && inferred_constraints[player_loop].len() > 1
             {
@@ -1591,8 +1577,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         &self,
         index_loop: usize,
         player_loop: usize,
-        draw: &Vec<Card>,
-        relinquish: &Vec<Card>,
+        draw: &[Card],
+        relinquish: &[Card],
         public_constraints: &mut Vec<Vec<Card>>,
         inferred_constraints: &mut Vec<Vec<Card>>,
     ) -> bool {
@@ -1997,6 +1983,8 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
                 } else {
                     // if updated {..} just check the state
                     let mut cards = Vec::with_capacity(2);
+                    // We keep a needless range loop here as we want to avoid the bounds check
+                    #[allow(clippy::needless_range_loop)]
                     for c in 0..MAX_CARD_PERMS_ONE {
                         for _ in 0..required[c] {
                             cards.push(Card::try_from(c as u8).unwrap());
