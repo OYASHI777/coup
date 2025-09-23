@@ -4,7 +4,8 @@ use super::{
 use crate::{
     history_public::Card,
     prob_manager::engine::constants::{
-        MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_PLAYERS_INCL_PILE,
+        MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_NUM_PER_CARD,
+        MAX_PLAYERS_INCL_PILE,
     },
 };
 
@@ -387,5 +388,13 @@ impl InfoArrayTrait for InfoArrayBits {
 
     fn find_only_possible_single_constraint(&self, player: usize) -> Option<usize> {
         (0..MAX_CARD_PERMS_ONE).find(|&card| !self.impossible_constraints[player].get(card as u8))
+    }
+
+    fn all_cards_dead(&self, card: Card) -> bool {
+        self.public_constraints
+            .iter()
+            .map(|v| v.iter().filter(|&&c| c == card).count())
+            .sum::<usize>()
+            >= MAX_NUM_PER_CARD as usize
     }
 }

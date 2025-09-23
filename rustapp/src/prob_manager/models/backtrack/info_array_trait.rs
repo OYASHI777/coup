@@ -78,4 +78,7 @@ pub trait InfoArrayTrait: Clone + std::fmt::Debug {
     /// Helper methods for complex constraint analysis
     fn count_possible_single_constraints(&self, player: usize) -> u8;
     fn find_only_possible_single_constraint(&self, player: usize) -> Option<usize>;
+
+    /// Check if all cards of a specific type are dead (in public constraints)
+    fn all_cards_dead(&self, card: Card) -> bool;
 }

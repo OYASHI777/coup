@@ -2,7 +2,8 @@ use super::info_array_trait::InfoArrayTrait;
 use crate::{
     history_public::Card,
     prob_manager::engine::constants::{
-        MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_PLAYERS_INCL_PILE,
+        MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_NUM_PER_CARD,
+        MAX_PLAYERS_INCL_PILE,
     },
 };
 /// For each player store an array of bool where each index is a Card, this represents whether a player cannot have a card true => cannot
@@ -387,5 +388,13 @@ impl InfoArrayTrait for InfoArray {
 
     fn find_only_possible_single_constraint(&self, player: usize) -> Option<usize> {
         self.impossible_constraints[player].iter().position(|b| !*b)
+    }
+
+    fn all_cards_dead(&self, card: Card) -> bool {
+        self.public_constraints
+            .iter()
+            .map(|v| v.iter().filter(|&&c| c == card).count())
+            .sum::<usize>()
+            >= MAX_NUM_PER_CARD as usize
     }
 }
