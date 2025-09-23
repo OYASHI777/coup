@@ -430,7 +430,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     pub fn generate_impossible_constraints(&mut self) {
         let history_index = self.constraint_history.len() - 1;
         // TODO: [OPTIMIZE] consider total dead cards inferred etc...
-        let mut cards: [u8; MAX_CARD_PERMS_ONE] = [0; MAX_CARD_PERMS_ONE];
         let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
         for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
             if self.latest_constraint_mut().public_constraints()[player_of_interest].len() == 2 {
@@ -439,7 +438,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                 continue;
             }
             for card in 0..MAX_CARD_PERMS_ONE {
-                cards[card] = 1;
                 log::trace!("generate_impossible_constraints 1 card : {:?}", card);
                 inferred_constraints[player_of_interest].push(Card::try_from(card as u8).unwrap());
                 let is_impossible = !self.possible_to_have_cards_recurse(
@@ -453,7 +451,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     is_impossible,
                 );
                 Self::clear_buffer(&mut public_constraints, &mut inferred_constraints);
-                cards[card] = 0;
             }
         }
         for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
