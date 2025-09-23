@@ -413,7 +413,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     // TODO: [OPTIMIZE] so we index impossible only via ascending order
     /// Does Backtracking to calculate impossibilities
     pub fn generate_impossible_constraints(&mut self) {
-        let history_index = self.constraint_history.len() - 1;
         // TODO: [OPTIMIZE] consider total dead cards inferred etc...
         let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
         for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
@@ -425,8 +424,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             for card in 0..MAX_CARD_PERMS_ONE {
                 log::trace!("generate_impossible_constraints 1 card : {:?}", card);
                 inferred_constraints[player_of_interest].push(Card::try_from(card as u8).unwrap());
-                let is_impossible = !self.possible_to_have_cards_recurse(
-                    history_index,
+                let is_impossible = !self.possible_to_have_cards_latest(
                     &mut public_constraints,
                     &mut inferred_constraints,
                 );
@@ -475,8 +473,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         Card::try_from(card_a as u8).unwrap(),
                         Card::try_from(card_b as u8).unwrap(),
                     ]);
-                    let output = !self.possible_to_have_cards_recurse(
-                        history_index,
+                    let output = !self.possible_to_have_cards_latest(
                         &mut public_constraints,
                         &mut inferred_constraints,
                     );
@@ -528,8 +525,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         Card::try_from(card_b as u8).unwrap(),
                         Card::try_from(card_c as u8).unwrap(),
                     ]);
-                    let output = !self.possible_to_have_cards_recurse(
-                        history_index,
+                    let output = !self.possible_to_have_cards_latest(
                         &mut public_constraints,
                         &mut inferred_constraints,
                     );
@@ -688,6 +684,31 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         }
         !self.possible_to_have_cards_recurse(
             index_lookback,
+            public_constraints,
+            inferred_constraints,
+        )
+    }
+    /// Returns true if possible, false if impossible
+    ///
+    /// Traces the game tree in reverse (from latest move to earliest move) by backtracking.
+    /// Tracks possible paths known cards could have come from in the past.
+    ///
+    /// # Returns
+    /// - `true` if a state is found to satisfy cards at the index_of_interest
+    /// - `false` if no valid state is found
+    ///
+    /// # Notes
+    /// - Assumes cards should be sorted before use
+    /// - User is responsible for clearing the public_constraints and inferred_constraints buffer after use!
+    /// - User is responsible for adding the initial cards into the buffer!
+    ///   Please see `BacktrackCardCountManager::impossible_to_have_cards_general` as an example
+    pub fn possible_to_have_cards_latest(
+        &self,
+        public_constraints: &mut Vec<Vec<Card>>,
+        inferred_constraints: &mut Vec<Vec<Card>>,
+    ) -> bool {
+        self.possible_to_have_cards_recurse(
+            self.constraint_history.len() - 1,
             public_constraints,
             inferred_constraints,
         )
@@ -1889,11 +1910,7 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
     fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool {
         let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
         inferred_constraints[player].push(card);
-        self.possible_to_have_cards_recurse(
-            self.constraint_history.len() - 1,
-            &mut public_constraints,
-            &mut inferred_constraints,
-        )
+        self.possible_to_have_cards_latest(&mut public_constraints, &mut inferred_constraints)
     }
 
     fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool {
@@ -1904,11 +1921,7 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
         // TODO: [OPTIMIZE] check if latest state is updated!
         let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
         inferred_constraints[player].extend_from_slice(cards);
-        self.possible_to_have_cards_recurse(
-            self.constraint_history.len() - 1,
-            &mut public_constraints,
-            &mut inferred_constraints,
-        )
+        self.possible_to_have_cards_latest(&mut public_constraints, &mut inferred_constraints)
     }
     fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         match action_observation {
