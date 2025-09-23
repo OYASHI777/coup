@@ -331,6 +331,13 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             vec![Vec::with_capacity(4); MAX_PLAYERS_INCL_PILE];
         (public_constraints, inferred_constraints)
     }
+    pub fn clear_buffer(
+        public_constraints: &mut Vec<Vec<Card>>,
+        inferred_constraints: &mut Vec<Vec<Card>>,
+    ) {
+        public_constraints.iter_mut().for_each(|v| v.clear());
+        inferred_constraints.iter_mut().for_each(|v| v.clear());
+    }
     /// Logs the constraint's log
     pub fn printlog(&self) {
         log::trace!(
@@ -445,8 +452,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     card,
                     is_impossible,
                 );
-                public_constraints.iter_mut().for_each(|v| v.clear());
-                inferred_constraints.iter_mut().for_each(|v| v.clear());
+                Self::clear_buffer(&mut public_constraints, &mut inferred_constraints);
                 cards[card] = 0;
             }
         }
@@ -492,8 +498,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         &mut public_constraints,
                         &mut inferred_constraints,
                     );
-                    public_constraints.iter_mut().for_each(|v| v.clear());
-                    inferred_constraints.iter_mut().for_each(|v| v.clear());
+                    Self::clear_buffer(&mut public_constraints, &mut inferred_constraints);
                     self.latest_constraint_mut().set_impossible_constraint_2(
                         player_of_interest,
                         card_a,
@@ -546,8 +551,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         &mut public_constraints,
                         &mut inferred_constraints,
                     );
-                    public_constraints.iter_mut().for_each(|v| v.clear());
-                    inferred_constraints.iter_mut().for_each(|v| v.clear());
+                    Self::clear_buffer(&mut public_constraints, &mut inferred_constraints);
                     self.latest_constraint_mut()
                         .set_impossible_constraint_3(card_a, card_b, card_c, output);
                 }
