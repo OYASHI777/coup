@@ -45,20 +45,32 @@ where
         // Check all possible cards to see if the player could have them
         let mut possible_discards = Vec::with_capacity(MAX_CARD_PERMS_ONE);
 
-        // Get a mutable reference to check constraints
-        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+        let (mut public_constraints, mut inferred_constraints) =
+            BackTrackCardCountManager::<InfoArray>::create_buffer();
 
-        // Check each card type to see if the player could possibly have it
-        for card_value in 0..MAX_CARD_PERMS_ONE {
-            let card = Card::try_from(card_value as u8).unwrap();
+        for card in [
+            Card::Ambassador,
+            Card::Assassin,
+            Card::Captain,
+            Card::Duke,
+            Card::Contessa,
+        ] {
+            inferred_constraints[player].push(card);
             // Check if the player can have this card based on current constraints
-            if !latest_constraint.get_impossible_constraint(player, card_value) {
+            if self
+                .backtracking_hybrid_prob
+                .possible_to_have_cards_latest(&mut public_constraints, &mut inferred_constraints)
+            {
                 possible_discards.push(ActionObservation::Discard {
                     player_id: player,
                     card: [card, card],
                     no_cards: 1,
                 });
             }
+            BackTrackCardCountManager::<InfoArray>::clear_buffer(
+                &mut public_constraints,
+                &mut inferred_constraints,
+            );
         }
 
         possible_discards
@@ -74,67 +86,213 @@ where
             final_actioner: player,
         }]
     }
-
+    /// ASSUMPTION: Game rule indicates that if player has the card they MUST reveal it
+    ///     => if a player discards a card, they cannot have had the card_reveal
     pub fn reveal_or_discard(&self, player: usize, card_reveal: Card) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(4);
-        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+        let mut cards_discard = vec![
+            Card::Ambassador,
+            Card::Assassin,
+            Card::Captain,
+            Card::Duke,
+            Card::Contessa,
+        ];
+        cards_discard.swap_remove(card_reveal as usize);
+        let mut output = Vec::with_capacity(5 + 4); // 5: reveal_redraw, 4: discards
+        let (mut public_constraints, mut inferred_constraints) =
+            BackTrackCardCountManager::<InfoArray>::create_buffer();
 
-        if latest_constraint.inferred_constraints()[player].contains(&card_reveal) {
-            let mut pile_cards = latest_constraint.inferred_constraints()[INDEX_PILE].clone();
-            pile_cards.push(card_reveal);
-            pile_cards.sort_unstable();
-            pile_cards.dedup();
-            output.extend(pile_cards.iter().map(|c| ActionObservation::RevealRedraw {
+        // Checking if possible for player to have card_reveal
+        inferred_constraints[player].push(card_reveal);
+        if self
+            .backtracking_hybrid_prob
+            .possible_to_have_cards_latest(&mut public_constraints, &mut inferred_constraints)
+        {
+            // CASE A
+            // Since player returns card to pile, then redraws from pile (including card_reveal)
+            // Player can always redraw the same card
+            output.push(ActionObservation::RevealRedraw {
                 player_id: player,
                 reveal: card_reveal,
-                redraw: *c,
-            }));
-        } else {
-            // If they don't have the card, they must discard what they do have
-            for card in latest_constraint.inferred_constraints()[player].iter() {
+                redraw: card_reveal,
+            });
+            // CASE B
+            // player redraws card that the pile has but is not card_reveal
+            for &card in cards_discard.iter() {
+                BackTrackCardCountManager::<InfoArray>::clear_buffer(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                );
+                // Checking if possible for player to have card_reveal and pile to have card
+                // TODO: Handle case where player can redraw the same card
+                inferred_constraints[player].push(card_reveal);
+                inferred_constraints[INDEX_PILE].push(card);
+                if self.backtracking_hybrid_prob.possible_to_have_cards_latest(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                ) {
+                    output.push(ActionObservation::RevealRedraw {
+                        player_id: player,
+                        reveal: card_reveal,
+                        redraw: card,
+                    });
+                }
+            }
+            // CASE C
+            // Player's hand does not have card_reveal so may discard any card in hand
+            // We check that the player can have a hand that does not include card_reveal
+            let mut index_checked: Vec<usize> = Vec::with_capacity(MAX_CARD_PERMS_ONE - 1);
+            debug_assert!(MAX_CARD_PERMS_ONE == 5);
+            for (i, j) in [
+                (0, 1),
+                (2, 3),
+                (0, 2),
+                (1, 3),
+                (0, 3),
+                (1, 2),
+                (0, 0),
+                (1, 1),
+                (2, 2),
+                (3, 3),
+            ] {
+                if index_checked.len() == MAX_CARD_PERMS_ONE - 1 {
+                    break;
+                }
+                let contains_i = index_checked.contains(&i);
+                let contains_j = index_checked.contains(&j);
+                if contains_i && contains_j {
+                    continue;
+                }
+                BackTrackCardCountManager::<InfoArray>::clear_buffer(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                );
+                // Checking if possible for player to have cards_discard[i] and cards_discard[j]
+                inferred_constraints[player]
+                    .extend_from_slice(&[cards_discard[i], cards_discard[j]]);
+                if self.backtracking_hybrid_prob.possible_to_have_cards_latest(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                ) {
+                    if !contains_i {
+                        index_checked.push(i);
+                    }
+                    if !contains_j {
+                        index_checked.push(j);
+                    }
+                }
+            }
+            // This is done outside the loop above to maintain order of moves
+            index_checked.sort_unstable();
+            for i in index_checked {
                 output.push(ActionObservation::Discard {
                     player_id: player,
-                    card: [*card; 2],
+                    card: [cards_discard[i], cards_discard[i]],
                     no_cards: 1,
                 })
+            }
+        } else {
+            // CASE D
+            // Player's hand does not have card_reveal so may discard any card in hand
+            for card in cards_discard {
+                // Checking if possible for player to have card
+                BackTrackCardCountManager::<InfoArray>::clear_buffer(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                );
+                // Checking if possible for player to have card
+                inferred_constraints[player].push(card);
+                if self.backtracking_hybrid_prob.possible_to_have_cards_latest(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                ) {
+                    output.push(ActionObservation::Discard {
+                        player_id: player,
+                        card: [card, card],
+                        no_cards: 1,
+                    });
+                }
             }
         }
         output
     }
 
+    /// ASSUMPTION: Game rule indicates that if player has the card they MUST reveal it
+    ///     => if a player discards a card, they cannot have had the card_reveal
     pub fn reveal_or_discard_all(
         &self,
         player: usize,
         card_reveal: Card,
     ) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(4);
-        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
+        let mut cards_discard = vec![
+            Card::Ambassador,
+            Card::Assassin,
+            Card::Captain,
+            Card::Duke,
+            Card::Contessa,
+        ];
+        cards_discard.swap_remove(card_reveal as usize);
+        let mut output = Vec::with_capacity(15); // 5: reveal_redraw, 10: discards
+        let (mut public_constraints, mut inferred_constraints) =
+            BackTrackCardCountManager::<InfoArray>::create_buffer();
 
-        if latest_constraint.inferred_constraints()[player].contains(&card_reveal) {
-            let mut pile_cards = latest_constraint.inferred_constraints()[INDEX_PILE].clone();
-            pile_cards.push(card_reveal);
-            pile_cards.sort_unstable();
-            pile_cards.dedup();
-            output.extend(pile_cards.iter().map(|c| ActionObservation::RevealRedraw {
+        // Checking if possible for player to have card_reveal
+        inferred_constraints[player].push(card_reveal);
+        if self
+            .backtracking_hybrid_prob
+            .possible_to_have_cards_latest(&mut public_constraints, &mut inferred_constraints)
+        {
+            // CASE A
+            // Since player returns card to pile, then redraws from pile (including card_reveal)
+            // Player can always redraw the same card
+            output.push(ActionObservation::RevealRedraw {
                 player_id: player,
                 reveal: card_reveal,
-                redraw: *c,
-            }));
-        } else {
-            // Discard all cards
-            let player_cards = &latest_constraint.inferred_constraints()[player];
-            if player_cards.len() == 1 {
-                output.push(ActionObservation::Discard {
-                    player_id: player,
-                    card: [player_cards[0]; MAX_CARDS_DISCARD],
-                    no_cards: 1,
-                })
-            } else if player_cards.len() == 2 {
-                output.push(ActionObservation::Discard {
-                    player_id: player,
-                    card: [player_cards[0], player_cards[1]],
-                    no_cards: 2,
-                })
+                redraw: card_reveal,
+            });
+            // CASE B
+            // player redraws card that the pile has but is not card_reveal
+            for &card in cards_discard.iter() {
+                BackTrackCardCountManager::<InfoArray>::clear_buffer(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                );
+                // Checking if possible for player to have card_reveal and pile to have card
+                // TODO: Handle case where player can redraw the same card
+                inferred_constraints[player].push(card_reveal);
+                inferred_constraints[INDEX_PILE].push(card);
+                if self.backtracking_hybrid_prob.possible_to_have_cards_latest(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                ) {
+                    output.push(ActionObservation::RevealRedraw {
+                        player_id: player,
+                        reveal: card_reveal,
+                        redraw: card,
+                    });
+                }
+            }
+        }
+        // CASE C
+        // Player's hand does not have card_reveal so may discard any card in hand
+        for i in 0..(MAX_CARD_PERMS_ONE - 1) {
+            for j in i..(MAX_CARD_PERMS_ONE - 1) {
+                // Checking if possible for player to have card
+                BackTrackCardCountManager::<InfoArray>::clear_buffer(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                );
+                inferred_constraints[player]
+                    .extend_from_slice(&[cards_discard[i], cards_discard[j]]);
+                if self.backtracking_hybrid_prob.possible_to_have_cards_latest(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                ) {
+                    output.push(ActionObservation::Discard {
+                        player_id: player,
+                        card: [cards_discard[i], cards_discard[j]],
+                        no_cards: 2,
+                    });
+                }
             }
         }
         output
