@@ -4,7 +4,7 @@ use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager;
 use crate::prob_manager::constants::MAX_GAME_LENGTH;
 use crate::prob_manager::engine::constants::{
-    DEFAULT_PLAYER_LIVES, INDEX_PILE, MAX_CARDS_DISCARD, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PLAYER,
+    INDEX_PILE, MAX_CARDS_DISCARD, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PLAYER,
 };
 use crate::prob_manager::engine::models::game_state::GameData;
 use crate::prob_manager::engine::models_prelude::*;
@@ -358,13 +358,8 @@ where
         );
     }
 
-    fn start_known(&mut self, player_cards: &Vec<Vec<Card>>) {
-        // Reset state for known game start
-        self.history.clear();
-        self.card_counts = [3; MAX_CARD_PERMS_ONE];
-        self.backtracking_hybrid_prob = BackTrackCardCountManager::new();
-        // Delegate to the backtracking manager's start method
-        self.backtracking_hybrid_prob.start_known(player_cards);
+    fn start_known(&mut self, _player_cards: &Vec<Vec<Card>>) {
+        unimplemented!("Card count tracker supports does not support this")
     }
 
     fn push_ao_public(&mut self, action: &ActionObservation) {
@@ -422,13 +417,15 @@ where
                 output.push(ActionObservation::Exchange {
                     player_id: state.player_turn,
                 });
-                output.extend(data.player_targets_steal(state.player_turn).map(|p| {
-                    ActionObservation::Steal {
-                        player_id: state.player_turn,
-                        opposing_player_id: p,
-                        amount: THIS_VALUE_DOES_NOT_MATTER,
-                    }
-                }));
+                output.extend(
+                    data.player_targets_steal(state.player_turn).map(|p| {
+                        ActionObservation::Steal {
+                            player_id: state.player_turn,
+                            opposing_player_id: p,
+                            amount: THIS_VALUE_DOES_NOT_MATTER,
+                        }
+                    }), // Steal amount is handled in engine not in move!
+                );
                 output
             }
             3..=6 => {
@@ -445,13 +442,15 @@ where
                 output.push(ActionObservation::Exchange {
                     player_id: state.player_turn,
                 });
-                output.extend(data.player_targets_steal(state.player_turn).map(|p| {
-                    ActionObservation::Steal {
-                        player_id: state.player_turn,
-                        opposing_player_id: p,
-                        amount: THIS_VALUE_DOES_NOT_MATTER,
-                    }
-                }));
+                output.extend(
+                    data.player_targets_steal(state.player_turn).map(|p| {
+                        ActionObservation::Steal {
+                            player_id: state.player_turn,
+                            opposing_player_id: p,
+                            amount: THIS_VALUE_DOES_NOT_MATTER,
+                        }
+                    }), // Steal amount is handled in engine not in move!
+                );
                 output.extend(data.player_targets_alive(state.player_turn).map(|p| {
                     ActionObservation::Assassinate {
                         player_id: state.player_turn,
@@ -474,13 +473,15 @@ where
                 output.push(ActionObservation::Exchange {
                     player_id: state.player_turn,
                 });
-                output.extend(data.player_targets_steal(state.player_turn).map(|p| {
-                    ActionObservation::Steal {
-                        player_id: state.player_turn,
-                        opposing_player_id: p,
-                        amount: THIS_VALUE_DOES_NOT_MATTER,
-                    }
-                }));
+                output.extend(
+                    data.player_targets_steal(state.player_turn).map(|p| {
+                        ActionObservation::Steal {
+                            player_id: state.player_turn,
+                            opposing_player_id: p,
+                            amount: THIS_VALUE_DOES_NOT_MATTER,
+                        }
+                    }), // Steal amount is handled in engine not in move!
+                );
                 output.extend(data.player_targets_alive(state.player_turn).map(|p| {
                     ActionObservation::Assassinate {
                         player_id: state.player_turn,
@@ -627,45 +628,10 @@ where
 
     fn on_steal_block_challenged(
         &self,
-        state: &StealBlockChallenged,
+        _state: &StealBlockChallenged,
         _data: &GameData,
     ) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(2 * MAX_CARD_PERMS_ONE - 1);
-        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
-        let mut pile_cards = latest_constraint.inferred_constraints()[INDEX_PILE].clone();
-        pile_cards.sort_unstable();
-        pile_cards.dedup();
-
-        if latest_constraint.inferred_constraints()[state.player_blocking]
-            .contains(&state.card_blocker)
-        {
-            if !pile_cards.contains(&state.card_blocker) {
-                output.push(ActionObservation::RevealRedraw {
-                    player_id: state.player_blocking,
-                    reveal: state.card_blocker,
-                    redraw: state.card_blocker,
-                });
-            }
-            for card in pile_cards.iter() {
-                output.push(ActionObservation::RevealRedraw {
-                    player_id: state.player_blocking,
-                    reveal: state.card_blocker,
-                    redraw: *card,
-                });
-            }
-        }
-        output.extend(
-            latest_constraint.inferred_constraints()[state.player_blocking]
-                .iter()
-                .filter_map(|player_card| {
-                    (*player_card != state.card_blocker).then_some(ActionObservation::Discard {
-                        player_id: state.player_blocking,
-                        card: [*player_card; MAX_CARDS_DISCARD],
-                        no_cards: 1,
-                    })
-                }),
-        );
-        output
+        todo!()
     }
 
     fn on_steal_block_challenger_failed(
@@ -715,23 +681,12 @@ where
         output
     }
     // TODO: Figure out if can just check as per normal? How does the backtracker work for exchangedraw?
-    fn on_exchange_drawn(&self, state: &ExchangeDrawn, _data: &GameData) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(6);
-        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
-        let player_constraints = &latest_constraint.inferred_constraints()[state.player_turn];
-
-        for i in 0..player_constraints.len() {
-            for j in (i + 1)..player_constraints.len() {
-                let action = ActionObservation::ExchangeChoice {
-                    player_id: state.player_turn,
-                    relinquish: [player_constraints[i], player_constraints[j]],
-                };
-                if !output.contains(&action) {
-                    output.push(action);
-                }
-            }
-        }
-        output
+    fn on_exchange_drawn(
+        &self,
+        _state: &ExchangeDrawn,
+        _data: &GameData,
+    ) -> Vec<ActionObservation> {
+        todo!()
     }
 
     fn on_exchange_challenged(
@@ -760,26 +715,10 @@ where
 
     fn on_assassinate_invites_block(
         &self,
-        state: &AssassinateInvitesBlock,
+        _state: &AssassinateInvitesBlock,
         _data: &GameData,
     ) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(2);
-        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
-
-        output.push(ActionObservation::BlockAssassinate {
-            player_id: state.player_blocking,
-            opposing_player_id: state.player_turn,
-        });
-        if latest_constraint.inferred_constraints()[state.player_blocking]
-            .iter()
-            .any(|c| *c != Card::Contessa)
-        {
-            output.push(ActionObservation::BlockAssassinate {
-                player_id: state.player_blocking,
-                opposing_player_id: state.player_blocking,
-            });
-        }
-        output
+        todo!()
     }
 
     fn on_assassinate_block_invites_challenge(
@@ -808,25 +747,10 @@ where
 
     fn on_assassinate_succeeded(
         &self,
-        state: &AssassinateSucceeded,
+        _state: &AssassinateSucceeded,
         _data: &GameData,
     ) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(DEFAULT_PLAYER_LIVES);
-        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
-
-        for card in latest_constraint.inferred_constraints()[state.player_blocking]
-            .iter()
-            .copied()
-        {
-            if card != Card::Contessa {
-                output.push(ActionObservation::Discard {
-                    player_id: state.player_blocking,
-                    card: [card; MAX_CARDS_DISCARD],
-                    no_cards: 1,
-                });
-            }
-        }
-        output
+        todo!()
     }
 
     fn on_assassinate_challenged(
