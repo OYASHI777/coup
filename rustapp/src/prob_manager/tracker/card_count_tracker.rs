@@ -714,7 +714,7 @@ where
         }
         output
     }
-
+    // TODO: Figure out if can just check as per normal? How does the backtracker work for exchangedraw?
     fn on_exchange_drawn(&self, state: &ExchangeDrawn, _data: &GameData) -> Vec<ActionObservation> {
         let mut output = Vec::with_capacity(6);
         let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
