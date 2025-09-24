@@ -30,11 +30,6 @@ fn main() {
     // game_rnd_constraint_bt_st_debug(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
 
     // game_rnd(game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, log_bool);
-    // test_variant_recurse();
-}
-pub fn test_variant_recurse() {
-    use rustapp::prob_manager::tools::recursion_fn::RecursionTest;
-    RecursionTest::test_variant_recurse(LOG_FILE_NAME);
 }
 #[derive(Default)]
 pub struct Stats {

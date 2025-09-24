@@ -1,10 +1,15 @@
-use crate::history_public::Card;
 use env_logger::{Builder, Env, Target};
 use itertools::Itertools;
 use log::LevelFilter;
+use rustapp::history_public::Card;
 use std::collections::HashSet;
 use std::fs::OpenOptions;
 use std::io::Write;
+const LOG_FILE_NAME: &str = "recursion_fn.log";
+fn main() {}
+pub fn test_variant_recurse() {
+    RecursionTest::test_variant_recurse(LOG_FILE_NAME);
+}
 pub struct RecursionTest;
 
 impl RecursionTest {

@@ -38,6 +38,10 @@ name = "perf_regression"
 path = "src/bin/perf_regression.rs"
 
 [[bin]]
+name = "recursion_fn"
+path = "src/bin/recursion_fn.rs"
+
+[[bin]]
 name = "test_card_count"
 path = "src/bin/test_card_count.rs"
 
