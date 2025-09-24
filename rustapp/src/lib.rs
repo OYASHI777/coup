@@ -43,9 +43,6 @@ pub mod prob_manager {
         pub mod backtrack;
         pub mod card_state_u64;
     }
-    pub mod tools {
-        pub mod recursion_fn;
-    }
     pub mod tracker {
         pub mod card_count_tracker;
         pub mod collater;

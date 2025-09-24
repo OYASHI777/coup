@@ -24,6 +24,7 @@ where
     history: Vec<ActionObservation>,
     pub backtracking_hybrid_prob: BackTrackCardCountManager<InfoArray>,
     card_counts: [u8; MAX_CARD_PERMS_ONE],
+    cards_alive: Vec<Card>,
     marker_collator: PhantomData<C>,
 }
 
@@ -36,6 +37,13 @@ where
             history: Vec::with_capacity(MAX_GAME_LENGTH),
             backtracking_hybrid_prob: BackTrackCardCountManager::new(),
             card_counts: [3; MAX_CARD_PERMS_ONE], // 3 of each card initially
+            cards_alive: vec![
+                Card::Ambassador,
+                Card::Assassin,
+                Card::Captain,
+                Card::Duke,
+                Card::Contessa,
+            ],
             marker_collator: PhantomData,
         }
     }
@@ -47,14 +55,7 @@ where
 
         let (mut public_constraints, mut inferred_constraints) =
             BackTrackCardCountManager::<InfoArray>::create_buffer();
-
-        for card in [
-            Card::Ambassador,
-            Card::Assassin,
-            Card::Captain,
-            Card::Duke,
-            Card::Contessa,
-        ] {
+        for &card in &self.cards_alive {
             inferred_constraints[player].push(card);
             // Check if the player can have this card based on current constraints
             if self
@@ -89,14 +90,10 @@ where
     /// ASSUMPTION: Game rule indicates that if player has the card they MUST reveal it
     ///     => if a player discards a card, they cannot have had the card_reveal
     pub fn reveal_or_discard(&self, player: usize, card_reveal: Card) -> Vec<ActionObservation> {
-        let mut cards_discard = vec![
-            Card::Ambassador,
-            Card::Assassin,
-            Card::Captain,
-            Card::Duke,
-            Card::Contessa,
-        ];
-        cards_discard.swap_remove(card_reveal as usize);
+        let mut cards_discard = self.cards_alive.clone();
+        if let Some(pos) = cards_discard.iter().position(|c| *c == card_reveal) {
+            cards_discard.swap_remove(pos);
+        }
         let mut output = Vec::with_capacity(5 + 4); // 5: reveal_redraw, 4: discards
         let (mut public_constraints, mut inferred_constraints) =
             BackTrackCardCountManager::<InfoArray>::create_buffer();
@@ -223,14 +220,10 @@ where
         player: usize,
         card_reveal: Card,
     ) -> Vec<ActionObservation> {
-        let mut cards_discard = vec![
-            Card::Ambassador,
-            Card::Assassin,
-            Card::Captain,
-            Card::Duke,
-            Card::Contessa,
-        ];
-        cards_discard.swap_remove(card_reveal as usize);
+        let mut cards_discard = self.cards_alive.clone();
+        if let Some(pos) = cards_discard.iter().position(|c| *c == card_reveal) {
+            cards_discard.swap_remove(pos);
+        }
         let mut output = Vec::with_capacity(15); // 5: reveal_redraw, 10: discards
         let (mut public_constraints, mut inferred_constraints) =
             BackTrackCardCountManager::<InfoArray>::create_buffer();
@@ -305,6 +298,13 @@ where
                 for i in 0..*no_cards {
                     if self.card_counts[card[i] as usize] > 0 {
                         self.card_counts[card[i] as usize] -= 1;
+                        if self.card_counts[card[i] as usize] == 0 {
+                            if let Some(pos) = self.cards_alive.iter().position(|c| *c == card[i]) {
+                                self.cards_alive.swap_remove(pos);
+                            } else {
+                                debug_assert!(false, "unable to find card!");
+                            }
+                        }
                     }
                 }
             }
