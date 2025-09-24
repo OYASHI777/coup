@@ -892,9 +892,9 @@ impl RecursionTest {
     pub fn test_variant_recurse(log_file_name: &str) {
         Self::logger(log_file_name, LevelFilter::Info);
         let mut test_inferred_constraints: HashSet<Vec<Vec<Card>>> = HashSet::new();
-        for player_hand in Self::gen_variants(&vec![Card::Ambassador, Card::Assassin], 2) {
+        for player_hand in Self::gen_variants(&[Card::Ambassador, Card::Assassin], 2) {
             'outer: for pile_hand in
-                Self::gen_variants(&vec![Card::Ambassador, Card::Assassin, Card::Captain], 3)
+                Self::gen_variants(&[Card::Ambassador, Card::Assassin, Card::Captain], 3)
             {
                 for card in [
                     Card::Ambassador,

@@ -177,7 +177,7 @@ where
                 player_exchange,
                 6,
                 &self.public_constraints[player_exchange],
-                &vec![],
+                &[],
                 draw,
                 relinquish,
             ) {

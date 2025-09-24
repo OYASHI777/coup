@@ -132,7 +132,7 @@ impl ReachProbability {
         card_count.insert("C".to_string(), 0);
         card_count.insert("D".to_string(), 0);
         card_count.insert("E".to_string(), 0);
-        return self.recur_check(&mut card_count, 0);
+        self.recur_check(&mut card_count, 0)
     }
     pub fn recur_check(&self, card_count: &mut HashMap<String, usize>, player_id: usize) -> bool {
         println!("card_count in node {} {:?}", player_id, card_count);
@@ -190,7 +190,7 @@ impl ReachProbability {
     pub fn info_state_recur_check(
         &self,
         card_count: &mut HashMap<String, usize>,
-        id_vec: &Vec<usize>,
+        id_vec: &[usize],
     ) -> bool {
         println!("card_count in node {:?}", card_count);
         let player_id = id_vec[0];
@@ -212,7 +212,7 @@ impl ReachProbability {
             return false;
         }
         // Remove once only at the start
-        let mut next_vec: Vec<usize> = id_vec.clone();
+        let mut next_vec: Vec<usize> = id_vec.to_owned();
         next_vec.swap_remove(0);
         'hand: for hand in &self.player_reach[player_id] {
             let mut temp_hm: HashMap<String, usize> = HashMap::new();
@@ -268,7 +268,7 @@ impl ReachProbability {
         for letter in hand.chars() {
             *card_count.entry(letter.to_string()).or_insert(0) += 1;
         }
-        return self.info_state_recur_check(&mut card_count, &other_player_vec);
+        self.info_state_recur_check(&mut card_count, &other_player_vec)
     }
     pub fn node_prune(&self) -> bool {
         // Checks if all states have reach prob of 0 or are not possible to reach
@@ -284,7 +284,7 @@ impl ReachProbability {
     pub fn info_state_recur_check_vec(
         &self,
         card_count: &mut HashMap<String, usize>,
-        id_vec: &Vec<usize>,
+        id_vec: &[usize],
     ) -> bool {
         println!("card_count in node {:?}", card_count);
         let player_id = id_vec[0];
@@ -303,7 +303,7 @@ impl ReachProbability {
             }
             return false;
         }
-        let mut next_vec: Vec<usize> = id_vec.clone();
+        let mut next_vec: Vec<usize> = id_vec.to_owned();
         next_vec.swap_remove(0);
         'hand: for hand in &self.player_reach_vec[player_id] {
             let mut temp_hm: HashMap<String, usize> = HashMap::new();
@@ -350,7 +350,7 @@ impl ReachProbability {
         for letter in hand.chars() {
             *card_count.entry(letter.to_string()).or_insert(0) += 1;
         }
-        return self.info_state_recur_check(&mut card_count, &other_player_vec);
+        self.info_state_recur_check(&mut card_count, &other_player_vec)
     }
 }
 

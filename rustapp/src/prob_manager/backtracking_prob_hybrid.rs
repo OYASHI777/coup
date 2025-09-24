@@ -297,6 +297,11 @@ pub struct BackTrackCardCountManager<T: InfoArrayTrait> {
     move_no_history: Vec<usize>, // TODO: determine if more optimal to put in constraint_history
     move_no: usize,
 }
+impl<T: InfoArrayTrait> Default for BackTrackCardCountManager<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     /// Constructor
     pub fn new() -> Self {

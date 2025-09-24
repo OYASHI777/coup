@@ -1958,13 +1958,11 @@ impl History {
                             card: [Card::Duke, Card::Duke],
                         });
                     }
-                    if num_dead_duk < 3 {
-                        if num_dead_con < 3 {
-                            changed_vec.push(ActionObservation::ExchangeDraw {
-                                player_id: player_id,
-                                card: [Card::Duke, Card::Contessa],
-                            });
-                        }
+                    if num_dead_duk < 3 && num_dead_con < 3 {
+                        changed_vec.push(ActionObservation::ExchangeDraw {
+                            player_id: player_id,
+                            card: [Card::Duke, Card::Contessa],
+                        });
                     }
                     if num_dead_con < 2 {
                         changed_vec.push(ActionObservation::ExchangeDraw {
@@ -2178,7 +2176,7 @@ impl History {
                     // Pass
                     // FA2
                     if self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name() == AOName::ForeignAid ||
-                    // B2 B9 
+                    // B2 B9
                     self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::BlockAssassinate ||
                     // C2 C7
                     self.store_len >= 2 && self.store[self.store_len - 2].name() == AOName::BlockSteal ||

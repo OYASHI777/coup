@@ -7,13 +7,11 @@ pub fn unique_sorted_string(tokens: &str) -> Vec<char> {
 
     // Removes duplicates
     let mut chars: Vec<char> = tokens.chars().collect::<HashSet<_>>().into_iter().collect();
-    // Sorts
     chars.sort_unstable();
-    // Returns as a String
-    return chars;
+    chars
 }
 
-pub fn filter_string_less_than(unique_sorted_string: &Vec<char>, char_max: &char) -> Vec<char> {
+pub fn filter_string_less_than(unique_sorted_string: &[char], char_max: &char) -> Vec<char> {
     // Takes a unique sorted string and removes all items above a given character char_max
     // unique sorted string should have no duplicates and be ascending
     let mut l: usize = 0;
@@ -43,10 +41,10 @@ pub fn filter_string_less_than(unique_sorted_string: &Vec<char>, char_max: &char
             r = l;
         }
     }
-    return unique_sorted_string[..l].to_vec();
+    unique_sorted_string[..l].to_vec()
 }
 
-pub fn filter_string_more_than(unique_sorted_string: &Vec<char>, char_min: &char) -> Vec<char> {
+pub fn filter_string_more_than(unique_sorted_string: &[char], char_min: &char) -> Vec<char> {
     // Takes a unique sorted string and removes all items below a given character char_max
     // unique sorted string should have no duplicates and be ascending
     let mut l: usize = 0;
@@ -76,16 +74,16 @@ pub fn filter_string_more_than(unique_sorted_string: &Vec<char>, char_min: &char
             r = l;
         }
     }
-    return unique_sorted_string[l..].to_vec();
+    unique_sorted_string[l..].to_vec()
 }
 
 pub fn filter_string_within(
-    unique_sorted_string: &Vec<char>,
+    unique_sorted_string: &[char],
     char_min: &char,
     char_max: &char,
 ) -> Vec<char> {
     let output: Vec<char> = filter_string_less_than(unique_sorted_string, char_max);
-    return filter_string_more_than(&output, char_min);
+    filter_string_more_than(&output, char_min)
 }
 
 pub fn sort_str(string: &str) -> String {
@@ -93,7 +91,7 @@ pub fn sort_str(string: &str) -> String {
     let mut chars: Vec<char> = sorted_string.chars().collect();
     chars.sort();
     sorted_string = chars.into_iter().collect();
-    return sorted_string;
+    sorted_string
 }
 
 pub fn remove_chars(string: &str, chars_to_remove: &str) -> String {
@@ -103,7 +101,7 @@ pub fn remove_chars(string: &str, chars_to_remove: &str) -> String {
             result_string.remove(index);
         }
     }
-    return result_string;
+    result_string
 }
 
 pub fn replace_chars(string: &str, chars_to_remove: &str, char_to_replace: &str) -> String {
@@ -114,11 +112,11 @@ pub fn replace_chars(string: &str, chars_to_remove: &str, char_to_replace: &str)
             result_string.remove(index);
         }
     }
-    result_string += &char_to_replace;
+    result_string += char_to_replace;
     let mut temp: Vec<char> = result_string.chars().collect();
     temp.sort_unstable();
     result_string = temp.into_iter().collect();
-    return result_string;
+    result_string
 }
 
 pub fn contains_all_chars(string1: &str, string2: &str) -> bool {
