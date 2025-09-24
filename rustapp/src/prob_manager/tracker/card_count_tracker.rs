@@ -689,19 +689,27 @@ where
         state: &ExchangeDrawing,
         _data: &GameData,
     ) -> Vec<ActionObservation> {
-        let mut output = Vec::with_capacity(3);
-        let latest_constraint = self.backtracking_hybrid_prob.latest_constraint();
-        let pile_constraints = &latest_constraint.inferred_constraints()[INDEX_PILE];
-
-        for i in 0..pile_constraints.len() {
-            for j in (i + 1)..pile_constraints.len() {
-                let action = ActionObservation::ExchangeDraw {
-                    player_id: state.player_turn,
-                    card: [pile_constraints[i], pile_constraints[j]],
-                };
-                if !output.contains(&action) {
-                    output.push(action);
+        let mut output = Vec::with_capacity(15);
+        let (mut public_constraints, mut inferred_constraints) =
+            BackTrackCardCountManager::<InfoArray>::create_buffer();
+        for i in 0..MAX_CARD_PERMS_ONE {
+            for j in i..MAX_CARD_PERMS_ONE {
+                if self.backtracking_hybrid_prob.possible_to_have_cards_latest(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                ) {
+                    output.push(ActionObservation::ExchangeDraw {
+                        player_id: state.player_turn,
+                        card: [
+                            Card::try_from(i as u8).unwrap(),
+                            Card::try_from(j as u8).unwrap(),
+                        ],
+                    });
                 }
+                BackTrackCardCountManager::<InfoArray>::clear_buffer(
+                    &mut public_constraints,
+                    &mut inferred_constraints,
+                );
             }
         }
         output
