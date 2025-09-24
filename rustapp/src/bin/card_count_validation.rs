@@ -27,7 +27,6 @@ fn main() {
         min_dead_check,
         log_bool,
     );
-    // game_rnd_constraint_bt_st_debug(game_no, bool_know_priv_info, print_frequency, min_dead_check, log_bool);
 
     // game_rnd(game_no, bool_know_priv_info, bool_skip_exchange, print_frequency, min_dead_check, log_bool);
 }
