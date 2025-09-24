@@ -698,10 +698,52 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     /// - `false` if no valid state is found
     ///
     /// # Notes
-    /// - Assumes cards should be sorted before use
-    /// - User is responsible for clearing the public_constraints and inferred_constraints buffer after use!
-    /// - User is responsible for adding the initial cards into the buffer!
-    ///   Please see `BacktrackCardCountManager::impossible_to_have_cards_general` as an example
+    /// Checks if a player can have specific cards based on the latest game state.
+    ///
+    /// This method verifies whether it's possible for a player to hold certain cards
+    /// given all public information and constraints from the game history.
+    ///
+    /// # Buffer Management
+    /// This method uses pre-allocated buffers for efficiency. You must:
+    /// 1. Create buffers once using `create_buffer()`
+    /// 2. Add cards to `inferred_constraints[player_index]` to test
+    /// 3. Call this method to check feasibility
+    /// 4. Use `clear_buffer()` between checks to reuse the buffers
+    ///
+    /// # Example
+    /// ```rust
+    /// // Create buffers once (reuse across multiple checks)
+    /// let (mut public_constraints, mut inferred_constraints) =
+    ///     BackTrackCardCountManager::<InfoArray>::create_buffer();
+    ///
+    /// // Check if player 0 can have Ambassador
+    /// inferred_constraints[0].push(Card::Ambassador);
+    /// if self.backtracking_hybrid_prob.possible_to_have_cards_latest(
+    ///     &mut public_constraints,
+    ///     &mut inferred_constraints,
+    /// ) {
+    ///     // Player can have Ambassador
+    /// }
+    ///
+    /// // Clear buffers before next check
+    /// BackTrackCardCountManager::<InfoArray>::clear_buffer(
+    ///     &mut public_constraints,
+    ///     &mut inferred_constraints,
+    /// );
+    ///
+    /// // Check if player 0 can have both Duke and Captain
+    /// inferred_constraints[0].extend_from_slice(&[Card::Duke, Card::Captain]);
+    /// if self.backtracking_hybrid_prob.possible_to_have_cards_latest(
+    ///     &mut public_constraints,
+    ///     &mut inferred_constraints,
+    /// ) {
+    ///     // Player can have both cards
+    /// }
+    /// ```
+    ///
+    /// # Notes
+    /// - Use `INDEX_PILE` to check pile constraints
+    /// - Always clear buffers between checks to avoid stale data
     pub fn possible_to_have_cards_latest(
         &self,
         public_constraints: &mut Vec<Vec<Card>>,
@@ -723,7 +765,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     /// - `false` if no valid state is found
     ///
     /// # Notes
-    /// - Assumes cards should be sorted before use
     /// - User is responsible for clearing the public_constraints and inferred_constraints buffer after use!
     /// - User is responsible for adding the initial cards into the buffer!
     ///   Please see `BacktrackCardCountManager::impossible_to_have_cards_general` as an example
