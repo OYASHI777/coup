@@ -291,24 +291,50 @@ where
         output
     }
 
-    /// Updates card counts based on public information
-    fn update_card_counts(&mut self, action: &ActionObservation) {
+    /// Updates public information
+    fn push_action_update(&mut self, action: &ActionObservation) {
         match action {
             ActionObservation::Discard { card, no_cards, .. } => {
-                for i in 0..*no_cards {
-                    if self.card_counts[card[i] as usize] > 0 {
-                        self.card_counts[card[i] as usize] -= 1;
-                        if self.card_counts[card[i] as usize] == 0 {
-                            if let Some(pos) = self.cards_alive.iter().position(|c| *c == card[i]) {
-                                self.cards_alive.swap_remove(pos);
-                            } else {
-                                debug_assert!(false, "unable to find card!");
-                            }
-                        }
-                    }
-                }
+                self.update_discard_card_counts(&card, *no_cards);
             }
             _ => {} // Other actions don't affect public card counts directly
+        }
+    }
+
+    /// Reverts card counts based on public information
+    fn pop_action_update(&mut self, action: &ActionObservation) {
+        match action {
+            ActionObservation::Discard { card, no_cards, .. } => {
+                self.revert_discard_card_counts(&card, *no_cards);
+            }
+            _ => {}
+        }
+    }
+
+    fn update_discard_card_counts(&mut self, card: &[Card; MAX_CARDS_DISCARD], no_cards: usize) {
+        for i in 0..no_cards {
+            debug_assert!(
+                self.card_counts[card[i] as usize] > 0,
+                "should only be able to discard an alive card"
+            );
+            self.card_counts[card[i] as usize] -= 1;
+            if self.card_counts[card[i] as usize] == 0 {
+                if let Some(pos) = self.cards_alive.iter().position(|c| *c == card[i]) {
+                    self.cards_alive.swap_remove(pos);
+                } else {
+                    debug_assert!(false, "unable to find card!");
+                }
+            }
+        }
+    }
+
+    fn revert_discard_card_counts(&mut self, card: &[Card; MAX_CARDS_DISCARD], no_cards: usize) {
+        for i in 0..no_cards {
+            if self.card_counts[card[i] as usize] == 0 {
+                debug_assert!(!self.cards_alive.contains(&card[i]));
+                self.cards_alive.push(card[i]);
+            }
+            self.card_counts[card[i] as usize] += 1;
         }
     }
 }
@@ -343,14 +369,14 @@ where
 
     fn push_ao_public(&mut self, action: &ActionObservation) {
         self.history.push(action.clone());
-        self.update_card_counts(action);
+        self.push_action_update(action);
         // Delegate to the backtracking manager
         self.backtracking_hybrid_prob.push_ao_public(action);
     }
 
     fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
         self.history.push(action.clone());
-        self.update_card_counts(action);
+        self.push_action_update(action);
         // Delegate to the backtracking manager
         self.backtracking_hybrid_prob.push_ao_public_lazy(action);
     }
@@ -369,15 +395,7 @@ where
 
     fn pop(&mut self) {
         if let Some(action) = self.history.pop() {
-            // Reverse the card count updates
-            match action {
-                ActionObservation::Discard { card, no_cards, .. } => {
-                    for i in 0..no_cards {
-                        self.card_counts[card[i] as usize] += 1;
-                    }
-                }
-                _ => {}
-            }
+            self.pop_action_update(&action);
             // Delegate to the backtracking manager
             self.backtracking_hybrid_prob.pop();
         }
