@@ -20,7 +20,7 @@ impl RecursionTest {
         inferred_constraints: &[Vec<Card>],
     ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::new();
-        let mut temp = inferred_constraints.clone();
+        let mut temp = inferred_constraints.to_vec();
         if let Some(pos) = temp[player_loop].iter().position(|c| *c == redraw) {
             temp[player_loop].swap_remove(pos);
         }
@@ -93,7 +93,7 @@ impl RecursionTest {
         pile_index: usize,
         player_to_pile_count: u8, // dst -> src
         pile_to_player_count: u8, // dst -> src
-        current: &Vec<Vec<Card>>,
+        current: &[Vec<Card>],
         variants: &mut Vec<Vec<Vec<Card>>>,
     ) {
         // build an intermediate state
@@ -116,7 +116,7 @@ impl RecursionTest {
         // dest: [[Ambassador, Ambassador], [], [], [], [], [], [Captain, Captain]]
         if idx == cards.len() {
             // TODO: OPTIMIZE the push
-            let mut source_constraints = current.clone();
+            let mut source_constraints = current.to_vec();
             // Player redrew same card
             // Not exactly right as player_to_pile could be a non ambassador
             // Add if player_to_pile is 0
@@ -192,7 +192,7 @@ impl RecursionTest {
                 (player_loop, player_to_pile_count, pile_to_player_count + 1)
             };
 
-            let mut new_constraints = current.clone();
+            let mut new_constraints = current.to_vec();
             if let Some(pos) = new_constraints[dst].iter().position(|&c| c == card) {
                 new_constraints[dst].swap_remove(pos);
                 new_constraints[src].push(card);
@@ -232,7 +232,7 @@ impl RecursionTest {
                 pile_hand.swap_remove(pos);
             }
             player_hand.push(reveal);
-            let mut temp = inferred_constraints.clone();
+            let mut temp = inferred_constraints.to_vec();
             temp[player_loop] = player_hand.clone();
             temp[6] = pile_hand.clone();
             if temp[player_loop].len() < 3
@@ -243,7 +243,7 @@ impl RecursionTest {
                     < 4
             {
                 // TODO: Recurse here in other version
-                variants.push(temp);
+                variants.push(temp.to_vec());
             }
             return variants;
             // TODO: remove if recursing
@@ -261,7 +261,7 @@ impl RecursionTest {
                     bool_move_from_pile_to_player = true;
                 }
                 player_hand.push(reveal);
-                let mut temp = inferred_constraints.clone();
+                let mut temp = inferred_constraints.to_vec();
                 temp[player_loop] = player_hand.clone();
                 temp[6] = pile_hand.clone();
 
@@ -281,7 +281,7 @@ impl RecursionTest {
                         < 4
                 {
                     // TODO: Recurse here in other version
-                    variants.push(temp);
+                    variants.push(temp.to_vec());
                 }
             }
             // TEMP
@@ -311,7 +311,7 @@ impl RecursionTest {
                 bool_move_from_pile_to_player = true;
             }
             player_hand.push(reveal);
-            let mut temp = inferred_constraints.clone();
+            let mut temp = inferred_constraints.to_vec();
             temp[player_loop] = player_hand.clone();
             temp[6] = pile_hand.clone();
 
@@ -325,7 +325,7 @@ impl RecursionTest {
                     < 4
             {
                 // TODO: Recurse here in other version
-                variants.push(temp);
+                variants.push(temp.to_vec());
             }
 
             if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
@@ -389,7 +389,7 @@ impl RecursionTest {
         // 0 moves, 1 moves, 2 moves
         // NOTE AMB player to pile and AMB pile to player cancel out so no intersection of player and pile ish
         // 0 player_to_pile move, 0 pile_to_player move
-        variants.push(inferred_constraints.clone());
+        variants.push(inferred_constraints.to_vec());
         // 1 player_to_pile move, 0 pile_to_player move
         if inferred_constraints[6].len() < 3 && !inferred_constraints[player_loop].is_empty() {
             for card_player in iter_cards_player.iter() {
@@ -399,10 +399,10 @@ impl RecursionTest {
                 if let Some(pos) = player_hand.iter().rposition(|c| *c == *card_player) {
                     player_hand.swap_remove(pos);
                     pile_hand.push(*card_player);
-                    let mut temp = inferred_constraints.clone();
+                    let mut temp = inferred_constraints.to_vec();
                     temp[player_loop] = player_hand.clone();
                     temp[6] = pile_hand.clone();
-                    variants.push(temp);
+                    variants.push(temp.to_vec());
                 }
             }
         }
@@ -415,10 +415,10 @@ impl RecursionTest {
                 if let Some(pos) = pile_hand.iter().rposition(|c| *c == *card_pile) {
                     pile_hand.swap_remove(pos);
                     player_hand.push(*card_pile);
-                    let mut temp = inferred_constraints.clone();
+                    let mut temp = inferred_constraints.to_vec();
                     temp[player_loop] = player_hand.clone();
                     temp[6] = pile_hand.clone();
-                    variants.push(temp);
+                    variants.push(temp.to_vec());
                 }
             }
         }
@@ -439,10 +439,10 @@ impl RecursionTest {
                     }
                     pile_hand.push(*card_player);
                     player_hand.push(*card_pile);
-                    let mut temp = inferred_constraints.clone();
+                    let mut temp = inferred_constraints.to_vec();
                     temp[player_loop] = player_hand.clone();
                     temp[6] = pile_hand.clone();
-                    variants.push(temp);
+                    variants.push(temp.to_vec());
                 }
             }
         }
@@ -456,10 +456,10 @@ impl RecursionTest {
                 player_hand.clear();
                 pile_hand.push(card_0);
                 pile_hand.push(card_1);
-                let mut temp = inferred_constraints.clone();
+                let mut temp = inferred_constraints.to_vec();
                 temp[player_loop] = player_hand.clone();
                 temp[6] = pile_hand.clone();
-                variants.push(temp);
+                variants.push(temp.to_vec());
             }
             // 0 player_to_pile move, 2 pile_to_player move
             if inferred_constraints[player_loop].is_empty() && inferred_constraints[6].len() > 1 {
@@ -486,10 +486,10 @@ impl RecursionTest {
                         }
                         player_hand.push(iter_cards_pile[index_pile_to_player_0]);
                         player_hand.push(iter_cards_pile[index_pile_to_player_1]);
-                        let mut temp = inferred_constraints.clone();
+                        let mut temp = inferred_constraints.to_vec();
                         temp[player_loop] = player_hand.clone();
                         temp[6] = pile_hand.clone();
-                        variants.push(temp);
+                        variants.push(temp.to_vec());
                     }
                 }
             }
@@ -539,10 +539,10 @@ impl RecursionTest {
                             pile_hand.push(iter_cards_player[index_player_to_pile_0]);
                             pile_hand.push(iter_cards_player[index_player_to_pile_1]);
                             player_hand.push(*card_pile);
-                            let mut temp = inferred_constraints.clone();
+                            let mut temp = inferred_constraints.to_vec();
                             temp[player_loop] = player_hand.clone();
                             temp[6] = pile_hand.clone();
-                            variants.push(temp);
+                            variants.push(temp.to_vec());
                         }
                     }
                 }
@@ -589,10 +589,10 @@ impl RecursionTest {
                             player_hand.push(iter_cards_pile[index_pile_to_player_0]);
                             player_hand.push(iter_cards_pile[index_pile_to_player_1]);
                             pile_hand.push(*card_player);
-                            let mut temp = inferred_constraints.clone();
+                            let mut temp = inferred_constraints.to_vec();
                             temp[player_loop] = player_hand.clone();
                             temp[6] = pile_hand.clone();
-                            variants.push(temp);
+                            variants.push(temp.to_vec());
                         }
                     }
                 }
@@ -666,10 +666,10 @@ impl RecursionTest {
                                 player_hand.push(iter_cards_pile[index_pile_to_player_1]);
                                 pile_hand.push(iter_cards_player[index_player_to_pile_0]);
                                 pile_hand.push(iter_cards_player[index_player_to_pile_1]);
-                                let mut temp = inferred_constraints.clone();
+                                let mut temp = inferred_constraints.to_vec();
                                 temp[player_loop] = player_hand.clone();
                                 temp[6] = pile_hand.clone();
-                                variants.push(temp);
+                                variants.push(temp.to_vec());
                             }
                         }
                     }
@@ -688,7 +688,7 @@ impl RecursionTest {
         // TODO: [REFACTOR] I think this case might handle all cases?
         // TODO: [REFACTOR] I think don't need hand?
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(1);
-        let mut temp = inferred_constraints.clone();
+        let mut temp = inferred_constraints.to_owned();
         // same card stays in pile
         // ensure
         if let Some(pos) = temp[6].iter().position(|c| *c == relinquish[0]) {
@@ -710,7 +710,7 @@ impl RecursionTest {
         // Remove this to check if able to add illegal moves! for simulation
         if temp[player_loop].len() < 3 && temp[6].len() < 4 {
             // Consider that Vec for players should have capacity 4 for this to work!
-            variants.push(temp);
+            variants.push(temp.to_vec());
         } else {
             // response = false;
         }
@@ -734,7 +734,7 @@ impl RecursionTest {
                 pile_hand.swap_remove(pos);
             }
             player_hand.push(reveal);
-            let mut temp = inferred_constraints.clone();
+            let mut temp = inferred_constraints.to_vec();
             temp[player_loop] = player_hand.clone();
             temp[6] = pile_hand.clone();
             if temp[player_loop].len() < 3
@@ -745,7 +745,7 @@ impl RecursionTest {
                     < 4
             {
                 // TODO: Recurse here in other version
-                variants.push(temp);
+                variants.push(temp.to_vec());
             }
             return variants;
             // TODO: remove if recursing
@@ -763,12 +763,12 @@ impl RecursionTest {
                 }
                 player_hand.push(reveal);
 
-                let mut temp = inferred_constraints.clone();
+                let mut temp = inferred_constraints.to_vec();
                 temp[player_loop] = player_hand.clone();
                 temp[6] = pile_hand.clone();
 
                 // TODO: Recurse here in other version
-                variants.push(temp);
+                variants.push(temp.to_vec());
 
                 if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
                     player_hand.swap_remove(pos);
@@ -792,11 +792,11 @@ impl RecursionTest {
                     bool_move_from_pile_to_player = true;
                 }
                 player_hand.push(reveal);
-                let mut temp = inferred_constraints.clone();
+                let mut temp = inferred_constraints.to_vec();
                 temp[player_loop] = player_hand.clone();
                 temp[6] = pile_hand.clone();
                 // TODO: Recurse here in other version
-                variants.push(temp);
+                variants.push(temp.to_vec());
 
                 if let Some(pos) = player_hand.iter().rposition(|c| *c == reveal) {
                     player_hand.swap_remove(pos);
@@ -820,7 +820,7 @@ impl RecursionTest {
             //         bool_move_from_pile_to_player = true;
             //     }
             //     player_hand.push(reveal);
-            //     let mut temp = inferred_constraints.clone();
+            //     let mut temp = inferred_constraints.to_vec();
             //     temp[player_loop] = player_hand.clone();
             //     temp[6] = pile_hand.clone();
 
