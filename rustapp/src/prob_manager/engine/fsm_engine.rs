@@ -16,6 +16,13 @@ pub struct FSMEngine {
     pub history_state: Vec<EngineState>,
     pub state: GameState,
 }
+
+impl Default for FSMEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FSMEngine {
     /// Generates an FSMEngine
     pub fn new() -> Self {
@@ -127,7 +134,7 @@ impl CoupTraversal for FSMEngine {
         self.history.clear();
         self.history_state.clear();
         self.state = GameState::start(player);
-        self.history_state.push(self.state.engine_state.clone());
+        self.history_state.push(self.state.engine_state);
     }
     /// Currently engine does not store private information, but tracker does
     /// so default to public
@@ -135,7 +142,7 @@ impl CoupTraversal for FSMEngine {
         self.start_public(player);
     }
 
-    fn start_known(&mut self, _cards: &Vec<Vec<Card>>) {
+    fn start_known(&mut self, _cards: &[Vec<Card>]) {
         unimplemented!()
     }
 

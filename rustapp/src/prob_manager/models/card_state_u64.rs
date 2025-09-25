@@ -43,6 +43,13 @@ impl std::fmt::Debug for CardStateu64 {
     }
 }
 use crate::prob_manager::constants::{BAG_SIZES, TOKENS};
+
+impl Default for CardStateu64 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CardStateu64 {
     /// Default creation for the uninitiated
     pub fn new() -> Self {
@@ -90,7 +97,7 @@ impl CardStateu64 {
             encoded_cards |= (*card as u64) << (i * BITS_PER_CARD);
         }
         self.0 &= !(mask << shift);
-        self.0 |= (encoded_cards as u64) << shift;
+        self.0 |= encoded_cards << shift;
     }
     // A small helper to generate all combinations of `k` elements from a slice.
     pub fn combinations<T: Clone>(arr: &[T], k: usize) -> Vec<Vec<T>> {
@@ -143,7 +150,7 @@ impl CardStateu64 {
 impl CardPermState for CardStateu64 {
     /// Creates CardPermState from str reference
     fn from_str(str: &str) -> Self {
-        let cards: Vec<Card> = str.chars().map(|c| Card::char_to_card(c)).collect();
+        let cards: Vec<Card> = str.chars().map(Card::char_to_card).collect();
         let mut state = Self::new();
         state.set_player_cards(0, &cards[0..2]);
         state.set_player_cards(1, &cards[2..4]);
@@ -320,7 +327,7 @@ impl CardPermState for CardStateu64 {
         card_i: Card,
         card_j: Card,
     ) -> Option<Self> {
-        let mut new_state = self.clone();
+        let mut new_state = *self;
         let mut player_i_cards = self.get_player_cards_unsorted(player_i);
         let mut player_j_cards = self.get_player_cards_unsorted(player_j);
         if let Some(pos_i) = player_i_cards.iter().rposition(|c| *c == card_i) {
@@ -343,7 +350,7 @@ impl CardPermState for CardStateu64 {
         draw: &[Card],
         relinquish: &[Card],
     ) -> Option<Self> {
-        let mut new_state = self.clone();
+        let mut new_state = *self;
         let mut player_drawing_cards = self.get_player_cards_unsorted(player_drawing);
         let mut player_drawn_cards = self.get_player_cards_unsorted(player_drawn);
         for dead_card in player_drawing_dead_cards.iter() {

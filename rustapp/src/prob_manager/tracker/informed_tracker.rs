@@ -60,6 +60,15 @@ where
     marker_collator: PhantomData<C>,
 }
 
+impl<C> Default for InformedTracker<C>
+where
+    C: Collator,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<C> InformedTracker<C>
 where
     C: Collator,
@@ -67,8 +76,12 @@ where
     pub fn new() -> Self {
         InformedTracker::<C> {
             history: Vec::with_capacity(MAX_GAME_LENGTH),
-            public_constraints: vec![Vec::with_capacity(2); MAX_PLAYERS_INCL_PILE],
-            inferred_constraints: vec![Vec::with_capacity(4); MAX_PLAYERS_INCL_PILE],
+            public_constraints: (0..MAX_PLAYERS_INCL_PILE)
+                .map(|_| Vec::with_capacity(2))
+                .collect::<Vec<_>>(),
+            inferred_constraints: (0..MAX_PLAYERS_INCL_PILE)
+                .map(|_| Vec::with_capacity(4))
+                .collect::<Vec<_>>(),
             card_counts: [3; MAX_CARD_PERMS_ONE],
             marker_collator: PhantomData,
         }
@@ -169,7 +182,7 @@ where
         unimplemented!();
     }
 
-    fn start_known(&mut self, player_cards: &Vec<Vec<Card>>) {
+    fn start_known(&mut self, player_cards: &[Vec<Card>]) {
         self.public_constraints.iter_mut().for_each(|v| v.clear());
         self.inferred_constraints.iter_mut().for_each(|v| v.clear());
         player_cards

@@ -41,10 +41,7 @@ impl CoupTransition for CoupHit {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::Discard { .. }),
             "Illegal Move!"
         )
     }

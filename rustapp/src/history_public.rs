@@ -102,8 +102,9 @@ pub enum AOResult {
     Failure,
     Pass,
 }
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ActionObservation {
+    #[default]
     EmptyAO,
     // Challenge Status before collation
     ChallengeAccept {
@@ -180,11 +181,6 @@ pub enum ActionObservation {
     // TODO: Add ExchangeChoice Private, and generate possible moves based on history and exchangedraw choice
 }
 
-impl Default for ActionObservation {
-    fn default() -> Self {
-        ActionObservation::EmptyAO
-    }
-}
 // Need split result
 // Collective tells us who challenges or blocks
 // Evalresult should tell us status of whether it succeeded or failed
@@ -439,14 +435,11 @@ impl History {
     }
     pub fn log_state(&self) {
         log::info!("Current move: {}", self.store_len());
-        log::info!(
-            "{}",
-            format!("Current_player_turn: {:?}", self.current_player_turn)
-        );
-        log::info!("{}", format!("Influence: {:?}", self.latest_influence()));
-        log::info!("{}", format!("Coins: {:?}", self.latest_coins()));
+        log::info!("Current_player_turn: {:?}", self.current_player_turn);
+        log::info!("Influence: {:?}", self.latest_influence());
+        log::info!("Coins: {:?}", self.latest_coins());
         // log::info!("{}", format!("Store_len: {:?}", self.store_len));
-        log::info!("{}", format!("Dead Cards: {:?}", self.public_card_count));
+        log::info!("Dead Cards: {:?}", self.public_card_count);
     }
     pub fn print_history(&self) {
         if self.store_len == 0 {
@@ -463,18 +456,12 @@ impl History {
     }
     pub fn log_history(&self) {
         log::info!(
-            "{}",
-            format!(
-                "Current_player_turn: {:?}",
-                self.get_history(self.store_len)
-            )
+            "Current_player_turn: {:?}",
+            self.get_history(self.store_len)
         );
         println!(
-            "{}",
-            format!(
-                "Current_player_turn: {:?}",
-                self.get_history(self.store_len)
-            )
+            "Current_player_turn: {:?}",
+            self.get_history(self.store_len)
         );
     }
     pub fn pop(&mut self) {
@@ -554,11 +541,7 @@ impl History {
                 count += 1;
             }
         }
-        if count == 5 {
-            true
-        } else {
-            false
-        }
+        count == 5
     }
     pub fn get_public_card_count(&self, card: &Card) -> u8 {
         self.public_card_count[*card as usize]
@@ -703,28 +686,26 @@ impl History {
                         }
                     }
                 }
-            } else if self.store_len == 3 {
-                if self.store[self.store_len - 3].name() == AOName::BlockSteal
-                    && self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name()
-                        == AOName::Steal
-                {
-                    // Case C3 C8
-                    // Coup Discard, can lookback to previous move -5 as BlockSteal so we include second condition
-                    let stealer_id: usize = self.store
-                        [self.store_len - self.dist_from_turn[self.store_len - 1]]
-                        .player_id();
-                    let stolen_id: usize = self.store
-                        [self.store_len - self.dist_from_turn[self.store_len - 1]]
-                        .opposing_player_id();
-                    let amount: u8 = self.store
-                        [self.store_len - self.dist_from_turn[self.store_len - 1]]
-                        .amount();
-                    if self.latest_influence()[stealer_id] != 0 {
-                        self.add_coins(stealer_id, amount);
-                    }
-                    if self.latest_influence()[stolen_id] != 0 {
-                        self.subtract_coins(stolen_id, amount);
-                    }
+            } else if self.store_len == 3
+                && self.store[self.store_len - 3].name() == AOName::BlockSteal
+                && self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].name()
+                    == AOName::Steal
+            {
+                // Case C3 C8
+                // Coup Discard, can lookback to previous move -5 as BlockSteal so we include second condition
+                let stealer_id: usize = self.store
+                    [self.store_len - self.dist_from_turn[self.store_len - 1]]
+                    .player_id();
+                let stolen_id: usize = self.store
+                    [self.store_len - self.dist_from_turn[self.store_len - 1]]
+                    .opposing_player_id();
+                let amount: u8 =
+                    self.store[self.store_len - self.dist_from_turn[self.store_len - 1]].amount();
+                if self.latest_influence()[stealer_id] != 0 {
+                    self.add_coins(stealer_id, amount);
+                }
+                if self.latest_influence()[stolen_id] != 0 {
+                    self.subtract_coins(stolen_id, amount);
                 }
             }
         } else if ao.name() == AOName::CollectiveBlock
@@ -806,32 +787,26 @@ impl History {
         let mut id: usize = (player_id + 1) % 6;
         match move_name {
             AOName::Income => {
-                changed_vec.push(ActionObservation::Income {
-                    player_id: player_id,
-                });
+                changed_vec.push(ActionObservation::Income { player_id });
             }
             AOName::ForeignAid => {
-                changed_vec.push(ActionObservation::ForeignAid {
-                    player_id: player_id,
-                });
+                changed_vec.push(ActionObservation::ForeignAid { player_id });
             }
             AOName::Tax => {
-                changed_vec.push(ActionObservation::Tax {
-                    player_id: player_id,
-                });
+                changed_vec.push(ActionObservation::Tax { player_id });
             }
             AOName::Steal => {
                 while id != player_id {
                     if self.latest_influence()[id] > 0 {
                         if self.latest_coins()[id] > 1 {
                             changed_vec.push(ActionObservation::Steal {
-                                player_id: player_id,
+                                player_id,
                                 opposing_player_id: id,
                                 amount: 2,
                             });
                         } else {
                             changed_vec.push(ActionObservation::Steal {
-                                player_id: player_id,
+                                player_id,
                                 opposing_player_id: id,
                                 amount: self.latest_coins()[id],
                             });
@@ -845,7 +820,7 @@ impl History {
                     while id != player_id {
                         if self.latest_influence()[id] > 0 {
                             changed_vec.push(ActionObservation::Assassinate {
-                                player_id: player_id,
+                                player_id,
                                 opposing_player_id: id,
                             });
                         }
@@ -858,7 +833,7 @@ impl History {
                     while id != player_id {
                         if self.latest_influence()[id] > 0 {
                             changed_vec.push(ActionObservation::Coup {
-                                player_id: player_id,
+                                player_id,
                                 opposing_player_id: id,
                             });
                         }
@@ -875,7 +850,7 @@ impl History {
                 //Adding case where nobody challenges make finalchallenger the person being challenged (an impossible result)
                 changed_vec.push(ActionObservation::CollectiveChallenge {
                     participants: [false, false, false, false, false, false],
-                    opposing_player_id: opposing_player_id,
+                    opposing_player_id,
                     final_actioner: opposing_player_id,
                 });
 
@@ -887,15 +862,15 @@ impl History {
                         continue;
                     }
                     // Modifies the participants based on combination and them being alive
-                    for i in 0..6 {
+                    for (i, participant) in participants.iter_mut().enumerate() {
                         // Skip opposing player or players with no influence
-                        if i == opposing_player_id || self.latest_influence()[i] <= 0 {
+                        if i == opposing_player_id || self.latest_influence()[i] == 0 {
                             continue;
                         }
                         // 01 << 1 => 10 which is like 2
                         // If comb player position has a 1
                         if (comb & (1 << i)) != 0 {
-                            participants[i] = true;
+                            *participant = true;
                             any_true = true;
                         }
                     }
@@ -903,8 +878,8 @@ impl History {
                     // Only add to changed_vec if there is at least one challenger
                     // Can be false because player influence may all be 0
                     if any_true {
-                        for i in 0..6 {
-                            if participants[i] {
+                        for (i, participant_check) in participants.iter().enumerate() {
+                            if *participant_check {
                                 let final_actioner = i;
                                 changed_vec.push(ActionObservation::CollectiveChallenge {
                                     participants,
@@ -924,7 +899,7 @@ impl History {
                 // Checks every combination by representing in 000000 or 010010
                 changed_vec.push(ActionObservation::CollectiveBlock {
                     participants: [false, false, false, false, false, false],
-                    opposing_player_id: opposing_player_id,
+                    opposing_player_id,
                     final_actioner: opposing_player_id,
                 });
                 for comb in 1..(1 << 6) {
@@ -935,15 +910,15 @@ impl History {
                         continue;
                     }
                     // Modifies the participants based on combination and them being alive
-                    for i in 0..6 {
+                    for (i, participant) in participants.iter_mut().enumerate() {
                         // Skip opposing player or players with no influence
-                        if i == opposing_player_id || self.latest_influence()[i] <= 0 {
+                        if i == opposing_player_id || self.latest_influence()[i] == 0 {
                             continue;
                         }
                         // 01 << 1 => 10 which is like 2
                         // If comb player position has a 1
                         if (comb & (1 << i)) != 0 {
-                            participants[i] = true;
+                            *participant = true;
                             any_true = true;
                         }
                     }
@@ -968,18 +943,18 @@ impl History {
                     [self.store_len - self.dist_from_turn[self.store_len - 1]]
                     .player_id();
                 changed_vec.push(ActionObservation::BlockSteal {
-                    player_id: player_id,
+                    player_id,
                     opposing_player_id: stealer_id,
                     card: Card::Ambassador,
                 });
                 changed_vec.push(ActionObservation::BlockSteal {
-                    player_id: player_id,
+                    player_id,
                     opposing_player_id: stealer_id,
                     card: Card::Captain,
                 });
                 // This is a move the represents a Pass
                 changed_vec.push(ActionObservation::BlockSteal {
-                    player_id: player_id,
+                    player_id,
                     opposing_player_id: player_id,
                     card: Card::Captain,
                 });
@@ -991,12 +966,12 @@ impl History {
                     [self.store_len - self.dist_from_turn[self.store_len - 1]]
                     .player_id();
                 changed_vec.push(ActionObservation::BlockAssassinate {
-                    player_id: player_id,
+                    player_id,
                     opposing_player_id: attacker_id,
                 });
                 // This is a move that represents a Pass
                 changed_vec.push(ActionObservation::BlockAssassinate {
-                    player_id: player_id,
+                    player_id,
                     opposing_player_id: player_id,
                 });
             }
@@ -1010,35 +985,35 @@ impl History {
 
                 if num_dead_amb < 3 {
                     changed_vec.push(ActionObservation::Discard {
-                        player_id: player_id,
+                        player_id,
                         card: [Card::Ambassador, Card::Ambassador],
                         no_cards: 1,
                     });
                 }
                 if num_dead_ass < 3 {
                     changed_vec.push(ActionObservation::Discard {
-                        player_id: player_id,
+                        player_id,
                         card: [Card::Assassin, Card::Assassin],
                         no_cards: 1,
                     });
                 }
                 if num_dead_cpt < 3 {
                     changed_vec.push(ActionObservation::Discard {
-                        player_id: player_id,
+                        player_id,
                         card: [Card::Captain, Card::Captain],
                         no_cards: 1,
                     });
                 }
                 if num_dead_duk < 3 {
                     changed_vec.push(ActionObservation::Discard {
-                        player_id: player_id,
+                        player_id,
                         card: [Card::Duke, Card::Duke],
                         no_cards: 1,
                     });
                 }
                 if num_dead_con < 3 {
                     changed_vec.push(ActionObservation::Discard {
-                        player_id: player_id,
+                        player_id,
                         card: [Card::Contessa, Card::Contessa],
                         no_cards: 1,
                     });
@@ -1060,35 +1035,35 @@ impl History {
                         // Spaghetti code i know
                         if num_dead_ass < 3 {
                             changed_vec.push(ActionObservation::RevealRedraw {
-                                player_id: player_id,
+                                player_id,
                                 reveal: Card::Assassin,
                                 redraw: Card::Assassin,
                             });
                             if bool_know_priv_info {
                                 if num_dead_amb < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Assassin,
                                         redraw: Card::Ambassador,
                                     });
                                 }
                                 if num_dead_cpt < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Assassin,
                                         redraw: Card::Captain,
                                     });
                                 }
                                 if num_dead_duk < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Assassin,
                                         redraw: Card::Duke,
                                     });
                                 }
                                 if num_dead_con < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Assassin,
                                         redraw: Card::Contessa,
                                     });
@@ -1097,28 +1072,28 @@ impl History {
                         }
                         if num_dead_amb < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Ambassador, Card::Ambassador],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_cpt < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Captain, Card::Captain],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Duke, Card::Duke],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Contessa, Card::Contessa],
                                 no_cards: 1,
                             });
@@ -1127,35 +1102,35 @@ impl History {
                         // C8 - C12
                         if num_dead_cpt < 3 {
                             changed_vec.push(ActionObservation::RevealRedraw {
-                                player_id: player_id,
+                                player_id,
                                 reveal: Card::Captain,
                                 redraw: Card::Captain,
                             });
                             if bool_know_priv_info {
                                 if num_dead_amb < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Captain,
                                         redraw: Card::Ambassador,
                                     });
                                 }
                                 if num_dead_ass < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Captain,
                                         redraw: Card::Assassin,
                                     });
                                 }
                                 if num_dead_duk < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Captain,
                                         redraw: Card::Duke,
                                     });
                                 }
                                 if num_dead_con < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Captain,
                                         redraw: Card::Contessa,
                                     });
@@ -1164,28 +1139,28 @@ impl History {
                         }
                         if num_dead_amb < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Ambassador, Card::Ambassador],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_ass < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Assassin, Card::Assassin],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Duke, Card::Duke],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Contessa, Card::Contessa],
                                 no_cards: 1,
                             });
@@ -1194,35 +1169,35 @@ impl History {
                         // D3
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::RevealRedraw {
-                                player_id: player_id,
+                                player_id,
                                 reveal: Card::Duke,
                                 redraw: Card::Duke,
                             });
                             if bool_know_priv_info {
                                 if num_dead_amb < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Ambassador,
                                     });
                                 }
                                 if num_dead_ass < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Assassin,
                                     });
                                 }
                                 if num_dead_cpt < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Captain,
                                     });
                                 }
                                 if num_dead_con < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Contessa,
                                     });
@@ -1231,28 +1206,28 @@ impl History {
                         }
                         if num_dead_amb < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Ambassador, Card::Ambassador],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_ass < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Assassin, Card::Assassin],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_cpt < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Captain, Card::Captain],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Contessa, Card::Contessa],
                                 no_cards: 1,
                             });
@@ -1261,35 +1236,35 @@ impl History {
                         // A3
                         if num_dead_amb < 3 {
                             changed_vec.push(ActionObservation::RevealRedraw {
-                                player_id: player_id,
+                                player_id,
                                 reveal: Card::Ambassador,
                                 redraw: Card::Ambassador,
                             });
                             if bool_know_priv_info {
                                 if num_dead_ass < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Ambassador,
                                         redraw: Card::Assassin,
                                     });
                                 }
                                 if num_dead_cpt < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Ambassador,
                                         redraw: Card::Captain,
                                     });
                                 }
                                 if num_dead_duk < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Ambassador,
                                         redraw: Card::Duke,
                                     });
                                 }
                                 if num_dead_con < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Ambassador,
                                         redraw: Card::Contessa,
                                     });
@@ -1298,28 +1273,28 @@ impl History {
                         }
                         if num_dead_ass < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Assassin, Card::Assassin],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_cpt < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Captain, Card::Captain],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Duke, Card::Duke],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Contessa, Card::Contessa],
                                 no_cards: 1,
                             });
@@ -1329,35 +1304,35 @@ impl History {
                             // B4 B11
                             // Special Assassinate Case
                             changed_vec.push(ActionObservation::RevealRedraw {
-                                player_id: player_id,
+                                player_id,
                                 reveal: Card::Contessa,
                                 redraw: Card::Contessa,
                             });
                             if bool_know_priv_info {
                                 if num_dead_amb < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Contessa,
                                         redraw: Card::Ambassador,
                                     });
                                 }
                                 if num_dead_ass < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Contessa,
                                         redraw: Card::Assassin,
                                     });
                                 }
                                 if num_dead_cpt < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Contessa,
                                         redraw: Card::Captain,
                                     });
                                 }
                                 if num_dead_duk < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Contessa,
                                         redraw: Card::Duke,
                                     });
@@ -1367,28 +1342,28 @@ impl History {
                         if self.latest_influence()[player_id] == 1 {
                             if num_dead_amb < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Ambassador, Card::Ambassador],
                                     no_cards: 1,
                                 });
                             }
                             if num_dead_ass < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Assassin, Card::Assassin],
                                     no_cards: 1,
                                 });
                             }
                             if num_dead_cpt < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Captain, Card::Captain],
                                     no_cards: 1,
                                 });
                             }
                             if num_dead_duk < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Duke, Card::Duke],
                                     no_cards: 1,
                                 });
@@ -1400,28 +1375,28 @@ impl History {
                             );
                             if num_dead_amb < 2 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Ambassador, Card::Ambassador],
                                     no_cards: 2,
                                 });
                             }
                             if num_dead_ass < 2 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Assassin, Card::Assassin],
                                     no_cards: 2,
                                 });
                             }
                             if num_dead_cpt < 2 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Captain, Card::Captain],
                                     no_cards: 2,
                                 });
                             }
                             if num_dead_duk < 2 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Duke, Card::Duke],
                                     no_cards: 2,
                                 });
@@ -1429,21 +1404,21 @@ impl History {
                             if num_dead_amb < 3 {
                                 if num_dead_ass < 3 {
                                     changed_vec.push(ActionObservation::Discard {
-                                        player_id: player_id,
+                                        player_id,
                                         card: [Card::Ambassador, Card::Assassin],
                                         no_cards: 2,
                                     });
                                 }
                                 if num_dead_cpt < 3 {
                                     changed_vec.push(ActionObservation::Discard {
-                                        player_id: player_id,
+                                        player_id,
                                         card: [Card::Ambassador, Card::Captain],
                                         no_cards: 2,
                                     });
                                 }
                                 if num_dead_duk < 3 {
                                     changed_vec.push(ActionObservation::Discard {
-                                        player_id: player_id,
+                                        player_id,
                                         card: [Card::Ambassador, Card::Duke],
                                         no_cards: 2,
                                     });
@@ -1452,27 +1427,25 @@ impl History {
                             if num_dead_ass < 3 {
                                 if num_dead_cpt < 3 {
                                     changed_vec.push(ActionObservation::Discard {
-                                        player_id: player_id,
+                                        player_id,
                                         card: [Card::Assassin, Card::Captain],
                                         no_cards: 2,
                                     });
                                 }
                                 if num_dead_duk < 3 {
                                     changed_vec.push(ActionObservation::Discard {
-                                        player_id: player_id,
+                                        player_id,
                                         card: [Card::Assassin, Card::Duke],
                                         no_cards: 2,
                                     });
                                 }
                             }
-                            if num_dead_cpt < 3 {
-                                if num_dead_duk < 3 {
-                                    changed_vec.push(ActionObservation::Discard {
-                                        player_id: player_id,
-                                        card: [Card::Captain, Card::Duke],
-                                        no_cards: 2,
-                                    });
-                                }
+                            if num_dead_cpt < 3 && num_dead_duk < 3 {
+                                changed_vec.push(ActionObservation::Discard {
+                                    player_id,
+                                    card: [Card::Captain, Card::Duke],
+                                    no_cards: 2,
+                                });
                             }
                         }
                     } else if self.store[self.store_len - 2].name() == AOName::BlockSteal {
@@ -1480,35 +1453,35 @@ impl History {
                         if self.store[self.store_len - 2].card() == Card::Ambassador {
                             if num_dead_amb < 3 {
                                 changed_vec.push(ActionObservation::RevealRedraw {
-                                    player_id: player_id,
+                                    player_id,
                                     reveal: Card::Ambassador,
                                     redraw: Card::Ambassador,
                                 });
                                 if bool_know_priv_info {
                                     if num_dead_ass < 3 {
                                         changed_vec.push(ActionObservation::RevealRedraw {
-                                            player_id: player_id,
+                                            player_id,
                                             reveal: Card::Ambassador,
                                             redraw: Card::Assassin,
                                         });
                                     }
                                     if num_dead_cpt < 3 {
                                         changed_vec.push(ActionObservation::RevealRedraw {
-                                            player_id: player_id,
+                                            player_id,
                                             reveal: Card::Ambassador,
                                             redraw: Card::Captain,
                                         });
                                     }
                                     if num_dead_duk < 3 {
                                         changed_vec.push(ActionObservation::RevealRedraw {
-                                            player_id: player_id,
+                                            player_id,
                                             reveal: Card::Ambassador,
                                             redraw: Card::Duke,
                                         });
                                     }
                                     if num_dead_con < 3 {
                                         changed_vec.push(ActionObservation::RevealRedraw {
-                                            player_id: player_id,
+                                            player_id,
                                             reveal: Card::Ambassador,
                                             redraw: Card::Contessa,
                                         });
@@ -1517,28 +1490,28 @@ impl History {
                             }
                             if num_dead_ass < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Assassin, Card::Assassin],
                                     no_cards: 1,
                                 });
                             }
                             if num_dead_cpt < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Captain, Card::Captain],
                                     no_cards: 1,
                                 });
                             }
                             if num_dead_duk < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Duke, Card::Duke],
                                     no_cards: 1,
                                 });
                             }
                             if num_dead_con < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Contessa, Card::Contessa],
                                     no_cards: 1,
                                 });
@@ -1546,35 +1519,35 @@ impl History {
                         } else if self.store[self.store_len - 2].card() == Card::Captain {
                             if num_dead_cpt < 3 {
                                 changed_vec.push(ActionObservation::RevealRedraw {
-                                    player_id: player_id,
+                                    player_id,
                                     reveal: Card::Captain,
                                     redraw: Card::Captain,
                                 });
                                 if bool_know_priv_info {
                                     if num_dead_amb < 3 {
                                         changed_vec.push(ActionObservation::RevealRedraw {
-                                            player_id: player_id,
+                                            player_id,
                                             reveal: Card::Captain,
                                             redraw: Card::Ambassador,
                                         });
                                     }
                                     if num_dead_ass < 3 {
                                         changed_vec.push(ActionObservation::RevealRedraw {
-                                            player_id: player_id,
+                                            player_id,
                                             reveal: Card::Captain,
                                             redraw: Card::Assassin,
                                         });
                                     }
                                     if num_dead_duk < 3 {
                                         changed_vec.push(ActionObservation::RevealRedraw {
-                                            player_id: player_id,
+                                            player_id,
                                             reveal: Card::Captain,
                                             redraw: Card::Duke,
                                         });
                                     }
                                     if num_dead_con < 3 {
                                         changed_vec.push(ActionObservation::RevealRedraw {
-                                            player_id: player_id,
+                                            player_id,
                                             reveal: Card::Captain,
                                             redraw: Card::Contessa,
                                         });
@@ -1583,28 +1556,28 @@ impl History {
                             }
                             if num_dead_amb < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Ambassador, Card::Ambassador],
                                     no_cards: 1,
                                 });
                             }
                             if num_dead_ass < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Assassin, Card::Assassin],
                                     no_cards: 1,
                                 });
                             }
                             if num_dead_duk < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Duke, Card::Duke],
                                     no_cards: 1,
                                 });
                             }
                             if num_dead_con < 3 {
                                 changed_vec.push(ActionObservation::Discard {
-                                    player_id: player_id,
+                                    player_id,
                                     card: [Card::Contessa, Card::Contessa],
                                     no_cards: 1,
                                 });
@@ -1618,35 +1591,35 @@ impl History {
                         // FA3
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::RevealRedraw {
-                                player_id: player_id,
+                                player_id,
                                 reveal: Card::Duke,
                                 redraw: Card::Duke,
                             });
                             if bool_know_priv_info {
                                 if num_dead_amb < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Ambassador,
                                     });
                                 }
                                 if num_dead_ass < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Assassin,
                                     });
                                 }
                                 if num_dead_cpt < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Captain,
                                     });
                                 }
                                 if num_dead_con < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Contessa,
                                     });
@@ -1655,28 +1628,28 @@ impl History {
                         }
                         if num_dead_amb < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Ambassador, Card::Ambassador],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_ass < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Assassin, Card::Assassin],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_cpt < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Captain, Card::Captain],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Contessa, Card::Contessa],
                                 no_cards: 1,
                             });
@@ -1689,35 +1662,35 @@ impl History {
                         // FA3
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::RevealRedraw {
-                                player_id: player_id,
+                                player_id,
                                 reveal: Card::Duke,
                                 redraw: Card::Duke,
                             });
                             if bool_know_priv_info {
                                 if num_dead_amb < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Ambassador,
                                     });
                                 }
                                 if num_dead_ass < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Assassin,
                                     });
                                 }
                                 if num_dead_cpt < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Captain,
                                     });
                                 }
                                 if num_dead_con < 3 {
                                     changed_vec.push(ActionObservation::RevealRedraw {
-                                        player_id: player_id,
+                                        player_id,
                                         reveal: Card::Duke,
                                         redraw: Card::Contessa,
                                     });
@@ -1726,28 +1699,28 @@ impl History {
                         }
                         if num_dead_amb < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Ambassador, Card::Ambassador],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_ass < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Assassin, Card::Assassin],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_cpt < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Captain, Card::Captain],
                                 no_cards: 1,
                             });
                         }
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::Discard {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Contessa, Card::Contessa],
                                 no_cards: 1,
                             });
@@ -1760,9 +1733,7 @@ impl History {
                 }
             }
             AOName::Exchange => {
-                changed_vec.push(ActionObservation::Exchange {
-                    player_id: player_id,
-                });
+                changed_vec.push(ActionObservation::Exchange { player_id });
             }
             AOName::ExchangeChoice => {
                 let num_dead_amb: u8 = self.get_public_card_count(&Card::Ambassador);
@@ -1787,7 +1758,7 @@ impl History {
                                 total_counts[j] += 1;
                                 if total_counts[j] + count_card_arr[j] < 4 {
                                     changed_vec.push(ActionObservation::ExchangeChoice {
-                                        player_id: player_id,
+                                        player_id,
                                         relinquish: [
                                             Card::try_from(i as u8).unwrap(),
                                             Card::try_from(j as u8).unwrap(),
@@ -1813,7 +1784,7 @@ impl History {
                     //                             for j in i..5 {
                     //                                 total_counts[j] += 1;
                     //                                 if total_counts[j] + count_card_arr[j] < 3 {
-                    //                                     changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 2, hand: [Card::try_from(i_p as u8).unwrap(), Card::try_from(j_p as u8).unwrap()], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
+                    //                                     changed_vec.push(ActionObservation::ExchangeChoice { player_id, no_cards: 2, hand: [Card::try_from(i_p as u8).unwrap(), Card::try_from(j_p as u8).unwrap()], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
                     //                                 }
                     //                                 total_counts[j] -= 1;
                     //                             }
@@ -1837,7 +1808,7 @@ impl History {
                     //                     for j in i..5 {
                     //                         total_counts[j] += 1;
                     //                         if total_counts[j] + count_card_arr[j] < 3 {
-                    //                             changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: 1, hand: [Card::try_from(i_p as u8).unwrap(), Card::try_from(i_p as u8).unwrap()], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
+                    //                             changed_vec.push(ActionObservation::ExchangeChoice { player_id, no_cards: 1, hand: [Card::try_from(i_p as u8).unwrap(), Card::try_from(i_p as u8).unwrap()], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
                     //                         }
                     //                         total_counts[j] -= 1;
                     //                     }
@@ -1851,17 +1822,17 @@ impl History {
                 } else {
                     // for i in 0..5 {
                     //     if count_card_arr[i] < 2 {
-                    //         changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: self.latest_influence()[player_id], hand: [Card::Ambassador, Card::Ambassador], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(i as u8).unwrap()]});
+                    //         changed_vec.push(ActionObservation::ExchangeChoice { player_id, no_cards: self.latest_influence()[player_id], hand: [Card::Ambassador, Card::Ambassador], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(i as u8).unwrap()]});
                     //     }
                     //     for j in (i + 1)..5 {
                     //         if count_card_arr[i] < 3 && count_card_arr[j] < 3 {
-                    //             changed_vec.push(ActionObservation::ExchangeChoice { player_id: player_id, no_cards: self.latest_influence()[player_id], hand: [Card::Ambassador, Card::Ambassador], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
+                    //             changed_vec.push(ActionObservation::ExchangeChoice { player_id, no_cards: self.latest_influence()[player_id], hand: [Card::Ambassador, Card::Ambassador], relinquish: [Card::try_from(i as u8).unwrap(), Card::try_from(j as u8).unwrap()]});
                     //         }
                     //     }
                     // }
                     // Assumes hand and relinquish are unknown, so placeholder Ambassadors are left there
                     changed_vec.push(ActionObservation::ExchangeChoice {
-                        player_id: player_id,
+                        player_id,
                         relinquish: [Card::Ambassador, Card::Ambassador],
                     });
                 }
@@ -1876,104 +1847,104 @@ impl History {
                     let num_dead_con: u8 = self.get_public_card_count(&Card::Contessa);
                     if num_dead_amb < 2 {
                         changed_vec.push(ActionObservation::ExchangeDraw {
-                            player_id: player_id,
+                            player_id,
                             card: [Card::Ambassador, Card::Ambassador],
                         });
                     }
                     if num_dead_amb < 3 {
                         if num_dead_ass < 3 {
                             changed_vec.push(ActionObservation::ExchangeDraw {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Ambassador, Card::Assassin],
                             });
                         }
                         if num_dead_cpt < 3 {
                             changed_vec.push(ActionObservation::ExchangeDraw {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Ambassador, Card::Captain],
                             });
                         }
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::ExchangeDraw {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Ambassador, Card::Duke],
                             });
                         }
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::ExchangeDraw {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Ambassador, Card::Contessa],
                             });
                         }
                     }
                     if num_dead_ass < 2 {
                         changed_vec.push(ActionObservation::ExchangeDraw {
-                            player_id: player_id,
+                            player_id,
                             card: [Card::Assassin, Card::Assassin],
                         });
                     }
                     if num_dead_ass < 3 {
                         if num_dead_cpt < 3 {
                             changed_vec.push(ActionObservation::ExchangeDraw {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Assassin, Card::Captain],
                             });
                         }
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::ExchangeDraw {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Assassin, Card::Duke],
                             });
                         }
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::ExchangeDraw {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Assassin, Card::Contessa],
                             });
                         }
                     }
                     if num_dead_cpt < 2 {
                         changed_vec.push(ActionObservation::ExchangeDraw {
-                            player_id: player_id,
+                            player_id,
                             card: [Card::Captain, Card::Captain],
                         });
                     }
                     if num_dead_cpt < 3 {
                         if num_dead_duk < 3 {
                             changed_vec.push(ActionObservation::ExchangeDraw {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Captain, Card::Duke],
                             });
                         }
                         if num_dead_con < 3 {
                             changed_vec.push(ActionObservation::ExchangeDraw {
-                                player_id: player_id,
+                                player_id,
                                 card: [Card::Captain, Card::Contessa],
                             });
                         }
                     }
                     if num_dead_duk < 2 {
                         changed_vec.push(ActionObservation::ExchangeDraw {
-                            player_id: player_id,
+                            player_id,
                             card: [Card::Duke, Card::Duke],
                         });
                     }
                     if num_dead_duk < 3 && num_dead_con < 3 {
                         changed_vec.push(ActionObservation::ExchangeDraw {
-                            player_id: player_id,
+                            player_id,
                             card: [Card::Duke, Card::Contessa],
                         });
                     }
                     if num_dead_con < 2 {
                         changed_vec.push(ActionObservation::ExchangeDraw {
-                            player_id: player_id,
+                            player_id,
                             card: [Card::Contessa, Card::Contessa],
                         });
                     }
                 } else {
                     // Assumes card info is unknown and placeholders of Ambassadors are used
                     changed_vec.push(ActionObservation::ExchangeDraw {
-                        player_id: player_id,
+                        player_id,
                         card: [Card::Ambassador, Card::Ambassador],
                     });
                 }

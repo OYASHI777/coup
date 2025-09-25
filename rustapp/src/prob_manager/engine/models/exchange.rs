@@ -67,10 +67,7 @@ impl CoupTransition for ExchangeInvitesChallenge {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::CollectiveChallenge { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::CollectiveChallenge { .. }),
             "Illegal Move!"
         )
     }
@@ -97,10 +94,7 @@ impl CoupTransition for ExchangeDrawing {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::ExchangeDraw { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::ExchangeDraw { .. }),
             "Illegal Move!"
         )
     }
@@ -127,10 +121,7 @@ impl CoupTransition for ExchangeDrawn {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::ExchangeChoice { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::ExchangeChoice { .. }),
             "Illegal Move!"
         )
     }
@@ -170,10 +161,10 @@ impl CoupTransition for ExchangeChallenged {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::RevealRedraw { .. } | ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(
+                action,
+                ActionObservation::RevealRedraw { .. } | ActionObservation::Discard { .. }
+            ),
             "Illegal Move!"
         )
     }
@@ -207,10 +198,7 @@ impl CoupTransition for ExchangeChallengerFailed {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::Discard { .. }),
             "Illegal Move!"
         )
     }

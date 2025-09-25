@@ -66,13 +66,10 @@ impl CoupTransition for TaxInvitesChallenge {
                 final_actioner,
                 ..
             } => {
-                match opposing_player_id == final_actioner {
-                    true => {
-                        // nobody blocked
-                        // game_data.coins[self.player_turn] -= GAIN_DUKE;
-                        game_data.sub_coins(self.player_turn, GAIN_DUKE);
-                    }
-                    false => {}
+                if opposing_player_id == final_actioner {
+                    // nobody blocked
+                    // game_data.coins[self.player_turn] -= GAIN_DUKE;
+                    game_data.sub_coins(self.player_turn, GAIN_DUKE);
                 }
             }
             _ => {
@@ -162,10 +159,7 @@ impl CoupTransition for TaxChallengerFailed {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::Discard { .. }),
             "Illegal Move!"
         )
     }

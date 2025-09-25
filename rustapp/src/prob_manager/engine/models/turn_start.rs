@@ -23,7 +23,7 @@ impl TurnStart {
 
 impl CoupTransition for TurnStart {
     fn state_enter_update(&mut self, game_data: &mut GameData) {
-        self.next_player(&game_data.influence());
+        self.next_player(game_data.influence());
     }
     fn state_enter_reverse(&mut self, _game_data: &mut GameData) {
         // nothing
@@ -79,16 +79,16 @@ impl CoupTransition for TurnStart {
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         // nothing
         debug_assert!(
-            match action {
+            matches!(
+                action,
                 ActionObservation::Income { .. }
-                | ActionObservation::Coup { .. }
-                | ActionObservation::ForeignAid { .. }
-                | ActionObservation::Tax { .. }
-                | ActionObservation::Steal { .. }
-                | ActionObservation::Assassinate { .. }
-                | ActionObservation::Exchange { .. } => true,
-                _ => false,
-            },
+                    | ActionObservation::Coup { .. }
+                    | ActionObservation::ForeignAid { .. }
+                    | ActionObservation::Tax { .. }
+                    | ActionObservation::Steal { .. }
+                    | ActionObservation::Assassinate { .. }
+                    | ActionObservation::Exchange { .. }
+            ),
             "Illegal Move!"
         )
     }

@@ -165,8 +165,8 @@ impl InfoArray {
             .iter_mut()
             .for_each(|v| v.sort_unstable());
     }
-    pub fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
-        self.inferred_constraints = inferred_constraints.clone();
+    pub fn set_inferred_constraints(&mut self, inferred_constraints: &[Vec<Card>]) {
+        self.inferred_constraints = inferred_constraints.to_vec();
     }
     pub fn impossible_constraints(&self) -> &[[bool; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE] {
         &self.impossible_constraints
@@ -201,7 +201,7 @@ impl InfoArray {
         &mut self,
         impossible_constraints: &[[bool; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE],
     ) {
-        self.impossible_constraints = impossible_constraints.clone();
+        self.impossible_constraints = *impossible_constraints;
     }
     pub fn player_cards_known<T>(&self, player_id: T) -> usize
     where
@@ -273,7 +273,7 @@ impl InfoArrayTrait for InfoArray {
         self.sort_inferred_constraints()
     }
 
-    fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
+    fn set_inferred_constraints(&mut self, inferred_constraints: &[Vec<Card>]) {
         self.set_inferred_constraints(inferred_constraints)
     }
 

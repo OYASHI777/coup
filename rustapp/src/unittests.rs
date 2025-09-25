@@ -2,14 +2,13 @@ use crate::prob_manager::permutation_generator::gen_bag_combinations;
 use crate::prob_manager::permutation_generator::gen_starting_hand;
 use crate::prob_manager::permutation_generator::gen_table_combinations;
 
-
 pub fn test1() {
     println!("RUNNING TEST: Hand Generation");
     let tokens = "AAABBBCCCDDDEEE";
     let bag_sizes: Vec<usize> = vec![2, 2, 2, 2, 2, 2, 3];
     for player_no in 0..6 {
         println!("Player: {player_no}");
-        for ihand in gen_bag_combinations("AABBCCDDEE", &2){
+        for ihand in gen_bag_combinations("AABBCCDDEE", &2) {
             let output: Vec<String> = gen_starting_hand(tokens, &bag_sizes, &player_no, &ihand);
             let total: usize = output.len();
             println!("{ihand}: {total}");
@@ -19,7 +18,7 @@ pub fn test1() {
 
 pub fn test2() {
     println!("RUNNING TEST: Hand Generation");
-    let  tokens = "AAABBBCCCDDDEEE";
+    let tokens = "AAABBBCCCDDDEEE";
     let bag_sizes: Vec<usize> = vec![2, 2, 2, 2, 2, 2, 3];
     let output: Vec<String> = gen_table_combinations(tokens, &bag_sizes);
     // println!("{output:?}");
@@ -57,49 +56,48 @@ pub fn test_prob_state1() {
     // println!("{test_object:?}");
 }
 
-pub fn test_string_utils1(){
+pub fn test_string_utils1() {
     use crate::string_utils::contains_all_chars;
     let mut counter: usize = 0;
     let mut total: usize = 0;
 
     let mut s1: String = String::from("ABCDE");
     let mut s2: String = String::from("DE");
-    if contains_all_chars(&s1, &s2) == true {
+    if contains_all_chars(&s1, &s2) {
         counter += 1;
     }
     total += 1;
     s1 = String::from("ABCDE");
     s2 = String::from("ED");
-    if contains_all_chars(&s1, &s2) == true {
+    if contains_all_chars(&s1, &s2) {
         counter += 1;
     }
     total += 1;
-    
+
     s1 = String::from("ABCDE");
     s2 = String::from("JZ");
-    if contains_all_chars(&s1, &s2) == false {
+    if !contains_all_chars(&s1, &s2) {
         counter += 1;
     }
     total += 1;
-    
+
     s1 = String::from("ABBCDE");
     s2 = String::from("BJ");
-    if contains_all_chars(&s1, &s2) == false {
+    if !contains_all_chars(&s1, &s2) {
         counter += 1;
     }
     total += 1;
-    
+
     s1 = String::from("ABBCDE");
     s2 = String::from("EE");
-    if contains_all_chars(&s1, &s2) == false {
+    if !contains_all_chars(&s1, &s2) {
         counter += 1;
     }
     total += 1;
     if counter == total {
-        println!{"===== PASSED {counter} / {total}====="};
+        println! {"===== PASSED {counter} / {total}====="};
     } else {
-        println!{"===== FAILED {counter} / {total}====="};
-
+        println! {"===== FAILED {counter} / {total}====="};
     }
 }
 

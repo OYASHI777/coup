@@ -95,10 +95,7 @@ impl CoupTransition for StealInvitesChallenge {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::CollectiveChallenge { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::CollectiveChallenge { .. }),
             "Illegal Move!"
         )
     }
@@ -142,10 +139,10 @@ impl CoupTransition for StealChallenged {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::RevealRedraw { .. } | ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(
+                action,
+                ActionObservation::RevealRedraw { .. } | ActionObservation::Discard { .. }
+            ),
             "Illegal Move!"
         )
     }
@@ -210,23 +207,14 @@ impl CoupTransition for StealChallengerFailed {
 
     fn state_leave_reverse(&self, action: &ActionObservation, game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::Discard { .. }),
             "Illegal Move!"
         );
-        match action {
-            ActionObservation::Discard { player_id, .. } => {
-                match *player_id == self.player_blocking {
-                    true => {
-                        game_data.add_coins(self.player_blocking, self.coins_stolen);
-                        game_data.sub_coins(self.player_turn, self.coins_stolen);
-                    }
-                    false => (),
-                }
+        if let ActionObservation::Discard { player_id, .. } = action {
+            if *player_id == self.player_blocking {
+                game_data.add_coins(self.player_blocking, self.coins_stolen);
+                game_data.sub_coins(self.player_turn, self.coins_stolen);
             }
-            _ => (),
         }
     }
 }
@@ -357,10 +345,7 @@ impl CoupTransition for StealBlockInvitesChallenge {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::CollectiveChallenge { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::CollectiveChallenge { .. }),
             "Illegal Move!"
         )
     }
@@ -449,10 +434,7 @@ impl CoupTransition for StealBlockChallengerFailed {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::Discard { .. }),
             "Illegal Move!"
         )
     }

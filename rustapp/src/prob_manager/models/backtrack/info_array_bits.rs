@@ -170,8 +170,8 @@ impl InfoArrayBits {
             .for_each(|v| v.sort_unstable());
     }
 
-    pub fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
-        self.inferred_constraints = inferred_constraints.clone();
+    pub fn set_inferred_constraints(&mut self, inferred_constraints: &[Vec<Card>]) {
+        self.inferred_constraints = inferred_constraints.to_vec();
     }
 
     pub fn player_cards_known<T>(&self, player_id: T) -> usize
@@ -247,7 +247,7 @@ impl InfoArrayTrait for InfoArrayBits {
         self.sort_inferred_constraints()
     }
 
-    fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
+    fn set_inferred_constraints(&mut self, inferred_constraints: &[Vec<Card>]) {
         self.set_inferred_constraints(inferred_constraints)
     }
 

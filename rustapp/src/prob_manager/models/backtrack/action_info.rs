@@ -72,7 +72,9 @@ impl ActionInfo {
             Self::StartInferred => true,
             Self::Discard { .. } => true,
             Self::RevealRedraw { redraw, .. } => redraw.is_some(),
-            Self::ExchangeDrawChoice { draw, relinquish } => draw.len() > 0 || relinquish.len() > 0,
+            Self::ExchangeDrawChoice { draw, relinquish } => {
+                !draw.is_empty() || !relinquish.is_empty()
+            }
             Self::ExchangeDraw { draw } => !draw.is_empty(),
             Self::ExchangeChoice { relinquish } => !relinquish.is_empty(),
         }
@@ -85,7 +87,7 @@ impl ActionInfo {
             Self::Discard { .. } => false,
             Self::RevealRedraw { redraw, .. } => redraw.is_none(),
             Self::ExchangeDrawChoice { draw, relinquish } => {
-                draw.len() == 0 && relinquish.len() == 0
+                draw.is_empty() && relinquish.is_empty()
             }
             Self::ExchangeDraw { draw } => draw.is_empty(),
             Self::ExchangeChoice { relinquish } => relinquish.is_empty(),

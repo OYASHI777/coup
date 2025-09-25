@@ -13,7 +13,6 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::hint::unreachable_unchecked;
 /// Struct that card count manually, by simulating movement of cards (as chars) for all possible permutations
-
 pub struct BruteCardCountManagerGeneric<T: CardPermState>
 where
     T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
@@ -41,9 +40,11 @@ where
         let history = Vec::with_capacity(60);
         let all_states: Vec<T> = T::gen_table_combinations();
         let calculated_states: Vec<T> = all_states.clone().into_iter().collect();
-        let mut public_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let mut public_constraints: Vec<Vec<Card>> =
+            (0..6).map(|_| Vec::with_capacity(2)).collect::<Vec<_>>();
         public_constraints.push(Vec::with_capacity(3));
-        let mut inferred_constraints: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let mut inferred_constraints: Vec<Vec<Card>> =
+            (0..6).map(|_| Vec::with_capacity(2)).collect::<Vec<_>>();
         inferred_constraints.push(Vec::with_capacity(3));
         let impossible_constraints = [[false; 5]; 7];
         let impossible_constraints_2 = [[[false; 5]; 5]; 7];
@@ -67,6 +68,10 @@ where
     /// total number of possible states
     pub fn len(&self) -> usize {
         self.calculated_states.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.calculated_states.is_empty()
     }
     /// adds public constraint
     pub fn add_public_constraint(&mut self, player_id: usize, card: Card) {
@@ -233,8 +238,10 @@ where
             .iter()
             .enumerate()
             .for_each(|(card_num, count)| {
-                check_cards
-                    .extend(std::iter::repeat(Card::try_from(card_num as u8).unwrap()).take(*count))
+                check_cards.extend(std::iter::repeat_n(
+                    Card::try_from(card_num as u8).unwrap(),
+                    *count,
+                ))
             });
         if check_cards.is_empty() {
             true
@@ -251,7 +258,7 @@ where
     /// 'C' won't appear in `result[0]`. If they always have two 'A's (i.e., every state has "AA"),
     /// then `result[0]` will contain `['A','A']`.
     pub fn must_have_cards(&self) -> Vec<Vec<Card>> {
-        let mut result: Vec<Vec<Card>> = vec![Vec::with_capacity(2); 6];
+        let mut result: Vec<Vec<Card>> = (0..6).map(|_| Vec::with_capacity(2)).collect::<Vec<_>>();
         result.push(Vec::with_capacity(3));
         // If there are no states at all, every player's "must have" set is empty
         if self.calculated_states.is_empty() {
@@ -260,7 +267,7 @@ where
 
         // For each of the 7 players, compute the "intersection frequency map"
         // across all `calculated_states`.
-        for player_id in 0..7 {
+        for (player_id, result_player) in result.iter_mut().enumerate() {
             // Start by taking the frequency map from the first state
             let mut iter = self.calculated_states.iter();
             let first_state = iter.next().unwrap();
@@ -292,7 +299,7 @@ where
                 }
             }
 
-            result[player_id] = must_have_for_player;
+            *result_player = must_have_for_player;
         }
 
         result
@@ -308,10 +315,10 @@ where
         }
 
         // For each player
-        for player_id in 0..7 {
+        for (player_id, result_player) in result.iter_mut().enumerate() {
             // For each card variant (assuming your Card enum maps 1:1 to these indices)
             // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
-            for card_idx in 0..5 as usize {
+            for card_idx in 0..5_usize {
                 // Convert card_idx -> Card -> char
                 let card_enum = Card::try_from(card_idx as u8).unwrap();
 
@@ -330,7 +337,7 @@ where
                 // If found_in_any_state == false, that means:
                 // "There is NO state in which the player has this card alive"
                 // So the player "cannot have" it => result = true
-                result[player_id][card_idx] = !found_in_any_state;
+                result_player[card_idx] = !found_in_any_state;
             }
         }
 
@@ -351,12 +358,12 @@ where
         for player_id in 0..7 {
             // For each card variant (assuming your Card enum maps 1:1 to these indices)
             // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
-            if self.public_constraints[player_id].len() > 0 {
+            if !self.public_constraints[player_id].is_empty() {
                 self.impossible_constraints_2[player_id] = [[true; 5]; 5];
                 continue;
             }
-            for card_idx_i in 0..5 as usize {
-                for card_idx_j in card_idx_i..5 as usize {
+            for card_idx_i in 0..5_usize {
+                for card_idx_j in card_idx_i..5_usize {
                     // Convert card_idx -> Card -> char
                     let mut card_counts: [u8; 5] = [0; 5];
                     card_counts[card_idx_i] += 1;
@@ -399,9 +406,9 @@ where
         }
 
         // For each player
-        for card_idx_i in 0..5 as usize {
-            for card_idx_j in card_idx_i..5 as usize {
-                for card_idx_k in card_idx_j..5 as usize {
+        for card_idx_i in 0..5_usize {
+            for card_idx_j in card_idx_i..5_usize {
+                for card_idx_k in card_idx_j..5_usize {
                     // Convert card_idx -> Card -> char
                     let mut card_counts: [u8; 5] = [0; 5];
                     card_counts[card_idx_i] += 1;
@@ -451,7 +458,7 @@ where
     ///
     /// Returns an array that is true if a player does cannot have that card alive
     pub fn validated_impossible_constraints(&self) -> [[bool; 5]; 7] {
-        self.impossible_constraints.clone()
+        self.impossible_constraints
     }
     /// Returns a 7x5x5 boolean array `[[[bool; 5]; 5]; 7]`.
     ///
@@ -463,7 +470,7 @@ where
     ///
     /// Returns an array that is true if a player does cannot have that card alive
     pub fn validated_impossible_constraints_2(&self) -> [[[bool; 5]; 5]; 7] {
-        self.impossible_constraints_2.clone()
+        self.impossible_constraints_2
     }
     /// Returns a 7x5x5 boolean array `[[[bool; 5]; 5]; 5]`.
     ///
@@ -475,7 +482,7 @@ where
     ///
     /// Returns an array that is true if a player does cannot have that card alive
     pub fn validated_impossible_constraints_3(&self) -> [[[bool; 5]; 5]; 5] {
-        self.impossible_constraints_3.clone()
+        self.impossible_constraints_3
     }
     /// Returns a 7x5 boolean array `[ [bool; 5]; 7 ]`.
     ///
@@ -500,7 +507,7 @@ where
         for player_id in 0..7 {
             // For each card variant (assuming your Card enum maps 1:1 to these indices)
             // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
-            for card_idx in 0..5 as usize {
+            for card_idx in 0..5_usize {
                 // Convert card_idx -> Card -> char
                 let card_enum = Card::try_from(card_idx as u8).unwrap();
 
@@ -615,9 +622,9 @@ where
         // Reset
         self.history.clear();
         self.private_player = None;
-        self.public_constraints = vec![Vec::with_capacity(2); 6];
+        self.public_constraints = (0..6).map(|_| Vec::with_capacity(2)).collect::<Vec<_>>();
         self.public_constraints.push(Vec::with_capacity(3));
-        self.inferred_constraints = vec![Vec::with_capacity(2); 6];
+        self.inferred_constraints = (0..6).map(|_| Vec::with_capacity(2)).collect::<Vec<_>>();
         self.inferred_constraints.push(Vec::with_capacity(3));
         self.impossible_constraints = [[false; 5]; 7];
         self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
@@ -629,9 +636,9 @@ where
     fn start_private(&mut self, player: usize, cards: &[Card; 2]) {
         // Reset
         self.history.clear();
-        self.public_constraints = vec![Vec::with_capacity(2); 6];
+        self.public_constraints = (0..6).map(|_| Vec::with_capacity(2)).collect::<Vec<_>>();
         self.public_constraints.push(Vec::with_capacity(3));
-        self.inferred_constraints = vec![Vec::with_capacity(2); 6];
+        self.inferred_constraints = (0..6).map(|_| Vec::with_capacity(2)).collect::<Vec<_>>();
         self.inferred_constraints.push(Vec::with_capacity(3));
         self.impossible_constraints = [[false; 5]; 7];
         self.impossible_constraints_2 = [[[false; 5]; 5]; 7];
@@ -648,7 +655,7 @@ where
         self.set_impossible_constraints_3();
     }
 
-    fn start_known(&mut self, _cards: &Vec<Vec<Card>>) {
+    fn start_known(&mut self, _cards: &[Vec<Card>]) {
         unimplemented!()
     }
 
@@ -691,7 +698,7 @@ where
             }
             _ => {}
         }
-        self.history.push(action.clone());
+        self.history.push(*action);
     }
 
     fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
@@ -746,7 +753,7 @@ where
             }
             _ => {}
         }
-        self.history.push(action.clone());
+        self.history.push(*action);
     }
 
     fn push_ao_private_lazy(&mut self, action: &ActionObservation) {
@@ -944,8 +951,8 @@ where
                 } else {
                     // if updated {..} just check the state
                     let mut cards = Vec::with_capacity(2);
-                    for c in 0..5 {
-                        for _ in 0..required[c] {
+                    for (c, &required_count) in required.iter().enumerate() {
+                        for _ in 0..required_count {
                             cards.push(Card::try_from(c as u8).unwrap());
                         }
                     }

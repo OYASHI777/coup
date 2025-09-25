@@ -137,10 +137,7 @@ impl CoupTransition for ForeignAidBlockInvitesChallenge {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::CollectiveChallenge { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::CollectiveChallenge { .. }),
             "Illegal Move!"
         )
     }
@@ -233,10 +230,7 @@ impl CoupTransition for ForeignAidBlockChallengerFailed {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::Discard { .. }),
             "Illegal Move!"
         )
     }

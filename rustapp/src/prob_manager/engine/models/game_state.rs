@@ -8,6 +8,13 @@ pub struct GameData {
     pub coins: [u8; 6],
     pub players_alive: u8,
 }
+
+impl Default for GameData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GameData {
     pub fn new() -> Self {
         GameData {
@@ -79,11 +86,11 @@ impl GameData {
     }
     /// Returns Coin amount zeroized for dead players
     pub fn coins_display(&self) -> [u8; 6] {
-        let mut output = self.coins.clone();
+        let mut output = self.coins;
         self.influence
             .iter()
             .enumerate()
-            .for_each(|(p, l)| output[p] = output[p] * (*l > 0) as u8);
+            .for_each(|(p, l)| output[p] *= (*l > 0) as u8);
         output
     }
 }
@@ -108,7 +115,7 @@ impl GameState {
         }
     }
     pub fn influence(&self) -> &[u8; 6] {
-        &self.game_data.influence()
+        self.game_data.influence()
     }
     pub fn coins(&self) -> &[u8; 6] {
         &self.game_data.coins

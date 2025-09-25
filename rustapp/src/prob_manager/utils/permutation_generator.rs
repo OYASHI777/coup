@@ -10,7 +10,7 @@ const LOCAL_MAX_PERM_CAPACITY: usize = MAX_PERM_STATES;
 
 pub fn gen_starting_hand(
     tokens: &str,
-    bag_sizes: &Vec<usize>,
+    bag_sizes: &[usize],
     player_no: &usize,
     hand: &String,
 ) -> Vec<String> {
@@ -25,7 +25,7 @@ pub fn gen_starting_hand(
     let mut tokens: String = remove_chars(tokens, hand);
     tokens = sort_str(tokens.as_str());
     assert!(
-        bag_sizes[*player_no] as usize == hand.len(),
+        bag_sizes[*player_no] == hand.len(),
         "INPUT ISSUE in gen_starting_hand: bag_size and hand size should be equal"
     );
 
@@ -64,14 +64,14 @@ pub fn gen_starting_hand(
             // Address remaining tokens
         }
     }
-    return old_storage;
+    old_storage
 }
 
-pub fn gen_table_combinations(tokens: &str, bag_sizes: &Vec<usize>) -> Vec<String> {
+pub fn gen_table_combinations(tokens: &str, bag_sizes: &[usize]) -> Vec<String> {
     // Generates all possible ways cards can be distributed
     let total: usize = bag_sizes.iter().sum();
     assert!(
-        tokens.len() == total as usize,
+        tokens.len() == total,
         "INPUT ISSUE in gen_table_combinations: tokens.len() == bag_sizes.iter().sum()"
     );
     let tokens: String = sort_str(tokens);
@@ -97,7 +97,7 @@ pub fn gen_table_combinations(tokens: &str, bag_sizes: &Vec<usize>) -> Vec<Strin
             // Address remaining tokens
         }
     }
-    return old_storage;
+    old_storage
 }
 
 pub fn gen_bag_combinations(tokens: &str, bag_size: &usize) -> Vec<String> {
@@ -106,12 +106,12 @@ pub fn gen_bag_combinations(tokens: &str, bag_size: &usize) -> Vec<String> {
     // String is arranged in ascending order
     // bag_size has to be <= tokens length
     let token_len = tokens.len();
-    assert!(*bag_size as usize <= token_len, "INPUT ISSUE in gen_bag_combinations: bag_size ({bag_size}) must be <= token_len ({token_len})");
+    assert!(*bag_size <= token_len, "INPUT ISSUE in gen_bag_combinations: bag_size ({bag_size}) must be <= token_len ({token_len})");
     assert!(
         *bag_size > 0,
         "INPUT ISSUE in gen_bag_combinations: bag_size must be > 0"
     );
-    if *bag_size as usize == token_len {
+    if *bag_size == token_len {
         return vec![tokens.to_string()];
     }
 
@@ -126,12 +126,9 @@ pub fn gen_bag_combinations(tokens: &str, bag_size: &usize) -> Vec<String> {
     let mut old_storage: Vec<String> = Vec::new();
 
     let mut current_index: usize = 0;
-    while current_index < *bag_size as usize {
+    while current_index < *bag_size {
         // The appropriate ending char => largest char that the current index can take
-        largest_char_min = match tokens
-            .chars()
-            .nth(token_len - (*bag_size as usize - current_index))
-        {
+        largest_char_min = match tokens.chars().nth(token_len - (*bag_size - current_index)) {
             Some(ch) => ch,
             None => {
                 panic!("Index out of bounds");
@@ -152,7 +149,7 @@ pub fn gen_bag_combinations(tokens: &str, bag_size: &usize) -> Vec<String> {
         let unique_possible_tokens =
             filter_string_within(&unique_sorted_tokens, &smallest_char_max, &largest_char_min);
 
-        if old_storage.len() == 0 {
+        if old_storage.is_empty() {
             let new_storage: Vec<String> = unique_possible_tokens
                 .iter()
                 .map(|&c| c.to_string())
@@ -178,5 +175,5 @@ pub fn gen_bag_combinations(tokens: &str, bag_size: &usize) -> Vec<String> {
         current_index += 1;
     }
 
-    return old_storage;
+    old_storage
 }

@@ -119,7 +119,7 @@ pub fn game_rnd_constraint_bt_mt(
             }
         }
         final_stats.add(&received);
-        if final_stats.games() % print_frequency == 0 {
+        if final_stats.games().is_multiple_of(print_frequency) {
             final_stats.print();
         }
     }
@@ -711,7 +711,7 @@ impl Stats {
 // TODO: Shift this to be a method in prob! or at least just to check a new_move!
 pub fn generate_legal_moves_with_card_constraints(
     history: &History,
-    new_moves: &mut Vec<ActionObservation>,
+    new_moves: &mut [ActionObservation],
     prob: &mut BruteCardCountManagerGeneric<CardStateu64>,
     private_player: Option<usize>,
 ) -> Result<(usize, ActionObservation, Option<ActionInfo>), ()> {

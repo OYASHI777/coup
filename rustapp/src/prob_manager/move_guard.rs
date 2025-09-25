@@ -198,13 +198,9 @@ impl MoveGuard {
 
         let mut added: [u8; MAX_CARD_PERMS_ONE] = [0; MAX_CARD_PERMS_ONE];
         for i in 0..MAX_CARD_PERMS_ONE {
-            let deficit = if need[i] > have[i] {
-                need[i] - have[i]
-            } else {
-                0
-            };
+            let deficit = need[i].saturating_sub(have[i]);
             inferred_constraint[player]
-                .extend(std::iter::repeat(Card::try_from(i as u8).unwrap()).take(deficit as usize));
+                .extend(std::iter::repeat_n(Card::try_from(i as u8).unwrap(), deficit as usize));
             added[i] = deficit;
         }
 

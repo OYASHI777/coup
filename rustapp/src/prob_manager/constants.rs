@@ -9,7 +9,7 @@ pub const TOKENS: &str = "AAABBBCCCDDDEEE";
 pub const MAX_HAND_STATES: usize = 107940;
 pub const MAX_PERM_STATES: usize = 1469700; // See test
 pub const MAX_GAME_LENGTH: usize = 120;
-pub static ARR_POSSIBLE_HANDS: [&'static str; 15] = [
+pub static ARR_POSSIBLE_HANDS: [&str; 15] = [
     "AA", "AB", "AC", "AD", "AE", "BB", "BC", "BD", "BE", "CC", "CD", "CE", "DD", "DE", "EE",
 ];
 lazy_static! {

@@ -89,10 +89,10 @@ impl CoupTransition for AssassinateInvitesChallenge {
     }
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
-        debug_assert!(match action {
-            ActionObservation::CollectiveChallenge { .. } => true,
-            _ => false,
-        })
+        debug_assert!(matches!(
+            action,
+            ActionObservation::CollectiveChallenge { .. }
+        ))
     }
 }
 impl CoupTransition for AssassinateInvitesBlock {
@@ -157,10 +157,7 @@ impl CoupTransition for AssassinateInvitesBlock {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::BlockAssassinate { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::BlockAssassinate { .. }),
             "Illegal Move!"
         )
     }
@@ -205,10 +202,7 @@ impl CoupTransition for AssassinateBlockInvitesChallenge {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::CollectiveChallenge { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::CollectiveChallenge { .. }),
             "Illegal Move!"
         )
     }
@@ -254,10 +248,10 @@ impl CoupTransition for AssassinateBlockChallenged {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::RevealRedraw { .. } | ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(
+                action,
+                ActionObservation::RevealRedraw { .. } | ActionObservation::Discard { .. }
+            ),
             "Illegal Move!"
         )
     }
@@ -294,10 +288,7 @@ impl CoupTransition for AssassinateBlockChallengerFailed {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::Discard { .. }),
             "Illegal Move!"
         )
     }
@@ -381,10 +372,10 @@ impl CoupTransition for AssassinateChallenged {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::RevealRedraw { .. } | ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(
+                action,
+                ActionObservation::RevealRedraw { .. } | ActionObservation::Discard { .. }
+            ),
             "Illegal Move!"
         )
     }
@@ -445,10 +436,7 @@ impl CoupTransition for AssassinateChallengerFailed {
 
     fn state_leave_reverse(&self, action: &ActionObservation, _game_data: &mut GameData) {
         debug_assert!(
-            match action {
-                ActionObservation::Discard { .. } => true,
-                _ => false,
-            },
+            matches!(action, ActionObservation::Discard { .. }),
             "Illegal Move!"
         )
     }

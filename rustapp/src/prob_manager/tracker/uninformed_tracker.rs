@@ -11,6 +11,12 @@ pub const TEMP_DUMMY_STEAL_AMT: u8 = 77;
 /// other than coins a player has and their lives.
 pub struct UninformedTracker;
 
+impl Default for UninformedTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UninformedTracker {
     pub fn new() -> Self {
         UninformedTracker

@@ -80,7 +80,7 @@ pub fn gen_unique_paths() {
             if let Some(action) = suggested_moves.choose(&mut rng) {
                 engine.push_ao_private(action);
                 tracker.push_ao_private(action);
-                replay.push(action.clone());
+                replay.push(*action);
                 match action {
                     ActionObservation::Steal {
                         opposing_player_id, ..
@@ -477,7 +477,7 @@ pub fn rand_game() {
                 log::info!("Move chosen: {action:?}");
                 engine.push_ao_private(action);
                 tracker.push_ao_private(action);
-                replay.push(action.clone());
+                replay.push(*action);
             } else {
                 panic!("suggested_moves is empty");
             }

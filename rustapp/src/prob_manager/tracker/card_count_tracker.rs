@@ -28,6 +28,15 @@ where
     marker_collator: PhantomData<C>,
 }
 
+impl<C> Default for CardCountTracker<C>
+where
+    C: Collator,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<C> CardCountTracker<C>
 where
     C: Collator,
@@ -138,7 +147,11 @@ where
             // Player's hand does not have card_reveal so may discard any card in hand
             // We check that the player can have a hand that does not include card_reveal
             let mut index_checked: Vec<usize> = Vec::with_capacity(MAX_CARD_PERMS_ONE - 1);
-            debug_assert!(MAX_CARD_PERMS_ONE == 5);
+
+            #[allow(clippy::assertions_on_constants)]
+            {
+                debug_assert!(MAX_CARD_PERMS_ONE == 5);
+            }
             for (i, j) in [
                 (0, 1),
                 (2, 3),
@@ -293,21 +306,15 @@ where
 
     /// Updates public information
     fn push_action_update(&mut self, action: &ActionObservation) {
-        match action {
-            ActionObservation::Discard { card, no_cards, .. } => {
-                self.update_discard_card_counts(&card, *no_cards);
-            }
-            _ => {} // Other actions don't affect public card counts directly
+        if let ActionObservation::Discard { card, no_cards, .. } = action {
+            self.update_discard_card_counts(card, *no_cards);
         }
     }
 
     /// Reverts card counts based on public information
     fn pop_action_update(&mut self, action: &ActionObservation) {
-        match action {
-            ActionObservation::Discard { card, no_cards, .. } => {
-                self.revert_discard_card_counts(&card, *no_cards);
-            }
-            _ => {}
+        if let ActionObservation::Discard { card, no_cards, .. } = action {
+            self.revert_discard_card_counts(card, *no_cards);
         }
     }
 
@@ -358,19 +365,19 @@ where
         );
     }
 
-    fn start_known(&mut self, _player_cards: &Vec<Vec<Card>>) {
+    fn start_known(&mut self, _player_cards: &[Vec<Card>]) {
         unimplemented!("Card count tracker supports does not support this")
     }
 
     fn push_ao_public(&mut self, action: &ActionObservation) {
-        self.history.push(action.clone());
+        self.history.push(*action);
         self.push_action_update(action);
         // Delegate to the backtracking manager
         self.backtracking_hybrid_prob.push_ao_public(action);
     }
 
     fn push_ao_public_lazy(&mut self, action: &ActionObservation) {
-        self.history.push(action.clone());
+        self.history.push(*action);
         self.push_action_update(action);
         // Delegate to the backtracking manager
         self.backtracking_hybrid_prob.push_ao_public_lazy(action);

@@ -20,7 +20,7 @@ impl GroupConstraint {
         // Default includes the pile (player_id = 7) because all player mixes are with the pile and not with other players
         let participation_list: [u8; 7] = [0, 0, 0, 0, 0, 0, 1];
         let count: usize = count_dead + count_alive;
-        let mut output = GroupConstraint{
+        let mut output = GroupConstraint {
             participation_list,
             card,
             count_dead,
@@ -30,9 +30,14 @@ impl GroupConstraint {
         output.group_add(player_id);
         output
     }
-    pub fn new_list(participation_list: [u8; 7], card: Card, count_dead: usize, count_alive: usize) -> Self {
+    pub fn new_list(
+        participation_list: [u8; 7],
+        card: Card,
+        count_dead: usize,
+        count_alive: usize,
+    ) -> Self {
         let count: usize = count_dead + count_alive;
-        GroupConstraint{
+        GroupConstraint {
             participation_list,
             card,
             count_dead,
@@ -40,36 +45,36 @@ impl GroupConstraint {
             count,
         }
     }
-    pub fn group_add(&mut self, player_id: usize){
+    pub fn group_add(&mut self, player_id: usize) {
         debug_assert!(player_id < 7, "Invalid Player Id");
         self.participation_list[player_id] = 1;
     }
-    pub fn group_add_list(&mut self, list: [u8; 7]){
+    pub fn group_add_list(&mut self, list: [u8; 7]) {
         self.participation_list = list;
     }
-    pub fn group_subtract(&mut self, player_id: usize){
+    pub fn group_subtract(&mut self, player_id: usize) {
         debug_assert!(player_id < 7, "Invalid Player Id");
         self.participation_list[player_id] = 0;
     }
-    pub fn count_add(&mut self, num: usize){
+    pub fn count_add(&mut self, num: usize) {
         self.count += num;
     }
-    pub fn count_dead_add(&mut self, num: usize){
+    pub fn count_dead_add(&mut self, num: usize) {
         self.count_dead += num;
         self.count += num;
     }
-    pub fn count_alive_add(&mut self, num: usize){
+    pub fn count_alive_add(&mut self, num: usize) {
         self.count_alive += num;
         self.count += num;
     }
-    pub fn count_subtract(&mut self, num: usize){
+    pub fn count_subtract(&mut self, num: usize) {
         if self.count < num {
             self.count = 0;
         } else {
             self.count -= num;
         }
     }
-    pub fn count_dead_subtract(&mut self, num: usize){
+    pub fn count_dead_subtract(&mut self, num: usize) {
         if self.count_dead < num {
             self.count_dead = 0;
         } else {
@@ -77,7 +82,7 @@ impl GroupConstraint {
             self.count -= num;
         }
     }
-    pub fn count_alive_subtract(&mut self, num: usize){
+    pub fn count_alive_subtract(&mut self, num: usize) {
         if self.count_alive < num {
             self.count_alive = 0;
         } else {
@@ -94,7 +99,7 @@ impl GroupConstraint {
     pub fn count_alive(&self) -> usize {
         self.count_alive
     }
-    pub fn indicator(&self, player_id : usize) -> u8 {
+    pub fn indicator(&self, player_id: usize) -> u8 {
         self.participation_list[player_id]
     }
     pub fn all_in(&self) -> bool {
@@ -105,23 +110,27 @@ impl GroupConstraint {
             false
         }
     }
-    pub fn get_list(&self) -> &[u8; 7]{
+    pub fn get_list(&self) -> &[u8; 7] {
         &self.participation_list
     }
     pub fn card(&self) -> &Card {
         &self.card
-    } 
+    }
     pub fn is_subset_of(&self, group: &Self) -> bool {
         // Returns true if group makes self redundant
         // Its redundant if they have the same participation list and their counts are equal
         // Its also redundant if they have the same participation list and group has a higher count
         //      If a group has at least 2 Dukes, it also fulfils having at least 1 Duke.
         //      Therefore having at least 1 Duke is redundant
-        if self.card() != group.card(){
+        if self.card() != group.card() {
             return false;
         }
         // if self.get_list() == group.get_list() && self.count() <= group.count() {
-        if self.get_list() == group.get_list() && self.count() <= group.count() && self.count_dead() <= group.count_dead() && self.count_alive() <= group.count_alive() {
+        if self.get_list() == group.get_list()
+            && self.count() <= group.count()
+            && self.count_dead() <= group.count_dead()
+            && self.count_alive() <= group.count_alive()
+        {
             true
         } else {
             false
@@ -134,10 +143,10 @@ impl GroupConstraint {
     pub fn list1_is_subset_list2(list1: &[u8; 7], list2: &[u8; 7]) -> bool {
         // Checks if list1 is subset of list2
         let mut index: usize = 0;
-        while index < list1.len(){
+        while index < list1.len() {
             if list1[index] == 1 && list2[index] == 0 {
-                    return false;
-                }
+                return false;
+            }
             index += 1;
         }
         true
@@ -148,10 +157,10 @@ impl GroupConstraint {
     }
     pub fn lists_are_mut_excl(list1: &[u8; 7], list2: &[u8; 7]) -> bool {
         let mut index: usize = 0;
-        while index < list1.len(){
-            if list1[index] == 1 && list2[index] == 1{
+        while index < list1.len() {
+            if list1[index] == 1 && list2[index] == 1 {
                 return false;
-            } 
+            }
             index += 1;
         }
         true
@@ -167,14 +176,21 @@ impl GroupConstraint {
         list1
     }
     pub fn printlog(&self) {
-        log::info!("{}", format!("Participation List: {:?}", self.participation_list));
+        log::info!(
+            "{}",
+            format!("Participation List: {:?}", self.participation_list)
+        );
         log::info!("{}", format!("Card: {:?}", self.card));
     }
 }
 
 impl PartialEq for GroupConstraint {
     fn eq(&self, other: &Self) -> bool {
-        self.participation_list == other.participation_list && self.card == other.card && self.count == other.count && self.count_dead == other.count_dead && self.count_alive == other.count_alive
+        self.participation_list == other.participation_list
+            && self.card == other.card
+            && self.count == other.count
+            && self.count_dead == other.count_dead
+            && self.count_alive == other.count_alive
     }
 }
 impl Hash for GroupConstraint {
@@ -196,7 +212,7 @@ pub struct CollectiveConstraint {
     gc_vec: Vec<GroupConstraint>,
     dead_card_count: HashMap<Card, u8>,
 }
-impl CollectiveConstraint{
+impl CollectiveConstraint {
     pub fn new() -> Self {
         let pc_hm: HashMap<usize, Card> = HashMap::new();
         let jc_hm: HashMap<usize, Vec<Card>> = HashMap::new();
@@ -209,22 +225,21 @@ impl CollectiveConstraint{
         dead_card_count.insert(Card::Duke, 0);
         dead_card_count.insert(Card::Contessa, 0);
 
-        CollectiveConstraint{
+        CollectiveConstraint {
             pc_hm,
             jc_hm,
             gc_vec,
             dead_card_count,
-
         }
     }
     pub fn is_empty(&self) -> bool {
-        if self.pc_hm.is_empty() && self.jc_hm.is_empty() && self.gc_vec.is_empty(){
+        if self.pc_hm.is_empty() && self.jc_hm.is_empty() && self.gc_vec.is_empty() {
             true
         } else {
             false
         }
     }
-    pub fn is_complement_of_pcjc(&self, group: &GroupConstraint) -> bool{
+    pub fn is_complement_of_pcjc(&self, group: &GroupConstraint) -> bool {
         // Tells us if information in a group is mutually exclusive from information in pc_hm and jc_hm
         let mut indicators: [u8; 7] = group.get_list().clone();
         for (key, value) in &self.pc_hm {
@@ -249,7 +264,7 @@ impl CollectiveConstraint{
     pub fn get_pc_hm(&self) -> &HashMap<usize, Card> {
         &self.pc_hm
     }
-    pub fn get_gc_vec(&self) -> &Vec<GroupConstraint>{
+    pub fn get_gc_vec(&self) -> &Vec<GroupConstraint> {
         &self.gc_vec
     }
     pub fn jc_hm(&mut self) -> &mut HashMap<usize, Vec<Card>> {
@@ -258,29 +273,31 @@ impl CollectiveConstraint{
     pub fn pc_hm(&mut self) -> &mut HashMap<usize, Card> {
         &mut self.pc_hm
     }
-    pub fn gc_vec(&mut self) -> &mut Vec<GroupConstraint>{
+    pub fn gc_vec(&mut self) -> &mut Vec<GroupConstraint> {
         &mut self.gc_vec
     }
-    pub fn add_raw_public_constraint(&mut self, player_id: usize, card: Card){
+    pub fn add_raw_public_constraint(&mut self, player_id: usize, card: Card) {
         // Therefore its useful for determining if a player can have a card
         // It does this by adding the constraint without pruning
         // So the check becomes, if we add this constraint, can the old constraints still be fulfilled?
-        if let Some(value) = self.dead_card_count.get_mut(&card){
+        if let Some(value) = self.dead_card_count.get_mut(&card) {
             *value += 1;
         }
-        if let Some(pc_hm_card) = self.pc_hm.remove(&player_id){
+        if let Some(pc_hm_card) = self.pc_hm.remove(&player_id) {
             // If pc_hm has a card already, remove it and add to jc_hm
-            debug_assert!(!self.jc_hm.contains_key(&player_id), "jc_hm also contains key! Should not happen!");
+            debug_assert!(
+                !self.jc_hm.contains_key(&player_id),
+                "jc_hm also contains key! Should not happen!"
+            );
             let mut card_vec: Vec<Card> = vec![pc_hm_card, card];
             card_vec.sort();
             self.jc_hm.insert(player_id, card_vec.clone());
-            
         } else {
             self.pc_hm.insert(player_id, card);
         }
         // [Test] - is this needed for add public constraints?
         let mut i: usize = 0;
-        while i < self.gc_vec.len(){
+        while i < self.gc_vec.len() {
             let group = &mut self.gc_vec[i];
             if *group.card() == card && group.get_list()[player_id] == 1 {
                 group.count_dead_add(1);
@@ -294,30 +311,31 @@ impl CollectiveConstraint{
                 i += 1;
             }
         }
-
     }
-    pub fn add_raw_group(&mut self, group: GroupConstraint){
+    pub fn add_raw_group(&mut self, group: GroupConstraint) {
         self.gc_vec.push(group);
     }
     // Technically can remove too but its not in Coup so..
-    pub fn add_public_constraint(&mut self, player_id: usize, card: Card){
-        if let Some(value) = self.dead_card_count.get_mut(&card){
+    pub fn add_public_constraint(&mut self, player_id: usize, card: Card) {
+        if let Some(value) = self.dead_card_count.get_mut(&card) {
             *value += 1;
         }
-        if let Some(pc_hm_card) = self.pc_hm.remove(&player_id){
+        if let Some(pc_hm_card) = self.pc_hm.remove(&player_id) {
             // If pc_hm has a card already, remove it and add to jc_hm
-            debug_assert!(!self.jc_hm.contains_key(&player_id), "jc_hm also contains key! Should not happen!");
+            debug_assert!(
+                !self.jc_hm.contains_key(&player_id),
+                "jc_hm also contains key! Should not happen!"
+            );
             let mut card_vec: Vec<Card> = vec![pc_hm_card, card];
             card_vec.sort();
             self.jc_hm.insert(player_id, card_vec.clone());
 
-            self.group_dead_player_prune(player_id, &card_vec);            
-
+            self.group_dead_player_prune(player_id, &card_vec);
         } else {
             self.pc_hm.insert(player_id, card);
         }
         let mut index = 0;
-        while index < self.gc_vec.len(){
+        while index < self.gc_vec.len() {
             let group: &mut GroupConstraint = &mut self.gc_vec[index];
             // [Test]
             if *group.card() == card && group.get_list()[player_id] == 1 {
@@ -346,30 +364,33 @@ impl CollectiveConstraint{
         // self.add_inferred_groups();
         self.group_redundant_prune();
     }
-    pub fn remove_public_constraint(&mut self, player_id: usize, card: Card){
+    pub fn remove_public_constraint(&mut self, player_id: usize, card: Card) {
         // self.gc_initial_hm.entry(card).and_modify(|arr| arr[player_id] = 0);
-        if let Some(pc_hm_card) = self.pc_hm.get(&player_id){
+        if let Some(pc_hm_card) = self.pc_hm.get(&player_id) {
             // card in pc_hm?
             if *pc_hm_card == card {
                 self.pc_hm.remove(&player_id);
                 // KIV: NEW LATE ADDITION 13/07/2024
-                if let Some(value) = self.dead_card_count.get_mut(&card){
+                if let Some(value) = self.dead_card_count.get_mut(&card) {
                     *value -= 1;
                 }
             } else {
-                debug_assert!(false, "Removing card constraint that does not exist in pc_hm");
+                debug_assert!(
+                    false,
+                    "Removing card constraint that does not exist in pc_hm"
+                );
             }
-        } else if let Some(jc_hm_vec) = self.jc_hm.get_mut(&player_id){
+        } else if let Some(jc_hm_vec) = self.jc_hm.get_mut(&player_id) {
             // Gets joint constraint in jc_hm
             // Removes it and adds remainder to pc_hm
-            if let Some(index) = jc_hm_vec.iter().position(|c| *c == card){
+            if let Some(index) = jc_hm_vec.iter().position(|c| *c == card) {
                 jc_hm_vec.remove(index);
                 // KIV: NEW LATE ADDITION 13/07/2024
-                if let Some(value) = self.dead_card_count.get_mut(&card){
+                if let Some(value) = self.dead_card_count.get_mut(&card) {
                     *value -= 1;
                 }
                 if jc_hm_vec.len() == 1 {
-                    if let Some(remaining_card) = jc_hm_vec.pop(){
+                    if let Some(remaining_card) = jc_hm_vec.pop() {
                         self.pc_hm.insert(player_id, remaining_card);
                         self.jc_hm.remove(&player_id);
                     } else {
@@ -379,15 +400,24 @@ impl CollectiveConstraint{
                     debug_assert!(false, "jc_hm_vec len was too long!");
                 }
             } else {
-                debug_assert!(false, "Removing card constraint that does not exist in jc_hm");
+                debug_assert!(
+                    false,
+                    "Removing card constraint that does not exist in jc_hm"
+                );
             }
         }
     }
-    pub fn add_joint_constraint(&mut self, player_id: usize, card_vec: &Vec<Card>){
-        debug_assert!(self.pc_hm.get(&player_id).is_none(), "Player already half dead, how to die again??");
-        debug_assert!(self.jc_hm.get(&player_id).is_none(), "Player already dead, how to die again??");
+    pub fn add_joint_constraint(&mut self, player_id: usize, card_vec: &Vec<Card>) {
+        debug_assert!(
+            self.pc_hm.get(&player_id).is_none(),
+            "Player already half dead, how to die again??"
+        );
+        debug_assert!(
+            self.jc_hm.get(&player_id).is_none(),
+            "Player already dead, how to die again??"
+        );
         for card in card_vec.iter() {
-            if let Some(value) = self.dead_card_count.get_mut(card){
+            if let Some(value) = self.dead_card_count.get_mut(card) {
                 *value += 1;
             }
         }
@@ -399,7 +429,7 @@ impl CollectiveConstraint{
     pub fn remove_constraints(&mut self, player_id: usize) {
         if let Some(card) = self.pc_hm.get_mut(&player_id) {
             // KIV: NEW LATE ADDITION
-            if let Some(value) = self.dead_card_count.get_mut(card){
+            if let Some(value) = self.dead_card_count.get_mut(card) {
                 *value -= 1;
             }
             self.pc_hm.remove(&player_id);
@@ -407,14 +437,14 @@ impl CollectiveConstraint{
         if let Some(card_vec) = self.jc_hm.get_mut(&player_id) {
             // KIV: NEW LATE ADDITION
             if card_vec[0] == card_vec[1] {
-                if let Some(value) = self.dead_card_count.get_mut(&card_vec[0]){
+                if let Some(value) = self.dead_card_count.get_mut(&card_vec[0]) {
                     *value -= 2;
                 }
             } else {
-                if let Some(value) = self.dead_card_count.get_mut(&card_vec[0]){
+                if let Some(value) = self.dead_card_count.get_mut(&card_vec[0]) {
                     *value -= 1;
                 }
-                if let Some(value) = self.dead_card_count.get_mut(&card_vec[1]){
+                if let Some(value) = self.dead_card_count.get_mut(&card_vec[1]) {
                     *value -= 1;
                 }
             }
@@ -422,7 +452,13 @@ impl CollectiveConstraint{
         }
     }
     // You will never remove from group only pop to reverse it because you cannot unmix cards
-    pub fn group_initial_prune(&mut self, player_id: usize, card: &Card, count: usize, bool_card_dead: bool){
+    pub fn group_initial_prune(
+        &mut self,
+        player_id: usize,
+        card: &Card,
+        count: usize,
+        bool_card_dead: bool,
+    ) {
         // Pruning for revealredraw or exchangedraw
         // Modifies dead_count and alive_count of groups that have player indicator == 1 given the knowledge of a card being dead
         // bool_cards_dead should only be true for discard and not revealredraw not exchangedraw
@@ -439,7 +475,7 @@ impl CollectiveConstraint{
                 // Player & Pile will have at least 2 of the card
                 new_count += 1;
             }
-        } else if let Some(cards) = self.jc_hm.get(&player_id){
+        } else if let Some(cards) = self.jc_hm.get(&player_id) {
             // Should not be able to revealredraw or exchangedraw if jc_hm has player as the player would be dead!
             debug_assert!(false, "Impossible Case Reached");
         }
@@ -449,11 +485,18 @@ impl CollectiveConstraint{
             let group = &mut self.gc_vec[index];
             // if group.card() == card && group.get_list()[player_id] == 1 && group.count() <= count{
 
-            if group.card() == card && group.get_list()[player_id] == 1 && group.count() <= new_count{
+            if group.card() == card
+                && group.get_list()[player_id] == 1
+                && group.count() <= new_count
+            {
                 // Prune If same card and is subset if old group count <= revealed count
                 // Because the group is redundant
                 self.gc_vec.swap_remove(index);
-            } else if group.card() == card && group.get_list()[player_id] == 1 && group.count() > new_count && bool_card_dead{
+            } else if group.card() == card
+                && group.get_list()[player_id] == 1
+                && group.count() > new_count
+                && bool_card_dead
+            {
                 // Adjusting figures appropriately to reflect number alive in the group and number dead
                 // In the case of Discard Groups are updated to reflect the value
                 // group.count() has to be > new_count else the group would have to be pruned as all information would be represented by public_constraint
@@ -468,23 +511,23 @@ impl CollectiveConstraint{
         }
         // if its one dead one alive?
     }
-    pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: &Vec<Card>){
+    pub fn group_dead_player_prune(&mut self, player_id: usize, card_vec: &Vec<Card>) {
         // Group initial prune should have been used before this, so the dead counts should be correct in group
         // Prunes relevant groups in gc_vec when player loses all their cards
         // log::info!("DEAD PLAYER PRUNE");
         let mut index: usize = 0;
         let mut bool_subtract: bool = false;
-        while index < self.gc_vec.len(){
+        while index < self.gc_vec.len() {
             let group: &mut GroupConstraint = &mut self.gc_vec[index];
 
             if group.indicator(player_id) == 1 {
-                if group.card() != &card_vec[0] && group.card() != &card_vec[1]{
+                if group.card() != &card_vec[0] && group.card() != &card_vec[1] {
                     // Modify Group whose cards are different!
                     // Their card will not be in the indicator because it is full!
                     // log::trace!("SUBTRACT NO COUNT");
                     group.group_subtract(player_id);
                     bool_subtract = true;
-                } else if &card_vec[0] == &card_vec[1]{
+                } else if &card_vec[0] == &card_vec[1] {
                     if group.card() == &card_vec[0] {
                         // log::trace!("SUBTRACT 2");
                         group.group_subtract(player_id);
@@ -500,7 +543,7 @@ impl CollectiveConstraint{
                         group.group_subtract(player_id);
                         group.count_dead_subtract(1);
                         bool_subtract = true;
-                    }else if group.card() == &card_vec[1] {
+                    } else if group.card() == &card_vec[1] {
                         // log::trace!("SUBTRACT 1");
                         group.group_subtract(player_id);
                         group.count_dead_subtract(1);
@@ -512,7 +555,7 @@ impl CollectiveConstraint{
                 }
                 // Other cases PRUNED in Initial PRUNE
             }
-            if group.count_alive() == 0{
+            if group.count_alive() == 0 {
                 // No longer handled in group_initial_prune
                 self.gc_vec.swap_remove(index);
             } else if self.dead_card_count[group.card()] == 3 {
@@ -527,7 +570,7 @@ impl CollectiveConstraint{
         }
         self.group_redundant_prune();
     }
-    pub fn group_redundant_prune(&mut self){
+    pub fn group_redundant_prune(&mut self) {
         // Loops through gc_vec and removes redundant groups
         if self.gc_vec.len() >= 2 {
             let mut i: usize = 0;
@@ -539,9 +582,9 @@ impl CollectiveConstraint{
                 while j < self.gc_vec.len() {
                     let group_i = &self.gc_vec[i];
                     let group_j = &self.gc_vec[j];
-                    if self.is_redundant(group_i, group_j){
+                    if self.is_redundant(group_i, group_j) {
                         self.gc_vec.swap_remove(i);
-                        i_incremented  = true;
+                        i_incremented = true;
                         break;
                     } else if self.is_redundant(group_j, group_i) {
                         self.gc_vec.swap_remove(j);
@@ -557,10 +600,10 @@ impl CollectiveConstraint{
     }
     pub fn is_redundant(&self, group1: &GroupConstraint, group2: &GroupConstraint) -> bool {
         // Returns true if GROUP 1 is redundant and false if not
-        if group1.is_subset_of(group2){
+        if group1.is_subset_of(group2) {
             return true;
         }
-        if group1.card() != group2.card(){
+        if group1.card() != group2.card() {
             return false;
         }
         if group1.count_alive() == 0 {
@@ -570,7 +613,7 @@ impl CollectiveConstraint{
         let remaining_count: usize = 3 - self.dead_card_count[card] as usize;
 
         if group1.count_alive() == remaining_count && group2.count_alive() == remaining_count {
-        // if group1.count() == remaining_count && group2.count() == remaining_count {
+            // if group1.count() == remaining_count && group2.count() == remaining_count {
             // Keep the subset as it is smaller!
             if group2.part_list_is_subset_of(group1) {
                 // e.g. where group 2 part list is subset of group 1 part list
@@ -588,7 +631,7 @@ impl CollectiveConstraint{
             false
         }
     }
-    pub fn add_group_constraint(&mut self, player_id: usize, card: &Card, count: usize){
+    pub fn add_group_constraint(&mut self, player_id: usize, card: &Card, count: usize) {
         // Adds a new constraint used for RevealRedraw
         // There is an [INITIAL PRUNE] because we know player had a card before the swap!
         // let mut new_count: usize = count;
@@ -601,22 +644,20 @@ impl CollectiveConstraint{
                 // new_count += 1;
                 dead_count += 1;
             }
-        } else if !self.jc_hm.get(&player_id).is_none(){
+        } else if !self.jc_hm.get(&player_id).is_none() {
             // Should not be able to revealredraw or exchangedraw if jc_hm has player as the player would be dead!
             debug_assert!(false, "Impossible Case Reached");
         }
         let mut index: usize = 0;
         // Iterate and update current groups
         while index < self.gc_vec.len() {
-
             // RevealRedraw Version
             let group = &mut self.gc_vec[index];
             if group.get_list()[player_id] == 0 {
                 group.group_add(player_id);
                 // Add one because the new player shows he has a card and swaps it into the pile & his hand
                 // So the past group + new player has an additional card
-                
-                
+
                 // Old Group: Duke [0 1 0 0 0 0 1] Count 1
                 // Move RevealRedraw a Duke is revealed and shuffled into pile
                 // Add Group: Duke [0 0 1 0 0 0 1] Count 1
@@ -634,14 +675,14 @@ impl CollectiveConstraint{
                         // log::trace!("GROUP COUNT HIGH! FIX WITH LEGAL MOVE PRUNE");
                     }
                 } else {
-                    if let Some(card_dead) = self.pc_hm.get(&player_id) { 
+                    if let Some(card_dead) = self.pc_hm.get(&player_id) {
                         if card_dead == group.card() {
                             // log::trace!("reveal redraw dead card addition");
                             group.count_dead_add(1);
                         }
                     }
                 }
-                if group.all_in() == true {
+                if group.all_in() {
                     // [FULL PRUNE] because group constraint just means there could be a Duke anywhere (anyone or the pile might have it)
                     self.gc_vec.swap_remove(index);
                 } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
@@ -662,7 +703,7 @@ impl CollectiveConstraint{
         // self.add_inferred_groups();
         self.group_redundant_prune();
     }
-    pub fn add_group_constraint_exchange(&mut self, player_id: usize, card: &Card, count: usize){
+    pub fn add_group_constraint_exchange(&mut self, player_id: usize, card: &Card, count: usize) {
         // Adds a new constraint used for exchangedraw
         // Here Some Pile cards are revealed before a player chooses whether they want it
         // There is an [INITIAL PRUNE] because we know player had a card before the swap!
@@ -676,7 +717,7 @@ impl CollectiveConstraint{
                 // new_count += 1;
                 dead_count += 1;
             }
-        } else if !self.jc_hm.get(&player_id).is_none(){
+        } else if !self.jc_hm.get(&player_id).is_none() {
             // Should not be able to revealredraw or exchangedraw if jc_hm has player as the player would be dead!
             debug_assert!(false, "Impossible Case Reached");
         }
@@ -686,7 +727,7 @@ impl CollectiveConstraint{
             // New Version
             let group = &mut self.gc_vec[index];
             if group.card() == card {
-                if group.get_list()[6] == 1{
+                if group.get_list()[6] == 1 {
                     // Add one because the new player shows he has a card and swaps it into the pile & his hand
                     // So the past group + new player has an additional card
                     // group is now mixed based on the swapping move
@@ -696,19 +737,19 @@ impl CollectiveConstraint{
                         group.group_add(player_id);
                         group.count_dead_add(dead_count);
                         // log::trace!("ExchangeDraw add group 1");
-                    } 
+                    }
                     if group.count_alive() < count {
                         // log::trace!("ExchangeDraw add alive 1");
                         group.count_alive_add(count - group.count_alive());
                     }
                     // Exchange draw count is handled differently because pile is the card that is revealed
                     // if group.count() < new_count {
-                        // group.count_add(new_count - group.count());
-                        // }
+                    // group.count_add(new_count - group.count());
+                    // }
                     // debug_assert!(group.count() < 4, "GROUP COUNT IN EXCHANGEDRAW TOO HIGH");
-                } 
+                }
             } else {
-                if group.get_list()[6] == 1{
+                if group.get_list()[6] == 1 {
                     if group.get_list()[player_id] == 0 {
                         // log::trace!("Exchange constraint do nothing");
                     }
@@ -730,7 +771,7 @@ impl CollectiveConstraint{
                     // }
                 }
             }
-            if group.all_in() == true {
+            if group.all_in() {
                 // [FULL PRUNE] because group constraint just means there could be a Duke anywhere (anyone or the pile might have it)
                 self.gc_vec.swap_remove(index);
             } else if self.is_complement_of_pcjc(&self.gc_vec[index]) {
@@ -781,7 +822,6 @@ impl CollectiveConstraint{
                             } else {
                                 max_possible_holdings = 1;
                             }
-
                         } else if let Some(dead_card_vec) = self.jc_hm.get(&player_id) {
                             // TODO: Review this it was originally not commented out
                             // I have implemented this for extensibility options
@@ -947,7 +987,7 @@ impl CollectiveConstraint{
         // Unsure if need to prune?
         self.group_redundant_prune();
     }
-    pub fn update_group_constraint(&mut self, player_id: usize){
+    pub fn update_group_constraint(&mut self, player_id: usize) {
         // For each gc, if player is not a participant, they now become one
         // If all players are participants, remove from tracking
         // Might already be done in exchangedraw
@@ -979,7 +1019,7 @@ impl CollectiveConstraint{
         }
         self.group_redundant_prune();
     }
-    pub fn remove_duplicate_groups(&mut self){
+    pub fn remove_duplicate_groups(&mut self) {
         let mut seen: HashSet<GroupConstraint> = HashSet::new();
         let mut i: usize = 0;
         while i < self.gc_vec.len() {
@@ -992,9 +1032,9 @@ impl CollectiveConstraint{
     }
     pub fn player_dead_card_count(&self, player_id: usize, card: &Card) -> usize {
         let mut output: usize = 0;
-        if let Some(_value) = self.pc_hm.get_key_value(&player_id){
+        if let Some(_value) = self.pc_hm.get_key_value(&player_id) {
             output += 1;
-        } else if let Some(card_vec) = self.jc_hm.get(&player_id){
+        } else if let Some(card_vec) = self.jc_hm.get(&player_id) {
             for icard in card_vec.iter() {
                 if icard == card {
                     output += 1;
@@ -1009,19 +1049,23 @@ impl CollectiveConstraint{
     pub fn player_can_have_active_card(&self, player_id: usize, card: &Card) -> bool {
         // TODO: Consider making a version where you clone self here and let function take &mut constraint and let it modify it in function
         let constraint: CollectiveConstraint = self.clone();
-        
+
         // if CollectiveConstraint::player_can_have_active_card_pub(&constraint, player_id, card) {
         //     // Doing this because there is a case where adding inferred groups leads to miscounting of card_count and \
         //     // Excluding inferred groups information is helpful
         //     constraint.add_inferred_groups();
         //     CollectiveConstraint::player_can_have_active_card_pub(&constraint, player_id, card)
         // } else {
-            //     false
-            // }
+        //     false
+        // }
         // constraint.add_inferred_groups();
         CollectiveConstraint::player_can_have_active_card_pub(&constraint, player_id, card)
     }
-    pub fn player_can_have_active_card_pub(input_constraint: &CollectiveConstraint, player_id: usize, card: &Card) -> bool {
+    pub fn player_can_have_active_card_pub(
+        input_constraint: &CollectiveConstraint,
+        player_id: usize,
+        card: &Card,
+    ) -> bool {
         // Returns true if player can have a card in his hand that is alive
         // TODO: If this works, modify others to not clone before adding as input?
         let mut constraint: CollectiveConstraint = input_constraint.clone();
@@ -1033,10 +1077,9 @@ impl CollectiveConstraint{
         }
         // === Section 1 ===
         // If a particular group has all the remaining alive cards of interest and the player of interested is not part of it, return false
-        
+
         // Number of cards that can be alive remaining
         let remaining_alive_count: usize = 3 - constraint.dead_card_count[card] as usize;
-
 
         for group in constraint.gc_vec.iter() {
             // Player may be alive and have one of the cards dead.
@@ -1046,10 +1089,10 @@ impl CollectiveConstraint{
             // Group Constraint VEC: [GroupConstraint { participation_list: [0, 0, 0, 0, 1, 1, 1], card: Captain, count: 1 }, GroupConstraint { participation_list: [0, 0, 0, 0, 0, 1, 1], card: Duke, count: 2 }]
             // remaining_alive_count = 2 but player 3 still can reveal a Duke
             // So we adjust the group count downward to prevent double counting the cards that are certain
-// 
+            //
             if group.card() == card {
                 let mut group_alive_count = group.count();
-                for (iplayer_id, indicator) in group.get_list().iter().enumerate(){
+                for (iplayer_id, indicator) in group.get_list().iter().enumerate() {
                     if *indicator == 1 {
                         if let Some(value) = constraint.pc_hm.get(&iplayer_id) {
                             if value == card {
@@ -1057,8 +1100,8 @@ impl CollectiveConstraint{
                             }
                         }
                         // Need this as add_inferred_groups can add groups that have dead players inside
-                        if let Some(card_vec) = constraint.jc_hm.get(&iplayer_id){
-                            for vcard in card_vec.iter(){
+                        if let Some(card_vec) = constraint.jc_hm.get(&iplayer_id) {
+                            for vcard in card_vec.iter() {
                                 if *vcard == *card {
                                     group_alive_count -= 1;
                                 }
@@ -1068,7 +1111,10 @@ impl CollectiveConstraint{
                     // I do not subtract for jc_hm as group should not have indicator 1 for a dead player due to initial pruning
                 }
                 // If group has all of a particular card and player_id is not within the group
-                if group.card() == card && group_alive_count == remaining_alive_count && group.get_list()[player_id] == 0 {
+                if group.card() == card
+                    && group_alive_count == remaining_alive_count
+                    && group.get_list()[player_id] == 0
+                {
                     // log::trace!("Basic False");
                     return false;
                 }
@@ -1108,14 +1154,22 @@ impl CollectiveConstraint{
             card_count_dead.insert(Card::Contessa, 0);
             // Initialise card_count_dead and card_count_alive
             let mut card_group_sets: HashMap<Card, [u8; 7]> = HashMap::new();
-            for icard in [Card::Ambassador, Card::Assassin ,Card::Captain, Card::Duke, Card::Contessa].iter(){
+            for icard in [
+                Card::Ambassador,
+                Card::Assassin,
+                Card::Captain,
+                Card::Duke,
+                Card::Contessa,
+            ]
+            .iter()
+            {
                 card_group_sets.insert(*icard, [0; 7]);
             }
             let mut total_card_count: usize = 0;
             // Initialise cap for item i, because all other items will be subsumed only if part_list are subsets
             let mut total_card_capacity: usize = 0;
             // Add current into the subsumed pool
-            for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate(){
+            for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate() {
                 if *indicator == 1 {
                     // Filling up total_card_capacity includes dead cards for now
                     if iplayer_id < 6 {
@@ -1134,11 +1188,11 @@ impl CollectiveConstraint{
                             *value += 1;
                             // Update card_count_dead
                         }
-                        if let Some(value) = card_count_dead.get_mut(vcard){
+                        if let Some(value) = card_count_dead.get_mut(vcard) {
                             *value += 1;
                         }
                         // [Addition to test]
-                        if let Some(arr) = card_group_sets.get_mut(vcard){
+                        if let Some(arr) = card_group_sets.get_mut(vcard) {
                             arr[iplayer_id] = 1;
                         }
                     }
@@ -1164,16 +1218,22 @@ impl CollectiveConstraint{
                     // === TODO: Modify to fill HashMap like inferred groups
                     // === START NEW
                     // log::trace!("card_group_sets: {:?}", card_group_sets);
-                    if let Some(union_part_list) = card_group_sets.get_mut(&constraint.gc_vec[j].card()) {
+                    if let Some(union_part_list) =
+                        card_group_sets.get_mut(&constraint.gc_vec[j].card())
+                    {
                         let mut bool_mutual_exclusive: bool = true;
                         for icheck in 0..7 {
-                            if union_part_list[icheck] == 1 && constraint.gc_vec[j].get_list()[icheck] == 1{
+                            if union_part_list[icheck] == 1
+                                && constraint.gc_vec[j].get_list()[icheck] == 1
+                            {
                                 bool_mutual_exclusive = false;
                                 break;
                             }
                         }
 
-                        if let Some(count_value) = card_count_alive.get_mut(&constraint.gc_vec[j].card()) {
+                        if let Some(count_value) =
+                            card_count_alive.get_mut(&constraint.gc_vec[j].card())
+                        {
                             // TODO: Add dead/alive split
                             // Create another hashmap for dead/alive too
                             if bool_mutual_exclusive {
@@ -1183,38 +1243,44 @@ impl CollectiveConstraint{
                                 total_card_count += constraint.gc_vec[j].count_alive();
                             } else {
                                 if constraint.gc_vec[j].count_alive() > *count_value {
-                                    total_card_count += constraint.gc_vec[j].count_alive() - *count_value;
+                                    total_card_count +=
+                                        constraint.gc_vec[j].count_alive() - *count_value;
                                     *count_value = constraint.gc_vec[j].count_alive();
                                 }
                             }
                         }
 
-                        if let Some(count_value) = card_count.get_mut(&constraint.gc_vec[j].card()){
-                            *count_value = card_count_dead[&constraint.gc_vec[j].card()] + card_count_alive[&constraint.gc_vec[j].card()];
+                        if let Some(count_value) = card_count.get_mut(&constraint.gc_vec[j].card())
+                        {
+                            *count_value = card_count_dead[&constraint.gc_vec[j].card()]
+                                + card_count_alive[&constraint.gc_vec[j].card()];
                         }
-                        for iupdate in 0..7{
-                            if union_part_list[iupdate] == 0 && constraint.gc_vec[j].get_list()[iupdate] == 1 {
+                        for iupdate in 0..7 {
+                            if union_part_list[iupdate] == 0
+                                && constraint.gc_vec[j].get_list()[iupdate] == 1
+                            {
                                 union_part_list[iupdate] = 1;
                             }
                         }
-
                     }
                     // === END NEW
-                    if total_card_count == total_card_capacity && constraint.gc_vec[i].get_list()[player_id] == 1 {
+                    if total_card_count == total_card_capacity
+                        && constraint.gc_vec[i].get_list()[player_id] == 1
+                    {
                         let alive_count: usize = card_count_alive[card];
 
                         if alive_count == 0 {
                             // If full group does not contain card of interest, its impossible for a player of that group to have the card
                             // See start of fn => Group will always have player_id indicator as 1 so player_id will be part of the group
                             // log::trace!("Section 2A False");
-                            return false
+                            return false;
                         } else {
                             // Since group is full, subsuming more groups will not provide more information
                             j += 1;
                             // log::trace!("Full Break A");
                             break;
                         }
-                    } else if constraint.gc_vec[i].get_list()[player_id] == 0{
+                    } else if constraint.gc_vec[i].get_list()[player_id] == 0 {
                         // Finding if some group excluding player of interest has all cards in that group known and the cards include card of interest
                         // log::trace!("Section 2B");
                         // log::trace!("Group: {:?}", constraint.gc_vec[i]);
@@ -1224,14 +1290,14 @@ impl CollectiveConstraint{
                             // [NEW]
                             if constraint.gc_vec[i].get_list()[temp_player_id] == 0 {
                                 // Removing the dead cards of alive players outside group
-                                if let Some(c) = constraint.pc_hm.get(&temp_player_id){
+                                if let Some(c) = constraint.pc_hm.get(&temp_player_id) {
                                     if *c == *card {
                                         remaining_card_count -= 1;
                                     }
                                 }
                                 // == END NEW
-                                if let Some(temp_card_vec) = constraint.jc_hm.get(&temp_player_id){
-                                    for c in temp_card_vec.iter(){
+                                if let Some(temp_card_vec) = constraint.jc_hm.get(&temp_player_id) {
+                                    for c in temp_card_vec.iter() {
                                         if *c == *card {
                                             remaining_card_count -= 1;
                                         }
@@ -1239,7 +1305,7 @@ impl CollectiveConstraint{
                                 }
                             }
                         }
-                        // If all remaining cards of interest are in the group the player of interest is not in 
+                        // If all remaining cards of interest are in the group the player of interest is not in
                         if card_count[card] == remaining_card_count {
                             // log::trace!("Section 2B False");
                             return false;
@@ -1248,7 +1314,7 @@ impl CollectiveConstraint{
                             // log::trace!("Full Break B");
                             // break;
                             // [NEW] Dont break as group not full!
-                        }  
+                        }
                     } else if total_card_count > total_card_capacity {
                         debug_assert!(false, "Impossible State Reached");
                     }
@@ -1256,56 +1322,68 @@ impl CollectiveConstraint{
                 j += 1;
             }
             // End of filling counting cards
-            
-            
+
             // Checking if group i is subset of another group that has 1 more indicator
             // Group i [1 0 0 0 0 0 1] all 5 cards known, e.g. Duke: 2
             // Group j [1 1 0 0 0 0 1] Duke 3
-            // Then we know Player 1 has Duke 
+            // Then we know Player 1 has Duke
             // In Addition
             // if for some player with indicator 0 outside the group, they can only have one card, add and recurse
             // log::trace!("i: {i} card_count before subset inferrence: {:?}", card_count);
             for group in constraint.gc_vec.iter() {
-                if total_card_capacity == total_card_count && constraint.gc_vec[i].part_list_is_subset_of(group) && group.count() > card_count[group.card()] && (group.get_list().iter().sum::<u8>() - constraint.gc_vec[i].get_list().iter().sum::<u8>()) == 1 {
-                        // Always > 0
-                        // let mut alive_count: usize = 3 - card_count[group.card()];
-                        let mut alive_count: usize = group.count() - card_count[group.card()];
-                        log::trace!("alive_count: {alive_count}");
-                        for iplayer in 0..7 as usize {
-                            if group.get_list()[iplayer] == 1 && constraint.gc_vec[i].get_list()[iplayer] == 0 && !constraint.jc_hm.contains_key(&iplayer){
-                                if let Some(vcard) = constraint.pc_hm.get(&iplayer){
-                                    if *vcard == *group.card() {
-                                        alive_count -= 1;
-                                    }
+                if total_card_capacity == total_card_count
+                    && constraint.gc_vec[i].part_list_is_subset_of(group)
+                    && group.count() > card_count[group.card()]
+                    && (group.get_list().iter().sum::<u8>()
+                        - constraint.gc_vec[i].get_list().iter().sum::<u8>())
+                        == 1
+                {
+                    // Always > 0
+                    // let mut alive_count: usize = 3 - card_count[group.card()];
+                    let mut alive_count: usize = group.count() - card_count[group.card()];
+                    log::trace!("alive_count: {alive_count}");
+                    for iplayer in 0..7 as usize {
+                        if group.get_list()[iplayer] == 1
+                            && constraint.gc_vec[i].get_list()[iplayer] == 0
+                            && !constraint.jc_hm.contains_key(&iplayer)
+                        {
+                            if let Some(vcard) = constraint.pc_hm.get(&iplayer) {
+                                if *vcard == *group.card() {
+                                    alive_count -= 1;
                                 }
-                                if alive_count > 0 {
-                                    // log::trace!("Determined that Player {} has {:?}", iplayer, *group.card());
-                                    if iplayer == player_id && *group.card() == *card {
-                                        // Player has card
-                                        return true;
-                                    } else if iplayer == player_id && constraint.pc_hm.contains_key(&player_id){
-                                        // Player full hand known and it isnt card of interest
-                                        // log::trace!("Section 2 asd False");
-                                        return false;
-                                    }
-                                    //ENsuring player is alive
+                            }
+                            if alive_count > 0 {
+                                // log::trace!("Determined that Player {} has {:?}", iplayer, *group.card());
+                                if iplayer == player_id && *group.card() == *card {
+                                    // Player has card
+                                    return true;
+                                } else if iplayer == player_id
+                                    && constraint.pc_hm.contains_key(&player_id)
+                                {
+                                    // Player full hand known and it isnt card of interest
+                                    // log::trace!("Section 2 asd False");
+                                    return false;
+                                }
+                                //ENsuring player is alive
 
-                                    let mut new_constraint: CollectiveConstraint = constraint.clone();
-                                    new_constraint.add_raw_public_constraint(iplayer, *group.card());
-                                    
-                                    // log::trace!("Section 2 Opposite Subset Recurse");
-                                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
-                                        // log::trace!("Section 2 Opposite Subset False");
-                                        return false;
-                                    } else {
-                                        return true;
-                                    }
+                                let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                new_constraint.add_raw_public_constraint(iplayer, *group.card());
 
+                                // log::trace!("Section 2 Opposite Subset Recurse");
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
+                                    // log::trace!("Section 2 Opposite Subset False");
+                                    return false;
+                                } else {
+                                    return true;
                                 }
                             }
                         }
-
-                }  
+                    }
+                }
                 //
             }
             // Checking if another group is subset of another group i that has 1 more indicator
@@ -1318,7 +1396,7 @@ impl CollectiveConstraint{
 
                 let mut player_i_possible_cards: HashMap<Card, usize> = HashMap::new();
                 // subset_union_card_list stores cards in groups that are subset of group i and exclude i_player-id
-                
+
                 let mut subset_union_card_list: HashMap<Card, [u8; 7]> = HashMap::new();
                 let mut bool_reset: bool = true;
                 let mut bool_mutually_exclusive: bool = false;
@@ -1331,7 +1409,15 @@ impl CollectiveConstraint{
                     if bool_reset {
                         total_cards_remaining = 0;
                         total_unique_cards_remaining = 0;
-                        for vcard in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa].iter() {
+                        for vcard in [
+                            Card::Ambassador,
+                            Card::Assassin,
+                            Card::Captain,
+                            Card::Duke,
+                            Card::Contessa,
+                        ]
+                        .iter()
+                        {
                             player_i_possible_cards.insert(*vcard, 0);
                             subset_union_card_list.insert(*vcard, [0; 7]);
                         }
@@ -1345,11 +1431,16 @@ impl CollectiveConstraint{
                     let mut players_left: [u8; 7] = constraint.gc_vec[i].get_list().clone();
                     // log::trace!("Currently checking for player: {iplayer_id}");
                     for group in constraint.gc_vec.iter() {
-                        if group.part_list_is_subset_of(&constraint.gc_vec[i]) && group.get_list()[iplayer_id] == 0 {
+                        if group.part_list_is_subset_of(&constraint.gc_vec[i])
+                            && group.get_list()[iplayer_id] == 0
+                        {
                             // update the subset_union_card_list and alive card counts
                             // log::trace!("Checking group: {:?}", group);
-                            bool_mutually_exclusive = GroupConstraint::lists_are_mut_excl(group.get_list(), &subset_union_card_list[group.card()]);
-                            if let Some(value) = player_i_possible_cards.get_mut(group.card()){
+                            bool_mutually_exclusive = GroupConstraint::lists_are_mut_excl(
+                                group.get_list(),
+                                &subset_union_card_list[group.card()],
+                            );
+                            if let Some(value) = player_i_possible_cards.get_mut(group.card()) {
                                 if bool_mutually_exclusive {
                                     *value += group.count_alive();
                                 } else {
@@ -1357,9 +1448,13 @@ impl CollectiveConstraint{
                                         *value = group.count_alive();
                                     }
                                 }
-                                if let Some(card_part_list) = subset_union_card_list.get_mut(group.card()){
+                                if let Some(card_part_list) =
+                                    subset_union_card_list.get_mut(group.card())
+                                {
                                     for iupdate in 0..7 {
-                                        if card_part_list[iupdate] == 0 && group.get_list()[iupdate] == 1 {
+                                        if card_part_list[iupdate] == 0
+                                            && group.get_list()[iupdate] == 1
+                                        {
                                             card_part_list[iupdate] = 1;
                                         }
                                     }
@@ -1367,7 +1462,8 @@ impl CollectiveConstraint{
                             }
                             // updating players_left to exclude players that are in current group
                             for ind_index in 0..7 as usize {
-                                if players_left[ind_index] == 1 && group.get_list()[ind_index] == 1 {
+                                if players_left[ind_index] == 1 && group.get_list()[ind_index] == 1
+                                {
                                     players_left[ind_index] = 0;
                                 }
                             }
@@ -1392,10 +1488,15 @@ impl CollectiveConstraint{
                         return false;
                     }
                     if group_player_count == 1 {
-                        if total_unique_cards_remaining == 1 && !constraint.jc_hm.contains_key(&iplayer_id){
+                        if total_unique_cards_remaining == 1
+                            && !constraint.jc_hm.contains_key(&iplayer_id)
+                        {
                             let mut new_constraint: CollectiveConstraint = constraint.clone();
-                            for (vcard, value) in player_i_possible_cards.iter(){
-                                if *value > 0 && constraint.pc_hm.contains_key(&iplayer_id) && !constraint.jc_hm.contains_key(&iplayer_id){
+                            for (vcard, value) in player_i_possible_cards.iter() {
+                                if *value > 0
+                                    && constraint.pc_hm.contains_key(&iplayer_id)
+                                    && !constraint.jc_hm.contains_key(&iplayer_id)
+                                {
                                     if iplayer_id == player_id {
                                         if *vcard == *card {
                                             // log::trace!("Section Subset 0 Known A True");
@@ -1405,16 +1506,23 @@ impl CollectiveConstraint{
                                             // log::trace!("Section Subset 0 Known B False");
                                             return false;
                                         }
-                                    } 
+                                    }
                                     new_constraint.add_raw_public_constraint(iplayer_id, *vcard);
-                                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                    if !CollectiveConstraint::player_can_have_active_card_pub(
+                                        &new_constraint,
+                                        player_id,
+                                        card,
+                                    ) {
                                         // log::trace!("Section Subset 0 Recurse A False");
                                         return false;
                                     } else {
                                         // log::trace!("Section Subset 0 Recurse A True");
                                         return true;
                                     }
-                                } else if *value > 1 && !constraint.pc_hm.contains_key(&iplayer_id) && !constraint.jc_hm.contains_key(&iplayer_id){
+                                } else if *value > 1
+                                    && !constraint.pc_hm.contains_key(&iplayer_id)
+                                    && !constraint.jc_hm.contains_key(&iplayer_id)
+                                {
                                     if iplayer_id == player_id {
                                         if *vcard == *card {
                                             // log::trace!("Section Subset 0 Known C True");
@@ -1426,14 +1534,19 @@ impl CollectiveConstraint{
                                     }
                                     new_constraint.add_raw_public_constraint(iplayer_id, *vcard);
                                     new_constraint.add_raw_public_constraint(iplayer_id, *vcard);
-                                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                    if !CollectiveConstraint::player_can_have_active_card_pub(
+                                        &new_constraint,
+                                        player_id,
+                                        card,
+                                    ) {
                                         // log::trace!("Section Subset 0 Recurse B False");
                                         return false;
                                     } else {
                                         // log::trace!("Section Subset 0 Recurse B True");
                                         return true;
                                     }
-                                } else if *value == 1 && !constraint.jc_hm.contains_key(&iplayer_id){
+                                } else if *value == 1 && !constraint.jc_hm.contains_key(&iplayer_id)
+                                {
                                     // implicitly pc_hm does not contain a key here! because of the first if condition
                                     // iplayer_id has 2 lives
                                     if iplayer_id == player_id {
@@ -1444,7 +1557,11 @@ impl CollectiveConstraint{
                                         // No return false because they have another card we dont know about!
                                     }
                                     new_constraint.add_raw_public_constraint(iplayer_id, *vcard);
-                                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                    if !CollectiveConstraint::player_can_have_active_card_pub(
+                                        &new_constraint,
+                                        player_id,
+                                        card,
+                                    ) {
                                         // log::trace!("Section Subset 0 Recurse C False");
                                         return false;
                                     } else {
@@ -1454,10 +1571,12 @@ impl CollectiveConstraint{
                                 }
                             }
                         } else if total_unique_cards_remaining == 2 && total_cards_remaining == 2 {
-                            if !constraint.pc_hm.contains_key(&iplayer_id) && !constraint.jc_hm.contains_key(&iplayer_id){
+                            if !constraint.pc_hm.contains_key(&iplayer_id)
+                                && !constraint.jc_hm.contains_key(&iplayer_id)
+                            {
                                 let mut new_constraint: CollectiveConstraint = constraint.clone();
                                 let mut counter: usize = 0;
-                                for (vcard, value) in player_i_possible_cards.iter(){
+                                for (vcard, value) in player_i_possible_cards.iter() {
                                     if *value > 0 {
                                         if iplayer_id == player_id {
                                             if *vcard == *card {
@@ -1469,32 +1588,44 @@ impl CollectiveConstraint{
                                                 return false;
                                             }
                                         }
-                                        new_constraint.add_raw_public_constraint(iplayer_id, *vcard);
+                                        new_constraint
+                                            .add_raw_public_constraint(iplayer_id, *vcard);
                                         counter += 1;
                                     }
                                 }
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section Subset 0 Recurse D False");
                                     return false;
                                 } else {
                                     return true;
                                 }
                             }
-                        } else if total_unique_cards_remaining == 2 && total_cards_remaining == 3{
+                        } else if total_unique_cards_remaining == 2 && total_cards_remaining == 3 {
                             // if player has 2 lives add card with value = 2
-                            if !constraint.pc_hm.contains_key(&iplayer_id) && !constraint.jc_hm.contains_key(&iplayer_id) {
+                            if !constraint.pc_hm.contains_key(&iplayer_id)
+                                && !constraint.jc_hm.contains_key(&iplayer_id)
+                            {
                                 let mut new_constraint: CollectiveConstraint = constraint.clone();
-                                for (vcard, value) in player_i_possible_cards.iter(){
+                                for (vcard, value) in player_i_possible_cards.iter() {
                                     if *value > 1 {
                                         if iplayer_id == player_id {
                                             if *vcard == *card {
                                                 // log::trace!("Section Subset 0 Known H True");
                                                 return true;
-                                            } 
+                                            }
                                             // No return false here because only 1 card will be added!
                                         }
-                                        new_constraint.add_raw_public_constraint(iplayer_id, *vcard);
-                                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                        new_constraint
+                                            .add_raw_public_constraint(iplayer_id, *vcard);
+                                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                                            &new_constraint,
+                                            player_id,
+                                            card,
+                                        ) {
                                             // log::trace!("Section Subset 0 Recurse E False");
                                             return false;
                                         } else {
@@ -1506,19 +1637,26 @@ impl CollectiveConstraint{
                         } else if total_unique_cards_remaining == 2 && total_cards_remaining == 4 {
                             // if player has 2 lives add card with value = 3
                             // In the case of a 3 1 card distribution of each kind of card, if a player has 2 slots they definitely have the card with count 3
-                            if !constraint.pc_hm.contains_key(&iplayer_id) && !constraint.jc_hm.contains_key(&iplayer_id) {
+                            if !constraint.pc_hm.contains_key(&iplayer_id)
+                                && !constraint.jc_hm.contains_key(&iplayer_id)
+                            {
                                 let mut new_constraint: CollectiveConstraint = constraint.clone();
-                                for (vcard, value) in player_i_possible_cards.iter(){
+                                for (vcard, value) in player_i_possible_cards.iter() {
                                     if *value > 2 {
                                         if iplayer_id == player_id {
                                             if *vcard == *card {
                                                 // log::trace!("Section Subset 0 Known I True");
                                                 return true;
-                                            } 
+                                            }
                                             // No return false here because only 1 card will be added!
                                         }
-                                        new_constraint.add_raw_public_constraint(iplayer_id, *vcard);
-                                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                        new_constraint
+                                            .add_raw_public_constraint(iplayer_id, *vcard);
+                                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                                            &new_constraint,
+                                            player_id,
+                                            card,
+                                        ) {
                                             // log::trace!("Section Subset 0 Recurse E False");
                                             return false;
                                         } else {
@@ -1542,33 +1680,31 @@ impl CollectiveConstraint{
                         // if required, add_raw_constraints and recurse
                         if total_unique_cards_remaining == 1 {
                             if total_cards_remaining == 3 {
-                                for (vcard, value) in player_i_possible_cards.iter(){
+                                for (vcard, value) in player_i_possible_cards.iter() {
                                     if *value == 3 {
                                         let mut total_lives: usize = 0;
                                         for (id, indicator) in players_left.iter().enumerate() {
                                             if *indicator == 1 {
-                                                if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                if !constraint.pc_hm.contains_key(&id)
+                                                    && !constraint.jc_hm.contains_key(&id)
+                                                {
                                                     total_lives += 2;
-                                                } else if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
+                                                } else if constraint.pc_hm.contains_key(&id)
+                                                    && !constraint.jc_hm.contains_key(&id)
+                                                {
                                                     total_lives += 1;
                                                 }
                                             }
                                         }
                                         if total_lives == 3 {
-                                            let mut new_constraint: CollectiveConstraint = constraint.clone();
-                                            for (id, indicator) in players_left.iter().enumerate() { 
+                                            let mut new_constraint: CollectiveConstraint =
+                                                constraint.clone();
+                                            for (id, indicator) in players_left.iter().enumerate() {
                                                 // 1 unique card 3 total cards 2 players -> if players have 3 lives collectively, all their empty cards are the card
                                                 if *indicator == 1 {
-                                                    if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
-                                                        if id == player_id {
-                                                            if *card == *vcard{
-                                                                return true;
-                                                            } else {
-                                                                return false;
-                                                            }
-                                                        }
-                                                        new_constraint.add_raw_public_constraint(id, *vcard);
-                                                    } else if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                    if constraint.pc_hm.contains_key(&id)
+                                                        && !constraint.jc_hm.contains_key(&id)
+                                                    {
                                                         if id == player_id {
                                                             if *card == *vcard {
                                                                 return true;
@@ -1576,10 +1712,24 @@ impl CollectiveConstraint{
                                                                 return false;
                                                             }
                                                         }
-                                                        new_constraint.add_raw_public_constraint(id, *vcard);
-                                                        new_constraint.add_raw_public_constraint(id, *vcard);
+                                                        new_constraint
+                                                            .add_raw_public_constraint(id, *vcard);
+                                                    } else if !constraint.pc_hm.contains_key(&id)
+                                                        && !constraint.jc_hm.contains_key(&id)
+                                                    {
+                                                        if id == player_id {
+                                                            if *card == *vcard {
+                                                                return true;
+                                                            } else {
+                                                                return false;
+                                                            }
+                                                        }
+                                                        new_constraint
+                                                            .add_raw_public_constraint(id, *vcard);
+                                                        new_constraint
+                                                            .add_raw_public_constraint(id, *vcard);
                                                     }
-                                                } 
+                                                }
                                             }
 
                                             // log::trace!("Entering Section Subset 2P Recurse A");
@@ -1594,45 +1744,57 @@ impl CollectiveConstraint{
                                 }
                             } else if total_cards_remaining == 2 {
                                 // 1 unique card 2 total cards 2 players -> if both players have 1 life only both players have the 1 of card
-                                for (vcard, value) in player_i_possible_cards.iter(){
+                                for (vcard, value) in player_i_possible_cards.iter() {
                                     if *value == 2 {
                                         let mut total_lives: usize = 0;
                                         for (id, indicator) in players_left.iter().enumerate() {
                                             if *indicator == 1 {
-                                                if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                if !constraint.pc_hm.contains_key(&id)
+                                                    && !constraint.jc_hm.contains_key(&id)
+                                                {
                                                     total_lives += 2;
-                                                } else if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
+                                                } else if constraint.pc_hm.contains_key(&id)
+                                                    && !constraint.jc_hm.contains_key(&id)
+                                                {
                                                     total_lives += 1;
                                                 }
                                             }
                                         }
                                         if total_lives == 2 {
                                             // constraint.printlog();
-                                            let mut new_constraint: CollectiveConstraint = constraint.clone();
-                                            for (id, indicator) in players_left.iter().enumerate() { 
+                                            let mut new_constraint: CollectiveConstraint =
+                                                constraint.clone();
+                                            for (id, indicator) in players_left.iter().enumerate() {
                                                 // 1 unique card 3 total cards 2 players -> if players have 3 lives collectively, all their empty cards are the card
                                                 if *indicator == 1 {
-                                                    if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                    if constraint.pc_hm.contains_key(&id)
+                                                        && !constraint.jc_hm.contains_key(&id)
+                                                    {
                                                         if id == player_id {
-                                                            if *card == *vcard{
+                                                            if *card == *vcard {
                                                                 return true;
                                                             } else {
                                                                 return false;
                                                             }
                                                         }
-                                                        new_constraint.add_raw_public_constraint(id, *vcard);
-                                                    } else if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                        new_constraint
+                                                            .add_raw_public_constraint(id, *vcard);
+                                                    } else if !constraint.pc_hm.contains_key(&id)
+                                                        && !constraint.jc_hm.contains_key(&id)
+                                                    {
                                                         if id == player_id {
-                                                            if *card == *vcard{
+                                                            if *card == *vcard {
                                                                 return true;
                                                             } else {
                                                                 return false;
                                                             }
                                                         }
-                                                        new_constraint.add_raw_public_constraint(id, *vcard);
-                                                        new_constraint.add_raw_public_constraint(id, *vcard);
+                                                        new_constraint
+                                                            .add_raw_public_constraint(id, *vcard);
+                                                        new_constraint
+                                                            .add_raw_public_constraint(id, *vcard);
                                                     }
-                                                } 
+                                                }
                                             }
                                             // log::trace!("Entering Section Subset 2P Recurse B");
                                             if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
@@ -1650,33 +1812,41 @@ impl CollectiveConstraint{
                             // 2 unique cards 4 total cards 3 1 Split 2 players -> both players have 4 lives collectively -> both players have 1 of the card with 3 total cards
                             // 2 unique cards 3 total cards 2 1 Split 2 players -> both players have 3 lives collectively -> player with 2 lives has 1 of the card with 2 total cards
                             if total_cards_remaining == 3 {
-                                for (vcard, value) in player_i_possible_cards.iter(){
+                                for (vcard, value) in player_i_possible_cards.iter() {
                                     if *value == 2 {
                                         let mut total_lives: usize = 0;
                                         for (id, indicator) in players_left.iter().enumerate() {
                                             if *indicator == 1 {
-                                                if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                if !constraint.pc_hm.contains_key(&id)
+                                                    && !constraint.jc_hm.contains_key(&id)
+                                                {
                                                     total_lives += 2;
-                                                } else if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
+                                                } else if constraint.pc_hm.contains_key(&id)
+                                                    && !constraint.jc_hm.contains_key(&id)
+                                                {
                                                     total_lives += 1;
                                                 }
                                             }
                                         }
                                         if total_lives == 3 {
-                                            let mut new_constraint: CollectiveConstraint = constraint.clone();
-                                            for (id, indicator) in players_left.iter().enumerate() { 
+                                            let mut new_constraint: CollectiveConstraint =
+                                                constraint.clone();
+                                            for (id, indicator) in players_left.iter().enumerate() {
                                                 // 1 unique card 3 total cards 2 players -> if players have 3 lives collectively, all their empty cards are the card
                                                 if *indicator == 1 {
-                                                    if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                    if !constraint.pc_hm.contains_key(&id)
+                                                        && !constraint.jc_hm.contains_key(&id)
+                                                    {
                                                         if id == player_id {
-                                                            if *card == *vcard{
+                                                            if *card == *vcard {
                                                                 return true;
                                                             }
                                                         }
-                                                        new_constraint.add_raw_public_constraint(id, *vcard);
+                                                        new_constraint
+                                                            .add_raw_public_constraint(id, *vcard);
                                                         break;
-                                                    } 
-                                                } 
+                                                    }
+                                                }
                                             }
                                             // log::trace!("Entering Section Subset 2P Recurse C");
                                             if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
@@ -1689,40 +1859,51 @@ impl CollectiveConstraint{
                                     }
                                 }
                             } else if total_cards_remaining == 4 {
-                                for (vcard, value) in player_i_possible_cards.iter(){
+                                for (vcard, value) in player_i_possible_cards.iter() {
                                     if *value == 3 {
                                         let mut total_lives: usize = 0;
                                         for (id, indicator) in players_left.iter().enumerate() {
                                             if *indicator == 1 {
-                                                if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                if !constraint.pc_hm.contains_key(&id)
+                                                    && !constraint.jc_hm.contains_key(&id)
+                                                {
                                                     total_lives += 2;
-                                                } else if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
+                                                } else if constraint.pc_hm.contains_key(&id)
+                                                    && !constraint.jc_hm.contains_key(&id)
+                                                {
                                                     total_lives += 1;
                                                 }
                                             }
                                         }
                                         if total_lives == 4 {
-                                            let mut new_constraint: CollectiveConstraint = constraint.clone();
-                                            for (id, indicator) in players_left.iter().enumerate() { 
+                                            let mut new_constraint: CollectiveConstraint =
+                                                constraint.clone();
+                                            for (id, indicator) in players_left.iter().enumerate() {
                                                 if *indicator == 1 {
-                                                    if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                    if constraint.pc_hm.contains_key(&id)
+                                                        && !constraint.jc_hm.contains_key(&id)
+                                                    {
                                                         if id == player_id {
-                                                            if *card == *vcard{
+                                                            if *card == *vcard {
                                                                 return true;
                                                             } else {
                                                                 return false;
                                                             }
                                                         }
-                                                        new_constraint.add_raw_public_constraint(id, *vcard);
-                                                    } else if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
+                                                        new_constraint
+                                                            .add_raw_public_constraint(id, *vcard);
+                                                    } else if !constraint.pc_hm.contains_key(&id)
+                                                        && !constraint.jc_hm.contains_key(&id)
+                                                    {
                                                         if id == player_id {
-                                                            if *card == *vcard{
+                                                            if *card == *vcard {
                                                                 return true;
-                                                            } 
+                                                            }
                                                         }
-                                                        new_constraint.add_raw_public_constraint(id, *vcard);
+                                                        new_constraint
+                                                            .add_raw_public_constraint(id, *vcard);
                                                     }
-                                                } 
+                                                }
                                             }
                                             // log::trace!("Entering Section Subset 2P Recurse D");
                                             if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
@@ -1739,43 +1920,57 @@ impl CollectiveConstraint{
                     } else if group_player_count == 3 {
                         if total_unique_cards_remaining == 1 {
                             // 1 unique card 3 total cards 3 players each have the same card
-                            for (vcard, value) in player_i_possible_cards.iter(){
+                            for (vcard, value) in player_i_possible_cards.iter() {
                                 if *value == 3 {
                                     let mut total_lives: usize = 0;
                                     for (id, indicator) in players_left.iter().enumerate() {
                                         if *indicator == 1 {
-                                            if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
+                                            if constraint.pc_hm.contains_key(&id)
+                                                && !constraint.jc_hm.contains_key(&id)
+                                            {
                                                 total_lives += 1;
                                             }
                                         }
                                     }
                                     if total_lives == 3 {
-                                        let mut new_constraint: CollectiveConstraint = constraint.clone();
-                                        for (id, indicator) in players_left.iter().enumerate() { 
+                                        let mut new_constraint: CollectiveConstraint =
+                                            constraint.clone();
+                                        for (id, indicator) in players_left.iter().enumerate() {
                                             if *indicator == 1 {
-                                                if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                                if constraint.pc_hm.contains_key(&id)
+                                                    && !constraint.jc_hm.contains_key(&id)
+                                                {
                                                     if id == player_id {
-                                                        if *card == *vcard{
+                                                        if *card == *vcard {
                                                             return true;
                                                         } else {
                                                             return false;
                                                         }
                                                     }
-                                                    new_constraint.add_raw_public_constraint(id, *vcard);
-                                                } else if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
+                                                    new_constraint
+                                                        .add_raw_public_constraint(id, *vcard);
+                                                } else if !constraint.pc_hm.contains_key(&id)
+                                                    && !constraint.jc_hm.contains_key(&id)
+                                                {
                                                     // its possible that not all players are alive anymore
                                                     if id == player_id {
-                                                        if *card == *vcard{
+                                                        if *card == *vcard {
                                                             return true;
-                                                        } 
+                                                        }
                                                     }
-                                                    new_constraint.add_raw_public_constraint(id, *vcard);
-                                                    new_constraint.add_raw_public_constraint(id, *vcard);
+                                                    new_constraint
+                                                        .add_raw_public_constraint(id, *vcard);
+                                                    new_constraint
+                                                        .add_raw_public_constraint(id, *vcard);
                                                 }
-                                            } 
+                                            }
                                         }
                                         // log::trace!("Entering Section Subset 2P Recurse E");
-                                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                                            &new_constraint,
+                                            player_id,
+                                            card,
+                                        ) {
                                             // log::trace!("Section Subset 2P Recurse E False");
                                             return false;
                                         } else {
@@ -1784,10 +1979,9 @@ impl CollectiveConstraint{
                                     }
                                 }
                             }
-
                         }
                     }
-    
+
                     bool_reset = true;
                 }
             }
@@ -1795,14 +1989,13 @@ impl CollectiveConstraint{
             // Next algo begins here!
 
             // Modifying card_count for a different purpose!
-            for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate(){
+            for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate() {
                 // [TESTING] if need to comment out or not ANS: Needs to be commented out
                 // Trying to make it work with this
                 if *indicator == 0 {
-
-                    if let Some(temp_card_vec) = constraint.jc_hm.get(&iplayer_id){
-                        for vcard in temp_card_vec.iter(){
-                            if let Some(value) = card_count.get_mut(vcard){
+                    if let Some(temp_card_vec) = constraint.jc_hm.get(&iplayer_id) {
+                        for vcard in temp_card_vec.iter() {
+                            if let Some(value) = card_count.get_mut(vcard) {
                                 *value += 1;
                             }
                         }
@@ -1815,7 +2008,7 @@ impl CollectiveConstraint{
             // log::trace!("card_count after: {:?}", card_count);
             let mut no_cards_remaining: usize = 0;
             let mut no_unique_cards_remaining: usize = 0;
-            for value in card_count.values_mut(){
+            for value in card_count.values_mut() {
                 *value = 3 - *value;
                 no_cards_remaining += *value;
                 if *value != 0 {
@@ -1824,8 +2017,8 @@ impl CollectiveConstraint{
             }
             for (iplayer, indicator) in constraint.gc_vec[i].get_list().iter().enumerate() {
                 if *indicator == 0 {
-                    if let Some(vcard) = constraint.pc_hm.get(&iplayer){
-                        if let Some(count_value) = card_count.get_mut(vcard){
+                    if let Some(vcard) = constraint.pc_hm.get(&iplayer) {
+                        if let Some(count_value) = card_count.get_mut(vcard) {
                             *count_value -= 1;
                             no_cards_remaining -= 1;
                         }
@@ -1833,37 +2026,43 @@ impl CollectiveConstraint{
                 }
             }
 
-            
             // card_count is now all possible cards alive and outside group i
             // [WHAT IS HAPPENING] We try to infer what a player's hand must have, add a new constraint and recurse!
-            if constraint.gc_vec[i].get_list()[player_id] == 0 && card_count[card] == 0{
+            if constraint.gc_vec[i].get_list()[player_id] == 0 && card_count[card] == 0 {
                 // log::trace!("False when player outside group and cant have card!");
                 return false;
-            }
-            else if no_cards_remaining == 2 {
+            } else if no_cards_remaining == 2 {
                 // Check if we can infer a player's entire hand
                 // There should only be one player alive outside the group that fulfils this
                 let mut recurse_bool: bool = false;
                 let mut new_constraint: CollectiveConstraint = constraint.clone();
-                for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate(){
+                for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate() {
                     if *indicator == 0 && iplayer_id == 6 {
-                        for (card_hm, value_hm) in card_count.iter(){
+                        for (card_hm, value_hm) in card_count.iter() {
                             if *value_hm > 0 {
-                                new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 0, *value_hm));
+                                new_constraint.add_raw_group(GroupConstraint::new_list(
+                                    [0, 0, 0, 0, 0, 0, 1],
+                                    *card_hm,
+                                    0,
+                                    *value_hm,
+                                ));
                                 recurse_bool = true;
                             }
-                        }     
+                        }
                     }
-                    if *indicator == 0 && !constraint.jc_hm.contains_key(&iplayer_id) && !constraint.pc_hm.contains_key(&iplayer_id) {
+                    if *indicator == 0
+                        && !constraint.jc_hm.contains_key(&iplayer_id)
+                        && !constraint.pc_hm.contains_key(&iplayer_id)
+                    {
                         // if player is fully alive and outside the group, we know their entire hand
 
-                        for (card_hm, value_hm) in card_count.iter(){
-                            if *value_hm == 1{
+                        for (card_hm, value_hm) in card_count.iter() {
+                            if *value_hm == 1 {
                                 if iplayer_id == player_id && *card_hm == *card {
                                     return true;
-                                // } else if iplayer_id == player_id {
-                                //     // Player full hand known and it isnt card of interest
-                                //     return false;
+                                    // } else if iplayer_id == player_id {
+                                    //     // Player full hand known and it isnt card of interest
+                                    //     return false;
                                 }
                                 new_constraint.add_raw_public_constraint(iplayer_id, *card_hm);
                                 recurse_bool = true;
@@ -1881,9 +2080,12 @@ impl CollectiveConstraint{
                                 break;
                             }
                         }
-                    } else if *indicator == 0 && !constraint.jc_hm.contains_key(&iplayer_id) && constraint.pc_hm.contains_key(&iplayer_id) {
+                    } else if *indicator == 0
+                        && !constraint.jc_hm.contains_key(&iplayer_id)
+                        && constraint.pc_hm.contains_key(&iplayer_id)
+                    {
                         // if player has 1 life and both cards remaining are the same
-                        for (card_hm, value_hm) in card_count.iter(){
+                        for (card_hm, value_hm) in card_count.iter() {
                             if *value_hm == 2 {
                                 if iplayer_id == player_id && *card_hm == *card {
                                     return true;
@@ -1896,12 +2098,15 @@ impl CollectiveConstraint{
                                 break;
                             }
                         }
-                        
                     }
                 }
                 if recurse_bool {
                     // log::trace!("Section 2 Recurse A Recurse");
-                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                    if !CollectiveConstraint::player_can_have_active_card_pub(
+                        &new_constraint,
+                        player_id,
+                        card,
+                    ) {
                         // log::trace!("Section 2 Recurse A False");
                         return false;
                     } else {
@@ -1911,21 +2116,29 @@ impl CollectiveConstraint{
             } else if no_cards_remaining == 1 {
                 let mut recurse_bool: bool = false;
                 let mut new_constraint: CollectiveConstraint = constraint.clone();
-                for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate(){
+                for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate() {
                     if *indicator == 0 && iplayer_id == 6 {
                         // Consider player 6 just add as group constraint
-                        for (card_hm, value_hm) in card_count.iter(){
+                        for (card_hm, value_hm) in card_count.iter() {
                             if *value_hm > 0 {
-                                new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 0, *value_hm));
+                                new_constraint.add_raw_group(GroupConstraint::new_list(
+                                    [0, 0, 0, 0, 0, 0, 1],
+                                    *card_hm,
+                                    0,
+                                    *value_hm,
+                                ));
                                 recurse_bool = true;
                                 break;
                             }
                         }
                     }
-                    if *indicator == 0 && !constraint.jc_hm.contains_key(&iplayer_id) && constraint.pc_hm.contains_key(&iplayer_id) {
+                    if *indicator == 0
+                        && !constraint.jc_hm.contains_key(&iplayer_id)
+                        && constraint.pc_hm.contains_key(&iplayer_id)
+                    {
                         // if player has 1 life left and is outside the group, we know their entire hand
-                        for (card_hm, value_hm) in card_count.iter(){
-                            if *value_hm == 1{
+                        for (card_hm, value_hm) in card_count.iter() {
+                            if *value_hm == 1 {
                                 if iplayer_id == player_id && *card_hm == *card {
                                     return true;
                                 } else if iplayer_id == player_id {
@@ -1952,7 +2165,11 @@ impl CollectiveConstraint{
                 }
                 if recurse_bool {
                     // log::trace!("Section 2 Recurse B Recurse");
-                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                    if !CollectiveConstraint::player_can_have_active_card_pub(
+                        &new_constraint,
+                        player_id,
+                        card,
+                    ) {
                         // log::trace!("Section 2 Recurse B False");
                         return false;
                     } else {
@@ -1964,22 +2181,32 @@ impl CollectiveConstraint{
                 // if constraint.gc_vec[i].get_list()[6] == 0 && !constraint.pc_hm.contains_key(&6) && !constraint.pc_hm.contains_key(&6){
                 let mut recurse_bool: bool = false;
                 let mut new_constraint: CollectiveConstraint = constraint.clone();
-                for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate(){
+                for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate() {
                     if *indicator == 0 && iplayer_id == 6 {
-                        for (card_hm, value_hm) in card_count.iter(){
+                        for (card_hm, value_hm) in card_count.iter() {
                             if *value_hm > 0 {
-                                new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 0, *value_hm));
+                                new_constraint.add_raw_group(GroupConstraint::new_list(
+                                    [0, 0, 0, 0, 0, 0, 1],
+                                    *card_hm,
+                                    0,
+                                    *value_hm,
+                                ));
                                 recurse_bool = true;
                             }
                         }
-                    } else if *indicator == 0 && !new_constraint.pc_hm.contains_key(&iplayer_id) && !new_constraint.jc_hm.contains_key(&iplayer_id){
+                    } else if *indicator == 0
+                        && !new_constraint.pc_hm.contains_key(&iplayer_id)
+                        && !new_constraint.jc_hm.contains_key(&iplayer_id)
+                    {
                         if no_unique_cards_remaining == 2 {
                             // 2 unique cards and a player with 2 lives remaining
-                            for (card_hm, value_hm) in card_count.iter(){
+                            for (card_hm, value_hm) in card_count.iter() {
                                 if *value_hm > 1 {
                                     if iplayer_id == player_id && *card_hm == *card {
                                         return true;
-                                    } else if iplayer_id == player_id && constraint.pc_hm.contains_key(&player_id){
+                                    } else if iplayer_id == player_id
+                                        && constraint.pc_hm.contains_key(&player_id)
+                                    {
                                         // Player full hand known and it isnt card of interest
                                         return false;
                                     }
@@ -1989,11 +2216,13 @@ impl CollectiveConstraint{
                             }
                         } else if no_unique_cards_remaining == 1 {
                             // 1 unique card and a player with 2 lives remaining
-                            for (card_hm, value_hm) in card_count.iter(){
+                            for (card_hm, value_hm) in card_count.iter() {
                                 if *value_hm > 1 {
                                     if iplayer_id == player_id && *card_hm == *card {
                                         return true;
-                                    } else if iplayer_id == player_id && constraint.pc_hm.contains_key(&player_id){
+                                    } else if iplayer_id == player_id
+                                        && constraint.pc_hm.contains_key(&player_id)
+                                    {
                                         // Player full hand known and it isnt card of interest
                                         return false;
                                     }
@@ -2003,14 +2232,19 @@ impl CollectiveConstraint{
                                 }
                             }
                         }
-                    } else if *indicator == 0 && new_constraint.pc_hm.contains_key(&iplayer_id) && !new_constraint.jc_hm.contains_key(&iplayer_id){
+                    } else if *indicator == 0
+                        && new_constraint.pc_hm.contains_key(&iplayer_id)
+                        && !new_constraint.jc_hm.contains_key(&iplayer_id)
+                    {
                         // 1 unique card and a player with 1 life remaining
                         if no_unique_cards_remaining == 1 {
-                            for (card_hm, value_hm) in card_count.iter(){
+                            for (card_hm, value_hm) in card_count.iter() {
                                 if *value_hm > 1 {
                                     if iplayer_id == player_id && *card_hm == *card {
                                         return true;
-                                    } else if iplayer_id == player_id && constraint.pc_hm.contains_key(&player_id){
+                                    } else if iplayer_id == player_id
+                                        && constraint.pc_hm.contains_key(&player_id)
+                                    {
                                         // Player full hand known and it isnt card of interest
                                         return false;
                                     }
@@ -2024,7 +2258,11 @@ impl CollectiveConstraint{
 
                 if recurse_bool {
                     // log::trace!("Section 2 Recurse C Recurse");
-                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                    if !CollectiveConstraint::player_can_have_active_card_pub(
+                        &new_constraint,
+                        player_id,
+                        card,
+                    ) {
                         // log::trace!("Section 2 Recurse C False");
                         return false;
                     } else {
@@ -2034,7 +2272,7 @@ impl CollectiveConstraint{
             } else if no_cards_remaining == 4 {
                 let mut recurse_bool: bool = false;
                 let mut new_constraint: CollectiveConstraint = constraint.clone();
-                for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate(){
+                for (iplayer_id, indicator) in constraint.gc_vec[i].get_list().iter().enumerate() {
                     if *indicator == 0 && iplayer_id == 6 {
                         // Pile case
                         if no_unique_cards_remaining == 2 {
@@ -2042,25 +2280,40 @@ impl CollectiveConstraint{
                             // Since pile has 3 cards
                             // 2 2 split add 1 of each since it will definitely have 1 of each card
                             // 1 3 split add 2 of the 3 card type since it will definitely have at least 2 of that
-                            for (card_hm, value_hm) in card_count.iter(){
+                            for (card_hm, value_hm) in card_count.iter() {
                                 if *value_hm == 3 {
-                                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 0, 2));
+                                    new_constraint.add_raw_group(GroupConstraint::new_list(
+                                        [0, 0, 0, 0, 0, 0, 1],
+                                        *card_hm,
+                                        0,
+                                        2,
+                                    ));
                                     recurse_bool = true;
                                 } else if *value_hm == 2 {
-                                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card_hm, 0, 1));
+                                    new_constraint.add_raw_group(GroupConstraint::new_list(
+                                        [0, 0, 0, 0, 0, 0, 1],
+                                        *card_hm,
+                                        0,
+                                        1,
+                                    ));
                                     recurse_bool = true;
                                 }
                             }
                         }
-                    } else if *indicator == 0 && !new_constraint.pc_hm.contains_key(&iplayer_id) && !new_constraint.jc_hm.contains_key(&iplayer_id){
+                    } else if *indicator == 0
+                        && !new_constraint.pc_hm.contains_key(&iplayer_id)
+                        && !new_constraint.jc_hm.contains_key(&iplayer_id)
+                    {
                         // player has 2 lives
                         if no_unique_cards_remaining == 2 {
                             // If its a 1 3 Split, we know player must have at least 1 of the card with 3 left
-                            for (card_hm, value_hm) in card_count.iter(){
+                            for (card_hm, value_hm) in card_count.iter() {
                                 if *value_hm == 3 {
                                     if iplayer_id == player_id && *card_hm == *card {
                                         return true;
-                                    } else if iplayer_id == player_id && constraint.pc_hm.contains_key(&player_id){
+                                    } else if iplayer_id == player_id
+                                        && constraint.pc_hm.contains_key(&player_id)
+                                    {
                                         // Player full hand known and it isnt card of interest
                                         return false;
                                     }
@@ -2074,7 +2327,11 @@ impl CollectiveConstraint{
                 }
                 if recurse_bool {
                     // log::trace!("Section 2 Recurse D Recurse");
-                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                    if !CollectiveConstraint::player_can_have_active_card_pub(
+                        &new_constraint,
+                        player_id,
+                        card,
+                    ) {
                         // log::trace!("Section 2 Recurse D False");
                         return false;
                     } else {
@@ -2082,7 +2339,7 @@ impl CollectiveConstraint{
                     }
                 }
             }
-            // [Whats Happening] Checking if we can infer more information about players outside 
+            // [Whats Happening] Checking if we can infer more information about players outside
             // Say we know group [1 0 0 0 0 0 1] has 2 Ambassadors 1 Capt 1 Duke 1 Cont
             // Say we know group [1 1 0 0 0 0 1] has 3 Ambassadors
             // Then we know [0 1 0 0 0 0 0] has at least 1 ambassador
@@ -2108,7 +2365,6 @@ impl CollectiveConstraint{
             i += 1;
         }
 
-        
         // === Section 3 ===
         // [MUST HAVE CARD CHECK]
         // Check if player must have certain cards
@@ -2145,7 +2401,10 @@ impl CollectiveConstraint{
                     // modifies excl_list to include list of group j
                     // Assume group constraints include dead card of alive players (pc_hm) if their indicator is 1
                     // Assume group constraints exclude dead players [DEAD PLAYER PRUNE]
-                    if GroupConstraint::lists_are_mut_excl(&excl_list, &constraint.gc_vec[j].get_list()) {
+                    if GroupConstraint::lists_are_mut_excl(
+                        &excl_list,
+                        &constraint.gc_vec[j].get_list(),
+                    ) {
                         if let Some(value) = excl_card_count.get_mut(&constraint.gc_vec[j].card()) {
                             *value += constraint.gc_vec[j].count_alive();
                         }
@@ -2165,21 +2424,21 @@ impl CollectiveConstraint{
             let mut k: usize = 0;
             while k < excl_list.len() {
                 // if excl_list[k] == 0 {
-                    // Include dead players card if they are not in the excl_list group and the player is fully dead
-                    if let Some(temp_card_vec) = constraint.jc_hm.get(&k) {
-                        for vcard in temp_card_vec.iter() {
-                            // update Hashmap
-                            if let Some(value) = excl_card_count.get_mut(&vcard) {
-                                *value += 1;
-                            }
-                        }
-                    }
-                    // Include dead card of alive player if they are not in excl_list group
-                    if let Some(vcard) = constraint.pc_hm.get(&k) {
+                // Include dead players card if they are not in the excl_list group and the player is fully dead
+                if let Some(temp_card_vec) = constraint.jc_hm.get(&k) {
+                    for vcard in temp_card_vec.iter() {
+                        // update Hashmap
                         if let Some(value) = excl_card_count.get_mut(&vcard) {
                             *value += 1;
                         }
                     }
+                }
+                // Include dead card of alive player if they are not in excl_list group
+                if let Some(vcard) = constraint.pc_hm.get(&k) {
+                    if let Some(value) = excl_card_count.get_mut(&vcard) {
+                        *value += 1;
+                    }
+                }
                 // }
                 k += 1;
             }
@@ -2187,7 +2446,15 @@ impl CollectiveConstraint{
             // Check if excl count implies player i must have a certain card
             let mut possible_cards: Vec<Card> = Vec::with_capacity(5);
             let mut possible_count: usize = 0;
-            for vcard in [Card::Ambassador, Card::Assassin, Card::Captain, Card::Duke, Card::Contessa].iter() {
+            for vcard in [
+                Card::Ambassador,
+                Card::Assassin,
+                Card::Captain,
+                Card::Duke,
+                Card::Contessa,
+            ]
+            .iter()
+            {
                 if excl_card_count[vcard] != 3 {
                     possible_cards.push(*vcard);
                     possible_count += 1;
@@ -2219,7 +2486,11 @@ impl CollectiveConstraint{
                     new_constraint.add_raw_public_constraint(i, possible_cards[0]);
 
                     // log::trace!("Section 3B Recurse");
-                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card) {
+                    if !CollectiveConstraint::player_can_have_active_card_pub(
+                        &new_constraint,
+                        player_id,
+                        card,
+                    ) {
                         // log::trace!("Section 3B False");
                         return false;
                     } else {
@@ -2232,7 +2503,7 @@ impl CollectiveConstraint{
             // Special case for if player i == player_id
             // Then if player i must have some card, and it is not card of interest return false else return true
             i += 1;
-        }  
+        }
         // === Section 4 ===
         // Checking if the union of some group leads to all cards being known
         // Group i [0, 1, 1, 0, 0, 0, 1]
@@ -2258,19 +2529,26 @@ impl CollectiveConstraint{
         card_count_dead.insert(Card::Contessa, 0);
         let mut card_group_sets: HashMap<Card, [u8; 7]> = HashMap::new();
         let mut union_group_set: [u8; 7] = [0; 7];
-        for icard in [Card::Ambassador, Card::Assassin ,Card::Captain, Card::Duke, Card::Contessa].iter(){
+        for icard in [
+            Card::Ambassador,
+            Card::Assassin,
+            Card::Captain,
+            Card::Duke,
+            Card::Contessa,
+        ]
+        .iter()
+        {
             card_group_sets.insert(*icard, [0; 7]);
         }
         let mut total_card_count: usize = 0;
         // Initialise cap for item i, because all other items will be subsumed only if part_list are subsets
         let mut total_card_capacity: usize = 0;
         // Filling them up with everything in the gc_vec!
-        for group in constraint.gc_vec.iter(){
-
+        for group in constraint.gc_vec.iter() {
             if let Some(union_part_list) = card_group_sets.get_mut(&group.card()) {
                 let mut bool_mutual_exclusive: bool = true;
                 for icheck in 0..7 {
-                    if union_part_list[icheck] == 1 && group.get_list()[icheck] == 1{
+                    if union_part_list[icheck] == 1 && group.get_list()[icheck] == 1 {
                         bool_mutual_exclusive = false;
                         break;
                     }
@@ -2292,11 +2570,11 @@ impl CollectiveConstraint{
                     }
                 }
 
-                if let Some(count_value) = card_count.get_mut(&group.card()){
+                if let Some(count_value) = card_count.get_mut(&group.card()) {
                     *count_value = card_count_alive[&group.card()];
                     // card_count_dead is all 0 so not updated
                 }
-                for iupdate in 0..7{
+                for iupdate in 0..7 {
                     if union_part_list[iupdate] == 0 && group.get_list()[iupdate] == 1 {
                         union_part_list[iupdate] = 1;
                         union_group_set[iupdate] = 1;
@@ -2306,7 +2584,7 @@ impl CollectiveConstraint{
         }
         // Filling with dead players
         if union_group_set.iter().sum::<u8>() != 0 && union_group_set.iter().sum::<u8>() != 7 {
-            for (iplayer_id, indicator) in union_group_set.iter().enumerate(){
+            for (iplayer_id, indicator) in union_group_set.iter().enumerate() {
                 if *indicator == 1 {
                     // Filling up total_card_capacity includes dead cards for now
                     if iplayer_id < 6 {
@@ -2325,10 +2603,10 @@ impl CollectiveConstraint{
                             *value += 1;
                             // Update card_count_dead
                         }
-                        if let Some(value) = card_count_dead.get_mut(vcard){
+                        if let Some(value) = card_count_dead.get_mut(vcard) {
                             *value += 1;
                         }
-                    }                    
+                    }
                     if let Some(card_vec) = constraint.jc_hm.get(&iplayer_id) {
                         total_card_count += 2;
                         for card in card_vec.iter() {
@@ -2340,18 +2618,19 @@ impl CollectiveConstraint{
                 }
             }
 
-            // End of filling card_count 
+            // End of filling card_count
             // Check if cards for some player outside group (indicator == 0) can be deduced
             if total_card_count == total_card_capacity && union_group_set[player_id] == 1 {
                 // If full group does not contain card of interest and player is in it
                 if card_count_alive[card] == 0 {
-                    return false
+                    return false;
                 }
             } else if union_group_set[player_id] == 0 {
                 // Check for excluded group, what cards are remaining
                 // if no remaining card of interest for player
-                let mut remaining_card_count_alive: HashMap<Card, usize> = HashMap::with_capacity(5);
-                for (vcard, vcount) in card_count.iter(){
+                let mut remaining_card_count_alive: HashMap<Card, usize> =
+                    HashMap::with_capacity(5);
+                for (vcard, vcount) in card_count.iter() {
                     remaining_card_count_alive.insert(*vcard, 3 - vcount);
                 }
                 // count of total life remaining for the group outside/complement_to union_group_set
@@ -2359,22 +2638,22 @@ impl CollectiveConstraint{
                 for (id, indicator) in union_group_set.iter().enumerate() {
                     let mut temp_life_counter: usize = 2;
                     if *indicator == 0 {
-                        if let Some(vcard) = constraint.pc_hm.get(&id){
-                            if let Some(vcount) = remaining_card_count_alive.get_mut(vcard){
+                        if let Some(vcard) = constraint.pc_hm.get(&id) {
+                            if let Some(vcount) = remaining_card_count_alive.get_mut(vcard) {
                                 *vcount -= 1;
                                 temp_life_counter -= 1;
                             }
                         }
-                        if let Some(card_vec) = constraint.jc_hm.get(&id){
-                            for vcard in card_vec.iter(){
-                                if let Some(vcount) = remaining_card_count_alive.get_mut(vcard){
+                        if let Some(card_vec) = constraint.jc_hm.get(&id) {
+                            for vcard in card_vec.iter() {
+                                if let Some(vcount) = remaining_card_count_alive.get_mut(vcard) {
                                     *vcount -= 1;
                                     temp_life_counter -= 1;
                                 }
                             }
                         }
                         total_life_remaining += temp_life_counter;
-                    } 
+                    }
                 }
                 // count of alive cards remaining for the group outside/complement_to union_group_set
                 let mut total_unique_card_remaining: usize = 0;
@@ -2394,10 +2673,10 @@ impl CollectiveConstraint{
                     }
                 }
                 if total_players_remaining == 1 {
-                    if total_life_remaining == 1 && total_cards_remaining == 1{
+                    if total_life_remaining == 1 && total_cards_remaining == 1 {
                         for (id, ind) in union_group_set.iter().enumerate() {
-                            if *ind == 0 && !constraint.jc_hm.contains_key(&id){
-                                for (vcard, vcount) in remaining_card_count_alive.iter(){
+                            if *ind == 0 && !constraint.jc_hm.contains_key(&id) {
+                                for (vcard, vcount) in remaining_card_count_alive.iter() {
                                     if *vcount == 1 {
                                         if id == player_id {
                                             if *vcard == *card {
@@ -2406,10 +2685,15 @@ impl CollectiveConstraint{
                                                 return false;
                                             }
                                         }
-                                        let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                        let mut new_constraint: CollectiveConstraint =
+                                            constraint.clone();
                                         new_constraint.add_raw_public_constraint(id, *vcard);
                                         // log::trace!("Entering Section 4 Out Recurse A");
-                                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                                            &new_constraint,
+                                            player_id,
+                                            card,
+                                        ) {
                                             // log::trace!("Section Subset 4 Out Recurse A False");
                                             return false;
                                         } else {
@@ -2419,11 +2703,14 @@ impl CollectiveConstraint{
                                 }
                             }
                         }
-                    } else if total_life_remaining == 2 && total_cards_remaining == 2{
+                    } else if total_life_remaining == 2 && total_cards_remaining == 2 {
                         if total_unique_card_remaining == 1 {
                             for (id, ind) in union_group_set.iter().enumerate() {
-                                if *ind == 0 && !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
-                                    for (vcard, vcount) in remaining_card_count_alive.iter(){
+                                if *ind == 0
+                                    && !constraint.pc_hm.contains_key(&id)
+                                    && !constraint.jc_hm.contains_key(&id)
+                                {
+                                    for (vcard, vcount) in remaining_card_count_alive.iter() {
                                         if *vcount == 2 {
                                             if id == player_id {
                                                 if *vcard == *card {
@@ -2432,7 +2719,8 @@ impl CollectiveConstraint{
                                                     return false;
                                                 }
                                             }
-                                            let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                            let mut new_constraint: CollectiveConstraint =
+                                                constraint.clone();
                                             new_constraint.add_raw_public_constraint(id, *vcard);
                                             new_constraint.add_raw_public_constraint(id, *vcard);
                                             // log::trace!("Entering Section 4 Out Recurse B");
@@ -2448,11 +2736,15 @@ impl CollectiveConstraint{
                             }
                         } else {
                             for (id, ind) in union_group_set.iter().enumerate() {
-                                if *ind == 0 && !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
+                                if *ind == 0
+                                    && !constraint.pc_hm.contains_key(&id)
+                                    && !constraint.jc_hm.contains_key(&id)
+                                {
                                     // if false return false
-                                    let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                    let mut new_constraint: CollectiveConstraint =
+                                        constraint.clone();
                                     let mut temp_counter: usize = 0;
-                                    for (vcard, vcount) in remaining_card_count_alive.iter(){
+                                    for (vcard, vcount) in remaining_card_count_alive.iter() {
                                         if *vcount == 1 {
                                             if id == player_id {
                                                 if *vcard == *card {
@@ -2469,7 +2761,11 @@ impl CollectiveConstraint{
                                         }
                                     }
                                     // log::trace!("Entering Section 4 Out Recurse C");
-                                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                    if !CollectiveConstraint::player_can_have_active_card_pub(
+                                        &new_constraint,
+                                        player_id,
+                                        card,
+                                    ) {
                                         // log::trace!("Section Subset 4 Out Recurse C False");
                                         return false;
                                     } else {
@@ -2477,18 +2773,16 @@ impl CollectiveConstraint{
                                     }
                                 }
                             }
-
                         }
-
                     }
                 } else if total_players_remaining == 2 {
                     if total_unique_card_remaining == 1 {
-                        if total_cards_remaining == 2 && total_life_remaining == 2{
+                        if total_cards_remaining == 2 && total_life_remaining == 2 {
                             let mut new_constraint: CollectiveConstraint = constraint.clone();
                             let mut bool_recurse: bool = false;
                             for (id, ind) in union_group_set.iter().enumerate() {
-                                if *ind == 0 && !constraint.jc_hm.contains_key(&id){
-                                    for (vcard, vcount) in remaining_card_count_alive.iter(){
+                                if *ind == 0 && !constraint.jc_hm.contains_key(&id) {
+                                    for (vcard, vcount) in remaining_card_count_alive.iter() {
                                         if *vcount == 2 {
                                             if id == player_id {
                                                 if *vcard == *card {
@@ -2503,21 +2797,28 @@ impl CollectiveConstraint{
                                     }
                                 }
                             }
-                            if bool_recurse{
+                            if bool_recurse {
                                 // log::trace!("Entering Section 4 Out Recurse D");
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section Subset 4 Out Recurse D False");
                                     return false;
                                 } else {
                                     return true;
                                 }
                             }
-                        } else if total_cards_remaining == 3 && total_life_remaining == 3{
+                        } else if total_cards_remaining == 3 && total_life_remaining == 3 {
                             let mut new_constraint: CollectiveConstraint = constraint.clone();
                             let mut bool_recurse: bool = false;
                             for (id, ind) in union_group_set.iter().enumerate() {
-                                if *ind == 0 && constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
-                                    for (vcard, vcount) in remaining_card_count_alive.iter(){
+                                if *ind == 0
+                                    && constraint.pc_hm.contains_key(&id)
+                                    && !constraint.jc_hm.contains_key(&id)
+                                {
+                                    for (vcard, vcount) in remaining_card_count_alive.iter() {
                                         if *vcount == 3 {
                                             if id == player_id {
                                                 if *vcard == *card {
@@ -2530,8 +2831,11 @@ impl CollectiveConstraint{
                                             bool_recurse = true;
                                         }
                                     }
-                                } else if *ind == 0 && !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
-                                    for (vcard, vcount) in remaining_card_count_alive.iter(){
+                                } else if *ind == 0
+                                    && !constraint.pc_hm.contains_key(&id)
+                                    && !constraint.jc_hm.contains_key(&id)
+                                {
+                                    for (vcard, vcount) in remaining_card_count_alive.iter() {
                                         if *vcount == 3 {
                                             if id == player_id {
                                                 if *vcard == *card {
@@ -2547,9 +2851,13 @@ impl CollectiveConstraint{
                                     }
                                 }
                             }
-                            if bool_recurse{
+                            if bool_recurse {
                                 // log::trace!("Entering Section 4 Out Recurse E");
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section Subset 4 Out Recurse E False");
                                     return false;
                                 } else {
@@ -2557,19 +2865,21 @@ impl CollectiveConstraint{
                                 }
                             }
                         }
-
                     } else if total_unique_card_remaining == 2 {
                         if total_cards_remaining == 3 && total_life_remaining == 3 {
                             // 2 1 split, player with 2 lives has the card with count of 2
                             let mut new_constraint: CollectiveConstraint = constraint.clone();
                             for (id, ind) in union_group_set.iter().enumerate() {
-                                if *ind == 0 && !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
-                                    for (vcard, vcount) in remaining_card_count_alive.iter(){
+                                if *ind == 0
+                                    && !constraint.pc_hm.contains_key(&id)
+                                    && !constraint.jc_hm.contains_key(&id)
+                                {
+                                    for (vcard, vcount) in remaining_card_count_alive.iter() {
                                         if *vcount == 2 {
                                             if id == player_id {
                                                 if *vcard == *card {
                                                     return true;
-                                                } 
+                                                }
                                             }
                                             new_constraint.add_raw_public_constraint(id, *vcard);
                                             // log::trace!("Entering Section 4 Out Recurse F");
@@ -2581,16 +2891,18 @@ impl CollectiveConstraint{
                                             }
                                         }
                                     }
-                                } 
+                                }
                             }
-
-                        } else if total_cards_remaining == 4 && total_life_remaining == 4{
+                        } else if total_cards_remaining == 4 && total_life_remaining == 4 {
                             // 3 1 Split, both players have 1 of card with count of 3
                             let mut new_constraint: CollectiveConstraint = constraint.clone();
                             let mut bool_recurse: bool = false;
                             for (id, ind) in union_group_set.iter().enumerate() {
-                                if *ind == 0 && !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
-                                    for (vcard, vcount) in remaining_card_count_alive.iter(){
+                                if *ind == 0
+                                    && !constraint.pc_hm.contains_key(&id)
+                                    && !constraint.jc_hm.contains_key(&id)
+                                {
+                                    for (vcard, vcount) in remaining_card_count_alive.iter() {
                                         if *vcount == 3 {
                                             if id == player_id {
                                                 if *vcard == *card {
@@ -2602,11 +2914,15 @@ impl CollectiveConstraint{
                                             break;
                                         }
                                     }
-                                } 
+                                }
                             }
-                            if bool_recurse{
+                            if bool_recurse {
                                 // log::trace!("Entering Section 4 Out Recurse G");
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section Subset 4 Out Recurse G False");
                                     return false;
                                 } else {
@@ -2616,35 +2932,45 @@ impl CollectiveConstraint{
                         }
                     }
                 } else if total_players_remaining == 3 {
-                    if total_unique_card_remaining == 1 && total_cards_remaining == 3 && total_life_remaining == 3{
+                    if total_unique_card_remaining == 1
+                        && total_cards_remaining == 3
+                        && total_life_remaining == 3
+                    {
                         let mut new_constraint: CollectiveConstraint = constraint.clone();
-                            let mut bool_recurse: bool = false;
-                            for (id, ind) in union_group_set.iter().enumerate() {
-                                if *ind == 0 && constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id){
-                                    for (vcard, vcount) in remaining_card_count_alive.iter(){
-                                        if *vcount == 3 {
-                                            if id == player_id {
-                                                if *vcard == *card {
-                                                    return true;
-                                                } else {
-                                                    return false;
-                                                }
+                        let mut bool_recurse: bool = false;
+                        for (id, ind) in union_group_set.iter().enumerate() {
+                            if *ind == 0
+                                && constraint.pc_hm.contains_key(&id)
+                                && !constraint.jc_hm.contains_key(&id)
+                            {
+                                for (vcard, vcount) in remaining_card_count_alive.iter() {
+                                    if *vcount == 3 {
+                                        if id == player_id {
+                                            if *vcard == *card {
+                                                return true;
+                                            } else {
+                                                return false;
                                             }
-                                            new_constraint.add_raw_public_constraint(id, *vcard);
-                                            bool_recurse = true;
                                         }
+                                        new_constraint.add_raw_public_constraint(id, *vcard);
+                                        bool_recurse = true;
                                     }
-                                } 
-                            }
-                            if bool_recurse{
-                                // log::trace!("Entering Section 4 Out Recurse H");
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
-                                    // log::trace!("Section Subset 4 Out Recurse H False");
-                                    return false;
-                                } else {
-                                    return true;
                                 }
                             }
+                        }
+                        if bool_recurse {
+                            // log::trace!("Entering Section 4 Out Recurse H");
+                            if !CollectiveConstraint::player_can_have_active_card_pub(
+                                &new_constraint,
+                                player_id,
+                                card,
+                            ) {
+                                // log::trace!("Section Subset 4 Out Recurse H False");
+                                return false;
+                            } else {
+                                return true;
+                            }
+                        }
                     }
                 }
             }
@@ -2666,25 +2992,33 @@ impl CollectiveConstraint{
                     possible_cards.insert(Card::Duke, 0);
                     possible_cards.insert(Card::Contessa, 0);
                     let mut card_group_sets: HashMap<Card, [u8; 7]> = HashMap::new();
-                    for icard in [Card::Ambassador, Card::Assassin ,Card::Captain, Card::Duke, Card::Contessa].iter(){
+                    for icard in [
+                        Card::Ambassador,
+                        Card::Assassin,
+                        Card::Captain,
+                        Card::Duke,
+                        Card::Contessa,
+                    ]
+                    .iter()
+                    {
                         card_group_sets.insert(*icard, [0; 7]);
                     }
                     // Adding cards for groups that have id == 1
                     // To find cards possible for player id
-                    for group in constraint.gc_vec.iter(){
+                    for group in constraint.gc_vec.iter() {
                         if group.get_list()[id] == 0 {
                             continue;
                         }
-            
+
                         if let Some(union_part_list) = card_group_sets.get_mut(&group.card()) {
                             let mut bool_mutual_exclusive: bool = true;
                             for icheck in 0..7 {
-                                if union_part_list[icheck] == 1 && group.get_list()[icheck] == 1{
+                                if union_part_list[icheck] == 1 && group.get_list()[icheck] == 1 {
                                     bool_mutual_exclusive = false;
                                     break;
                                 }
                             }
-            
+
                             if let Some(count_value) = possible_cards.get_mut(&group.card()) {
                                 // TODO: Add dead/alive split
                                 // Create another hashmap for dead/alive too
@@ -2700,12 +3034,12 @@ impl CollectiveConstraint{
                                     }
                                 }
                             }
-            
-                            if let Some(count_value) = card_count.get_mut(&group.card()){
+
+                            if let Some(count_value) = card_count.get_mut(&group.card()) {
                                 *count_value = possible_cards[&group.card()];
                                 // card_count_dead is all 0 so not updated
                             }
-                            for iupdate in 0..7{
+                            for iupdate in 0..7 {
                                 if union_part_list[iupdate] == 0 && group.get_list()[iupdate] == 1 {
                                     union_part_list[iupdate] = 1;
                                     // union_group_set[iupdate] = 1;
@@ -2716,19 +3050,22 @@ impl CollectiveConstraint{
                     // // Storing no of cards alive remaining for the player
                     let mut alive_remaining: usize = 0;
                     let mut unique_alive_remaining: usize = 0;
-                    for val in possible_cards.values(){
+                    for val in possible_cards.values() {
                         if *val > 0 {
                             unique_alive_remaining += 1;
                             alive_remaining += *val;
                         }
                     }
                     // if id == player_id cannot have card of interest return false
-                    if id == player_id && possible_cards[card] == 0{
+                    if id == player_id && possible_cards[card] == 0 {
                         // log::trace!("Section 4B Initial Return False");
                         return false;
                     }
                     if unique_alive_remaining == 1 {
-                        if alive_remaining == 1 && constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                        if alive_remaining == 1
+                            && constraint.pc_hm.contains_key(&id)
+                            && !constraint.jc_hm.contains_key(&id)
+                        {
                             for (vcard, vcount) in possible_cards.iter() {
                                 if *vcount >= 1 {
                                     if id == player_id {
@@ -2738,10 +3075,15 @@ impl CollectiveConstraint{
                                             return false;
                                         }
                                     }
-                                    let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                    let mut new_constraint: CollectiveConstraint =
+                                        constraint.clone();
                                     // log::trace!("Entering Section 4B Recurse A");
                                     new_constraint.add_raw_public_constraint(id, *vcard);
-                                    if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                    if !CollectiveConstraint::player_can_have_active_card_pub(
+                                        &new_constraint,
+                                        player_id,
+                                        card,
+                                    ) {
                                         // log::trace!("Section Subset 4B Recurse A False");
                                         return false;
                                     } else {
@@ -2751,7 +3093,9 @@ impl CollectiveConstraint{
                             }
                         } else if alive_remaining == 2 {
                             for (vcard, vcount) in possible_cards.iter() {
-                                if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                if !constraint.pc_hm.contains_key(&id)
+                                    && !constraint.jc_hm.contains_key(&id)
+                                {
                                     if *vcount >= 2 {
                                         if id == player_id {
                                             if *vcard == *card {
@@ -2760,18 +3104,25 @@ impl CollectiveConstraint{
                                                 return false;
                                             }
                                         }
-                                        let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                        let mut new_constraint: CollectiveConstraint =
+                                            constraint.clone();
                                         // log::trace!("Entering Section 4B Recurse B");
                                         new_constraint.add_raw_public_constraint(id, *vcard);
                                         new_constraint.add_raw_public_constraint(id, *vcard);
-                                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                                            &new_constraint,
+                                            player_id,
+                                            card,
+                                        ) {
                                             // log::trace!("Section Subset 4B Recurse B False");
                                             return false;
                                         } else {
                                             return true;
                                         }
                                     }
-                                } else if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                } else if constraint.pc_hm.contains_key(&id)
+                                    && !constraint.jc_hm.contains_key(&id)
+                                {
                                     if *vcount >= 2 {
                                         if id == player_id {
                                             if *vcard == *card {
@@ -2780,22 +3131,28 @@ impl CollectiveConstraint{
                                                 return false;
                                             }
                                         }
-                                        let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                        let mut new_constraint: CollectiveConstraint =
+                                            constraint.clone();
                                         // log::trace!("Entering Section 4B Recurse C");
                                         new_constraint.add_raw_public_constraint(id, *vcard);
-                                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                                            &new_constraint,
+                                            player_id,
+                                            card,
+                                        ) {
                                             // log::trace!("Section Subset 4B Recurse C False");
                                             return false;
                                         } else {
                                             return true;
                                         }
                                     }
-
                                 }
                             }
                         } else if alive_remaining == 3 {
                             for (vcard, vcount) in possible_cards.iter() {
-                                if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                if !constraint.pc_hm.contains_key(&id)
+                                    && !constraint.jc_hm.contains_key(&id)
+                                {
                                     if *vcount == 3 {
                                         if id == player_id {
                                             if *vcard == *card {
@@ -2804,18 +3161,25 @@ impl CollectiveConstraint{
                                                 return false;
                                             }
                                         }
-                                        let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                        let mut new_constraint: CollectiveConstraint =
+                                            constraint.clone();
                                         // log::trace!("Entering Section 4B Recurse D");
                                         new_constraint.add_raw_public_constraint(id, *vcard);
                                         new_constraint.add_raw_public_constraint(id, *vcard);
-                                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                                            &new_constraint,
+                                            player_id,
+                                            card,
+                                        ) {
                                             // log::trace!("Section Subset 4B Recurse D False");
                                             return false;
                                         } else {
                                             return true;
                                         }
                                     }
-                                } else if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                                } else if constraint.pc_hm.contains_key(&id)
+                                    && !constraint.jc_hm.contains_key(&id)
+                                {
                                     if *vcount == 3 {
                                         if id == player_id {
                                             if *vcard == *card {
@@ -2824,27 +3188,32 @@ impl CollectiveConstraint{
                                                 return false;
                                             }
                                         }
-                                        let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                        let mut new_constraint: CollectiveConstraint =
+                                            constraint.clone();
                                         // log::trace!("Entering Section 4B Recurse E");
                                         new_constraint.add_raw_public_constraint(id, *vcard);
-                                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                                            &new_constraint,
+                                            player_id,
+                                            card,
+                                        ) {
                                             // log::trace!("Section Subset 4B Recurse E False");
                                             return false;
                                         } else {
                                             return true;
                                         }
                                     }
-
                                 }
                             }
-
                         }
                     } else if unique_alive_remaining == 2 {
                         if alive_remaining == 2 {
-                            if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                            if !constraint.pc_hm.contains_key(&id)
+                                && !constraint.jc_hm.contains_key(&id)
+                            {
                                 let mut new_constraint: CollectiveConstraint = constraint.clone();
                                 let mut counter: usize = 0;
-                                for (vcard, value) in possible_cards.iter(){
+                                for (vcard, value) in possible_cards.iter() {
                                     if *value == 1 {
                                         if id == player_id {
                                             if *vcard == *card {
@@ -2861,56 +3230,74 @@ impl CollectiveConstraint{
                                     }
                                 }
                                 // log::trace!("Entering Section 4B Recurse F");
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section 4B Recurse F False");
                                     return false;
                                 } else {
                                     return true;
                                 }
-                            } 
+                            }
                         } else if alive_remaining == 3 {
                             // 2 1 split => player with 2 lives has card with count of 2
-                            if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                            if !constraint.pc_hm.contains_key(&id)
+                                && !constraint.jc_hm.contains_key(&id)
+                            {
                                 for (vcard, vcount) in possible_cards.iter() {
                                     if *vcount == 2 {
                                         if id == player_id {
                                             if *vcard == *card {
                                                 return true;
-                                            } 
+                                            }
                                         }
-                                        let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                        let mut new_constraint: CollectiveConstraint =
+                                            constraint.clone();
                                         // log::trace!("Entering Section 4B Recurse G");
                                         new_constraint.add_raw_public_constraint(id, *vcard);
-                                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                                            &new_constraint,
+                                            player_id,
+                                            card,
+                                        ) {
                                             // log::trace!("Section Subset 4B Recurse G False");
                                             return false;
                                         } else {
                                             return true;
                                         }
                                     }
-                                } 
+                                }
                             }
                         } else if alive_remaining == 4 {
                             // 3 1 split => if player has 2 lives they have card with count of 3
-                            if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                            if !constraint.pc_hm.contains_key(&id)
+                                && !constraint.jc_hm.contains_key(&id)
+                            {
                                 for (vcard, vcount) in possible_cards.iter() {
                                     if *vcount == 3 {
                                         if id == player_id {
                                             if *vcard == *card {
                                                 return true;
-                                            } 
+                                            }
                                         }
-                                        let mut new_constraint: CollectiveConstraint = constraint.clone();
+                                        let mut new_constraint: CollectiveConstraint =
+                                            constraint.clone();
                                         // log::trace!("Entering Section 4B Recurse H");
                                         new_constraint.add_raw_public_constraint(id, *vcard);
-                                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                                            &new_constraint,
+                                            player_id,
+                                            card,
+                                        ) {
                                             // log::trace!("Section Subset 4B Recurse H False");
                                             return false;
                                         } else {
                                             return true;
                                         }
                                     }
-                                } 
+                                }
                             }
                         }
                     }
@@ -2943,13 +3330,13 @@ impl CollectiveConstraint{
                 }
             }
         }
-        // End of filling card_count 
+        // End of filling card_count
         // Check if cards for some player outside group (indicator == 0) can be deduced
         if union_group_set[player_id] == 1 {
             // If full group does not contain card of interest and player is in it
             // Pretty sure this is the case where all teh cards are dead, but its left here for completion sake
             if card_count_alive[card] == 0 {
-                return false
+                return false;
             }
         }
         for id in 0..6 as usize {
@@ -2964,7 +3351,15 @@ impl CollectiveConstraint{
             not_possible_cards.insert(Card::Duke, 0);
             not_possible_cards.insert(Card::Contessa, 0);
             let mut card_group_sets: HashMap<Card, [u8; 7]> = HashMap::new();
-            for icard in [Card::Ambassador, Card::Assassin ,Card::Captain, Card::Duke, Card::Contessa].iter(){
+            for icard in [
+                Card::Ambassador,
+                Card::Assassin,
+                Card::Captain,
+                Card::Duke,
+                Card::Contessa,
+            ]
+            .iter()
+            {
                 card_group_sets.insert(*icard, [0; 7]);
             }
             for group in constraint.gc_vec.iter() {
@@ -2974,12 +3369,12 @@ impl CollectiveConstraint{
                 if let Some(union_part_list) = card_group_sets.get_mut(&group.card()) {
                     let mut bool_mutual_exclusive: bool = true;
                     for icheck in 0..7 {
-                        if union_part_list[icheck] == 1 && group.get_list()[icheck] == 1{
+                        if union_part_list[icheck] == 1 && group.get_list()[icheck] == 1 {
                             bool_mutual_exclusive = false;
                             break;
                         }
                     }
-    
+
                     if let Some(count_value) = not_possible_cards.get_mut(&group.card()) {
                         // TODO: Add dead/alive split
                         // Create another hashmap for dead/alive too
@@ -2995,12 +3390,12 @@ impl CollectiveConstraint{
                             }
                         }
                     }
-    
-                    if let Some(count_value) = card_count.get_mut(&group.card()){
+
+                    if let Some(count_value) = card_count.get_mut(&group.card()) {
                         *count_value = not_possible_cards[&group.card()];
                         // card_count_dead is all 0 so not updated
                     }
-                    for iupdate in 0..7{
+                    for iupdate in 0..7 {
                         if union_part_list[iupdate] == 0 && group.get_list()[iupdate] == 1 {
                             union_part_list[iupdate] = 1;
                             // union_group_set[iupdate] = 1;
@@ -3011,7 +3406,7 @@ impl CollectiveConstraint{
             let mut alive_remaining: usize = 0;
             let mut unique_alive_remaining: usize = 0;
             let mut possible_cards: HashMap<Card, usize> = HashMap::with_capacity(5);
-            for (vcard, vcount) in not_possible_cards.iter(){
+            for (vcard, vcount) in not_possible_cards.iter() {
                 let insertion_val: usize = card_count_alive[vcard] - *vcount;
                 possible_cards.insert(*vcard, card_count_alive[vcard] - *vcount);
                 if insertion_val > 0 {
@@ -3019,12 +3414,15 @@ impl CollectiveConstraint{
                     alive_remaining += insertion_val;
                 }
             }
-            if id == player_id && possible_cards[card] == 0{
+            if id == player_id && possible_cards[card] == 0 {
                 // log::trace!("Section 4B Copy Initial Return False");
                 return false;
             }
             if unique_alive_remaining == 1 {
-                if alive_remaining == 1 && constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                if alive_remaining == 1
+                    && constraint.pc_hm.contains_key(&id)
+                    && !constraint.jc_hm.contains_key(&id)
+                {
                     for (vcard, vcount) in possible_cards.iter() {
                         if *vcount >= 1 {
                             if id == player_id {
@@ -3037,7 +3435,11 @@ impl CollectiveConstraint{
                             let mut new_constraint: CollectiveConstraint = constraint.clone();
                             // log::trace!("Entering Section 4B Copy Recurse A");
                             new_constraint.add_raw_public_constraint(id, *vcard);
-                            if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                            if !CollectiveConstraint::player_can_have_active_card_pub(
+                                &new_constraint,
+                                player_id,
+                                card,
+                            ) {
                                 // log::trace!("Section Subset 4B Copy Recurse A False");
                                 return false;
                             } else {
@@ -3047,7 +3449,9 @@ impl CollectiveConstraint{
                     }
                 } else if alive_remaining == 2 {
                     for (vcard, vcount) in possible_cards.iter() {
-                        if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                        if !constraint.pc_hm.contains_key(&id)
+                            && !constraint.jc_hm.contains_key(&id)
+                        {
                             if *vcount >= 2 {
                                 if id == player_id {
                                     if *vcard == *card {
@@ -3060,14 +3464,20 @@ impl CollectiveConstraint{
                                 // log::trace!("Entering Section 4B Copy Recurse B");
                                 new_constraint.add_raw_public_constraint(id, *vcard);
                                 new_constraint.add_raw_public_constraint(id, *vcard);
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section Subset 4B Copy Recurse B False");
                                     return false;
                                 } else {
                                     return true;
                                 }
                             }
-                        } else if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                        } else if constraint.pc_hm.contains_key(&id)
+                            && !constraint.jc_hm.contains_key(&id)
+                        {
                             if *vcount >= 2 {
                                 if id == player_id {
                                     if *vcard == *card {
@@ -3079,19 +3489,24 @@ impl CollectiveConstraint{
                                 let mut new_constraint: CollectiveConstraint = constraint.clone();
                                 // log::trace!("Entering Section 4B Copy Recurse C");
                                 new_constraint.add_raw_public_constraint(id, *vcard);
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section Subset 4B Copy Recurse C False");
                                     return false;
                                 } else {
                                     return true;
                                 }
                             }
-
                         }
                     }
                 } else if alive_remaining == 3 {
                     for (vcard, vcount) in possible_cards.iter() {
-                        if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                        if !constraint.pc_hm.contains_key(&id)
+                            && !constraint.jc_hm.contains_key(&id)
+                        {
                             if *vcount == 3 {
                                 if id == player_id {
                                     if *vcard == *card {
@@ -3104,14 +3519,20 @@ impl CollectiveConstraint{
                                 // log::trace!("Entering Section 4B Copy Recurse D");
                                 new_constraint.add_raw_public_constraint(id, *vcard);
                                 new_constraint.add_raw_public_constraint(id, *vcard);
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section Subset 4B Copy Recurse D False");
                                     return false;
                                 } else {
                                     return true;
                                 }
                             }
-                        } else if constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
+                        } else if constraint.pc_hm.contains_key(&id)
+                            && !constraint.jc_hm.contains_key(&id)
+                        {
                             if *vcount == 3 {
                                 if id == player_id {
                                     if *vcard == *card {
@@ -3123,24 +3544,26 @@ impl CollectiveConstraint{
                                 let mut new_constraint: CollectiveConstraint = constraint.clone();
                                 // log::trace!("Entering Section 4B Copy Recurse E");
                                 new_constraint.add_raw_public_constraint(id, *vcard);
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section Subset 4B Copy Recurse E False");
                                     return false;
                                 } else {
                                     return true;
                                 }
                             }
-
                         }
                     }
-
                 }
             } else if unique_alive_remaining == 2 {
                 if alive_remaining == 2 {
                     if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
                         let mut new_constraint: CollectiveConstraint = constraint.clone();
                         let mut counter: usize = 0;
-                        for (vcard, value) in possible_cards.iter(){
+                        for (vcard, value) in possible_cards.iter() {
                             if *value == 1 {
                                 if id == player_id {
                                     if *vcard == *card {
@@ -3157,13 +3580,17 @@ impl CollectiveConstraint{
                             }
                         }
                         // log::trace!("Entering Section 4B Copy Recurse F");
-                        if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                        if !CollectiveConstraint::player_can_have_active_card_pub(
+                            &new_constraint,
+                            player_id,
+                            card,
+                        ) {
                             // log::trace!("Section 4B Copy Recurse F False");
                             return false;
                         } else {
                             return true;
                         }
-                    } 
+                    }
                 } else if alive_remaining == 3 {
                     // 2 1 split => player with 2 lives has card with count of 2
                     if !constraint.pc_hm.contains_key(&id) && !constraint.jc_hm.contains_key(&id) {
@@ -3172,19 +3599,23 @@ impl CollectiveConstraint{
                                 if id == player_id {
                                     if *vcard == *card {
                                         return true;
-                                    } 
+                                    }
                                 }
                                 let mut new_constraint: CollectiveConstraint = constraint.clone();
                                 // log::trace!("Entering Section 4B Recurse G");
                                 new_constraint.add_raw_public_constraint(id, *vcard);
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section Subset 4B Recurse G False");
                                     return false;
                                 } else {
                                     return true;
                                 }
                             }
-                        } 
+                        }
                     }
                 } else if alive_remaining == 4 {
                     // 3 1 split => if player has 2 lives they have card with count of 3
@@ -3194,19 +3625,23 @@ impl CollectiveConstraint{
                                 if id == player_id {
                                     if *vcard == *card {
                                         return true;
-                                    } 
+                                    }
                                 }
                                 let mut new_constraint: CollectiveConstraint = constraint.clone();
                                 // log::trace!("Entering Section 4B Recurse H");
                                 new_constraint.add_raw_public_constraint(id, *vcard);
-                                if !CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, card){
+                                if !CollectiveConstraint::player_can_have_active_card_pub(
+                                    &new_constraint,
+                                    player_id,
+                                    card,
+                                ) {
                                     // log::trace!("Section Subset 4B Recurse H False");
                                     return false;
                                 } else {
                                     return true;
                                 }
                             }
-                        } 
+                        }
                     }
                 }
             }
@@ -3225,17 +3660,22 @@ impl CollectiveConstraint{
         println!("{}", format!("Group Constraint VEC: {:?}", self.gc_vec));
     }
     pub fn player_can_have_active_cards(&self, player_id: usize, cards: &[Card; 2]) -> bool {
-        if self.player_can_have_active_card(player_id, &cards[0]){
+        if self.player_can_have_active_card(player_id, &cards[0]) {
             let mut new_constraint: CollectiveConstraint = self.clone();
             if player_id == 6 {
                 // Add case for when both cards are the same!
                 // If both are the same it will return legal if 1 card works because I dont add [0, 0, 0, 0, 0, 0, 1] count: 2
                 if cards[0] != cards[1] {
-                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 0, 1));
+                    new_constraint.add_raw_group(GroupConstraint::new_list(
+                        [0, 0, 0, 0, 0, 0, 1],
+                        cards[0],
+                        0,
+                        1,
+                    ));
                 } else {
                     // When they are same, we put both constraints and see if can have the card? I dont think this should work tho?
                     // CURRENTLY NO PROPER FUNCTIONALITY IMPLEMENTED FOR TESTING IF PILE HAS 2 OF THE SAME CARD
-                    // ITS NOT NEEDED FOR ALGO SO THIS DISCLAIMER IS 
+                    // ITS NOT NEEDED FOR ALGO SO THIS DISCLAIMER IS
                     // THIS IS A TEMP FIX THAT MAY WORK BUT LEADS TO USIZE OVERFLOW
                     // new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], cards[0], 2));
                     return true;
@@ -3243,7 +3683,11 @@ impl CollectiveConstraint{
             } else {
                 new_constraint.add_raw_public_constraint(player_id, cards[0]);
             }
-            CollectiveConstraint::player_can_have_active_card_pub(&new_constraint, player_id, &cards[1])
+            CollectiveConstraint::player_can_have_active_card_pub(
+                &new_constraint,
+                player_id,
+                &cards[1],
+            )
         } else {
             false
         }
@@ -3252,17 +3696,22 @@ impl CollectiveConstraint{
         assert!(cards.len() == 2, "Please only use len of 2");
         let card0: &Card = &Card::char_to_card(cards.chars().nth(0).unwrap());
         let card1: &Card = &Card::char_to_card(cards.chars().nth(1).unwrap());
-        if self.player_can_have_active_card(player_id, card0){
+        if self.player_can_have_active_card(player_id, card0) {
             let mut new_constraint: CollectiveConstraint = self.clone();
             if player_id == 6 {
                 // Add case for when both cards are the same!
                 // If both are the same it will return legal if 1 card works because I dont add [0, 0, 0, 0, 0, 0, 1] count: 2
                 if *card0 != *card1 {
-                    new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], *card0, 0, 1));
+                    new_constraint.add_raw_group(GroupConstraint::new_list(
+                        [0, 0, 0, 0, 0, 0, 1],
+                        *card0,
+                        0,
+                        1,
+                    ));
                 } else {
                     // When they are same, we put both constraints and see if can have the card? I dont think this should work tho?
                     // CURRENTLY NO PROPER FUNCTIONALITY IMPLEMENTED FOR TESTING IF PILE HAS 2 OF THE SAME CARD
-                    // ITS NOT NEEDED FOR ALGO SO THIS DISCLAIMER IS 
+                    // ITS NOT NEEDED FOR ALGO SO THIS DISCLAIMER IS
                     // THIS IS A TEMP FIX THAT MAY WORK BUT LEADS TO USIZE OVERFLOW
                     // new_constraint.add_raw_group(GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], card0, 2));
                     return true;
@@ -3284,20 +3733,25 @@ mod constrainttest {
     fn test0() {
         let mut colcon = CollectiveConstraint::new();
         colcon.add_public_constraint(5, Card::Assassin);
-    
+
         colcon.add_public_constraint(3, Card::Assassin);
         colcon.add_public_constraint(3, Card::Contessa);
         colcon.add_public_constraint(0, Card::Duke);
         colcon.add_public_constraint(0, Card::Captain);
         colcon.add_public_constraint(2, Card::Contessa);
         colcon.add_public_constraint(2, Card::Duke);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Contessa, 0,  1);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 1, 1], Card::Captain, 0, 2 );
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Ambassador, 0, 1 );
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Duke , 0, 1 );
-        let group5: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Captain , 0, 1 );
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Contessa, 0, 1);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 0, 1, 1], Card::Captain, 0, 2);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Ambassador, 0, 1);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Duke, 0, 1);
+        let group5: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Captain, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
@@ -3305,8 +3759,9 @@ mod constrainttest {
         colcon.add_raw_group(group5);
         log::info!(" === Test 7 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 1, &Card::Assassin);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 1, &Card::Assassin);
         assert!(output);
         // if output {
         //     println!("Test 7 Legal Correct");
@@ -3320,27 +3775,31 @@ mod constrainttest {
         colcon.add_public_constraint(2, Card::Contessa);
         colcon.add_public_constraint(5, Card::Assassin);
         colcon.add_public_constraint(0, Card::Assassin);
-    
+
         colcon.add_public_constraint(4, Card::Captain);
         colcon.add_public_constraint(4, Card::Contessa);
         colcon.add_public_constraint(1, Card::Assassin);
         colcon.add_public_constraint(1, Card::Captain);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Duke, 0,  2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Captain, 0, 1 );
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Ambassador, 0, 1 );
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Duke, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Captain, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Ambassador, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
-    
+
         // log::info!(" === Test 8 === ");
         // colcon.printlog();
         let dead_hm = colcon.dead_card_count();
         // log::trace!("dead_card_count: {:?}", dead_hm);
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Ambassador);
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Ambassador);
         assert!(!output);
-    
+
         // if output {
         //     println!("Test 8 Legal Wrong");
         // } else {
@@ -3350,26 +3809,31 @@ mod constrainttest {
     #[test]
     fn test2() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(2, Card::Captain);
         colcon.add_public_constraint(2, Card::Contessa);
         colcon.add_public_constraint(3, Card::Assassin);
         colcon.add_public_constraint(3, Card::Ambassador);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Captain, 0,  2);
-        let group2: GroupConstraint = GroupConstraint::new_list([1, 0, 0, 0, 1, 0, 1], Card::Contessa, 0, 1 );
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Assassin, 0, 2);
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Duke, 0, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Captain, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([1, 0, 0, 0, 1, 0, 1], Card::Contessa, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Assassin, 0, 2);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Duke, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
-    
+
         // log::info!(" === Test 9 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 5, &Card::Contessa);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 5, &Card::Contessa);
         assert!(output);
         // if output {
         //     println!("Test 9 Legal Correct");
@@ -3380,27 +3844,29 @@ mod constrainttest {
     #[test]
     fn test3() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(2, Card::Ambassador);
         colcon.add_public_constraint(5, Card::Assassin);
         colcon.add_public_constraint(1, Card::Assassin);
         colcon.add_public_constraint(3, Card::Duke);
         colcon.add_public_constraint(0, Card::Captain);
         colcon.add_public_constraint(0, Card::Contessa);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Duke, 0, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Duke, 0, 1 );
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Duke, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Duke, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
-    
-    
+
         log::info!(" === Test 10 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 1, &Card::Assassin);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 1, &Card::Assassin);
         assert!(output);
-    
+
         // if output {
         //     println!("Test 10 Legal Correct");
         // } else {
@@ -3410,34 +3876,38 @@ mod constrainttest {
     #[test]
     fn test4() {
         let mut colcon = CollectiveConstraint::new();
-    
-    
+
         colcon.add_public_constraint(2, Card::Contessa);
         colcon.add_public_constraint(3, Card::Assassin);
         colcon.add_public_constraint(5, Card::Duke);
         colcon.add_public_constraint(4, Card::Contessa);
         colcon.add_public_constraint(1, Card::Assassin);
-    
+
         colcon.add_public_constraint(0, Card::Duke);
         colcon.add_public_constraint(0, Card::Ambassador);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 1, 1, 0, 1], Card::Captain, 0, 3);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Duke, 0, 1 );
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 1, 0, 1], Card::Captain, 0, 1);
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Ambassador, 0, 1);
-        let group5: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Assassin, 0, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 1, 1, 0, 1], Card::Captain, 0, 3);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Duke, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 1, 1, 0, 1], Card::Captain, 0, 1);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Ambassador, 0, 1);
+        let group5: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Assassin, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
         colcon.add_raw_group(group5);
-    
-    
+
         log::info!(" === Test 11 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Ambassador);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Ambassador);
         assert!(!output);
         // if output {
         //     println!("Test 11 Legal Wrong");
@@ -3448,8 +3918,7 @@ mod constrainttest {
     #[test]
     fn test5() {
         let mut colcon = CollectiveConstraint::new();
-    
-    
+
         colcon.add_public_constraint(2, Card::Assassin);
         colcon.add_public_constraint(4, Card::Contessa);
         colcon.add_public_constraint(1, Card::Captain);
@@ -3458,22 +3927,26 @@ mod constrainttest {
         colcon.add_public_constraint(5, Card::Duke);
         colcon.add_public_constraint(0, Card::Duke);
         colcon.add_public_constraint(0, Card::Contessa);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Ambassador, 0, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 1, 0, 1], Card::Captain, 0, 1 );
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Ambassador, 0, 3);
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Assassin, 0, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Ambassador, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 1, 0, 1], Card::Captain, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Ambassador, 0, 3);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Assassin, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
-    
-    
+
         log::info!(" === Test 12 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Assassin);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Assassin);
         assert!(!output);
         // if output {
         //     println!("Test 12 Legal Wrong");
@@ -3484,8 +3957,7 @@ mod constrainttest {
     #[test]
     fn test6() {
         let mut colcon = CollectiveConstraint::new();
-    
-    
+
         colcon.add_public_constraint(5, Card::Captain);
         colcon.add_public_constraint(1, Card::Contessa);
         colcon.add_public_constraint(4, Card::Captain);
@@ -3496,20 +3968,23 @@ mod constrainttest {
         colcon.add_public_constraint(3, Card::Ambassador);
         colcon.add_public_constraint(2, Card::Captain);
         colcon.add_public_constraint(2, Card::Assassin);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Duke, 0, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Ambassador, 0, 1 );
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Contessa, 1, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Duke, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Ambassador, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Contessa, 1, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
-    
-    
+
         log::info!(" === Test 13 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 1, &Card::Duke);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 1, &Card::Duke);
         assert!(output);
         // if output {
         //     println!("Test 13 Legal Correct");
@@ -3520,31 +3995,36 @@ mod constrainttest {
     #[test]
     fn test7() {
         let mut colcon = CollectiveConstraint::new();
-    
-    
+
         colcon.add_public_constraint(5, Card::Captain);
-    
+
         colcon.add_public_constraint(0, Card::Duke);
         colcon.add_public_constraint(0, Card::Duke);
         colcon.add_public_constraint(4, Card::Assassin);
         colcon.add_public_constraint(4, Card::Assassin);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 1, 1, 1, 0, 0, 1], Card::Captain, 0, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Ambassador, 0, 3 );
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Duke, 0, 1);
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Assassin, 0, 1);
-        let group5: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 1, 1], Card::Contessa, 0, 2);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 1, 1, 0, 0, 1], Card::Captain, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Ambassador, 0, 3);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Duke, 0, 1);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Assassin, 0, 1);
+        let group5: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 1, 1], Card::Contessa, 0, 2);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
         colcon.add_raw_group(group5);
-    
+
         log::info!(" === Test 14 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Contessa);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Contessa);
         assert!(output);
         // if output {
         //     println!("Test 14 Legal Correct");
@@ -3555,33 +4035,38 @@ mod constrainttest {
     #[test]
     fn test8() {
         let mut colcon = CollectiveConstraint::new();
-    
-    
+
         colcon.add_public_constraint(1, Card::Ambassador);
         colcon.add_public_constraint(2, Card::Contessa);
         colcon.add_public_constraint(3, Card::Assassin);
-    
+
         colcon.add_public_constraint(0, Card::Assassin);
         colcon.add_public_constraint(0, Card::Duke);
         colcon.add_public_constraint(4, Card::Assassin);
         colcon.add_public_constraint(4, Card::Captain);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 1, 1, 0, 0, 0, 1], Card::Captain, 0, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Duke, 0, 1 );
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Ambassador, 0, 2);
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Ambassador, 0, 1);
-        let group5: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Contessa, 0, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 1, 0, 0, 0, 1], Card::Captain, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Duke, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Ambassador, 0, 2);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Ambassador, 0, 1);
+        let group5: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Contessa, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
         colcon.add_raw_group(group5);
-    
+
         log::info!(" === Test 15 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Duke);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Duke);
         assert!(!output);
         // if output {
         //     println!("Test 15 Legal Wrong");
@@ -3592,33 +4077,37 @@ mod constrainttest {
     #[test]
     fn test9() {
         let mut colcon = CollectiveConstraint::new();
-    
-    
+
         colcon.add_public_constraint(0, Card::Ambassador);
         colcon.add_public_constraint(5, Card::Captain);
         colcon.add_public_constraint(2, Card::Assassin);
-    
+
         colcon.add_public_constraint(3, Card::Assassin);
         colcon.add_public_constraint(3, Card::Ambassador);
         colcon.add_public_constraint(4, Card::Contessa);
         colcon.add_public_constraint(4, Card::Contessa);
         colcon.add_public_constraint(1, Card::Assassin);
         colcon.add_public_constraint(1, Card::Ambassador);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Duke, 0, 1);
-        let group2: GroupConstraint = GroupConstraint::new_list([1, 0, 0, 0, 0, 0, 1], Card::Captain, 0, 2 );
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Duke, 0, 2);
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Contessa, 0, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 0, 1], Card::Duke, 0, 1);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([1, 0, 0, 0, 0, 0, 1], Card::Captain, 0, 2);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Duke, 0, 2);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Contessa, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
-    
+
         log::info!(" === Test 16 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 0, &Card::Duke);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 0, &Card::Duke);
         assert!(!output);
         // if output {
         //     println!("Test 16 Legal Wrong");
@@ -3629,28 +4118,30 @@ mod constrainttest {
     #[test]
     fn test10() {
         let mut colcon = CollectiveConstraint::new();
-    
-    
+
         colcon.add_public_constraint(2, Card::Duke);
         colcon.add_public_constraint(3, Card::Contessa);
-    
+
         colcon.add_public_constraint(0, Card::Assassin);
         colcon.add_public_constraint(0, Card::Duke);
         colcon.add_public_constraint(1, Card::Duke);
         colcon.add_public_constraint(1, Card::Ambassador);
         colcon.add_public_constraint(5, Card::Ambassador);
         colcon.add_public_constraint(5, Card::Assassin);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Captain, 0, 3);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Contessa, 0, 2 );
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Captain, 0, 3);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Contessa, 0, 2);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
-    
+
         log::info!(" === Test 17 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Ambassador);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Ambassador);
         assert!(!output)
         // if output {
         //     println!("Test 17 Legal Wrong");
@@ -3661,35 +4152,41 @@ mod constrainttest {
     #[test]
     fn test11() {
         let mut colcon = CollectiveConstraint::new();
-    
-    
+
         colcon.add_public_constraint(2, Card::Contessa);
         colcon.add_public_constraint(4, Card::Duke);
         colcon.add_public_constraint(5, Card::Captain);
         colcon.add_public_constraint(3, Card::Assassin);
         colcon.add_public_constraint(0, Card::Assassin);
-    
+
         colcon.add_public_constraint(1, Card::Duke);
         colcon.add_public_constraint(1, Card::Ambassador);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Captain, 0, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Ambassador, 0, 1);
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Duke, 0, 1);
-        let group4: GroupConstraint = GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Assassin, 1, 1);
-        let group5: GroupConstraint = GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Contessa, 1, 1);
-        let group6: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Captain, 0, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Captain, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Ambassador, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Duke, 0, 1);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Assassin, 1, 1);
+        let group5: GroupConstraint =
+            GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Contessa, 1, 1);
+        let group6: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Captain, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
         colcon.add_raw_group(group5);
         colcon.add_raw_group(group6);
-    
+
         log::info!(" === Test 18 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Contessa);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Contessa);
         assert!(!output);
         // if output {
         //     println!("Test 18 Legal Wrong");
@@ -3700,10 +4197,10 @@ mod constrainttest {
     #[test]
     fn test12() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(3, Card::Assassin);
         colcon.add_public_constraint(5, Card::Contessa);
-    
+
         colcon.add_public_constraint(2, Card::Captain);
         colcon.add_public_constraint(2, Card::Duke);
         colcon.add_public_constraint(0, Card::Duke);
@@ -3712,19 +4209,23 @@ mod constrainttest {
         colcon.add_public_constraint(1, Card::Contessa);
         colcon.add_public_constraint(4, Card::Captain);
         colcon.add_public_constraint(4, Card::Assassin);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Ambassador, 0, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Contessa, 0, 1);
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Assassin, 1, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Ambassador, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Contessa, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Assassin, 1, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
-    
+
         // log::info!(" === Test 19 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Ambassador);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Ambassador);
         assert!(output);
         // if output {
         //     println!("Test 19 Legal Correct");
@@ -3735,30 +4236,35 @@ mod constrainttest {
     #[test]
     fn test13() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(5, Card::Assassin);
         colcon.add_public_constraint(1, Card::Contessa);
         colcon.add_public_constraint(2, Card::Captain);
         colcon.add_public_constraint(3, Card::Ambassador);
         colcon.add_public_constraint(4, Card::Assassin);
-    
+
         colcon.add_public_constraint(0, Card::Assassin);
         colcon.add_public_constraint(0, Card::Duke);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Ambassador, 0, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 1, 1, 0, 0, 0, 1], Card::Duke, 0, 1);
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 1, 1, 0, 0, 0, 1], Card::Contessa, 1, 2);
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Captain, 0, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Ambassador, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 1, 0, 0, 0, 1], Card::Duke, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 1, 0, 0, 0, 1], Card::Contessa, 1, 2);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Captain, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
-    
+
         // log::info!(" === Test 20 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Captain);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Captain);
         assert!(!output);
         // if output {
         //     println!("Test 20 Legal Wrong");
@@ -3769,9 +4275,9 @@ mod constrainttest {
     #[test]
     fn test14() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(5, Card::Ambassador);
-        
+
         colcon.add_public_constraint(0, Card::Ambassador);
         colcon.add_public_constraint(0, Card::Duke);
         colcon.add_public_constraint(2, Card::Contessa);
@@ -3780,19 +4286,23 @@ mod constrainttest {
         colcon.add_public_constraint(1, Card::Contessa);
         colcon.add_public_constraint(4, Card::Ambassador);
         colcon.add_public_constraint(4, Card::Duke);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Duke, 0, 1);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Captain, 0, 2);
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Assassin, 0, 2);
-         
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Duke, 0, 1);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Captain, 0, 2);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Assassin, 0, 2);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
-    
+
         // log::info!(" === Test 21 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Assassin);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Assassin);
         assert!(output);
         // if output {
         //     println!("Test 21 Legal Correct");
@@ -3803,35 +4313,42 @@ mod constrainttest {
     #[test]
     fn test15() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(2, Card::Ambassador);
         colcon.add_public_constraint(0, Card::Captain);
         colcon.add_public_constraint(3, Card::Duke);
-    
+
         colcon.add_public_constraint(5, Card::Contessa);
         colcon.add_public_constraint(5, Card::Assassin);
-    
+
         colcon.add_public_constraint(4, Card::Contessa);
         colcon.add_public_constraint(4, Card::Duke);
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Ambassador, 1, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Duke, 0, 1);
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Ambassador, 1, 1);
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Captain, 0, 2);
-        let group5: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Contessa, 0, 1);
-        let group6: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Captain, 0, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Ambassador, 1, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Duke, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Ambassador, 1, 1);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Captain, 0, 2);
+        let group5: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 1, 0, 0, 1], Card::Contessa, 0, 1);
+        let group6: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Captain, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
         colcon.add_raw_group(group5);
         colcon.add_raw_group(group6);
-    
+
         log::info!(" === Test 22 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 0, &Card::Assassin);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 0, &Card::Assassin);
         assert!(!output);
         // if output {
         //     println!("Test 22 Legal Wrong");
@@ -3842,9 +4359,9 @@ mod constrainttest {
     #[test]
     fn test16() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(5, Card::Contessa);
-    
+
         colcon.add_public_constraint(0, Card::Ambassador);
         colcon.add_public_constraint(0, Card::Assassin);
         colcon.add_public_constraint(1, Card::Ambassador);
@@ -3853,18 +4370,20 @@ mod constrainttest {
         colcon.add_public_constraint(4, Card::Contessa);
         colcon.add_public_constraint(2, Card::Ambassador);
         colcon.add_public_constraint(2, Card::Assassin);
-    
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Captain, 0, 3);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Duke, 0, 2);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 1, 0, 0, 1], Card::Captain, 0, 3);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Duke, 0, 2);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
-    
+
         // log::info!(" === Test 23 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Duke);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 3, &Card::Duke);
         assert!(output);
         // if output {
         //     println!("Test 23 Legal Correct");
@@ -3875,7 +4394,7 @@ mod constrainttest {
     #[test]
     fn test17() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(4, Card::Contessa);
         colcon.add_public_constraint(1, Card::Contessa);
         colcon.add_public_constraint(0, Card::Ambassador);
@@ -3886,20 +4405,23 @@ mod constrainttest {
         colcon.add_public_constraint(2, Card::Assassin);
         colcon.add_public_constraint(5, Card::Assassin);
         colcon.add_public_constraint(5, Card::Duke);
-    
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Captain, 0, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Assassin, 0, 1);
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Contessa, 1, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 1, 0, 1], Card::Captain, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Assassin, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Contessa, 1, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
-    
+
         // log::info!(" === Test 24 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 1, &Card::Captain);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 1, &Card::Captain);
         assert!(output);
         // if output {
         //     println!("Test 24 Legal Correct");
@@ -3910,33 +4432,38 @@ mod constrainttest {
     #[test]
     fn test18() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(0, Card::Ambassador);
         colcon.add_public_constraint(2, Card::Contessa);
         colcon.add_public_constraint(5, Card::Duke);
-    
+
         colcon.add_public_constraint(1, Card::Contessa);
         colcon.add_public_constraint(1, Card::Assassin);
         colcon.add_public_constraint(3, Card::Ambassador);
         colcon.add_public_constraint(3, Card::Contessa);
-    
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 1, 1], Card::Duke, 1, 1);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 1, 1], Card::Assassin, 0, 2);
-        let group3: GroupConstraint = GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Ambassador, 1, 1);
-        let group4: GroupConstraint = GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Captain, 0, 2);
-        let group5: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Captain, 0, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 1, 1], Card::Duke, 1, 1);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 1, 1], Card::Assassin, 0, 2);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Ambassador, 1, 1);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([1, 0, 1, 0, 0, 0, 1], Card::Captain, 0, 2);
+        let group5: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Captain, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
         colcon.add_raw_group(group5);
-    
+
         // log::info!(" === Test 25 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 5, &Card::Captain);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 5, &Card::Captain);
         assert!(!output);
         // if output {
         //     println!("Test 25 Legal Wrong");
@@ -3945,12 +4472,12 @@ mod constrainttest {
         // }
     }
     #[test]
-    fn test19 () {
+    fn test19() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(0, Card::Duke);
         colcon.add_public_constraint(5, Card::Contessa);
-    
+
         colcon.add_public_constraint(2, Card::Assassin);
         colcon.add_public_constraint(2, Card::Assassin);
         colcon.add_public_constraint(4, Card::Ambassador);
@@ -3959,20 +4486,23 @@ mod constrainttest {
         colcon.add_public_constraint(3, Card::Assassin);
         colcon.add_public_constraint(1, Card::Ambassador);
         colcon.add_public_constraint(1, Card::Contessa);
-    
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([1, 0, 0, 0, 0, 0, 1], Card::Contessa, 0, 1);
-        let group2: GroupConstraint = GroupConstraint::new_list([1, 0, 0, 0, 0, 0, 1], Card::Duke, 1, 1);
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Captain, 0, 2);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([1, 0, 0, 0, 0, 0, 1], Card::Contessa, 0, 1);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([1, 0, 0, 0, 0, 0, 1], Card::Duke, 1, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Captain, 0, 2);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
-    
+
         // log::info!(" === Test 26 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 0, &Card::Captain);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 0, &Card::Captain);
         assert!(output);
         // if output {
         //     println!("Test 26 Legal Correct");
@@ -3983,32 +4513,36 @@ mod constrainttest {
     #[test]
     fn test20() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(2, Card::Ambassador);
         colcon.add_public_constraint(5, Card::Captain);
-    
+
         colcon.add_public_constraint(1, Card::Captain);
         colcon.add_public_constraint(1, Card::Duke);
         colcon.add_public_constraint(0, Card::Captain);
         colcon.add_public_constraint(0, Card::Duke);
         colcon.add_public_constraint(4, Card::Contessa);
         colcon.add_public_constraint(4, Card::Duke);
-        
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 1, 0, 1, 1], Card::Ambassador, 0, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Ambassador, 0, 1);
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Contessa, 0, 2);
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Assassin, 0, 2);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 1, 0, 1, 1], Card::Ambassador, 0, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Ambassador, 0, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 1, 0, 0, 0, 1], Card::Contessa, 0, 2);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 0, 0, 0, 0, 1, 1], Card::Assassin, 0, 2);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
-    
+
         // log::info!(" === Test 27 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Assassin);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 2, &Card::Assassin);
         assert!(!output);
         // if output {
         //     println!("Test 27 Legal Wrong");
@@ -4019,31 +4553,36 @@ mod constrainttest {
     #[test]
     fn test21() {
         let mut colcon = CollectiveConstraint::new();
-    
+
         colcon.add_public_constraint(4, Card::Ambassador);
         colcon.add_public_constraint(2, Card::Assassin);
         colcon.add_public_constraint(5, Card::Captain);
-    
-       
-        
-        let group1: GroupConstraint = GroupConstraint::new_list([1, 1, 0, 0, 1, 0, 1], Card::Ambassador, 1, 2);
-        let group2: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Ambassador, 1, 1);
-        let group3: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Duke, 0, 2);
-        let group4: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Assassin, 0, 1);
-        let group5: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 1, 1], Card::Contessa, 0, 2);
-        let group6: GroupConstraint = GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Captain, 0, 1);
-        
+
+        let group1: GroupConstraint =
+            GroupConstraint::new_list([1, 1, 0, 0, 1, 0, 1], Card::Ambassador, 1, 2);
+        let group2: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Ambassador, 1, 1);
+        let group3: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Duke, 0, 2);
+        let group4: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 1, 0, 1], Card::Assassin, 0, 1);
+        let group5: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 0, 1, 1], Card::Contessa, 0, 2);
+        let group6: GroupConstraint =
+            GroupConstraint::new_list([0, 1, 0, 0, 0, 0, 1], Card::Captain, 0, 1);
+
         colcon.add_raw_group(group1);
         colcon.add_raw_group(group2);
         colcon.add_raw_group(group3);
         colcon.add_raw_group(group4);
         colcon.add_raw_group(group5);
         colcon.add_raw_group(group6);
-    
+
         // log::info!(" === Test 28 === ");
         // colcon.printlog();
-    
-        let output: bool = CollectiveConstraint::player_can_have_active_card_pub(&colcon, 4, &Card::Contessa);
+
+        let output: bool =
+            CollectiveConstraint::player_can_have_active_card_pub(&colcon, 4, &Card::Contessa);
         assert!(!output);
         // if output {
         //     println!("Test 28 Inferred Group needed Legal Wrong");

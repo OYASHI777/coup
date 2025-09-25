@@ -143,7 +143,7 @@ pub fn game_rnd_constraint_bt_st_debug(
         InfoArray,
     > = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     while game < game_no {
-        if game % print_frequency == 0 {
+        if game.is_multiple_of(print_frequency) {
             println!("Debug Checked game: {game}");
         }
         let mut stats = Stats::new();
@@ -215,7 +215,7 @@ pub fn game_rnd_constraint_bt_st_debug(
                 );
                 panic!("no legit moves found");
             });
-            log::info!("{}", format!("Player: {} Choice: {:?}", player, action_obs));
+            log::info!("Player: {} Choice: {:?}", player, action_obs);
             hh.push_ao(action_obs);
             if bool_know_priv_info && action_obs.player_id() == private_player {
                 prob.push_ao_private(&action_obs);
@@ -256,7 +256,7 @@ pub fn game_rnd_constraint_bt_st_debug(
                 if !pass_public_constraints {
                     break;
                 }
-                if prob.len() == 0 {
+                if prob.is_empty() {
                     println!("Found problematic game, please hold...");
                     let replay = hh.get_history(hh.store_len());
                     replay_game_constraint_bt(
@@ -340,7 +340,7 @@ pub fn game_rnd_constraint_bt_st_debug(
 // TODO: Shift this to be a method in prob! or at least just to check a new_move!
 pub fn generate_legal_moves_with_card_constraints(
     history: &History,
-    new_moves: &mut Vec<ActionObservation>,
+    new_moves: &mut [ActionObservation],
     prob: &mut BruteCardCountManagerGeneric<CardStateu64>,
     private_player: Option<usize>,
 ) -> Result<(usize, ActionObservation, Option<ActionInfo>), ()> {
@@ -649,7 +649,7 @@ pub fn replay_game_constraint_bt(
             panic!("no legit moves found");
         });
         if let Some(output) = replay.get(step) {
-            log::info!("{}", format!("Choice: {:?}", output));
+            log::info!("Choice: {:?}", output);
             hh.push_ao(*output);
             if bool_know_priv_info && output.player_id() == private_player {
                 prob.push_ao_private(output);
@@ -845,7 +845,7 @@ pub fn game_rnd(
             bit_prob.start_public(7);
         }
         // if game % (game_no / 10) == 0 {
-        if game % print_frequency == 0 {
+        if game.is_multiple_of(print_frequency) {
             println!("Game: {}", game);
         }
         log::trace!("Game Made:");
@@ -1036,7 +1036,7 @@ pub fn game_rnd(
         if step > max_steps {
             max_steps = step;
         }
-        log::info!("{}", format!("Game Won : {:?}", step));
+        log::info!("Game Won : {:?}", step);
         hh.log_state();
         // log::info!("{}", format!("Dist_from_turn: {:?}",hh.get_dist_from_turn(step)));
         // log::info!("{}", format!("History: {:?}",hh.get_history(step)));

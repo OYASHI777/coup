@@ -20,7 +20,7 @@ pub trait InfoArrayTrait: Clone + std::fmt::Debug {
     fn inferred_constraints(&self) -> &Vec<Vec<Card>>;
     fn inferred_constraints_mut(&mut self) -> &mut Vec<Vec<Card>>;
     fn sort_inferred_constraints(&mut self);
-    fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>);
+    fn set_inferred_constraints(&mut self, inferred_constraints: &[Vec<Card>]);
 
     /// Access to impossible constraints (single cards) - these need to provide array-like access
     fn get_impossible_constraint(&self, player: usize, card: usize) -> bool;

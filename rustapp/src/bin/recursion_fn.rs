@@ -17,7 +17,7 @@ impl RecursionTest {
         reveal: Card,
         redraw: Card,
         player_loop: usize,
-        inferred_constraints: &Vec<Vec<Card>>,
+        inferred_constraints: &[Vec<Card>],
     ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::new();
         let mut temp = inferred_constraints.clone();
@@ -32,12 +32,12 @@ impl RecursionTest {
         if temp[6].len() < 4 && temp[player_loop].len() < 3 {
             variants.push(temp);
         }
-        return variants;
+        variants
     }
     pub fn return_variants_reveal_redraw_none(
         reveal: Card,
         player_loop: usize,
-        inferred_constraints: &Vec<Vec<Card>>,
+        inferred_constraints: &[Vec<Card>],
     ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
         if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5
@@ -67,10 +67,10 @@ impl RecursionTest {
             6,
             0,
             0,
-            &inferred_constraints,
+            inferred_constraints,
             &mut variants,
         );
-        return variants;
+        variants
     }
     /// Builds possible previous inferred_constraint states
     /// All cards have a source
@@ -214,7 +214,7 @@ impl RecursionTest {
     pub fn return_variants_reveal_redraw_none_opt(
         reveal: Card,
         player_loop: usize,
-        inferred_constraints: &Vec<Vec<Card>>,
+        inferred_constraints: &[Vec<Card>],
     ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
         if inferred_constraints[player_loop].len() + inferred_constraints[6].len() == 5
@@ -252,7 +252,7 @@ impl RecursionTest {
         iter_cards.sort_unstable();
         iter_cards.dedup();
         // Doesnt handle empty case
-        for (_, card_player) in iter_cards.iter().enumerate() {
+        for card_player in iter_cards.iter() {
             // Card Source was not from Pile
             let mut bool_move_from_pile_to_player = false;
             if *card_player != reveal || inferred_constraints[6].contains(&reveal) {
@@ -351,13 +351,13 @@ impl RecursionTest {
             //     log::warn!("failed 2 to pop pile hand properly");
             // }
         }
-        return variants;
+        variants
     }
     // TODO: modify inferred_constraints and recurse when no longer testing this
     pub fn return_variants_exchange_opt(
         player_lives: u8,
         player_loop: usize,
-        inferred_constraints: &Vec<Vec<Card>>,
+        inferred_constraints: &[Vec<Card>],
     ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
         let mut iter_cards_player = inferred_constraints[player_loop].clone();
@@ -391,7 +391,7 @@ impl RecursionTest {
         // 0 player_to_pile move, 0 pile_to_player move
         variants.push(inferred_constraints.clone());
         // 1 player_to_pile move, 0 pile_to_player move
-        if inferred_constraints[6].len() < 3 && inferred_constraints[player_loop].len() > 0 {
+        if inferred_constraints[6].len() < 3 && !inferred_constraints[player_loop].is_empty() {
             for card_player in iter_cards_player.iter() {
                 // move to pile
                 let mut player_hand = inferred_constraints[player_loop].clone();
@@ -407,7 +407,7 @@ impl RecursionTest {
             }
         }
         // 0 player_to_pile move, 1 pile_to_player move
-        if inferred_constraints[player_loop].len() < 2 && inferred_constraints[6].len() > 0 {
+        if inferred_constraints[player_loop].len() < 2 && !inferred_constraints[6].is_empty() {
             for card_pile in iter_cards_pile.iter() {
                 // move to player
                 let mut player_hand = inferred_constraints[player_loop].clone();
@@ -423,7 +423,7 @@ impl RecursionTest {
             }
         }
         // 1 player_to_pile move, 1 pile_to_player move
-        if inferred_constraints[player_loop].len() > 0 && inferred_constraints[6].len() > 0 {
+        if !inferred_constraints[player_loop].is_empty() && !inferred_constraints[6].is_empty() {
             for card_player in iter_cards_player.iter() {
                 for card_pile in iter_cards_pile.iter() {
                     if card_player == card_pile {
@@ -462,7 +462,7 @@ impl RecursionTest {
                 variants.push(temp);
             }
             // 0 player_to_pile move, 2 pile_to_player move
-            if inferred_constraints[player_loop].len() == 0 && inferred_constraints[6].len() > 1 {
+            if inferred_constraints[player_loop].is_empty() && inferred_constraints[6].len() > 1 {
                 for index_pile_to_player_0 in 0..iter_cards_pile.len() {
                     for index_pile_to_player_1 in index_pile_to_player_0..iter_cards_pile.len() {
                         if index_pile_to_player_0 == index_pile_to_player_1
@@ -494,7 +494,7 @@ impl RecursionTest {
                 }
             }
             // 2 player_to_pile move, 1 pile_to_player move
-            if inferred_constraints[6].len() > 0
+            if !inferred_constraints[6].is_empty()
                 && inferred_constraints[6].len() < 3
                 && inferred_constraints[player_loop].len() > 1
             {
@@ -680,9 +680,9 @@ impl RecursionTest {
     }
     pub fn return_variants_exchange_private_3(
         player_loop: usize,
-        draw: &Vec<Card>,
-        relinquish: &Vec<Card>,
-        inferred_constraints: &Vec<Vec<Card>>,
+        draw: &[Card],
+        relinquish: &[Card],
+        inferred_constraints: &[Vec<Card>],
     ) -> Vec<Vec<Vec<Card>>> {
         // TODO: [REFACTOR] maybe only need draw and relinquish?
         // TODO: [REFACTOR] I think this case might handle all cases?
@@ -719,7 +719,7 @@ impl RecursionTest {
     pub fn return_variants_reveal_relinquish_opt(
         reveal: Card,
         player_loop: usize,
-        inferred_constraints: &Vec<Vec<Card>>,
+        inferred_constraints: &[Vec<Card>],
     ) -> Vec<Vec<Vec<Card>>> {
         let mut variants: Vec<Vec<Vec<Card>>> = Vec::with_capacity(12);
         if inferred_constraints[6].len() == 3 && !inferred_constraints[6].contains(&reveal) {
@@ -753,7 +753,7 @@ impl RecursionTest {
         let mut iter_cards = inferred_constraints[player_loop].clone();
         iter_cards.sort_unstable();
         iter_cards.dedup();
-        for (_, card_player) in iter_cards.iter().enumerate() {
+        for card_player in iter_cards.iter() {
             // Card Source was not from Pile
             if player_hand.len() < 2 {
                 let mut bool_move_from_pile_to_player = false;
@@ -875,7 +875,6 @@ impl RecursionTest {
         let _ = Self::clear_log(log_file_name);
         let log_file = OpenOptions::new()
             .create(true)
-            .write(true)
             .append(true)
             .open(log_file_name)
             .expect("Failed to open log file");

@@ -58,7 +58,7 @@ impl<T: InfoArrayTrait> SignificantAction<T> {
     pub fn inferred_constraints_mut(&mut self) -> &mut Vec<Vec<Card>> {
         self.meta_data.inferred_constraints_mut()
     }
-    pub fn set_inferred_constraints(&mut self, inferred_constraints: &Vec<Vec<Card>>) {
+    pub fn set_inferred_constraints(&mut self, inferred_constraints: &[Vec<Card>]) {
         self.meta_data
             .set_inferred_constraints(inferred_constraints)
     }
@@ -1705,7 +1705,7 @@ impl<T: InfoArrayTrait> CoupTraversal for BackTrackCardCountManager<T> {
         self.move_no = 1;
     }
 
-    fn start_known(&mut self, _cards: &Vec<Vec<Card>>) {
+    fn start_known(&mut self, _cards: &[Vec<Card>]) {
         unimplemented!()
     }
 

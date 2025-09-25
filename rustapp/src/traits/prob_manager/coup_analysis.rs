@@ -10,7 +10,7 @@ pub trait CoupTraversal {
     /// Starts a game with private information
     fn start_private(&mut self, player: usize, cards: &[Card; MAX_HAND_SIZE_PLAYER]);
     /// Starts a game with all cards known
-    fn start_known(&mut self, cards: &Vec<Vec<Card>>);
+    fn start_known(&mut self, cards: &[Vec<Card>]);
     /// Adds an Action with only public information
     fn push_ao_public(&mut self, action: &ActionObservation);
     /// Adds an Action with only public information using lazy calculation methodology
