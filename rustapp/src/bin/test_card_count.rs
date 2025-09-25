@@ -709,6 +709,7 @@ impl Stats {
     }
 }
 // TODO: Shift this to be a method in prob! or at least just to check a new_move!
+#[allow(clippy::result_unit_err)]
 pub fn generate_legal_moves_with_card_constraints(
     history: &History,
     new_moves: &mut [ActionObservation],

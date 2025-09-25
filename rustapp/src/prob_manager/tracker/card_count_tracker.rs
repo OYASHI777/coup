@@ -319,14 +319,14 @@ where
     }
 
     fn update_discard_card_counts(&mut self, card: &[Card; MAX_CARDS_DISCARD], no_cards: usize) {
-        for i in 0..no_cards {
+        for &card_item in &card[..no_cards] {
             debug_assert!(
-                self.card_counts[card[i] as usize] > 0,
+                self.card_counts[card_item as usize] > 0,
                 "should only be able to discard an alive card"
             );
-            self.card_counts[card[i] as usize] -= 1;
-            if self.card_counts[card[i] as usize] == 0 {
-                if let Some(pos) = self.cards_alive.iter().position(|c| *c == card[i]) {
+            self.card_counts[card_item as usize] -= 1;
+            if self.card_counts[card_item as usize] == 0 {
+                if let Some(pos) = self.cards_alive.iter().position(|c| *c == card_item) {
                     self.cards_alive.swap_remove(pos);
                 } else {
                     debug_assert!(false, "unable to find card!");
@@ -336,12 +336,12 @@ where
     }
 
     fn revert_discard_card_counts(&mut self, card: &[Card; MAX_CARDS_DISCARD], no_cards: usize) {
-        for i in 0..no_cards {
-            if self.card_counts[card[i] as usize] == 0 {
-                debug_assert!(!self.cards_alive.contains(&card[i]));
-                self.cards_alive.push(card[i]);
+        for &card_item in &card[..no_cards] {
+            if self.card_counts[card_item as usize] == 0 {
+                debug_assert!(!self.cards_alive.contains(&card_item));
+                self.cards_alive.push(card_item);
             }
-            self.card_counts[card[i] as usize] += 1;
+            self.card_counts[card_item as usize] += 1;
         }
     }
 }

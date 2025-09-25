@@ -85,6 +85,7 @@ impl RecursionTest {
     /// src: [[Ambassador], [], [], [], [], [], [Assassin, Ambassador]], [Ambassador, Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
     /// dest: [[Ambassador], [], [], [], [], [], [Ambassador, Assassin]]
     /// the second is a more specific case of the first item in src
+    #[allow(clippy::too_many_arguments)]
     fn build_variants_reveal_redraw_none_opt(
         reveal: Card,
         cards: &[(usize, Card)],

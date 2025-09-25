@@ -318,7 +318,7 @@ where
         for (player_id, result_player) in result.iter_mut().enumerate() {
             // For each card variant (assuming your Card enum maps 1:1 to these indices)
             // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
-            for card_idx in 0..5_usize {
+            for (card_idx, card_result) in result_player.iter_mut().enumerate() {
                 // Convert card_idx -> Card -> char
                 let card_enum = Card::try_from(card_idx as u8).unwrap();
 
@@ -337,7 +337,7 @@ where
                 // If found_in_any_state == false, that means:
                 // "There is NO state in which the player has this card alive"
                 // So the player "cannot have" it => result = true
-                result_player[card_idx] = !found_in_any_state;
+                *card_result = !found_in_any_state;
             }
         }
 
@@ -504,10 +504,10 @@ where
         }
 
         // For each player
-        for player_id in 0..7 {
+        for (player_id, arr) in result.iter_mut().enumerate() {
             // For each card variant (assuming your Card enum maps 1:1 to these indices)
             // e.g., 0 = Duke, 1 = Assassin, 2 = Captain, 3 = Ambassador, 4 = Contessa
-            for card_idx in 0..5_usize {
+            for (card_idx, card_result) in arr.iter_mut().enumerate() {
                 // Convert card_idx -> Card -> char
                 let card_enum = Card::try_from(card_idx as u8).unwrap();
 
@@ -522,7 +522,7 @@ where
                 // If found_in_any_state == false, that means:
                 // "There is NO state in which the player has this card."
                 // So the player "cannot have" it => result = true
-                result[player_id][card_idx] = !found_in_any_state;
+                *card_result = !found_in_any_state;
             }
         }
 
@@ -713,9 +713,9 @@ where
                 no_cards,
             } => {
                 let mut card_restrictions = Vec::with_capacity(2);
-                for i in 0..*no_cards {
-                    card_restrictions.push(card[i]);
-                    self.public_constraints[*player_id].push(card[i]);
+                for &card_item in &card[..*no_cards] {
+                    card_restrictions.push(card_item);
+                    self.public_constraints[*player_id].push(card_item);
                 }
                 self.restrict(*player_id, &card_restrictions);
                 self.update_constraints();

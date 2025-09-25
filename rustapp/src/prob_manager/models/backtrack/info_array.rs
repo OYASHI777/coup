@@ -93,8 +93,8 @@ impl InfoArray {
         impossible_constraints_3[cards[1] as usize][cards[1] as usize][cards[1] as usize] = true;
         if cards[0] == cards[1] {
             // update impossible_2
-            for p in 0..MAX_PLAYERS_INCL_PILE {
-                impossible_constraints_2[p][cards[0] as usize][cards[0] as usize] = true;
+            for constraint_2 in impossible_constraints_2.iter_mut() {
+                constraint_2[cards[0] as usize][cards[0] as usize] = true;
             }
             // update impossible_3 where more than 2
             for c in 0..MAX_CARD_PERMS_ONE {

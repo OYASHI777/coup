@@ -345,9 +345,9 @@ impl InfoArrayTrait for InfoArrayBits {
 
     fn impossible_constraints(&self) -> [[bool; 5]; 7] {
         let mut result = [[false; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE];
-        for player in 0..MAX_PLAYERS_INCL_PILE {
-            for card in 0..MAX_CARD_PERMS_ONE {
-                result[player][card] = self.impossible_constraints[player].get(card as u8);
+        for (player, player_result) in result.iter_mut().enumerate() {
+            for (card, card_result) in player_result.iter_mut().enumerate() {
+                *card_result = self.impossible_constraints[player].get(card as u8);
             }
         }
         result
@@ -355,10 +355,10 @@ impl InfoArrayTrait for InfoArrayBits {
 
     fn impossible_constraints_paired(&self) -> [[[bool; 5]; 5]; 7] {
         let mut result = [[[false; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE];
-        for player in 0..MAX_PLAYERS_INCL_PILE {
-            for card1 in 0..MAX_CARD_PERMS_ONE {
-                for card2 in 0..MAX_CARD_PERMS_ONE {
-                    result[player][card1][card2] =
+        for (player, player_result) in result.iter_mut().enumerate() {
+            for (card1, card1_result) in player_result.iter_mut().enumerate() {
+                for (card2, card2_result) in card1_result.iter_mut().enumerate() {
+                    *card2_result =
                         self.impossible_constraints_2[player].get(card1 as u8, card2 as u8);
                 }
             }
@@ -368,10 +368,10 @@ impl InfoArrayTrait for InfoArrayBits {
 
     fn impossible_constraints_triple(&self) -> [[[bool; 5]; 5]; 5] {
         let mut result = [[[false; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE]; MAX_CARD_PERMS_ONE];
-        for card1 in 0..MAX_CARD_PERMS_ONE {
-            for card2 in 0..MAX_CARD_PERMS_ONE {
-                for card3 in 0..MAX_CARD_PERMS_ONE {
-                    result[card1][card2][card3] =
+        for (card1, card1_result) in result.iter_mut().enumerate() {
+            for (card2, card2_result) in card1_result.iter_mut().enumerate() {
+                for (card3, card3_result) in card2_result.iter_mut().enumerate() {
+                    *card3_result =
                         self.impossible_constraints_3
                             .get(card1 as u8, card2 as u8, card3 as u8);
                 }

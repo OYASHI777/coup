@@ -1122,7 +1122,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             ActionInfo::StartInferred => {
                 // TODO: OPTIMIZE this is only needed if bool_know_priv_info is true
                 let mut buffer: Vec<(usize, Card)> = Vec::with_capacity(3);
-                for player in 0..MAX_PLAYERS_INCL_PILE {
+                for (player, player_constraints) in inferred_constraints.iter_mut().enumerate() {
                     let mut card_counts_req = [0u8; MAX_CARD_PERMS_ONE];
                     let mut card_counts_cur = [0u8; MAX_CARD_PERMS_ONE];
                     for card_start in
@@ -1130,7 +1130,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     {
                         card_counts_req[*card_start as usize] += 1;
                     }
-                    for card_start in inferred_constraints[player].iter() {
+                    for card_start in player_constraints.iter() {
                         card_counts_cur[*card_start as usize] += 1;
                     }
                     for card_num_to_add in 0..MAX_CARD_PERMS_ONE {
@@ -1139,7 +1139,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 - card_counts_cur[card_num_to_add])
                             {
                                 let card_add = Card::try_from(card_num_to_add as u8).unwrap();
-                                inferred_constraints[player].push(card_add);
+                                player_constraints.push(card_add);
                                 buffer.push((player, card_add));
                             }
                         }
@@ -1220,18 +1220,18 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             log::trace!("is_valid_combination pile has too many cards");
             return false;
         }
-        for player in 0..=INDEX_PILE {
-            if inferred_constraints[player].len() == 1
+        for (player, player_constraints) in inferred_constraints.iter().enumerate() {
+            if player_constraints.len() == 1
                 && self.constraint_history[index_loop]
-                    .get_impossible_constraint(player, inferred_constraints[player][0] as usize)
+                    .get_impossible_constraint(player, player_constraints[0] as usize)
             {
                 return false;
             }
-            if inferred_constraints[player].len() == 2
+            if player_constraints.len() == 2
                 && self.constraint_history[index_loop].get_impossible_constraint_2(
                     player,
-                    inferred_constraints[player][0] as usize,
-                    inferred_constraints[player][1] as usize,
+                    player_constraints[0] as usize,
+                    player_constraints[1] as usize,
                 )
             {
                 return false;
@@ -2042,12 +2042,9 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
                 } else {
                     // if updated {..} just check the state
                     let mut cards = Vec::with_capacity(2);
-                    // We keep a needless range loop here as we want to avoid the bounds check
-                    #[allow(clippy::needless_range_loop)]
-                    for c in 0..MAX_CARD_PERMS_ONE {
-                        for _ in 0..required[c] {
-                            cards.push(Card::try_from(c as u8).unwrap());
-                        }
+                    for (c, &req_count) in required.iter().enumerate() {
+                        let card = Card::try_from(c as u8).unwrap();
+                        cards.extend(std::iter::repeat(card).take(req_count as usize));
                     }
                     self.player_can_have_cards_alive_lazy(*player_id, &cards)
                 }

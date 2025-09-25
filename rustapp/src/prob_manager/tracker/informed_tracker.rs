@@ -208,14 +208,14 @@ where
                 card,
                 no_cards,
             } => {
-                for i in 0..*no_cards {
+                for &card_item in &card[..*no_cards] {
                     if let Some(pos) = self.inferred_constraints[*player_id]
                         .iter()
-                        .rposition(|c| *c == card[i])
+                        .rposition(|c| *c == card_item)
                     {
                         self.inferred_constraints[*player_id].swap_remove(pos);
-                        self.public_constraints[*player_id].push(card[i]);
-                        self.card_counts[card[i] as usize] -= 1;
+                        self.public_constraints[*player_id].push(card_item);
+                        self.card_counts[card_item as usize] -= 1;
                     } else {
                         debug_assert!(false, "Card not found!");
                     }
@@ -283,14 +283,14 @@ where
                     card,
                     no_cards,
                 } => {
-                    for i in 0..no_cards {
+                    for &card_item in &card[..no_cards] {
                         if let Some(pos) = self.public_constraints[player_id]
                             .iter()
-                            .rposition(|c| *c == card[i])
+                            .rposition(|c| *c == card_item)
                         {
                             self.public_constraints[player_id].swap_remove(pos);
-                            self.inferred_constraints[player_id].push(card[i]);
-                            self.card_counts[card[i] as usize] += 1;
+                            self.inferred_constraints[player_id].push(card_item);
+                            self.card_counts[card_item as usize] += 1;
                         } else {
                             debug_assert!(false, "Card not found!");
                         }
