@@ -1192,14 +1192,15 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         ]
         .iter()
         {
-            if public_constraints
+            if inferred_constraints
                 .iter()
                 .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
                 .sum::<u8>()
-                + inferred_constraints
-                    .iter()
-                    .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
-                    .sum::<u8>()
+                // Documentation comment => the following is useless if there are no revives in Coup
+                // + public_constraints
+                //     .iter()
+                //     .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
+                //     .sum::<u8>()
                 > 3
             {
                 log::trace!("is_valid_combination constraints has too many {:?}", card);
@@ -2044,7 +2045,7 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
                     let mut cards = Vec::with_capacity(2);
                     for (c, &req_count) in required.iter().enumerate() {
                         let card = Card::try_from(c as u8).unwrap();
-                        cards.extend(std::iter::repeat(card).take(req_count as usize));
+                        cards.extend(std::iter::repeat_n(card, req_count as usize));
                     }
                     self.player_can_have_cards_alive_lazy(*player_id, &cards)
                 }
