@@ -9,9 +9,9 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";
 // TODO: [REFACTOR] Lite to take history instead of store again and again
 fn main() {
-    game_rnd_constraint_bt_bench::<InfoArray>(10000, false);
+    game_rnd_constraint_bt_bench::<InfoArray>(50000, false);
     game_rnd_constraint_bt_bench_lazy::<InfoArray>(100000, false);
-    game_rnd_constraint_bt_bench::<InfoArray>(10000, true);
+    game_rnd_constraint_bt_bench::<InfoArray>(50000, true);
     game_rnd_constraint_bt_bench_lazy::<InfoArray>(100000, true);
 }
 pub fn game_rnd_constraint_bt_bench<I: InfoArrayTrait>(game_no: usize, bool_know_priv_info: bool) {
