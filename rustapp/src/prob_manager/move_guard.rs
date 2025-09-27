@@ -55,12 +55,7 @@ impl MoveGuard {
         }
         inferred_constraint[player_b].extend(moved_from_a_to_b.iter());
         inferred_constraint[player_a].extend(moved_from_b_to_a.iter());
-        if public_constraint[player_a].len() + inferred_constraint[player_a].len()
-            <= MAX_PLAYER_HAND_SIZE[player_a]
-            && public_constraint[player_b].len() + inferred_constraint[player_b].len()
-                <= MAX_PLAYER_HAND_SIZE[player_b]
-            && f(public_constraint, inferred_constraint)
-        {
+        if f(public_constraint, inferred_constraint) {
             return true;
         }
         for c in moved_from_b_to_a.iter() {
@@ -123,12 +118,7 @@ impl MoveGuard {
             }
             inferred_constraint[player_b].push(c);
         }
-        if public_constraint[player_a].len() + inferred_constraint[player_a].len()
-            <= MAX_PLAYER_HAND_SIZE[player_a]
-            && public_constraint[player_b].len() + inferred_constraint[player_b].len()
-                <= MAX_PLAYER_HAND_SIZE[player_b]
-            && f(public_constraint, inferred_constraint)
-        {
+        if f(public_constraint, inferred_constraint) {
             return true;
         }
         for &c in b_to_a.iter().rev() {
