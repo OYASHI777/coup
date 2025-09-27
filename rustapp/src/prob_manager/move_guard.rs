@@ -1,9 +1,6 @@
 use arrayvec::ArrayVec;
 
-use crate::{
-    history_public::Card,
-    prob_manager::engine::constants::{MAX_CARD_PERMS_ONE, MAX_PLAYER_HAND_SIZE},
-};
+use crate::{history_public::Card, prob_manager::engine::constants::MAX_CARD_PERMS_ONE};
 
 /// This aids in resetting inferred constraint after card swaps between players
 pub struct MoveGuard;

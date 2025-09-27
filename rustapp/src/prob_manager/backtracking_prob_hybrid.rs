@@ -810,6 +810,11 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     *discard,
                     |pub_con, inf_con| {
                         inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                            && inf_con
+                                .iter()
+                                .map(|v| v.iter().filter(|c| **c == *discard).count() as u8)
+                                .sum::<u8>()
+                                <= MAX_NUM_PER_CARD
                             && self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
                     },
                 );
@@ -836,6 +841,18 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                             |pub_con, inf_con| {
                                 inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                     && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                    && inf_con
+                                        .iter()
+                                        .map(|v| {
+                                            v.iter().filter(|c| **c == *redraw_i).count() as u8
+                                        })
+                                        .sum::<u8>()
+                                        <= MAX_NUM_PER_CARD
+                                    && inf_con
+                                        .iter()
+                                        .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
+                                        .sum::<u8>()
+                                        <= MAX_NUM_PER_CARD
                                     && self.possible_to_have_cards_recurse(
                                         index_loop - 1,
                                         pub_con,
@@ -877,6 +894,14 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                             response = inf_con[player_loop].len()
                                                 <= MAX_HAND_SIZE_PLAYER
                                                 && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                                && inf_con
+                                                    .iter()
+                                                    .map(|v| {
+                                                        v.iter().filter(|c| **c == *reveal).count()
+                                                            as u8
+                                                    })
+                                                    .sum::<u8>()
+                                                    <= MAX_NUM_PER_CARD
                                                 && self.possible_to_have_cards_recurse(
                                                     index_loop - 1,
                                                     pub_con,
@@ -909,6 +934,16 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                 inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                                     && inf_con[INDEX_PILE].len()
                                                         <= MAX_HAND_SIZE_PILE
+                                                    && inf_con
+                                                        .iter()
+                                                        .map(|v| {
+                                                            v.iter()
+                                                                .filter(|c| **c == *reveal)
+                                                                .count()
+                                                                as u8
+                                                        })
+                                                        .sum::<u8>()
+                                                        <= MAX_NUM_PER_CARD
                                                     && self.possible_to_have_cards_recurse(
                                                         index_loop - 1,
                                                         pub_con,
@@ -936,6 +971,26 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                 inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                                     && inf_con[INDEX_PILE].len()
                                                         <= MAX_HAND_SIZE_PILE
+                                                    && inf_con
+                                                        .iter()
+                                                        .map(|v| {
+                                                            v.iter()
+                                                                .filter(|c| **c == *reveal)
+                                                                .count()
+                                                                as u8
+                                                        })
+                                                        .sum::<u8>()
+                                                        <= MAX_NUM_PER_CARD
+                                                    && inf_con
+                                                        .iter()
+                                                        .map(|v| {
+                                                            v.iter()
+                                                                .filter(|c| **c == *card_player)
+                                                                .count()
+                                                                as u8
+                                                        })
+                                                        .sum::<u8>()
+                                                        <= MAX_NUM_PER_CARD
                                                     && self.possible_to_have_cards_recurse(
                                                         index_loop - 1,
                                                         pub_con,
@@ -970,6 +1025,14 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                             // keep your acceptance gates exactly as-is:
                                             inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                                 && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                                && inf_con
+                                                    .iter()
+                                                    .map(|v| {
+                                                        v.iter().filter(|c| **c == *reveal).count()
+                                                            as u8
+                                                    })
+                                                    .sum::<u8>()
+                                                    <= MAX_NUM_PER_CARD
                                                 && self.possible_to_have_cards_recurse(
                                                     index_loop - 1,
                                                     pub_con,
@@ -997,6 +1060,16 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                 inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                                     && inf_con[INDEX_PILE].len()
                                                         <= MAX_HAND_SIZE_PILE
+                                                    && inf_con
+                                                        .iter()
+                                                        .map(|v| {
+                                                            v.iter()
+                                                                .filter(|c| **c == *reveal)
+                                                                .count()
+                                                                as u8
+                                                        })
+                                                        .sum::<u8>()
+                                                        <= MAX_NUM_PER_CARD
                                                     && self.possible_to_have_cards_recurse(
                                                         index_loop - 1,
                                                         pub_con,
@@ -1018,6 +1091,24 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                         |pub_con, inf_con| {
                                             inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                                 && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                                && inf_con
+                                                    .iter()
+                                                    .map(|v| {
+                                                        v.iter()
+                                                            .filter(|c| **c == *card_player)
+                                                            .count()
+                                                            as u8
+                                                    })
+                                                    .sum::<u8>()
+                                                    <= MAX_NUM_PER_CARD
+                                                && inf_con
+                                                    .iter()
+                                                    .map(|v| {
+                                                        v.iter().filter(|c| **c == *reveal).count()
+                                                            as u8
+                                                    })
+                                                    .sum::<u8>()
+                                                    <= MAX_NUM_PER_CARD
                                                 && self.possible_to_have_cards_recurse(
                                                     index_loop - 1,
                                                     pub_con,
@@ -1040,6 +1131,10 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             ActionInfo::ExchangeDraw { draw } => {
                 if !draw.is_empty() {
                     // Assumes draw is always 2 cards
+                    debug_assert!(
+                        draw.len() == 2,
+                        "we assume this for the draw[0] and draw[1] checks below"
+                    );
                     response = MoveGuard::with_needed_cards_present(
                         public_constraints,
                         inferred_constraints,
@@ -1047,6 +1142,16 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         draw,
                         |pub_con, inf_con| {
                             inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                && inf_con
+                                    .iter()
+                                    .map(|v| v.iter().filter(|c| **c == draw[0]).count() as u8)
+                                    .sum::<u8>()
+                                    <= MAX_NUM_PER_CARD
+                                && inf_con
+                                    .iter()
+                                    .map(|v| v.iter().filter(|c| **c == draw[1]).count() as u8)
+                                    .sum::<u8>()
+                                    <= MAX_NUM_PER_CARD
                                 && self.possible_to_have_cards_recurse(
                                     index_loop - 1,
                                     pub_con,
@@ -1119,7 +1224,27 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     }
                 }
 
-                if self.possible_to_have_cards_recurse(
+                if {
+                    for card in [
+                        Card::Ambassador,
+                        Card::Assassin,
+                        Card::Captain,
+                        Card::Duke,
+                        Card::Contessa,
+                    ]
+                    .iter()
+                    {
+                        if inferred_constraints
+                            .iter()
+                            .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
+                            .sum::<u8>()
+                            > 3
+                        {
+                            return false;
+                        }
+                    }
+                    true
+                } && self.possible_to_have_cards_recurse(
                     index_loop - 1,
                     public_constraints,
                     inferred_constraints,
@@ -1156,30 +1281,34 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         // Check actual constraints at leaf node
         // All public_constraints inside actual
         log::trace!("is_valid_combination for: index {}, considering public_constraints: {:?}, inferred_constraints: {:?}", index_loop, public_constraints, inferred_constraints);
-        for card in [
-            Card::Ambassador,
-            Card::Assassin,
-            Card::Captain,
-            Card::Duke,
-            Card::Contessa,
-        ]
-        .iter()
-        {
-            if inferred_constraints
-                .iter()
-                .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
-                .sum::<u8>()
-                // Documentation comment => the following is useless if there are no revives in Coup
-                // + public_constraints
-                //     .iter()
-                //     .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
-                //     .sum::<u8>()
-                > 3
-            {
-                log::trace!("is_valid_combination constraints has too many {:?}", card);
-                return false;
-            }
-        }
+        // Documentation comment => the following is now used before calling the fn in MoveGuard
+        // to avoid unnecessary extra calls
+        // for card in [
+        //     Card::Ambassador,
+        //     Card::Assassin,
+        //     Card::Captain,
+        //     Card::Duke,
+        //     Card::Contessa,
+        // ]
+        // .iter()
+        // {
+        //     if inferred_constraints
+        //         .iter()
+        //         .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
+        //         .sum::<u8>()
+        //         // Documentation comment => the following is useless if there are no revives in Coup
+        //         // + public_constraints
+        //         //     .iter()
+        //         //     .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
+        //         //     .sum::<u8>()
+        //         > 3
+        //     {
+        //         log::trace!("is_valid_combination constraints has too many {:?}", card);
+        //         return false;
+        //     }
+        // }
+        // Documentation comment => the following is now used before calling the fn in MoveGuard
+        // to avoid unnecessary extra calls
         // for player in 0..INDEX_PILE {
         //     if public_constraints[player].len() + inferred_constraints[player].len()
         //         > MAX_HAND_SIZE_PLAYER
@@ -1319,6 +1448,11 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     |pub_con, inf_con| {
                         inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                            && inf_con
+                                .iter()
+                                .map(|v| v.iter().filter(|c| **c == *card_player).count() as u8)
+                                .sum::<u8>()
+                                <= MAX_NUM_PER_CARD
                             && self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)
                     },
                 ) {
@@ -1342,6 +1476,11 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     |pub_con, inf_con| {
                         inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                            && inf_con
+                                .iter()
+                                .map(|v| v.iter().filter(|c| **c == *card_pile).count() as u8)
+                                .sum::<u8>()
+                                <= MAX_NUM_PER_CARD
                             && self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)
                     },
                 ) {
@@ -1371,6 +1510,16 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         |pub_con, inf_con| {
                             inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                 && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                && inf_con
+                                    .iter()
+                                    .map(|v| v.iter().filter(|c| **c == *card_player).count() as u8)
+                                    .sum::<u8>()
+                                    <= MAX_NUM_PER_CARD
+                                && inf_con
+                                    .iter()
+                                    .map(|v| v.iter().filter(|c| **c == *card_pile).count() as u8)
+                                    .sum::<u8>()
+                                    <= MAX_NUM_PER_CARD
                                 && self.possible_to_have_cards_recurse(
                                     index_loop - 2,
                                     pub_con,
@@ -1391,6 +1540,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                 log::trace!("Before Exchange 2 player_to_pile 0 pile_to_player");
                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                let cards = inferred_constraints[player_loop].clone();
                 if MoveGuard::swap(
                     public_constraints,
                     inferred_constraints,
@@ -1404,6 +1554,16 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     |pub_con, inf_con| {
                         inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                            && inf_con
+                                .iter()
+                                .map(|v| v.iter().filter(|c| **c == cards[0]).count() as u8)
+                                .sum::<u8>()
+                                <= MAX_NUM_PER_CARD
+                            && inf_con
+                                .iter()
+                                .map(|v| v.iter().filter(|c| **c == cards[1]).count() as u8)
+                                .sum::<u8>()
+                                <= MAX_NUM_PER_CARD
                             && self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)
                     },
                 ) {
@@ -1437,6 +1597,30 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                             |pub_con, inf_con| {
                                 inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                     && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                    && inf_con
+                                        .iter()
+                                        .map(|v| {
+                                            v.iter()
+                                                .filter(|c| {
+                                                    **c == iter_cards_pile[index_pile_to_player_0]
+                                                })
+                                                .count()
+                                                as u8
+                                        })
+                                        .sum::<u8>()
+                                        <= MAX_NUM_PER_CARD
+                                    && inf_con
+                                        .iter()
+                                        .map(|v| {
+                                            v.iter()
+                                                .filter(|c| {
+                                                    **c == iter_cards_pile[index_pile_to_player_1]
+                                                })
+                                                .count()
+                                                as u8
+                                        })
+                                        .sum::<u8>()
+                                        <= MAX_NUM_PER_CARD
                                     && self.possible_to_have_cards_recurse(
                                         index_loop - 2,
                                         pub_con,
@@ -1491,6 +1675,39 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 |pub_con, inf_con| {
                                     inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                         && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                        && inf_con
+                                            .iter()
+                                            .map(|v| {
+                                                v.iter()
+                                                    .filter(|c| {
+                                                        **c == iter_cards_player
+                                                            [index_player_to_pile_0]
+                                                    })
+                                                    .count()
+                                                    as u8
+                                            })
+                                            .sum::<u8>()
+                                            <= MAX_NUM_PER_CARD
+                                        && inf_con
+                                            .iter()
+                                            .map(|v| {
+                                                v.iter()
+                                                    .filter(|c| {
+                                                        **c == iter_cards_player
+                                                            [index_player_to_pile_1]
+                                                    })
+                                                    .count()
+                                                    as u8
+                                            })
+                                            .sum::<u8>()
+                                            <= MAX_NUM_PER_CARD
+                                        && inf_con
+                                            .iter()
+                                            .map(|v| {
+                                                v.iter().filter(|c| **c == *card_pile).count() as u8
+                                            })
+                                            .sum::<u8>()
+                                            <= MAX_NUM_PER_CARD
                                         && self.possible_to_have_cards_recurse(
                                             index_loop - 2,
                                             pub_con,
@@ -1543,6 +1760,40 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 |pub_con, inf_con| {
                                     inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                         && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                        && inf_con
+                                            .iter()
+                                            .map(|v| {
+                                                v.iter().filter(|c| **c == *card_player).count()
+                                                    as u8
+                                            })
+                                            .sum::<u8>()
+                                            <= MAX_NUM_PER_CARD
+                                        && inf_con
+                                            .iter()
+                                            .map(|v| {
+                                                v.iter()
+                                                    .filter(|c| {
+                                                        **c == iter_cards_pile
+                                                            [index_pile_to_player_0]
+                                                    })
+                                                    .count()
+                                                    as u8
+                                            })
+                                            .sum::<u8>()
+                                            <= MAX_NUM_PER_CARD
+                                        && inf_con
+                                            .iter()
+                                            .map(|v| {
+                                                v.iter()
+                                                    .filter(|c| {
+                                                        **c == iter_cards_pile
+                                                            [index_pile_to_player_1]
+                                                    })
+                                                    .count()
+                                                    as u8
+                                            })
+                                            .sum::<u8>()
+                                            <= MAX_NUM_PER_CARD
                                         && self.possible_to_have_cards_recurse(
                                             index_loop - 2,
                                             pub_con,
@@ -1616,6 +1867,58 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                     |pub_con, inf_con| {
                                         inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                                            && inf_con
+                                                .iter()
+                                                .map(|v| {
+                                                    v.iter()
+                                                        .filter(|c| {
+                                                            **c == iter_cards_player
+                                                                [index_player_to_pile_0]
+                                                        })
+                                                        .count()
+                                                        as u8
+                                                })
+                                                .sum::<u8>()
+                                                <= MAX_NUM_PER_CARD
+                                            && inf_con
+                                                .iter()
+                                                .map(|v| {
+                                                    v.iter()
+                                                        .filter(|c| {
+                                                            **c == iter_cards_player
+                                                                [index_player_to_pile_1]
+                                                        })
+                                                        .count()
+                                                        as u8
+                                                })
+                                                .sum::<u8>()
+                                                <= MAX_NUM_PER_CARD
+                                            && inf_con
+                                                .iter()
+                                                .map(|v| {
+                                                    v.iter()
+                                                        .filter(|c| {
+                                                            **c == iter_cards_pile
+                                                                [index_pile_to_player_0]
+                                                        })
+                                                        .count()
+                                                        as u8
+                                                })
+                                                .sum::<u8>()
+                                                <= MAX_NUM_PER_CARD
+                                            && inf_con
+                                                .iter()
+                                                .map(|v| {
+                                                    v.iter()
+                                                        .filter(|c| {
+                                                            **c == iter_cards_pile
+                                                                [index_pile_to_player_1]
+                                                        })
+                                                        .count()
+                                                        as u8
+                                                })
+                                                .sum::<u8>()
+                                                <= MAX_NUM_PER_CARD
                                             && self.possible_to_have_cards_recurse(
                                                 index_loop - 2,
                                                 pub_con,
@@ -1654,6 +1957,26 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             |pub_con, inf_con| {
                 inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
                     && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                    && inf_con
+                        .iter()
+                        .map(|v| v.iter().filter(|c| **c == relinquish[0]).count() as u8)
+                        .sum::<u8>()
+                        <= MAX_NUM_PER_CARD
+                    && inf_con
+                        .iter()
+                        .map(|v| v.iter().filter(|c| **c == relinquish[1]).count() as u8)
+                        .sum::<u8>()
+                        <= MAX_NUM_PER_CARD
+                    && inf_con
+                        .iter()
+                        .map(|v| v.iter().filter(|c| **c == draw[0]).count() as u8)
+                        .sum::<u8>()
+                        <= MAX_NUM_PER_CARD
+                    && inf_con
+                        .iter()
+                        .map(|v| v.iter().filter(|c| **c == draw[1]).count() as u8)
+                        .sum::<u8>()
+                        <= MAX_NUM_PER_CARD
                     && self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)
             },
         )
