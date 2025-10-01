@@ -21,7 +21,7 @@ fn main() {
     let bool_lazy = true;
     let print_frequency: usize = 100;
     let min_dead_check: usize = 0;
-    let num_threads = 14;
+    let num_threads = 16;
     game_rnd_constraint_bt_mt(
         num_threads,
         game_no,
@@ -623,11 +623,15 @@ pub struct Stats {
     pub total_tries: usize,
     pub pushed_bad_move: usize,
     pub replay_string: String,
+    pub first_print: bool,
 }
 
 impl Stats {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            first_print: true,
+            ..Self::default()
+        }
     }
 
     pub fn add(&mut self, other: &Stats) {
@@ -671,7 +675,14 @@ impl Stats {
         self.games
     }
 
-    pub fn print(&self) {
+    pub fn print(&mut self) {
+        if !self.first_print {
+            // Move cursor up 8 lines and clear from cursor to end of screen
+            print!("\x1b[8A\x1b[J");
+        } else {
+            self.first_print = false;
+        }
+
         println!("Game: {}", self.games);
         println!(
             "Public Constraints Incorrect: {}/{}",
