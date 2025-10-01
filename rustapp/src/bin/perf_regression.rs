@@ -40,7 +40,7 @@ pub fn game_rnd_constraint_bt_bench<I: InfoArrayTrait>(game_no: usize, bool_know
             // TODO: Fill those up
             bit_prob.start_private(private_player, &cards);
         } else {
-            bit_prob.start_public(7);
+            bit_prob.start_public(0);
         }
         while !hh.game_won() {
             // log::info!("{}", format!("Step : {:?}",step));
@@ -126,7 +126,7 @@ pub fn game_rnd_constraint_bt_bench_lazy<I: InfoArrayTrait>(
             // TODO: Fill those up
             bit_prob.start_private(private_player, &cards);
         } else {
-            bit_prob.start_public(7);
+            bit_prob.start_public(0);
         }
         while !hh.game_won() {
             // log::info!("{}", format!("Step : {:?}",step));

@@ -799,6 +799,13 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         }
         log::trace!("is_valid_combination evaluated to true");
         let player_loop = self.constraint_history[index_loop].player() as usize;
+        let player_loop_dead_cards_count_before_move: usize = match self.constraint_history
+            [index_loop]
+            .action_info()
+        {
+            ActionInfo::Start | ActionInfo::StartInferred => 0,
+            _ => self.constraint_history[index_loop - 1].public_constraints()[player_loop].len(),
+        };
         let mut response = false;
         match self.constraint_history[index_loop].action_info() {
             ActionInfo::Discard { discard } => {
@@ -811,7 +818,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     player_loop,
                     *discard,
                     |pub_con, inf_con| {
-                        inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                        player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
+                            <= MAX_HAND_SIZE_PLAYER
                             && inf_con
                                 .iter()
                                 .map(|v| v.iter().filter(|c| **c == *discard).count() as u8)
@@ -841,7 +849,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                             &[*redraw_i],
                             &[*reveal],
                             |pub_con, inf_con| {
-                                inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                player_loop_dead_cards_count_before_move
+                                    + inf_con[player_loop].len()
+                                    <= MAX_HAND_SIZE_PLAYER
                                     && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                     && inf_con
                                         .iter()
@@ -893,7 +903,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                         &[*reveal],
                                         &[],
                                         |pub_con, inf_con| {
-                                            response = inf_con[player_loop].len()
+                                            response = player_loop_dead_cards_count_before_move
+                                                + inf_con[player_loop].len()
                                                 <= MAX_HAND_SIZE_PLAYER
                                                 && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                                 && inf_con
@@ -933,7 +944,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                             &[*reveal],
                                             &[],
                                             |pub_con, inf_con| {
-                                                inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                                player_loop_dead_cards_count_before_move
+                                                    + inf_con[player_loop].len()
+                                                    <= MAX_HAND_SIZE_PLAYER
                                                     && inf_con[INDEX_PILE].len()
                                                         <= MAX_HAND_SIZE_PILE
                                                     && inf_con
@@ -970,7 +983,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                             &[*reveal],
                                             &[*card_player],
                                             |pub_con, inf_con| {
-                                                inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                                player_loop_dead_cards_count_before_move
+                                                    + inf_con[player_loop].len()
+                                                    <= MAX_HAND_SIZE_PLAYER
                                                     && inf_con[INDEX_PILE].len()
                                                         <= MAX_HAND_SIZE_PILE
                                                     && inf_con
@@ -1006,7 +1021,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 }
                             }
                             None => {
-                                if inferred_constraints[player_loop].len()
+                                // TODO: Unsure?
+                                if player_loop_dead_cards_count_before_move
+                                    + inferred_constraints[player_loop].len()
                                     + inferred_constraints[INDEX_PILE].len()
                                     == MAX_HAND_SIZE_PLAYER + MAX_HAND_SIZE_PILE
                                     && !inferred_constraints[player_loop].contains(reveal)
@@ -1025,7 +1042,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                         &[],
                                         |pub_con, inf_con| {
                                             // keep your acceptance gates exactly as-is:
-                                            inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                            player_loop_dead_cards_count_before_move
+                                                + inf_con[player_loop].len()
+                                                <= MAX_HAND_SIZE_PLAYER
                                                 && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                                 && inf_con
                                                     .iter()
@@ -1059,7 +1078,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                             &[*reveal],
                                             &[],
                                             |pub_con, inf_con| {
-                                                inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                                player_loop_dead_cards_count_before_move
+                                                    + inf_con[player_loop].len()
+                                                    <= MAX_HAND_SIZE_PLAYER
                                                     && inf_con[INDEX_PILE].len()
                                                         <= MAX_HAND_SIZE_PILE
                                                     && inf_con
@@ -1091,7 +1112,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                         &[*card_player],
                                         &[*reveal],
                                         |pub_con, inf_con| {
-                                            inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                            player_loop_dead_cards_count_before_move
+                                                + inf_con[player_loop].len()
+                                                <= MAX_HAND_SIZE_PLAYER
                                                 && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                                 && inf_con
                                                     .iter()
@@ -1295,13 +1318,13 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     /// Return true if hypothesised card permutations cannot be shown to be impossible
     pub fn is_valid_combination(
         &self,
-        index_loop: usize,
-        inferred_constraints: &Vec<Vec<Card>>,
+        _index_loop: usize,
+        _inferred_constraints: &Vec<Vec<Card>>,
     ) -> bool {
-        let public_constraints = self.constraint_history[index_loop].public_constraints();
+        // let public_constraints = self.constraint_history[index_loop].public_constraints();
         // Check actual constraints at leaf node
         // All public_constraints inside actual
-        log::trace!("is_valid_combination for: index {}, considering public_constraints: {:?}, inferred_constraints: {:?}", index_loop, public_constraints, inferred_constraints);
+        // log::trace!("is_valid_combination for: index {}, considering public_constraints: {:?}, inferred_constraints: {:?}", index_loop, public_constraints, inferred_constraints);
         // Documentation comment => the following is now used before calling the fn in MoveGuard
         // to avoid unnecessary extra calls
         // for card in [
@@ -1330,20 +1353,22 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         // }
         // Documentation comment => the following is now used before calling the fn in MoveGuard
         // to avoid unnecessary extra calls
-        for player in 0..INDEX_PILE {
-            if public_constraints[player].len() + inferred_constraints[player].len()
-                > MAX_HAND_SIZE_PLAYER
-            {
-                log::trace!("is_valid_combination player {} has too many cards", player);
-                return false;
-            }
-        }
-        if public_constraints[INDEX_PILE].len() + inferred_constraints[INDEX_PILE].len()
-            > MAX_HAND_SIZE_PILE
-        {
-            log::trace!("is_valid_combination pile has too many cards");
-            return false;
-        }
+        // for player in 0..INDEX_PILE {
+        //     if public_constraints[player].len() + inferred_constraints[player].len()
+        //         > MAX_HAND_SIZE_PLAYER
+        //     {
+        //         log::trace!("is_valid_combination player {} has too many cards", player);
+        //         return false;
+        //     }
+        // }
+        // if public_constraints[INDEX_PILE].len() + inferred_constraints[INDEX_PILE].len()
+        //     > MAX_HAND_SIZE_PILE
+        // {
+        //     log::trace!("is_valid_combination pile has too many cards");
+        //     return false;
+        // }
+        // Documentation comment => the following is not necessary as our history is not very long
+        // this early check can be helpful if games are very long and not lazy evaluated
         // for (player, player_constraints) in inferred_constraints.iter().enumerate() {
         //     if player_constraints.len() == 1
         //         && self.constraint_history[index_loop]
@@ -1445,7 +1470,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             public_constraints,
             inferred_constraints
         );
-
+        let player_loop_dead_cards_count_before_move: usize =
+            self.constraint_history[index_loop - 1].public_constraints()[player_loop].len();
         if self.possible_to_have_cards_recurse(
             index_loop - 2,
             public_constraints,
@@ -1467,7 +1493,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     &[*card_player],
                     &[],
                     |pub_con, inf_con| {
-                        inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                        player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
+                            <= MAX_HAND_SIZE_PLAYER
                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                             && inf_con
                                 .iter()
@@ -1495,7 +1522,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     &[],
                     &[*card_pile],
                     |pub_con, inf_con| {
-                        inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                        player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
+                            <= MAX_HAND_SIZE_PLAYER
                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                             && inf_con
                                 .iter()
@@ -1529,7 +1557,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         &[*card_player],
                         &[*card_pile],
                         |pub_con, inf_con| {
-                            inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                            player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
+                                <= MAX_HAND_SIZE_PLAYER
                                 && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                 && inf_con
                                     .iter()
@@ -1573,7 +1602,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     ],
                     &[],
                     |pub_con, inf_con| {
-                        inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                        player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
+                            <= MAX_HAND_SIZE_PLAYER
                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                             && inf_con
                                 .iter()
@@ -1616,7 +1646,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 iter_cards_pile[index_pile_to_player_1],
                             ],
                             |pub_con, inf_con| {
-                                inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                player_loop_dead_cards_count_before_move
+                                    + inf_con[player_loop].len()
+                                    <= MAX_HAND_SIZE_PLAYER
                                     && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                     && inf_con
                                         .iter()
@@ -1694,7 +1726,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 ],
                                 &[*card_pile],
                                 |pub_con, inf_con| {
-                                    inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                    player_loop_dead_cards_count_before_move
+                                        + inf_con[player_loop].len()
+                                        <= MAX_HAND_SIZE_PLAYER
                                         && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                         && inf_con
                                             .iter()
@@ -1779,7 +1813,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                     iter_cards_pile[index_pile_to_player_1],
                                 ],
                                 |pub_con, inf_con| {
-                                    inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                    player_loop_dead_cards_count_before_move
+                                        + inf_con[player_loop].len()
+                                        <= MAX_HAND_SIZE_PLAYER
                                         && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                         && inf_con
                                             .iter()
@@ -1886,7 +1922,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                         iter_cards_pile[index_pile_to_player_1],
                                     ],
                                     |pub_con, inf_con| {
-                                        inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                                        player_loop_dead_cards_count_before_move
+                                            + inf_con[player_loop].len()
+                                            <= MAX_HAND_SIZE_PLAYER
                                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                             && inf_con
                                                 .iter()
@@ -1968,6 +2006,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         inferred_constraints: &mut Vec<Vec<Card>>,
     ) -> bool {
         log::trace!("In recurse_variants_exchange_private!");
+        let player_loop_dead_cards_count_before_move: usize =
+            self.constraint_history[index_loop - 1].public_constraints()[player_loop].len();
         MoveGuard::swap_ordered(
             public_constraints,
             inferred_constraints,
@@ -1976,7 +2016,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             &[relinquish[0], relinquish[1]],
             &[draw[0], draw[1]],
             |pub_con, inf_con| {
-                inf_con[player_loop].len() <= MAX_HAND_SIZE_PLAYER
+                player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
+                    <= MAX_HAND_SIZE_PLAYER
                     && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                     && inf_con
                         .iter()
