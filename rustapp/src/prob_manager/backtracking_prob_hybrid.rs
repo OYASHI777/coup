@@ -1330,46 +1330,46 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         // }
         // Documentation comment => the following is now used before calling the fn in MoveGuard
         // to avoid unnecessary extra calls
-        // for player in 0..INDEX_PILE {
-        //     if public_constraints[player].len() + inferred_constraints[player].len()
-        //         > MAX_HAND_SIZE_PLAYER
+        for player in 0..INDEX_PILE {
+            if public_constraints[player].len() + inferred_constraints[player].len()
+                > MAX_HAND_SIZE_PLAYER
+            {
+                log::trace!("is_valid_combination player {} has too many cards", player);
+                return false;
+            }
+        }
+        if public_constraints[INDEX_PILE].len() + inferred_constraints[INDEX_PILE].len()
+            > MAX_HAND_SIZE_PILE
+        {
+            log::trace!("is_valid_combination pile has too many cards");
+            return false;
+        }
+        // for (player, player_constraints) in inferred_constraints.iter().enumerate() {
+        //     if player_constraints.len() == 1
+        //         && self.constraint_history[index_loop]
+        //             .get_impossible_constraint(player, player_constraints[0] as usize)
         //     {
-        //         log::trace!("is_valid_combination player {} has too many cards", player);
+        //         return false;
+        //     }
+        //     if player_constraints.len() == 2
+        //         && self.constraint_history[index_loop].get_impossible_constraint_2(
+        //             player,
+        //             player_constraints[0] as usize,
+        //             player_constraints[1] as usize,
+        //         )
+        //     {
         //         return false;
         //     }
         // }
-        // if public_constraints[INDEX_PILE].len() + inferred_constraints[INDEX_PILE].len()
-        //     > MAX_HAND_SIZE_PILE
+        // if inferred_constraints[INDEX_PILE].len() == 3
+        //     && self.constraint_history[index_loop].get_impossible_constraint_3(
+        //         inferred_constraints[INDEX_PILE][0] as usize,
+        //         inferred_constraints[INDEX_PILE][1] as usize,
+        //         inferred_constraints[INDEX_PILE][2] as usize,
+        //     )
         // {
-        //     log::trace!("is_valid_combination pile has too many cards");
         //     return false;
         // }
-        for (player, player_constraints) in inferred_constraints.iter().enumerate() {
-            if player_constraints.len() == 1
-                && self.constraint_history[index_loop]
-                    .get_impossible_constraint(player, player_constraints[0] as usize)
-            {
-                return false;
-            }
-            if player_constraints.len() == 2
-                && self.constraint_history[index_loop].get_impossible_constraint_2(
-                    player,
-                    player_constraints[0] as usize,
-                    player_constraints[1] as usize,
-                )
-            {
-                return false;
-            }
-        }
-        if inferred_constraints[INDEX_PILE].len() == 3
-            && self.constraint_history[index_loop].get_impossible_constraint_3(
-                inferred_constraints[INDEX_PILE][0] as usize,
-                inferred_constraints[INDEX_PILE][1] as usize,
-                inferred_constraints[INDEX_PILE][2] as usize,
-            )
-        {
-            return false;
-        }
         // =================== Required to test inferred at Start! ======================
         // This is Implemented in recursion
         // But this is the general form that can be used to check any particular state
