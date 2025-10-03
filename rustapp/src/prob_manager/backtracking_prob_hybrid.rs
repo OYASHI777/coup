@@ -1206,28 +1206,33 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                             }
                         }
 
-                        if {
-                            for card in [
-                                Card::Ambassador,
-                                Card::Assassin,
-                                Card::Captain,
-                                Card::Duke,
-                                Card::Contessa,
-                            ]
-                            .iter()
-                            {
-                                if inferred_constraints
-                                    .iter()
-                                    .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
-                                    .sum::<u8>()
-                                    > 3
+                        if inferred_constraints[self.private_player.unwrap()].len()
+                            <= MAX_HAND_SIZE_PLAYER
+                            && {
+                                for card in [
+                                    Card::Ambassador,
+                                    Card::Assassin,
+                                    Card::Captain,
+                                    Card::Duke,
+                                    Card::Contessa,
+                                ]
+                                .iter()
                                 {
-                                    return false;
+                                    if inferred_constraints
+                                        .iter()
+                                        .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
+                                        .sum::<u8>()
+                                        > 3
+                                    {
+                                        return false;
+                                    }
                                 }
+                                true
                             }
-                            true
-                        } && self
-                            .possible_to_have_cards_recurse(index_loop - 1, inferred_constraints)
+                            && self.possible_to_have_cards_recurse(
+                                index_loop - 1,
+                                inferred_constraints,
+                            )
                         {
                             return true;
                         }

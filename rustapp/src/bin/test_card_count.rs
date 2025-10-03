@@ -16,7 +16,7 @@ pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";
 fn main() {
     let game_no = 100000;
-    let bool_know_priv_info = false;
+    let bool_know_priv_info = true;
     let bool_skip_exchange = false;
     let bool_lazy = true;
     let print_frequency: usize = 100;
