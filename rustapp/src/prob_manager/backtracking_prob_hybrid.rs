@@ -1213,23 +1213,15 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
 
                         if inferred_constraints[player].len() <= MAX_HAND_SIZE_PLAYER
                             && {
-                                for card in [
-                                    Card::Ambassador,
-                                    Card::Assassin,
-                                    Card::Captain,
-                                    Card::Duke,
-                                    Card::Contessa,
-                                ]
-                                .iter()
-                                {
-                                    if inferred_constraints
-                                        .iter()
-                                        .map(|v| v.iter().filter(|c| **c == *card).count() as u8)
-                                        .sum::<u8>()
-                                        > 3
-                                    {
-                                        return false;
+                                let mut card_frequencies = [0u8; 5];
+                                for player_constraints in inferred_constraints.iter() {
+                                    for &card in player_constraints.iter() {
+                                        card_frequencies[card as usize] += 1;
                                     }
+                                }
+
+                                if card_frequencies.iter().any(|&count| count > 3) {
+                                    return false;
                                 }
                                 true
                             }
