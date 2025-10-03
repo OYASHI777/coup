@@ -18,6 +18,3 @@ pub use info_array_trait::InfoArrayTrait;
 
 pub mod info_array;
 pub use info_array::InfoArray;
-
-pub mod mode;
-pub use mode::Mode;

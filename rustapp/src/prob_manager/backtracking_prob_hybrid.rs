@@ -8,7 +8,7 @@
 use super::constants::MAX_GAME_LENGTH;
 use super::models::backtrack::{ActionInfo, ActionInfoName};
 use super::move_guard::MoveGuard;
-use crate::prob_manager::models::backtrack::{InfoArrayTrait, Mode};
+use crate::prob_manager::models::backtrack::InfoArrayTrait;
 use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
 use crate::{
     history_public::{ActionObservation, Card},
@@ -296,7 +296,6 @@ pub struct BackTrackCardCountManager<T: InfoArrayTrait> {
     constraint_history: Vec<SignificantAction<T>>,
     move_no_history: Vec<usize>, // TODO: determine if more optimal to put in constraint_history
     move_no: usize,
-    mode: Mode,
 }
 impl<T: InfoArrayTrait> Default for BackTrackCardCountManager<T> {
     fn default() -> Self {
@@ -313,7 +312,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             constraint_history,
             move_no_history,
             move_no: 1, // First move will be move 1, post-increment this (saving 0 for initial game state)
-            mode: Mode::Public,
         }
     }
     /// Buffer for doing backtracking with
@@ -1167,47 +1165,46 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             }
             ActionInfo::StartInferred => {
                 // TODO: OPTIMIZE this is only needed if bool_know_priv_info is true
-                match self.mode {
-                    Mode::Public => {
+                match self.private_player {
+                    None => {
                         if self.possible_to_have_cards_recurse(index_loop - 1, inferred_constraints)
                         {
                             return true;
                         }
                     }
-                    Mode::Private => {
+                    Some(player) => {
+                        // Documentation Comment => The following is required for
+                        // when more private info is known about player cards
+                        // e.g. when 1 card is known and/or when >1 players' cards
+                        // are known
+                        // This should be run for all players instead of just player
+                        // if private info is known for more than 1 player
                         let mut buffer: Vec<(usize, Card)> = Vec::with_capacity(3);
-                        for (player, player_constraints) in
-                            inferred_constraints.iter_mut().enumerate()
+                        let player_constraints = &mut inferred_constraints[player];
+                        let mut card_counts_req = [0u8; MAX_CARD_PERMS_ONE];
+                        let mut card_counts_cur = [0u8; MAX_CARD_PERMS_ONE];
+                        for card_start in self.constraint_history[index_loop].inferred_constraints()
+                            [player]
+                            .iter()
                         {
-                            let mut card_counts_req = [0u8; MAX_CARD_PERMS_ONE];
-                            let mut card_counts_cur = [0u8; MAX_CARD_PERMS_ONE];
-                            for card_start in self.constraint_history[index_loop]
-                                .inferred_constraints()[player]
-                                .iter()
-                            {
-                                card_counts_req[*card_start as usize] += 1;
-                            }
-                            for card_start in player_constraints.iter() {
-                                card_counts_cur[*card_start as usize] += 1;
-                            }
-                            for card_num_to_add in 0..MAX_CARD_PERMS_ONE {
-                                if card_counts_req[card_num_to_add]
-                                    > card_counts_cur[card_num_to_add]
+                            card_counts_req[*card_start as usize] += 1;
+                        }
+                        for card_start in player_constraints.iter() {
+                            card_counts_cur[*card_start as usize] += 1;
+                        }
+                        for card_num_to_add in 0..MAX_CARD_PERMS_ONE {
+                            if card_counts_req[card_num_to_add] > card_counts_cur[card_num_to_add] {
+                                for _ in 0..(card_counts_req[card_num_to_add]
+                                    - card_counts_cur[card_num_to_add])
                                 {
-                                    for _ in 0..(card_counts_req[card_num_to_add]
-                                        - card_counts_cur[card_num_to_add])
-                                    {
-                                        let card_add =
-                                            Card::try_from(card_num_to_add as u8).unwrap();
-                                        player_constraints.push(card_add);
-                                        buffer.push((player, card_add));
-                                    }
+                                    let card_add = Card::try_from(card_num_to_add as u8).unwrap();
+                                    player_constraints.push(card_add);
+                                    buffer.push((player, card_add));
                                 }
                             }
                         }
 
-                        if inferred_constraints[self.private_player.unwrap()].len()
-                            <= MAX_HAND_SIZE_PLAYER
+                        if inferred_constraints[player].len() <= MAX_HAND_SIZE_PLAYER
                             && {
                                 for card in [
                                     Card::Ambassador,
@@ -1994,7 +1991,6 @@ impl<T: InfoArrayTrait> CoupTraversal for BackTrackCardCountManager<T> {
         self.move_no_history.push(0);
         self.move_no_history.push(0);
         self.move_no = 1;
-        self.mode = Mode::Public;
     }
 
     fn start_private(&mut self, player: usize, cards: &[Card; MAX_HAND_SIZE_PLAYER]) {
@@ -2015,7 +2011,6 @@ impl<T: InfoArrayTrait> CoupTraversal for BackTrackCardCountManager<T> {
         self.move_no_history.push(0);
         self.move_no_history.push(0);
         self.move_no = 1;
-        self.mode = Mode::Private;
     }
 
     fn start_known(&mut self, _cards: &[Vec<Card>]) {
