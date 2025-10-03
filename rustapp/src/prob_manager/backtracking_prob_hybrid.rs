@@ -1193,14 +1193,21 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                             card_counts_cur[*card_start as usize] += 1;
                         }
                         for card_num_to_add in 0..MAX_CARD_PERMS_ONE {
-                            if card_counts_req[card_num_to_add] > card_counts_cur[card_num_to_add] {
-                                for _ in 0..(card_counts_req[card_num_to_add]
-                                    - card_counts_cur[card_num_to_add])
-                                {
-                                    let card_add = Card::try_from(card_num_to_add as u8).unwrap();
-                                    player_constraints.push(card_add);
-                                    buffer.push((player, card_add));
+                            match card_counts_req[card_num_to_add]
+                                .cmp(&card_counts_cur[card_num_to_add])
+                            {
+                                std::cmp::Ordering::Greater => {
+                                    for _ in 0..(card_counts_req[card_num_to_add]
+                                        - card_counts_cur[card_num_to_add])
+                                    {
+                                        let card_add =
+                                            Card::try_from(card_num_to_add as u8).unwrap();
+                                        player_constraints.push(card_add);
+                                        buffer.push((player, card_add));
+                                    }
                                 }
+                                std::cmp::Ordering::Less => return false,
+                                std::cmp::Ordering::Equal => {}
                             }
                         }
 
