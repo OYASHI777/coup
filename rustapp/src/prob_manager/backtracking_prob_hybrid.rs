@@ -317,20 +317,13 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         }
     }
     /// Buffer for doing backtracking with
-    pub fn create_buffer() -> (Vec<Vec<Card>>, Vec<Vec<Card>>) {
-        let public_constraints: Vec<Vec<Card>> = (0..MAX_PLAYERS_INCL_PILE)
-            .map(|_| Vec::with_capacity(2))
-            .collect();
+    pub fn create_buffer() -> Vec<Vec<Card>> {
         let inferred_constraints: Vec<Vec<Card>> = (0..MAX_PLAYERS_INCL_PILE)
             .map(|_| Vec::with_capacity(4))
             .collect();
-        (public_constraints, inferred_constraints)
+        inferred_constraints
     }
-    pub fn clear_buffer(
-        public_constraints: &mut [Vec<Card>],
-        inferred_constraints: &mut [Vec<Card>],
-    ) {
-        public_constraints.iter_mut().for_each(|v| v.clear());
+    pub fn clear_buffer(inferred_constraints: &mut [Vec<Card>]) {
         inferred_constraints.iter_mut().for_each(|v| v.clear());
     }
     /// Logs the constraint's log
@@ -421,7 +414,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     /// Does Backtracking to calculate impossibilities
     pub fn generate_impossible_constraints(&mut self) {
         // TODO: [OPTIMIZE] consider total dead cards inferred etc...
-        let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
+        let mut inferred_constraints = Self::create_buffer();
         for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
             if self.latest_constraint_mut().public_constraints()[player_of_interest].len() == 2 {
                 self.latest_constraint_mut()
@@ -431,16 +424,13 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             for card in 0..MAX_CARD_PERMS_ONE {
                 log::trace!("generate_impossible_constraints 1 card : {:?}", card);
                 inferred_constraints[player_of_interest].push(Card::try_from(card as u8).unwrap());
-                let is_impossible = !self.possible_to_have_cards_latest(
-                    &mut public_constraints,
-                    &mut inferred_constraints,
-                );
+                let is_impossible = !self.possible_to_have_cards_latest(&mut inferred_constraints);
                 self.latest_constraint_mut().set_impossible_constraint(
                     player_of_interest,
                     card,
                     is_impossible,
                 );
-                Self::clear_buffer(&mut public_constraints, &mut inferred_constraints);
+                Self::clear_buffer(&mut inferred_constraints);
             }
         }
         for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
@@ -480,11 +470,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         Card::try_from(card_a as u8).unwrap(),
                         Card::try_from(card_b as u8).unwrap(),
                     ]);
-                    let output = !self.possible_to_have_cards_latest(
-                        &mut public_constraints,
-                        &mut inferred_constraints,
-                    );
-                    Self::clear_buffer(&mut public_constraints, &mut inferred_constraints);
+                    let output = !self.possible_to_have_cards_latest(&mut inferred_constraints);
+                    Self::clear_buffer(&mut inferred_constraints);
                     self.latest_constraint_mut().set_impossible_constraint_2(
                         player_of_interest,
                         card_a,
@@ -532,11 +519,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         Card::try_from(card_b as u8).unwrap(),
                         Card::try_from(card_c as u8).unwrap(),
                     ]);
-                    let output = !self.possible_to_have_cards_latest(
-                        &mut public_constraints,
-                        &mut inferred_constraints,
-                    );
-                    Self::clear_buffer(&mut public_constraints, &mut inferred_constraints);
+                    let output = !self.possible_to_have_cards_latest(&mut inferred_constraints);
+                    Self::clear_buffer(&mut inferred_constraints);
                     self.latest_constraint_mut()
                         .set_impossible_constraint_3(card_a, card_b, card_c, output);
                 }
@@ -689,11 +673,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     .push(Card::try_from(card_num as u8).unwrap());
             }
         }
-        !self.possible_to_have_cards_recurse(
-            index_lookback,
-            public_constraints,
-            inferred_constraints,
-        )
+        !self.possible_to_have_cards_recurse(index_lookback, inferred_constraints)
     }
     /// Returns true if possible, false if impossible
     ///
@@ -751,16 +731,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     /// # Notes
     /// - Use `INDEX_PILE` to check pile constraints
     /// - Always clear buffers between checks to avoid stale data
-    pub fn possible_to_have_cards_latest(
-        &self,
-        public_constraints: &mut Vec<Vec<Card>>,
-        inferred_constraints: &mut Vec<Vec<Card>>,
-    ) -> bool {
-        self.possible_to_have_cards_recurse(
-            self.constraint_history.len() - 1,
-            public_constraints,
-            inferred_constraints,
-        )
+    pub fn possible_to_have_cards_latest(&self, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
+        self.possible_to_have_cards_recurse(self.constraint_history.len() - 1, inferred_constraints)
     }
     /// Returns true if possible, false if impossible
     ///
@@ -778,7 +750,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     pub fn possible_to_have_cards_recurse(
         &self,
         index_loop: usize,
-        public_constraints: &mut Vec<Vec<Card>>,
         inferred_constraints: &mut Vec<Vec<Card>>,
     ) -> bool {
         log::trace!("After");
@@ -813,11 +784,10 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop} move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
                 log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
                 return MoveGuard::discard(
-                    public_constraints,
                     inferred_constraints,
                     player_loop,
                     *discard,
-                    |pub_con, inf_con| {
+                    |inf_con| {
                         player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
                             <= MAX_HAND_SIZE_PLAYER
                             && inf_con
@@ -825,7 +795,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 .map(|v| v.iter().filter(|c| **c == *discard).count() as u8)
                                 .sum::<u8>()
                                 <= MAX_NUM_PER_CARD
-                            && self.possible_to_have_cards_recurse(index_loop - 1, pub_con, inf_con)
+                            && self.possible_to_have_cards_recurse(index_loop - 1, inf_con)
                     },
                 );
             }
@@ -842,13 +812,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
 
                         response = MoveGuard::swap_ordered(
-                            public_constraints,
                             inferred_constraints,
                             INDEX_PILE,
                             player_loop,
                             &[*redraw_i],
                             &[*reveal],
-                            |pub_con, inf_con| {
+                            |inf_con| {
                                 player_loop_dead_cards_count_before_move
                                     + inf_con[player_loop].len()
                                     <= MAX_HAND_SIZE_PLAYER
@@ -865,11 +834,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                         .map(|v| v.iter().filter(|c| **c == *reveal).count() as u8)
                                         .sum::<u8>()
                                         <= MAX_NUM_PER_CARD
-                                    && self.possible_to_have_cards_recurse(
-                                        index_loop - 1,
-                                        pub_con,
-                                        inf_con,
-                                    )
+                                    && self.possible_to_have_cards_recurse(index_loop - 1, inf_con)
                             },
                         );
                     }
@@ -896,13 +861,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                         inferred_constraints[player_loop]
                                     );
                                     let _ = MoveGuard::swap_ordered(
-                                        public_constraints,
                                         inferred_constraints,
                                         player_loop,
                                         INDEX_PILE,
                                         &[*reveal],
                                         &[],
-                                        |pub_con, inf_con| {
+                                        |inf_con| {
                                             response = player_loop_dead_cards_count_before_move
                                                 + inf_con[player_loop].len()
                                                 <= MAX_HAND_SIZE_PLAYER
@@ -917,7 +881,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                     <= MAX_NUM_PER_CARD
                                                 && self.possible_to_have_cards_recurse(
                                                     index_loop - 1,
-                                                    pub_con,
                                                     inf_con,
                                                 );
                                             // Force rollback regardless of `response`
@@ -937,13 +900,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
 
                                     if inferred_constraints[player_loop].len() < 2
                                         && MoveGuard::swap_ordered(
-                                            public_constraints,
                                             inferred_constraints,
                                             player_loop,
                                             INDEX_PILE,
                                             &[*reveal],
                                             &[],
-                                            |pub_con, inf_con| {
+                                            |inf_con| {
                                                 player_loop_dead_cards_count_before_move
                                                     + inf_con[player_loop].len()
                                                     <= MAX_HAND_SIZE_PLAYER
@@ -961,7 +923,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                         <= MAX_NUM_PER_CARD
                                                     && self.possible_to_have_cards_recurse(
                                                         index_loop - 1,
-                                                        pub_con,
                                                         inf_con,
                                                     )
                                             },
@@ -976,13 +937,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                         log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", self.constraint_history[index_loop].public_constraints(), inferred_constraints);
 
                                         if MoveGuard::swap_ordered(
-                                            public_constraints,
                                             inferred_constraints,
                                             player_loop,
                                             INDEX_PILE,
                                             &[*reveal],
                                             &[*card_player],
-                                            |pub_con, inf_con| {
+                                            |inf_con| {
                                                 player_loop_dead_cards_count_before_move
                                                     + inf_con[player_loop].len()
                                                     <= MAX_HAND_SIZE_PLAYER
@@ -1010,7 +970,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                         <= MAX_NUM_PER_CARD
                                                     && self.possible_to_have_cards_recurse(
                                                         index_loop - 1,
-                                                        pub_con,
                                                         inf_con,
                                                     )
                                             },
@@ -1034,13 +993,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 }
                                 if inferred_constraints[player_loop].is_empty() {
                                     return MoveGuard::swap_ordered(
-                                        public_constraints,
                                         inferred_constraints,
                                         player_loop,
                                         INDEX_PILE,
                                         &[*reveal],
                                         &[],
-                                        |pub_con, inf_con| {
+                                        |inf_con| {
                                             // keep your acceptance gates exactly as-is:
                                             player_loop_dead_cards_count_before_move
                                                 + inf_con[player_loop].len()
@@ -1056,7 +1014,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                     <= MAX_NUM_PER_CARD
                                                 && self.possible_to_have_cards_recurse(
                                                     index_loop - 1,
-                                                    pub_con,
                                                     inf_con,
                                                 )
                                         },
@@ -1071,13 +1028,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                     if (*card_player != *reveal
                                         || inferred_constraints[INDEX_PILE].contains(reveal))
                                         && MoveGuard::swap_ordered(
-                                            public_constraints,
                                             inferred_constraints,
                                             player_loop,
                                             INDEX_PILE,
                                             &[*reveal],
                                             &[],
-                                            |pub_con, inf_con| {
+                                            |inf_con| {
                                                 player_loop_dead_cards_count_before_move
                                                     + inf_con[player_loop].len()
                                                     <= MAX_HAND_SIZE_PLAYER
@@ -1095,7 +1051,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                         <= MAX_NUM_PER_CARD
                                                     && self.possible_to_have_cards_recurse(
                                                         index_loop - 1,
-                                                        pub_con,
                                                         inf_con,
                                                     )
                                             },
@@ -1105,13 +1060,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                     }
 
                                     if MoveGuard::swap_ordered(
-                                        public_constraints,
                                         inferred_constraints,
                                         INDEX_PILE,
                                         player_loop,
                                         &[*card_player],
                                         &[*reveal],
-                                        |pub_con, inf_con| {
+                                        |inf_con| {
                                             player_loop_dead_cards_count_before_move
                                                 + inf_con[player_loop].len()
                                                 <= MAX_HAND_SIZE_PLAYER
@@ -1136,7 +1090,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                     <= MAX_NUM_PER_CARD
                                                 && self.possible_to_have_cards_recurse(
                                                     index_loop - 1,
-                                                    pub_con,
                                                     inf_con,
                                                 )
                                         },
@@ -1161,11 +1114,10 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         "we assume this for the draw[0] and draw[1] checks below"
                     );
                     response = MoveGuard::with_needed_cards_present(
-                        public_constraints,
                         inferred_constraints,
                         INDEX_PILE,
                         draw,
-                        |pub_con, inf_con| {
+                        |inf_con| {
                             inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
                                 && inf_con
                                     .iter()
@@ -1177,11 +1129,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                     .map(|v| v.iter().filter(|c| **c == draw[1]).count() as u8)
                                     .sum::<u8>()
                                     <= MAX_NUM_PER_CARD
-                                && self.possible_to_have_cards_recurse(
-                                    index_loop - 1,
-                                    pub_con,
-                                    inf_con,
-                                )
+                                && self.possible_to_have_cards_recurse(index_loop - 1, inf_con)
                         },
                     );
                 } else {
@@ -1189,11 +1137,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     // When we use lazy evaluation on previous moves,
                     // ExchangeDraw inferred impossibilities cannot just clone from the previous move
                     // We will need this to evaluate ExchangeDraw inference
-                    response = self.possible_to_have_cards_recurse(
-                        index_loop - 1,
-                        public_constraints,
-                        inferred_constraints,
-                    );
+                    response =
+                        self.possible_to_have_cards_recurse(index_loop - 1, inferred_constraints);
                 }
             }
             ActionInfo::ExchangeChoice { relinquish } => {
@@ -1204,7 +1149,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         response = self.recurse_variants_exchange_public(
                             index_loop,
                             player_loop,
-                            public_constraints,
                             inferred_constraints,
                         );
                     } else {
@@ -1216,7 +1160,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                             player_loop,
                             draw,
                             relinquish,
-                            public_constraints,
                             inferred_constraints,
                         );
                     }
@@ -1226,11 +1169,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                 // TODO: OPTIMIZE this is only needed if bool_know_priv_info is true
                 match self.mode {
                     Mode::Public => {
-                        if self.possible_to_have_cards_recurse(
-                            index_loop - 1,
-                            public_constraints,
-                            inferred_constraints,
-                        ) {
+                        if self.possible_to_have_cards_recurse(index_loop - 1, inferred_constraints)
+                        {
                             return true;
                         }
                     }
@@ -1286,11 +1226,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 }
                             }
                             true
-                        } && self.possible_to_have_cards_recurse(
-                            index_loop - 1,
-                            public_constraints,
-                            inferred_constraints,
-                        ) {
+                        } && self
+                            .possible_to_have_cards_recurse(index_loop - 1, inferred_constraints)
+                        {
                             return true;
                         }
                         for (player_remove, card_remove) in buffer.iter() {
@@ -1438,7 +1376,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         &self,
         index_loop: usize,
         player_loop: usize,
-        public_constraints: &mut Vec<Vec<Card>>,
         inferred_constraints: &mut Vec<Vec<Card>>,
     ) -> bool {
         let player_lives =
@@ -1466,17 +1403,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             self.constraint_history[index_loop].action_info()
         );
         log::trace!(
-            "possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}",
-            public_constraints,
+            "possible_to_have_cards_recurse: inferred_constraints: {:?}",
             inferred_constraints
         );
         let player_loop_dead_cards_count_before_move: usize =
             self.constraint_history[index_loop - 1].public_constraints()[player_loop].len();
-        if self.possible_to_have_cards_recurse(
-            index_loop - 2,
-            public_constraints,
-            inferred_constraints,
-        ) {
+        if self.possible_to_have_cards_recurse(index_loop - 2, inferred_constraints) {
             return true;
         }
         // 1 player_to_pile move, 0 pile_to_player move
@@ -1486,13 +1418,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             for card_player in iter_cards_player.iter() {
                 // move to pile
                 if MoveGuard::swap(
-                    public_constraints,
                     inferred_constraints,
                     player_loop,
                     INDEX_PILE,
                     &[*card_player],
                     &[],
-                    |pub_con, inf_con| {
+                    |inf_con| {
                         player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
                             <= MAX_HAND_SIZE_PLAYER
                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
@@ -1501,7 +1432,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 .map(|v| v.iter().filter(|c| **c == *card_player).count() as u8)
                                 .sum::<u8>()
                                 <= MAX_NUM_PER_CARD
-                            && self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)
+                            && self.possible_to_have_cards_recurse(index_loop - 2, inf_con)
                     },
                 ) {
                     return true;
@@ -1515,13 +1446,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             for card_pile in iter_cards_pile.iter() {
                 // move to player
                 if MoveGuard::swap(
-                    public_constraints,
                     inferred_constraints,
                     player_loop,
                     INDEX_PILE,
                     &[],
                     &[*card_pile],
-                    |pub_con, inf_con| {
+                    |inf_con| {
                         player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
                             <= MAX_HAND_SIZE_PLAYER
                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
@@ -1530,7 +1460,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 .map(|v| v.iter().filter(|c| **c == *card_pile).count() as u8)
                                 .sum::<u8>()
                                 <= MAX_NUM_PER_CARD
-                            && self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)
+                            && self.possible_to_have_cards_recurse(index_loop - 2, inf_con)
                     },
                 ) {
                     return true;
@@ -1548,15 +1478,17 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     }
                     log::trace!("Before Exchange 1 player_to_pile 1 pile_to_player");
                     log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-                    log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                    log::trace!(
+                        "possible_to_have_cards_recurse: inferred_constraints: {:?}",
+                        inferred_constraints
+                    );
                     if MoveGuard::swap(
-                        public_constraints,
                         inferred_constraints,
                         player_loop,
                         INDEX_PILE,
                         &[*card_player],
                         &[*card_pile],
-                        |pub_con, inf_con| {
+                        |inf_con| {
                             player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
                                 <= MAX_HAND_SIZE_PLAYER
                                 && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
@@ -1570,11 +1502,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                     .map(|v| v.iter().filter(|c| **c == *card_pile).count() as u8)
                                     .sum::<u8>()
                                     <= MAX_NUM_PER_CARD
-                                && self.possible_to_have_cards_recurse(
-                                    index_loop - 2,
-                                    pub_con,
-                                    inf_con,
-                                )
+                                && self.possible_to_have_cards_recurse(index_loop - 2, inf_con)
                         },
                     ) {
                         return true;
@@ -1589,10 +1517,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             {
                 log::trace!("Before Exchange 2 player_to_pile 0 pile_to_player");
                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-                log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                log::trace!(
+                    "possible_to_have_cards_recurse: inferred_constraints: {:?}",
+                    inferred_constraints
+                );
                 let cards = inferred_constraints[player_loop].clone();
                 if MoveGuard::swap(
-                    public_constraints,
                     inferred_constraints,
                     player_loop,
                     INDEX_PILE,
@@ -1601,7 +1531,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         inferred_constraints[player_loop][1],
                     ],
                     &[],
-                    |pub_con, inf_con| {
+                    |inf_con| {
                         player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
                             <= MAX_HAND_SIZE_PLAYER
                             && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
@@ -1615,7 +1545,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 .map(|v| v.iter().filter(|c| **c == cards[1]).count() as u8)
                                 .sum::<u8>()
                                 <= MAX_NUM_PER_CARD
-                            && self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)
+                            && self.possible_to_have_cards_recurse(index_loop - 2, inf_con)
                     },
                 ) {
                     return true;
@@ -1634,9 +1564,11 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         }
                         log::trace!("Before Exchange 0 player_to_pile 2 pile_to_player");
                         log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-                        log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                        log::trace!(
+                            "possible_to_have_cards_recurse: inferred_constraints: {:?}",
+                            inferred_constraints
+                        );
                         if MoveGuard::swap(
-                            public_constraints,
                             inferred_constraints,
                             player_loop,
                             INDEX_PILE,
@@ -1645,7 +1577,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 iter_cards_pile[index_pile_to_player_0],
                                 iter_cards_pile[index_pile_to_player_1],
                             ],
-                            |pub_con, inf_con| {
+                            |inf_con| {
                                 player_loop_dead_cards_count_before_move
                                     + inf_con[player_loop].len()
                                     <= MAX_HAND_SIZE_PLAYER
@@ -1674,11 +1606,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                         })
                                         .sum::<u8>()
                                         <= MAX_NUM_PER_CARD
-                                    && self.possible_to_have_cards_recurse(
-                                        index_loop - 2,
-                                        pub_con,
-                                        inf_con,
-                                    )
+                                    && self.possible_to_have_cards_recurse(index_loop - 2, inf_con)
                             },
                         ) {
                             return true;
@@ -1714,9 +1642,11 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                             }
                             log::trace!("Before Exchange 2 player_to_pile 1 pile_to_player");
                             log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-                            log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                            log::trace!(
+                                "possible_to_have_cards_recurse: inferred_constraints: {:?}",
+                                inferred_constraints
+                            );
                             if MoveGuard::swap(
-                                public_constraints,
                                 inferred_constraints,
                                 player_loop,
                                 INDEX_PILE,
@@ -1725,7 +1655,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                     iter_cards_player[index_player_to_pile_1],
                                 ],
                                 &[*card_pile],
-                                |pub_con, inf_con| {
+                                |inf_con| {
                                     player_loop_dead_cards_count_before_move
                                         + inf_con[player_loop].len()
                                         <= MAX_HAND_SIZE_PLAYER
@@ -1763,11 +1693,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                             })
                                             .sum::<u8>()
                                             <= MAX_NUM_PER_CARD
-                                        && self.possible_to_have_cards_recurse(
-                                            index_loop - 2,
-                                            pub_con,
-                                            inf_con,
-                                        )
+                                        && self
+                                            .possible_to_have_cards_recurse(index_loop - 2, inf_con)
                                 },
                             ) {
                                 return true;
@@ -1801,9 +1728,11 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                             }
                             log::trace!("Before Exchange 1 player_to_pile 2 pile_to_player");
                             log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-                            log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                            log::trace!(
+                                "possible_to_have_cards_recurse: inferred_constraints: {:?}",
+                                inferred_constraints
+                            );
                             if MoveGuard::swap(
-                                public_constraints,
                                 inferred_constraints,
                                 player_loop,
                                 INDEX_PILE,
@@ -1812,7 +1741,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                     iter_cards_pile[index_pile_to_player_0],
                                     iter_cards_pile[index_pile_to_player_1],
                                 ],
-                                |pub_con, inf_con| {
+                                |inf_con| {
                                     player_loop_dead_cards_count_before_move
                                         + inf_con[player_loop].len()
                                         <= MAX_HAND_SIZE_PLAYER
@@ -1851,11 +1780,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                             })
                                             .sum::<u8>()
                                             <= MAX_NUM_PER_CARD
-                                        && self.possible_to_have_cards_recurse(
-                                            index_loop - 2,
-                                            pub_con,
-                                            inf_con,
-                                        )
+                                        && self
+                                            .possible_to_have_cards_recurse(index_loop - 2, inf_con)
                                 },
                             ) {
                                 return true;
@@ -1907,9 +1833,11 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 }
                                 log::trace!("Before Exchange 2 player_to_pile 2 pile_to_player");
                                 log::trace!("possible_to_have_cards_recurse: index_loop: {index_loop}, move: player: {} {:?}", self.constraint_history[index_loop].player(), self.constraint_history[index_loop].action_info());
-                                log::trace!("possible_to_have_cards_recurse: public_constraints: {:?}, inferred_constraints: {:?}", public_constraints, inferred_constraints);
+                                log::trace!(
+                                    "possible_to_have_cards_recurse: inferred_constraints: {:?}",
+                                    inferred_constraints
+                                );
                                 if MoveGuard::swap(
-                                    public_constraints,
                                     inferred_constraints,
                                     player_loop,
                                     INDEX_PILE,
@@ -1921,7 +1849,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                         iter_cards_pile[index_pile_to_player_0],
                                         iter_cards_pile[index_pile_to_player_1],
                                     ],
-                                    |pub_con, inf_con| {
+                                    |inf_con| {
                                         player_loop_dead_cards_count_before_move
                                             + inf_con[player_loop].len()
                                             <= MAX_HAND_SIZE_PLAYER
@@ -1980,7 +1908,6 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                                 <= MAX_NUM_PER_CARD
                                             && self.possible_to_have_cards_recurse(
                                                 index_loop - 2,
-                                                pub_con,
                                                 inf_con,
                                             )
                                     },
@@ -2002,20 +1929,18 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         player_loop: usize,
         draw: &[Card],
         relinquish: &[Card],
-        public_constraints: &mut Vec<Vec<Card>>,
         inferred_constraints: &mut Vec<Vec<Card>>,
     ) -> bool {
         log::trace!("In recurse_variants_exchange_private!");
         let player_loop_dead_cards_count_before_move: usize =
             self.constraint_history[index_loop - 1].public_constraints()[player_loop].len();
         MoveGuard::swap_ordered(
-            public_constraints,
             inferred_constraints,
             player_loop,
             INDEX_PILE,
             &[relinquish[0], relinquish[1]],
             &[draw[0], draw[1]],
-            |pub_con, inf_con| {
+            |inf_con| {
                 player_loop_dead_cards_count_before_move + inf_con[player_loop].len()
                     <= MAX_HAND_SIZE_PLAYER
                     && inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
@@ -2039,7 +1964,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         .map(|v| v.iter().filter(|c| **c == draw[1]).count() as u8)
                         .sum::<u8>()
                         <= MAX_NUM_PER_CARD
-                    && self.possible_to_have_cards_recurse(index_loop - 2, pub_con, inf_con)
+                    && self.possible_to_have_cards_recurse(index_loop - 2, inf_con)
             },
         )
     }
@@ -2337,9 +2262,9 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
     }
 
     fn player_can_have_card_alive_lazy(&mut self, player: usize, card: Card) -> bool {
-        let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
+        let mut inferred_constraints = Self::create_buffer();
         inferred_constraints[player].push(card);
-        self.possible_to_have_cards_latest(&mut public_constraints, &mut inferred_constraints)
+        self.possible_to_have_cards_latest(&mut inferred_constraints)
     }
 
     fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool {
@@ -2348,9 +2273,9 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
     }
     fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool {
         // TODO: [OPTIMIZE] check if latest state is updated!
-        let (mut public_constraints, mut inferred_constraints) = Self::create_buffer();
+        let mut inferred_constraints = Self::create_buffer();
         inferred_constraints[player].extend_from_slice(cards);
-        self.possible_to_have_cards_latest(&mut public_constraints, &mut inferred_constraints)
+        self.possible_to_have_cards_latest(&mut inferred_constraints)
     }
     fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         match action_observation {
