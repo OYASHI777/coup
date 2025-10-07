@@ -7,7 +7,7 @@
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 use super::constants::MAX_GAME_LENGTH;
 use super::models::backtrack::{ActionInfo, ActionInfoName};
-use super::move_guard::MoveGuard;
+use super::move_guard::{MoveGuard, MAX_REQUIRED_PLAYER_BUFFER_SIZE};
 use crate::prob_manager::models::backtrack::InfoArrayTrait;
 use crate::traits::prob_manager::coup_analysis::{
     CoupPossibilityAnalysis, ImpossibleConstraints, InferredConstraints, LegalMoveQuery,
@@ -328,7 +328,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     /// Buffer for doing backtracking with
     pub fn create_buffer() -> Vec<Vec<Card>> {
         let inferred_constraints: Vec<Vec<Card>> = (0..MAX_PLAYERS_INCL_PILE)
-            .map(|_| Vec::with_capacity(4))
+            .map(|_| Vec::with_capacity(MAX_REQUIRED_PLAYER_BUFFER_SIZE))
             .collect();
         inferred_constraints
     }

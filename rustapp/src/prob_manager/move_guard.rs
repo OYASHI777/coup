@@ -2,6 +2,7 @@ use arrayvec::ArrayVec;
 
 use crate::{history_public::Card, prob_manager::engine::constants::MAX_CARD_PERMS_ONE};
 
+pub const MAX_REQUIRED_PLAYER_BUFFER_SIZE: usize = 5; // swap_ordered can make it go up to 5
 /// This aids in resetting inferred constraint after card swaps between players
 pub struct MoveGuard;
 
