@@ -1,5 +1,9 @@
 use super::{
-    info_array_trait::InfoArrayTrait, ImpossibleField1, ImpossibleField2, ImpossibleField3,
+    info_array_trait::{
+        InfoArrayImpossibleConstraints, InfoArrayInferredConstraints, InfoArrayInit,
+        InfoArrayPlayerUtils, InfoArrayPublicConstraints, InfoArrayTrait,
+    },
+    ImpossibleField1, ImpossibleField2, ImpossibleField3,
 };
 use crate::{
     history_public::Card,
@@ -210,7 +214,8 @@ impl InfoArrayBits {
     }
 }
 
-impl InfoArrayTrait for InfoArrayBits {
+// InfoArrayInit implementation
+impl InfoArrayInit for InfoArrayBits {
     fn start_public() -> Self {
         InfoArrayBits::start_public()
     }
@@ -222,7 +227,10 @@ impl InfoArrayTrait for InfoArrayBits {
     fn clone_public(&self) -> Self {
         self.clone_public()
     }
+}
 
+// InfoArrayPublicConstraints implementation
+impl InfoArrayPublicConstraints for InfoArrayBits {
     fn public_constraints(&self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }
@@ -234,7 +242,10 @@ impl InfoArrayTrait for InfoArrayBits {
     fn sort_public_constraints(&mut self) {
         self.sort_public_constraints()
     }
+}
 
+// InfoArrayInferredConstraints implementation
+impl InfoArrayInferredConstraints for InfoArrayBits {
     fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
         &self.inferred_constraints
     }
@@ -250,7 +261,10 @@ impl InfoArrayTrait for InfoArrayBits {
     fn set_inferred_constraints(&mut self, inferred_constraints: &[Vec<Card>]) {
         self.set_inferred_constraints(inferred_constraints)
     }
+}
 
+// InfoArrayImpossibleConstraints implementation
+impl InfoArrayImpossibleConstraints for InfoArrayBits {
     fn get_impossible_constraint(&self, player: usize, card: usize) -> bool {
         self.impossible_constraints[player].get(card as u8)
     }
@@ -303,46 +317,6 @@ impl InfoArrayTrait for InfoArrayBits {
             .set(card1 as u8, card2 as u8, card3 as u8, value);
     }
 
-    fn player_cards_known<T>(&self, player_id: T) -> usize
-    where
-        T: Into<usize> + Copy,
-    {
-        self.player_cards_known(player_id)
-    }
-
-    fn player_has_public_constraint<T>(&self, player_id: T, card: Card) -> bool
-    where
-        T: Into<usize> + Copy,
-    {
-        self.player_has_public_constraint(player_id, card)
-    }
-
-    fn player_has_inferred_constraint<T>(&self, player_id: T, card: Card) -> bool
-    where
-        T: Into<usize> + Copy,
-    {
-        self.player_has_inferred_constraint(player_id, card)
-    }
-
-    fn player_constraints_all_full<T>(&self, player_id: T, card: Card) -> bool
-    where
-        T: Into<usize> + Copy,
-    {
-        self.player_constraints_all_full(player_id, card)
-    }
-
-    fn format_impossible_constraints(&self) -> String {
-        format!("{:?}", self.impossible_constraints)
-    }
-
-    fn format_impossible_constraints_2(&self) -> String {
-        format!("{:?}", self.impossible_constraints_2)
-    }
-
-    fn format_impossible_constraints_3(&self) -> String {
-        format!("{:?}", self.impossible_constraints_3)
-    }
-
     fn impossible_constraints(&self) -> [[bool; 5]; 7] {
         let mut result = [[false; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE];
         for (player, player_result) in result.iter_mut().enumerate() {
@@ -380,6 +354,18 @@ impl InfoArrayTrait for InfoArrayBits {
         result
     }
 
+    fn format_impossible_constraints(&self) -> String {
+        format!("{:?}", self.impossible_constraints)
+    }
+
+    fn format_impossible_constraints_2(&self) -> String {
+        format!("{:?}", self.impossible_constraints_2)
+    }
+
+    fn format_impossible_constraints_3(&self) -> String {
+        format!("{:?}", self.impossible_constraints_3)
+    }
+
     fn count_possible_single_constraints(&self, player: usize) -> u8 {
         (0..MAX_CARD_PERMS_ONE)
             .map(|card| !self.impossible_constraints[player].get(card as u8) as u8)
@@ -388,6 +374,37 @@ impl InfoArrayTrait for InfoArrayBits {
 
     fn find_only_possible_single_constraint(&self, player: usize) -> Option<usize> {
         (0..MAX_CARD_PERMS_ONE).find(|&card| !self.impossible_constraints[player].get(card as u8))
+    }
+}
+
+// InfoArrayPlayerUtils implementation
+impl InfoArrayPlayerUtils for InfoArrayBits {
+    fn player_cards_known<T>(&self, player_id: T) -> usize
+    where
+        T: Into<usize> + Copy,
+    {
+        self.player_cards_known(player_id)
+    }
+
+    fn player_has_public_constraint<T>(&self, player_id: T, card: Card) -> bool
+    where
+        T: Into<usize> + Copy,
+    {
+        self.player_has_public_constraint(player_id, card)
+    }
+
+    fn player_has_inferred_constraint<T>(&self, player_id: T, card: Card) -> bool
+    where
+        T: Into<usize> + Copy,
+    {
+        self.player_has_inferred_constraint(player_id, card)
+    }
+
+    fn player_constraints_all_full<T>(&self, player_id: T, card: Card) -> bool
+    where
+        T: Into<usize> + Copy,
+    {
+        self.player_constraints_all_full(player_id, card)
     }
 
     fn all_cards_dead(&self, card: Card) -> bool {
@@ -398,3 +415,6 @@ impl InfoArrayTrait for InfoArrayBits {
             >= MAX_NUM_PER_CARD as usize
     }
 }
+
+// Combined trait implementation
+impl InfoArrayTrait for InfoArrayBits {}

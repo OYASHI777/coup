@@ -1,4 +1,7 @@
-use super::info_array_trait::InfoArrayTrait;
+use super::info_array_trait::{
+    InfoArrayImpossibleConstraints, InfoArrayInferredConstraints, InfoArrayInit,
+    InfoArrayPlayerUtils, InfoArrayPublicConstraints, InfoArrayTrait,
+};
 use crate::{
     history_public::Card,
     prob_manager::engine::constants::{
@@ -121,7 +124,8 @@ impl InfoArrayMinimal {
     }
 }
 
-impl InfoArrayTrait for InfoArrayMinimal {
+// InfoArrayInit implementation
+impl InfoArrayInit for InfoArrayMinimal {
     fn start_public() -> Self {
         InfoArrayMinimal::start_public()
     }
@@ -133,7 +137,10 @@ impl InfoArrayTrait for InfoArrayMinimal {
     fn clone_public(&self) -> Self {
         self.clone_public()
     }
+}
 
+// InfoArrayPublicConstraints implementation
+impl InfoArrayPublicConstraints for InfoArrayMinimal {
     fn public_constraints(&self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }
@@ -145,7 +152,10 @@ impl InfoArrayTrait for InfoArrayMinimal {
     fn sort_public_constraints(&mut self) {
         self.sort_public_constraints()
     }
+}
 
+// InfoArrayInferredConstraints implementation
+impl InfoArrayInferredConstraints for InfoArrayMinimal {
     fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
         &self.inferred_constraints
     }
@@ -161,7 +171,10 @@ impl InfoArrayTrait for InfoArrayMinimal {
     fn set_inferred_constraints(&mut self, inferred_constraints: &[Vec<Card>]) {
         self.set_inferred_constraints(inferred_constraints)
     }
+}
 
+// InfoArrayImpossibleConstraints implementation
+impl InfoArrayImpossibleConstraints for InfoArrayMinimal {
     fn get_impossible_constraint(&self, _player: usize, _card: usize) -> bool {
         false
     }
@@ -206,6 +219,41 @@ impl InfoArrayTrait for InfoArrayMinimal {
         unimplemented!()
     }
 
+    fn impossible_constraints(&self) -> [[bool; 5]; 7] {
+        unimplemented!()
+    }
+
+    fn impossible_constraints_paired(&self) -> [[[bool; 5]; 5]; 7] {
+        unimplemented!()
+    }
+
+    fn impossible_constraints_triple(&self) -> [[[bool; 5]; 5]; 5] {
+        unimplemented!()
+    }
+
+    fn format_impossible_constraints(&self) -> String {
+        unimplemented!()
+    }
+
+    fn format_impossible_constraints_2(&self) -> String {
+        unimplemented!()
+    }
+
+    fn format_impossible_constraints_3(&self) -> String {
+        unimplemented!()
+    }
+
+    fn count_possible_single_constraints(&self, _player: usize) -> u8 {
+        unimplemented!()
+    }
+
+    fn find_only_possible_single_constraint(&self, _player: usize) -> Option<usize> {
+        unimplemented!()
+    }
+}
+
+// InfoArrayPlayerUtils implementation
+impl InfoArrayPlayerUtils for InfoArrayMinimal {
     fn player_cards_known<T>(&self, player_id: T) -> usize
     where
         T: Into<usize> + Copy,
@@ -234,38 +282,6 @@ impl InfoArrayTrait for InfoArrayMinimal {
         self.player_constraints_all_full(player_id, card)
     }
 
-    fn format_impossible_constraints(&self) -> String {
-        unimplemented!()
-    }
-
-    fn format_impossible_constraints_2(&self) -> String {
-        unimplemented!()
-    }
-
-    fn format_impossible_constraints_3(&self) -> String {
-        unimplemented!()
-    }
-
-    fn impossible_constraints(&self) -> [[bool; 5]; 7] {
-        unimplemented!()
-    }
-
-    fn impossible_constraints_paired(&self) -> [[[bool; 5]; 5]; 7] {
-        unimplemented!()
-    }
-
-    fn impossible_constraints_triple(&self) -> [[[bool; 5]; 5]; 5] {
-        unimplemented!()
-    }
-
-    fn count_possible_single_constraints(&self, _player: usize) -> u8 {
-        unimplemented!()
-    }
-
-    fn find_only_possible_single_constraint(&self, _player: usize) -> Option<usize> {
-        unimplemented!()
-    }
-
     fn all_cards_dead(&self, card: Card) -> bool {
         self.public_constraints
             .iter()
@@ -274,3 +290,6 @@ impl InfoArrayTrait for InfoArrayMinimal {
             >= MAX_NUM_PER_CARD as usize
     }
 }
+
+// Combined trait implementation
+impl InfoArrayTrait for InfoArrayMinimal {}

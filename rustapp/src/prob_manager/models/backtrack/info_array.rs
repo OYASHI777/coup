@@ -1,4 +1,7 @@
-use super::info_array_trait::InfoArrayTrait;
+use super::info_array_trait::{
+    InfoArrayImpossibleConstraints, InfoArrayInferredConstraints, InfoArrayInit,
+    InfoArrayPlayerUtils, InfoArrayPublicConstraints, InfoArrayTrait,
+};
 use crate::{
     history_public::Card,
     prob_manager::engine::constants::{
@@ -236,7 +239,8 @@ impl InfoArray {
     }
 }
 
-impl InfoArrayTrait for InfoArray {
+// InfoArrayInit implementation
+impl InfoArrayInit for InfoArray {
     fn start_public() -> Self {
         InfoArray::start_public()
     }
@@ -248,7 +252,10 @@ impl InfoArrayTrait for InfoArray {
     fn clone_public(&self) -> Self {
         self.clone_public()
     }
+}
 
+// InfoArrayPublicConstraints implementation
+impl InfoArrayPublicConstraints for InfoArray {
     fn public_constraints(&self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }
@@ -260,7 +267,10 @@ impl InfoArrayTrait for InfoArray {
     fn sort_public_constraints(&mut self) {
         self.sort_public_constraints()
     }
+}
 
+// InfoArrayInferredConstraints implementation
+impl InfoArrayInferredConstraints for InfoArray {
     fn inferred_constraints(&self) -> &Vec<Vec<Card>> {
         &self.inferred_constraints
     }
@@ -276,7 +286,10 @@ impl InfoArrayTrait for InfoArray {
     fn set_inferred_constraints(&mut self, inferred_constraints: &[Vec<Card>]) {
         self.set_inferred_constraints(inferred_constraints)
     }
+}
 
+// InfoArrayImpossibleConstraints implementation
+impl InfoArrayImpossibleConstraints for InfoArray {
     fn get_impossible_constraint(&self, player: usize, card: usize) -> bool {
         self.impossible_constraints[player][card]
     }
@@ -327,6 +340,44 @@ impl InfoArrayTrait for InfoArray {
         self.impossible_constraints_3[card3][card1][card2] = value;
     }
 
+    fn impossible_constraints(&self) -> [[bool; 5]; 7] {
+        self.impossible_constraints
+    }
+
+    fn impossible_constraints_paired(&self) -> [[[bool; 5]; 5]; 7] {
+        self.impossible_constraints_2
+    }
+
+    fn impossible_constraints_triple(&self) -> [[[bool; 5]; 5]; 5] {
+        self.impossible_constraints_3
+    }
+
+    fn format_impossible_constraints(&self) -> String {
+        format!("{:?}", self.impossible_constraints)
+    }
+
+    fn format_impossible_constraints_2(&self) -> String {
+        format!("{:?}", self.impossible_constraints_2)
+    }
+
+    fn format_impossible_constraints_3(&self) -> String {
+        format!("{:?}", self.impossible_constraints_3)
+    }
+
+    fn count_possible_single_constraints(&self, player: usize) -> u8 {
+        self.impossible_constraints[player]
+            .iter()
+            .map(|b| !*b as u8)
+            .sum::<u8>()
+    }
+
+    fn find_only_possible_single_constraint(&self, player: usize) -> Option<usize> {
+        self.impossible_constraints[player].iter().position(|b| !*b)
+    }
+}
+
+// InfoArrayPlayerUtils implementation
+impl InfoArrayPlayerUtils for InfoArray {
     fn player_cards_known<T>(&self, player_id: T) -> usize
     where
         T: Into<usize> + Copy,
@@ -355,41 +406,6 @@ impl InfoArrayTrait for InfoArray {
         self.player_constraints_all_full(player_id, card)
     }
 
-    fn format_impossible_constraints(&self) -> String {
-        format!("{:?}", self.impossible_constraints)
-    }
-
-    fn format_impossible_constraints_2(&self) -> String {
-        format!("{:?}", self.impossible_constraints_2)
-    }
-
-    fn format_impossible_constraints_3(&self) -> String {
-        format!("{:?}", self.impossible_constraints_3)
-    }
-
-    fn impossible_constraints(&self) -> [[bool; 5]; 7] {
-        self.impossible_constraints
-    }
-
-    fn impossible_constraints_paired(&self) -> [[[bool; 5]; 5]; 7] {
-        self.impossible_constraints_2
-    }
-
-    fn impossible_constraints_triple(&self) -> [[[bool; 5]; 5]; 5] {
-        self.impossible_constraints_3
-    }
-
-    fn count_possible_single_constraints(&self, player: usize) -> u8 {
-        self.impossible_constraints[player]
-            .iter()
-            .map(|b| !*b as u8)
-            .sum::<u8>()
-    }
-
-    fn find_only_possible_single_constraint(&self, player: usize) -> Option<usize> {
-        self.impossible_constraints[player].iter().position(|b| !*b)
-    }
-
     fn all_cards_dead(&self, card: Card) -> bool {
         self.public_constraints
             .iter()
@@ -398,3 +414,6 @@ impl InfoArrayTrait for InfoArray {
             >= MAX_NUM_PER_CARD as usize
     }
 }
+
+// Combined trait implementation
+impl InfoArrayTrait for InfoArray {}

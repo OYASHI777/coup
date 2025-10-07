@@ -740,7 +740,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     /// # Notes
     /// - Use `INDEX_PILE` to check pile constraints
     /// - Always clear buffers between checks to avoid stale data
-    pub fn possible_to_have_cards_latest(&self, inferred_constraints: &mut Vec<Vec<Card>>) -> bool {
+    pub fn possible_to_have_cards_latest(&self, inferred_constraints: &mut [Vec<Card>]) -> bool {
         self.possible_to_have_cards_recurse(self.constraint_history.len() - 1, inferred_constraints)
     }
     /// Returns true if possible, false if impossible
