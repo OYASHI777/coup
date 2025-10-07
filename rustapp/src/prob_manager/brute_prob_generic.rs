@@ -7,7 +7,10 @@
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::constants::MAX_PERM_STATES;
 use crate::traits::prob_manager::card_state::CardPermState;
-use crate::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
+use crate::traits::prob_manager::coup_analysis::{
+    CoupPossibilityAnalysis, CoupTraversal, ImpossibleConstraints, InferredConstraints,
+    LegalMoveQuery, PublicConstraints,
+};
 use ahash::AHashSet;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
@@ -766,7 +769,7 @@ where
     }
 }
 
-impl<T> CoupPossibilityAnalysis for BruteCardCountManagerGeneric<T>
+impl<T> PublicConstraints for BruteCardCountManagerGeneric<T>
 where
     T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
 {
@@ -780,6 +783,12 @@ where
         // Sorted in update_constraints
         &self.public_constraints
     }
+}
+
+impl<T> InferredConstraints for BruteCardCountManagerGeneric<T>
+where
+    T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
+{
     /// Returns all the dead cards for each player that we are certain they have
     /// Assumes calculates states align with latest constraints
     fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
@@ -790,7 +799,12 @@ where
         // Sorted in update_constraints
         &self.inferred_constraints
     }
+}
 
+impl<T> ImpossibleConstraints for BruteCardCountManagerGeneric<T>
+where
+    T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
+{
     fn player_impossible_constraints(&mut self) -> [[bool; 5]; 7] {
         self.impossible_constraints
     }
@@ -878,7 +892,12 @@ where
         }
         false
     }
+}
 
+impl<T> LegalMoveQuery for BruteCardCountManagerGeneric<T>
+where
+    T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug,
+{
     fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         match action_observation {
             ActionObservation::Discard {
@@ -966,4 +985,9 @@ where
             _ => true,
         }
     }
+}
+
+impl<T> CoupPossibilityAnalysis for BruteCardCountManagerGeneric<T> where
+    T: CardPermState + Hash + Eq + Copy + Clone + Display + Debug
+{
 }

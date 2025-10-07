@@ -16,12 +16,12 @@ impl MoveGuard {
     ///     - then added to b
     #[inline(always)]
     pub fn swap(
-        inferred_constraint: &mut Vec<Vec<Card>>,
+        inferred_constraint: &mut [Vec<Card>],
         player_a: usize,
         player_b: usize,
         a_to_b: &[Card],
         b_to_a: &[Card],
-        f: impl FnOnce(&mut Vec<Vec<Card>>) -> bool,
+        f: impl FnOnce(&mut [Vec<Card>]) -> bool,
     ) -> bool {
         let mut moved_from_a_to_b: ArrayVec<Card, 2> = ArrayVec::new();
         let mut moved_from_b_to_a: ArrayVec<Card, 2> = ArrayVec::new();
@@ -84,12 +84,12 @@ impl MoveGuard {
     ///     - then added to BOTH
     #[inline(always)]
     pub fn swap_ordered(
-        inferred_constraint: &mut Vec<Vec<Card>>,
+        inferred_constraint: &mut [Vec<Card>],
         player_a: usize,
         player_b: usize,
         a_to_b: &[Card],
         b_to_a: &[Card],
-        f: impl FnOnce(&mut Vec<Vec<Card>>) -> bool,
+        f: impl FnOnce(&mut [Vec<Card>]) -> bool,
     ) -> bool {
         let mut removed_from_b: ArrayVec<Card, 2> = ArrayVec::new();
         let mut removed_from_a: ArrayVec<Card, 2> = ArrayVec::new();
@@ -136,10 +136,10 @@ impl MoveGuard {
     }
     #[inline(always)]
     pub fn discard(
-        inferred_constraint: &mut Vec<Vec<Card>>,
+        inferred_constraint: &mut [Vec<Card>],
         player: usize,
         card: Card,
-        f: impl FnOnce(&mut Vec<Vec<Card>>) -> bool,
+        f: impl FnOnce(&mut [Vec<Card>]) -> bool,
     ) -> bool {
         // Documentation comment => This is only required if resurrection is possible
         // let mut removed: ArrayVec<Card, 1> = ArrayVec::new();
@@ -166,10 +166,10 @@ impl MoveGuard {
     /// Ensures a player's hand contains at least the cards in needed
     #[inline(always)]
     pub fn with_needed_cards_present(
-        inferred_constraint: &mut Vec<Vec<Card>>,
+        inferred_constraint: &mut [Vec<Card>],
         player: usize,
         needed: &[Card],
-        f: impl FnOnce(&mut Vec<Vec<Card>>) -> bool,
+        f: impl FnOnce(&mut [Vec<Card>]) -> bool,
     ) -> bool {
         let mut have: [u8; MAX_CARD_PERMS_ONE] = [0; MAX_CARD_PERMS_ONE];
         for &x in inferred_constraint[player].iter() {

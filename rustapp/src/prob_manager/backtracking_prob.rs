@@ -7,7 +7,10 @@
 // TODO: REFACTOR ActionInfo and ActionInfoName to BacktrackManager or its own file
 use super::backtracking_collective_constraints::ActionInfo;
 use crate::history_public::{ActionObservation, Card};
-use crate::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
+use crate::traits::prob_manager::coup_analysis::{
+    CoupPossibilityAnalysis, CoupTraversal, ImpossibleConstraints, InferredConstraints,
+    LegalMoveQuery, PublicConstraints,
+};
 pub struct BackTrackCardCountManager<C>
 where
     C: CoupConstraint,
@@ -242,7 +245,7 @@ where
     }
 }
 
-impl<C> CoupPossibilityAnalysis for BackTrackCardCountManager<C>
+impl<C> PublicConstraints for BackTrackCardCountManager<C>
 where
     C: CoupConstraint + CoupPossibilityAnalysis,
 {
@@ -253,7 +256,12 @@ where
     fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.latest_constraint_mut().sorted_public_constraints()
     }
+}
 
+impl<C> InferredConstraints for BackTrackCardCountManager<C>
+where
+    C: CoupConstraint + CoupPossibilityAnalysis,
+{
     fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.latest_constraint_mut().inferred_constraints()
     }
@@ -261,7 +269,12 @@ where
     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.latest_constraint_mut().sorted_inferred_constraints()
     }
+}
 
+impl<C> ImpossibleConstraints for BackTrackCardCountManager<C>
+where
+    C: CoupConstraint + CoupPossibilityAnalysis,
+{
     fn player_impossible_constraints(&mut self) -> [[bool; 5]; 7] {
         self.latest_constraint_mut().player_impossible_constraints()
     }
@@ -295,7 +308,12 @@ where
         self.latest_constraint_mut()
             .player_can_have_cards_alive_lazy(player, cards)
     }
+}
 
+impl<C> LegalMoveQuery for BackTrackCardCountManager<C>
+where
+    C: CoupConstraint + CoupPossibilityAnalysis,
+{
     fn is_legal_move_public(&mut self, _action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
@@ -303,6 +321,11 @@ where
     fn is_legal_move_private(&mut self, _action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
+}
+
+impl<C> CoupPossibilityAnalysis for BackTrackCardCountManager<C> where
+    C: CoupConstraint + CoupPossibilityAnalysis
+{
 }
 
 /// A trait providing the interface for a constraint

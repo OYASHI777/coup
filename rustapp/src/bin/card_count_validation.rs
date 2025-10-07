@@ -6,7 +6,9 @@ use rustapp::history_public::{AOName, ActionObservation, Card, History};
 use rustapp::prob_manager::brute_prob_generic::BruteCardCountManagerGeneric;
 use rustapp::prob_manager::models::backtrack::{ActionInfo, InfoArray};
 use rustapp::prob_manager::models::card_state_u64::CardStateu64;
-use rustapp::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
+use rustapp::traits::prob_manager::coup_analysis::{
+    CoupTraversal, ImpossibleConstraints, InferredConstraints, LegalMoveQuery, PublicConstraints,
+};
 use std::fs::OpenOptions;
 use std::io::Write;
 use ActionObservation::*;

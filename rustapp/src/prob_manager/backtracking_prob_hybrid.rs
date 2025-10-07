@@ -9,7 +9,10 @@ use super::constants::MAX_GAME_LENGTH;
 use super::models::backtrack::{ActionInfo, ActionInfoName};
 use super::move_guard::MoveGuard;
 use crate::prob_manager::models::backtrack::InfoArrayTrait;
-use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
+use crate::traits::prob_manager::coup_analysis::{
+    CoupPossibilityAnalysis, ImpossibleConstraints, InferredConstraints, LegalMoveQuery,
+    PublicConstraints,
+};
 use crate::{
     history_public::{ActionObservation, Card},
     prob_manager::engine::constants::{
@@ -199,7 +202,7 @@ impl<T: InfoArrayTrait> SignificantAction<T> {
         );
     }
 }
-impl<T: InfoArrayTrait> CoupPossibilityAnalysis for SignificantAction<T> {
+impl<T: InfoArrayTrait> PublicConstraints for SignificantAction<T> {
     fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.meta_data.public_constraints()
     }
@@ -208,7 +211,9 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for SignificantAction<T> {
         self.meta_data.sort_public_constraints();
         self.meta_data.public_constraints()
     }
+}
 
+impl<T: InfoArrayTrait> InferredConstraints for SignificantAction<T> {
     fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.meta_data.inferred_constraints()
     }
@@ -216,7 +221,9 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for SignificantAction<T> {
         self.meta_data.sort_inferred_constraints();
         self.meta_data.inferred_constraints()
     }
+}
 
+impl<T: InfoArrayTrait> ImpossibleConstraints for SignificantAction<T> {
     fn player_impossible_constraints(
         &mut self,
     ) -> [[bool; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE] {
@@ -278,7 +285,9 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for SignificantAction<T> {
     fn player_can_have_cards_alive_lazy(&mut self, _player: usize, _cards: &[Card]) -> bool {
         unimplemented!()
     }
+}
 
+impl<T: InfoArrayTrait> LegalMoveQuery for SignificantAction<T> {
     fn is_legal_move_public(&mut self, _action_observation: &ActionObservation) -> bool {
         unimplemented!()
     }
@@ -287,6 +296,8 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for SignificantAction<T> {
         unimplemented!()
     }
 }
+
+impl<T: InfoArrayTrait> CoupPossibilityAnalysis for SignificantAction<T> {}
 // TODO: Store also a version of constraint_history but split by players
 // TODO: Improve analysis interface when using the manager... using last_constraint then the analysis is very clunky
 // So it is easier to know the first time a player does something
@@ -652,8 +663,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         index_lookback: usize,
         player_of_interest: usize,
         cards: &[u8; MAX_CARD_PERMS_ONE],
-        public_constraints: &mut Vec<Vec<Card>>,
-        inferred_constraints: &mut Vec<Vec<Card>>,
+        public_constraints: &mut [Vec<Card>],
+        inferred_constraints: &mut [Vec<Card>],
     ) -> bool {
         log::trace!(
             "impossible_to_have_cards player_of_interest: {}, cards: {:?}",
@@ -748,7 +759,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     pub fn possible_to_have_cards_recurse(
         &self,
         index_loop: usize,
-        inferred_constraints: &mut Vec<Vec<Card>>,
+        inferred_constraints: &mut [Vec<Card>],
     ) -> bool {
         log::trace!("After");
         log::trace!(
@@ -1258,7 +1269,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     pub fn is_valid_combination(
         &self,
         _index_loop: usize,
-        _inferred_constraints: &Vec<Vec<Card>>,
+        _inferred_constraints: &[Vec<Card>],
     ) -> bool {
         // let public_constraints = self.constraint_history[index_loop].public_constraints();
         // Check actual constraints at leaf node
@@ -1377,7 +1388,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         &self,
         index_loop: usize,
         player_loop: usize,
-        inferred_constraints: &mut Vec<Vec<Card>>,
+        inferred_constraints: &mut [Vec<Card>],
     ) -> bool {
         let player_lives =
             2 - self.constraint_history[index_loop].public_constraints()[player_loop].len() as u8;
@@ -1930,7 +1941,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         player_loop: usize,
         draw: &[Card],
         relinquish: &[Card],
-        inferred_constraints: &mut Vec<Vec<Card>>,
+        inferred_constraints: &mut [Vec<Card>],
     ) -> bool {
         log::trace!("In recurse_variants_exchange_private!");
         let player_loop_dead_cards_count_before_move: usize =
@@ -2224,7 +2235,7 @@ impl<T: InfoArrayTrait> CoupTraversal for BackTrackCardCountManager<T> {
     }
 }
 
-impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T> {
+impl<T: InfoArrayTrait> PublicConstraints for BackTrackCardCountManager<T> {
     fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.latest_constraint_mut().public_constraints()
     }
@@ -2232,7 +2243,9 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
     fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.latest_constraint_mut().sorted_public_constraints()
     }
+}
 
+impl<T: InfoArrayTrait> InferredConstraints for BackTrackCardCountManager<T> {
     fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.latest_constraint_mut().inferred_constraints()
     }
@@ -2240,7 +2253,9 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
         self.latest_constraint_mut().sorted_inferred_constraints()
     }
+}
 
+impl<T: InfoArrayTrait> ImpossibleConstraints for BackTrackCardCountManager<T> {
     fn player_impossible_constraints(&mut self) -> [[bool; 5]; 7] {
         self.latest_constraint_mut().player_impossible_constraints()
     }
@@ -2276,6 +2291,9 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
         inferred_constraints[player].extend_from_slice(cards);
         self.possible_to_have_cards_latest(&mut inferred_constraints)
     }
+}
+
+impl<T: InfoArrayTrait> LegalMoveQuery for BackTrackCardCountManager<T> {
     fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         match action_observation {
             ActionObservation::Discard {
@@ -2360,3 +2378,5 @@ impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T>
         }
     }
 }
+
+impl<T: InfoArrayTrait> CoupPossibilityAnalysis for BackTrackCardCountManager<T> {}

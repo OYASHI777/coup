@@ -172,15 +172,21 @@ pub trait CoupGeneration {
     ) -> Vec<ActionObservation>;
 }
 
-pub trait CoupPossibilityAnalysis {
+pub trait PublicConstraints {
     /// Returns reference to latest Public Constraints
     fn public_constraints(&mut self) -> &Vec<Vec<Card>>;
     /// Returns reference to latest sorted Public Constraints
     fn sorted_public_constraints(&mut self) -> &Vec<Vec<Card>>;
+}
+
+pub trait InferredConstraints {
     /// Returns reference to latest Inferred Constraints
     fn inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
     /// Returns reference to latest sorted Inferred Constraints
     fn sorted_inferred_constraints(&mut self) -> &Vec<Vec<Card>>;
+}
+
+pub trait ImpossibleConstraints {
     /// Returns array[player][card] storing whether a player can have a card alive
     fn player_impossible_constraints(&mut self) -> [[bool; 5]; 7];
     /// Returns array[player][card_i][card_j] storing whether a player can have a card_i and card_j alive
@@ -195,10 +201,18 @@ pub trait CoupPossibilityAnalysis {
     fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool;
     /// Returns true if player can have a collection of cards alive | evaluates lazily
     fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool;
+}
+
+pub trait LegalMoveQuery {
     /// Returns true if move is legal considering only public information
     /// Assumes the player can make a turn and does not check if it is the player's turn
     fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool;
     /// Returns true if move is legal considering public and private information
     /// Assumes the player can make a turn and does not check if it is the player's turn
     fn is_legal_move_private(&mut self, action_observation: &ActionObservation) -> bool;
+}
+
+pub trait CoupPossibilityAnalysis:
+    PublicConstraints + InferredConstraints + ImpossibleConstraints + LegalMoveQuery
+{
 }

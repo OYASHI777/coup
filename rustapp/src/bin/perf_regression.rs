@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
 use rustapp::prob_manager::models::backtrack::{InfoArray, InfoArrayTrait};
-use rustapp::traits::prob_manager::coup_analysis::{CoupPossibilityAnalysis, CoupTraversal};
+use rustapp::traits::prob_manager::coup_analysis::{CoupTraversal, ImpossibleConstraints};
 use std::time::Instant;
 pub const LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 pub const LOG_FILE_NAME: &str = "just_test_replay_000000000.log";

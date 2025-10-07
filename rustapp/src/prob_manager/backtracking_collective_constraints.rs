@@ -1,7 +1,10 @@
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::backtracking_prob::CoupConstraint;
 use crate::prob_manager::models::backtrack::InfoArray;
-use crate::traits::prob_manager::coup_analysis::CoupPossibilityAnalysis;
+use crate::traits::prob_manager::coup_analysis::{
+    CoupPossibilityAnalysis, ImpossibleConstraints, InferredConstraints, LegalMoveQuery,
+    PublicConstraints,
+};
 use std::marker::Copy;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -3523,7 +3526,7 @@ impl CoupConstraint for BackTrackCollectiveConstraint {
         );
     }
 }
-impl CoupPossibilityAnalysis for BackTrackCollectiveConstraint {
+impl PublicConstraints for BackTrackCollectiveConstraint {
     fn public_constraints(&mut self) -> &Vec<Vec<Card>> {
         &self.public_constraints
     }
@@ -3534,7 +3537,9 @@ impl CoupPossibilityAnalysis for BackTrackCollectiveConstraint {
             .for_each(|v| v.sort_unstable());
         &self.public_constraints
     }
+}
 
+impl InferredConstraints for BackTrackCollectiveConstraint {
     fn inferred_constraints(&mut self) -> &Vec<Vec<Card>> {
         &self.inferred_constraints
     }
@@ -3545,7 +3550,9 @@ impl CoupPossibilityAnalysis for BackTrackCollectiveConstraint {
             .for_each(|v| v.sort_unstable());
         &self.inferred_constraints
     }
+}
 
+impl ImpossibleConstraints for BackTrackCollectiveConstraint {
     fn player_impossible_constraints(&mut self) -> [[bool; 5]; 7] {
         self.impossible_constraints
     }
@@ -3568,7 +3575,8 @@ impl CoupPossibilityAnalysis for BackTrackCollectiveConstraint {
     fn player_can_have_cards_alive(&mut self, player: usize, cards: &[Card]) -> bool {
         if player < 6 {
             if cards.len() == 2 {
-                return !self.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize];
+                return !self.impossible_constraints_2[player][cards[0] as usize]
+                    [cards[1] as usize];
             } else if cards.len() == 1 {
                 return self.player_can_have_card_alive(player, cards[0]);
             }
@@ -3576,7 +3584,8 @@ impl CoupPossibilityAnalysis for BackTrackCollectiveConstraint {
             if cards.len() == 1 {
                 return self.player_can_have_card_alive(player, cards[0]);
             } else if cards.len() == 2 {
-                return !self.impossible_constraints_2[player][cards[0] as usize][cards[1] as usize];
+                return !self.impossible_constraints_2[player][cards[0] as usize]
+                    [cards[1] as usize];
             } else if cards.len() == 3 {
                 return !self.impossible_constraints_3[cards[0] as usize][cards[1] as usize]
                     [cards[2] as usize];
@@ -3587,6 +3596,9 @@ impl CoupPossibilityAnalysis for BackTrackCollectiveConstraint {
     fn player_can_have_cards_alive_lazy(&mut self, player: usize, cards: &[Card]) -> bool {
         self.player_can_have_cards_alive(player, cards)
     }
+}
+
+impl LegalMoveQuery for BackTrackCollectiveConstraint {
     fn is_legal_move_public(&mut self, action_observation: &ActionObservation) -> bool {
         match action_observation {
             ActionObservation::Discard {
@@ -3612,3 +3624,5 @@ impl CoupPossibilityAnalysis for BackTrackCollectiveConstraint {
         unimplemented!()
     }
 }
+
+impl CoupPossibilityAnalysis for BackTrackCollectiveConstraint {}
