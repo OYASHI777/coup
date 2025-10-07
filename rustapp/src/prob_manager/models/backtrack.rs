@@ -13,6 +13,9 @@ pub use impossible_field_3::ImpossibleField3;
 pub mod info_array_bits;
 pub use info_array_bits::InfoArrayBits;
 
+pub mod info_array_minimal;
+pub use info_array_minimal::InfoArrayMinimal;
+
 pub mod info_array_trait;
 pub use info_array_trait::InfoArrayTrait;
 

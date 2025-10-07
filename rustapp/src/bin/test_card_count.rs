@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use rustapp::history_public::{AOName, ActionObservation, Card, History};
 use rustapp::prob_manager::brute_prob_generic::BruteCardCountManagerGeneric;
-use rustapp::prob_manager::models::backtrack::{ActionInfo, InfoArray};
+use rustapp::prob_manager::models::backtrack::{ActionInfo, InfoArray, InfoArrayTrait};
 use rustapp::prob_manager::models::card_state_u64::CardStateu64;
 use rustapp::traits::prob_manager::coup_analysis::{
     CoupTraversal, ImpossibleConstraints, InferredConstraints, LegalMoveQuery, PublicConstraints,
@@ -24,7 +24,7 @@ fn main() {
     let print_frequency: usize = 100;
     let min_dead_check: usize = 0;
     let num_threads = 16;
-    game_rnd_constraint_bt_mt(
+    game_rnd_constraint_bt_mt::<InfoArray>(
         num_threads,
         game_no,
         bool_know_priv_info,
@@ -34,7 +34,7 @@ fn main() {
         bool_lazy,
     );
 }
-pub fn game_rnd_constraint_bt_mt(
+pub fn game_rnd_constraint_bt_mt<I: InfoArrayTrait>(
     num_threads: usize,
     game_no: usize,
     bool_know_priv_info: bool,
@@ -64,7 +64,7 @@ pub fn game_rnd_constraint_bt_mt(
         let thread_min_dead_check = min_dead_check;
         let handle = thread::spawn(move || {
             if bool_lazy {
-                game_rnd_constraint_bt2_st_lazy(
+                game_rnd_constraint_bt2_st_lazy::<I>(
                     thread_games,
                     thread_bool_know_priv_info,
                     bool_skip_exchange,
@@ -72,7 +72,7 @@ pub fn game_rnd_constraint_bt_mt(
                     thread_tx,
                 );
             } else {
-                game_rnd_constraint_bt2_st_new(
+                game_rnd_constraint_bt2_st_new::<I>(
                     thread_games,
                     thread_bool_know_priv_info,
                     bool_skip_exchange,
@@ -129,7 +129,7 @@ pub fn game_rnd_constraint_bt_mt(
         handle.join().unwrap();
     }
 }
-pub fn game_rnd_constraint_bt2_st_new(
+pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
     game_no: usize,
     bool_know_priv_info: bool,
     bool_skip_exchange: bool,
@@ -143,7 +143,7 @@ pub fn game_rnd_constraint_bt2_st_new(
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager<
-        InfoArray,
+        I,
     > = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     while game < game_no {
         let mut stats = Stats::new();
@@ -370,7 +370,7 @@ pub fn game_rnd_constraint_bt2_st_new(
         game += 1;
     }
 }
-pub fn game_rnd_constraint_bt2_st_lazy(
+pub fn game_rnd_constraint_bt2_st_lazy<I: InfoArrayTrait>(
     game_no: usize,
     bool_know_priv_info: bool,
     bool_skip_exchange: bool,
@@ -384,7 +384,7 @@ pub fn game_rnd_constraint_bt2_st_lazy(
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager<
-        InfoArray,
+        I,
     > = rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager::new();
     while game < game_no {
         let mut stats = Stats::new();

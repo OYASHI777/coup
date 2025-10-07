@@ -4,10 +4,7 @@ use super::info_array_trait::{
 };
 use crate::{
     history_public::Card,
-    prob_manager::engine::constants::{
-        MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PILE, MAX_HAND_SIZE_PLAYER, MAX_NUM_PER_CARD,
-        MAX_PLAYERS_INCL_PILE,
-    },
+    prob_manager::engine::constants::{MAX_HAND_SIZE_PLAYER, MAX_NUM_PER_CARD},
 };
 
 /// Minimal InfoArray that only contains public_constraints and inferred_constraints
