@@ -1,6 +1,9 @@
 use arrayvec::ArrayVec;
 
-use crate::{history_public::Card, prob_manager::engine::constants::MAX_CARD_PERMS_ONE};
+use crate::{
+    history_public::Card,
+    prob_manager::engine::constants::{INDEX_PILE, MAX_CARD_PERMS_ONE},
+};
 
 pub const MAX_REQUIRED_PLAYER_BUFFER_SIZE: usize = 5; // swap_ordered can make it go up to 5
 /// This aids in resetting inferred constraint after card swaps between players
@@ -204,6 +207,226 @@ impl MoveGuard {
                 }
             }
         }
+        false
+    }
+    /// Exchange draw public: Try all possible combinations of moving 2 cards from player to pile
+    /// This tests: 2 known cards, 1 known + 1 unstated, or 2 unstated cards
+    #[inline(always)]
+    pub fn exchange_draw_public(
+        inferred_constraint: &mut [Vec<Card>],
+        player_loop: usize,
+        pile_index: usize,
+        f: impl Fn(&mut [Vec<Card>]) -> bool,
+    ) -> bool {
+        let player_hand_len = inferred_constraint[player_loop].len();
+        if inferred_constraint[INDEX_PILE].len() > 1 {
+            return false;
+        }
+        // Get unique cards in player hand
+        let mut iter_cards_player: ArrayVec<Card, 4> = ArrayVec::new();
+        for &card in inferred_constraint[player_loop].iter() {
+            if !iter_cards_player.contains(&card) {
+                // SAFETY: Player has at most 4 cards, so at most 4 unique cards
+                unsafe {
+                    iter_cards_player.push_unchecked(card);
+                }
+            }
+        }
+        iter_cards_player.sort_unstable();
+
+        // Count cards in player hand
+        let mut player_count = [0u8; 5];
+        for &card in inferred_constraint[player_loop].iter() {
+            player_count[card as usize] += 1;
+        }
+
+        // Case 0: Move 0 cards (2 unstated cards)
+        if player_hand_len <= 2 && inferred_constraint[pile_index].len() <= 3 {
+            if f(inferred_constraint) {
+                return true;
+            }
+        }
+
+        // Case 1: Move 1 known card (1 known card + 1 unstated card)
+        if player_hand_len <= 3 && inferred_constraint[pile_index].len() <= 2 {
+            for &card in iter_cards_player.iter() {
+                if let Some(pos) = inferred_constraint[player_loop]
+                    .iter()
+                    .position(|c| *c == card)
+                {
+                    let removed_card = inferred_constraint[player_loop].swap_remove(pos);
+                    inferred_constraint[pile_index].push(removed_card);
+
+                    if inferred_constraint[player_loop].len() <= 2
+                        && inferred_constraint[pile_index].len() <= 3
+                        && f(inferred_constraint)
+                    {
+                        // Restore before returning
+                        if let Some(pos) = inferred_constraint[pile_index]
+                            .iter()
+                            .rposition(|c| *c == card)
+                        {
+                            inferred_constraint[pile_index].swap_remove(pos);
+                        }
+                        inferred_constraint[player_loop].push(removed_card);
+                        return true;
+                    }
+
+                    // Restore
+                    if let Some(pos) = inferred_constraint[pile_index]
+                        .iter()
+                        .rposition(|c| *c == card)
+                    {
+                        inferred_constraint[pile_index].swap_remove(pos);
+                    }
+                    inferred_constraint[player_loop].push(removed_card);
+                }
+            }
+        }
+
+        // Case 2: Move 2 known cards
+        if player_hand_len >= 2
+            && player_hand_len <= 4
+            && inferred_constraint[pile_index].len() <= 1
+        {
+            for idx0 in 0..iter_cards_player.len() {
+                for idx1 in idx0..iter_cards_player.len() {
+                    let card0 = iter_cards_player[idx0];
+                    let card1 = iter_cards_player[idx1];
+
+                    // Check if we have enough cards to move
+                    if idx0 == idx1 && player_count[card0 as usize] < 2 {
+                        continue;
+                    }
+
+                    let mut removed_cards: ArrayVec<Card, 2> = ArrayVec::new();
+
+                    // Remove first card
+                    if let Some(pos) = inferred_constraint[player_loop]
+                        .iter()
+                        .position(|c| *c == card0)
+                    {
+                        let card = inferred_constraint[player_loop].swap_remove(pos);
+                        // SAFETY: We're adding at most 2 cards
+                        unsafe {
+                            removed_cards.push_unchecked(card);
+                        }
+                    }
+
+                    // Remove second card
+                    if let Some(pos) = inferred_constraint[player_loop]
+                        .iter()
+                        .position(|c| *c == card1)
+                    {
+                        let card = inferred_constraint[player_loop].swap_remove(pos);
+                        // SAFETY: We're adding at most 2 cards
+                        unsafe {
+                            removed_cards.push_unchecked(card);
+                        }
+                    }
+
+                    // Add to pile
+                    inferred_constraint[pile_index].extend(removed_cards.iter());
+
+                    if f(inferred_constraint) {
+                        return true;
+                    }
+
+                    // Restore
+                    for &card in removed_cards.iter().rev() {
+                        if let Some(pos) = inferred_constraint[pile_index]
+                            .iter()
+                            .rposition(|c| *c == card)
+                        {
+                            inferred_constraint[pile_index].swap_remove(pos);
+                        }
+                    }
+                    inferred_constraint[player_loop].extend(removed_cards.iter());
+                }
+            }
+        }
+
+        false
+    }
+    /// Exchange draw private: Move specific 2 cards from player to pile
+    /// Cards may or may not be in player's hand (if not, they're treated as unstated)
+    #[inline(always)]
+    pub fn exchange_draw_private(
+        inferred_constraint: &mut [Vec<Card>],
+        player_loop: usize,
+        pile_index: usize,
+        draw: &[Card],
+        f: impl FnOnce(&mut [Vec<Card>]) -> bool,
+    ) -> bool {
+        if draw.len() != 2
+            || inferred_constraint[INDEX_PILE].len() > 1
+            || inferred_constraint[player_loop].len() > 4
+        {
+            return false;
+        }
+        let max_cards_added_but_not_removed = 4 - inferred_constraint[player_loop].len();
+        let card0 = draw[0];
+        let card1 = draw[1];
+
+        let mut removed_cards: ArrayVec<Card, 2> = ArrayVec::new();
+
+        // Try to remove card0 from player hand
+        if let Some(pos) = inferred_constraint[player_loop]
+            .iter()
+            .position(|c| *c == card0)
+        {
+            let card = inferred_constraint[player_loop].swap_remove(pos);
+            // SAFETY: We're adding at most 2 cards
+            unsafe {
+                removed_cards.push_unchecked(card);
+            }
+        }
+
+        // Try to remove card1 from player hand
+        if let Some(pos) = inferred_constraint[player_loop]
+            .iter()
+            .position(|c| *c == card1)
+        {
+            let card = inferred_constraint[player_loop].swap_remove(pos);
+            // SAFETY: We're adding at most 2 cards
+            unsafe {
+                removed_cards.push_unchecked(card);
+            }
+        }
+
+        // Add both cards to pile
+        inferred_constraint[pile_index].push(card0);
+        inferred_constraint[pile_index].push(card1);
+
+        // Check validity: player must have had space for cards they didn't have
+        let cards_added_but_not_removed = 2 - removed_cards.len();
+        let original_size = inferred_constraint[player_loop].len() + cards_added_but_not_removed;
+
+        // Player must have had enough space for the cards
+        let valid = inferred_constraint[player_loop].len() <= 2
+            && inferred_constraint[pile_index].len() <= 3
+            && cards_added_but_not_removed <= max_cards_added_but_not_removed
+            && original_size <= 4;
+
+        if valid && f(inferred_constraint) {
+            return true;
+        }
+
+        // Restore
+        if let Some(pos) = inferred_constraint[pile_index]
+            .iter()
+            .rposition(|c| *c == card1)
+        {
+            inferred_constraint[pile_index].swap_remove(pos);
+        }
+        if let Some(pos) = inferred_constraint[pile_index]
+            .iter()
+            .rposition(|c| *c == card0)
+        {
+            inferred_constraint[pile_index].swap_remove(pos);
+        }
+        inferred_constraint[player_loop].extend(removed_cards.iter());
+
         false
     }
 }
