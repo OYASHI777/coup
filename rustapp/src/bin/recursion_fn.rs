@@ -6,9 +6,12 @@ use std::collections::HashSet;
 use std::fs::OpenOptions;
 use std::io::Write;
 const LOG_FILE_NAME: &str = "recursion_fn.log";
-fn main() {}
+fn main() {
+    test_variant_recurse();
+}
 pub fn test_variant_recurse() {
-    RecursionTest::test_variant_recurse(LOG_FILE_NAME);
+    // RecursionTest::test_variant_recurse(LOG_FILE_NAME);
+    RecursionTest::test_exchange_draw_public(LOG_FILE_NAME);
 }
 pub struct RecursionTest;
 
@@ -845,6 +848,97 @@ impl RecursionTest {
         }
         variants
     }
+    pub fn return_variants_exchange_draw_public(
+        player_loop: usize,
+        inferred_constraints: &[Vec<Card>],
+    ) -> Vec<Vec<Vec<Card>>> {
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::new();
+
+        let player_hand_len = inferred_constraints[player_loop].len();
+        if inferred_constraints[6].len() > 1 || player_hand_len + inferred_constraints[6].len() > 5
+        {
+            // pile cannot have more than 1 card!
+            return variants;
+        }
+
+        // Get unique cards in player hand
+        let mut iter_cards_player = inferred_constraints[player_loop].clone();
+        iter_cards_player.sort_unstable();
+        iter_cards_player.dedup();
+
+        // Count cards in player hand
+        let mut player_count = [0u8; 5];
+        inferred_constraints[player_loop]
+            .iter()
+            .for_each(|c| player_count[*c as usize] += 1);
+
+        // Case 0: Move 0 cards (2 unstated cards)
+        if player_hand_len <= 2 && inferred_constraints[6].len() <= 3 - 0 {
+            variants.push(inferred_constraints.to_vec());
+        }
+
+        // Case 1: Move 1 known card (1 known card + 1 unstated card)
+        if player_hand_len <= 3 && inferred_constraints[6].len() <= 3 - 1 {
+            for card in iter_cards_player.iter() {
+                let mut player_hand = inferred_constraints[player_loop].clone();
+                let mut pile_hand = inferred_constraints[6].clone();
+
+                if let Some(pos) = player_hand.iter().position(|c| *c == *card) {
+                    player_hand.swap_remove(pos);
+                    pile_hand.push(*card);
+
+                    if player_hand.len() <= 2 && pile_hand.len() <= 3 {
+                        let mut temp = inferred_constraints.to_vec();
+                        temp[player_loop] = player_hand;
+                        temp[6] = pile_hand;
+                        variants.push(temp);
+                    }
+                }
+            }
+        }
+
+        // Case 2: Move 2 known cards
+        if player_hand_len >= 2 && player_hand_len <= 4 && inferred_constraints[6].len() <= 3 - 2 {
+            for idx0 in 0..iter_cards_player.len() {
+                for idx1 in idx0..iter_cards_player.len() {
+                    let card0 = iter_cards_player[idx0];
+                    let card1 = iter_cards_player[idx1];
+
+                    // Check if we have enough cards to move
+                    if idx0 == idx1 && player_count[card0 as usize] < 2 {
+                        continue;
+                    }
+
+                    let mut player_hand = inferred_constraints[player_loop].clone();
+                    let mut pile_hand = inferred_constraints[6].clone();
+
+                    // Remove first card
+                    if let Some(pos) = player_hand.iter().position(|c| *c == card0) {
+                        player_hand.swap_remove(pos);
+                    }
+
+                    // Remove second card
+                    if let Some(pos) = player_hand.iter().position(|c| *c == card1) {
+                        player_hand.swap_remove(pos);
+                    }
+
+                    // Add to pile
+                    pile_hand.push(card0);
+                    pile_hand.push(card1);
+
+                    // These conditions are guaranteed
+                    // if player_hand.len() <= 2 && pile_hand.len() <= 3 {
+                    let mut temp = inferred_constraints.to_vec();
+                    temp[player_loop] = player_hand;
+                    temp[6] = pile_hand;
+                    variants.push(temp);
+                    // }
+                }
+            }
+        }
+
+        variants
+    }
     pub fn gen_variants(card_types: &[Card], max_cards: usize) -> Vec<Vec<Card>> {
         let mut variants = Vec::new();
         // for each possible hand size 0..=max_cards
@@ -893,6 +987,98 @@ impl RecursionTest {
             .filter(None, level)
             .target(Target::Pipe(Box::new(log_file)))
             .init();
+    }
+    pub fn test_exchange_draw_public(log_file_name: &str) {
+        Self::logger(log_file_name, LevelFilter::Info);
+        let mut test_inferred_constraints: HashSet<Vec<Vec<Card>>> = HashSet::new();
+
+        // Generate all possible combinations for player_loop (0-4 cards) and player 6 (0-3 cards)
+        for player_hand in Self::gen_variants(
+            &[
+                Card::Ambassador,
+                Card::Assassin,
+                Card::Captain,
+                Card::Duke,
+                Card::Contessa,
+            ],
+            4,
+        ) {
+            'outer: for pile_hand in Self::gen_variants(
+                &[
+                    Card::Ambassador,
+                    Card::Assassin,
+                    Card::Captain,
+                    Card::Duke,
+                    Card::Contessa,
+                ],
+                3,
+            ) {
+                // Check that no card type exceeds 3 total across player and pile
+                for card in [
+                    Card::Ambassador,
+                    Card::Assassin,
+                    Card::Captain,
+                    Card::Duke,
+                    Card::Contessa,
+                ] {
+                    if player_hand.iter().filter(|c| **c == card).count()
+                        + pile_hand.iter().filter(|c| **c == card).count()
+                        > 3
+                        || player_hand.len() + pile_hand.len() > 5
+                        || pile_hand.len() > 1
+                    {
+                        continue 'outer;
+                    }
+                }
+                test_inferred_constraints.insert(vec![
+                    player_hand.clone(),
+                    vec![],
+                    vec![],
+                    vec![],
+                    vec![],
+                    vec![],
+                    pile_hand.clone(),
+                ]);
+            }
+        }
+
+        log::info!(
+            "Testing {} unique inferred_constraints configurations",
+            test_inferred_constraints.len()
+        );
+
+        for item in test_inferred_constraints.iter() {
+            let variants = Self::return_variants_exchange_draw_public(0, item);
+            log::info!("dest: {:?}", item);
+            log::info!("variants count: {}", variants.len());
+
+            // Check for duplicate variants
+            let mut seen_variants: HashSet<Vec<Vec<Card>>> = HashSet::new();
+            for variant in variants.iter() {
+                if !seen_variants.insert(variant.clone()) {
+                    log::warn!("  FAILED: duplicate variant found: {:?}", variant);
+                }
+            }
+
+            for variant in variants.iter() {
+                log::info!("  src: {:?}", variant);
+                // Verify constraints
+                if variant[0].len() > 2 {
+                    log::warn!("  FAILED: player_loop has > 4 cards in source");
+                }
+                if variant[6].len() > 3 {
+                    log::warn!("  FAILED: pile has > 3 cards in source");
+                }
+                // Verify that after the move, player ends with at most 2 cards
+                // (This is checking the reverse: source -> dest should result in dest having ≤2)
+                if item[0].len() > 4 {
+                    log::warn!("  FAILED: dest player_loop has > 4 cards");
+                }
+                if item[6].len() > 1 {
+                    log::warn!("  FAILED: dest pile has > 1 cards");
+                }
+            }
+        }
     }
     pub fn test_variant_recurse(log_file_name: &str) {
         Self::logger(log_file_name, LevelFilter::Info);
