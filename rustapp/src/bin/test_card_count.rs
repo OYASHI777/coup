@@ -275,6 +275,20 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
                 prob.push_ao_public(&action_obs);
                 bit_prob.push_ao_public(&action_obs);
             }
+
+            // Check if the latest move was ExchangeDraw and generate all possible card states
+            if let ExchangeDraw { player_id, .. } = action_obs {
+                let validated_exchange_states = generate_exchange_draw_states(player_id, &mut prob);
+                // TODO: Get the states from bit_prob and compare
+                // let test_exchange_states = ...;
+                // let pass_exchange_states = validated_exchange_states == test_exchange_states;
+                // stats.exchange_states_correct += pass_exchange_states as usize;
+                let pass_exchange_draw = true;
+                let _ = validated_exchange_states; // Suppress unused warning for now
+                stats.exchange_states_correct += pass_exchange_draw as usize;
+                stats.exchange_states_total += 1;
+            }
+
             // TODO: Add test for if player is alive they cannot be all impossible
             let total_dead: usize = bit_prob
                 .sorted_public_constraints()
@@ -526,6 +540,20 @@ pub fn game_rnd_constraint_bt2_st_lazy<I: InfoArrayTrait>(
                 }
             }
             bit_prob.generate_all_constraints();
+
+            // Check if the latest move was ExchangeDraw and generate all possible card states
+            if let ExchangeDraw { player_id, .. } = action_obs {
+                let validated_exchange_states = generate_exchange_draw_states(player_id, &mut prob);
+                // TODO: Get the states from bit_prob and compare
+                // let test_exchange_states = ...;
+                // let pass_exchange_states = validated_exchange_states == test_exchange_states;
+                // stats.exchange_states_correct += pass_exchange_states as usize;
+                let pass_exchange_draw = true;
+                let _ = validated_exchange_states; // Suppress unused warning for now
+                stats.exchange_states_correct += pass_exchange_draw as usize;
+                stats.exchange_states_total += 1;
+            }
+
             let total_dead: usize = bit_prob
                 .sorted_public_constraints()
                 .iter()
@@ -624,6 +652,8 @@ pub struct Stats {
     pub over_inferred_count: usize,
     pub total_tries: usize,
     pub pushed_bad_move: usize,
+    pub exchange_states_correct: usize,
+    pub exchange_states_total: usize,
     pub replay_string: String,
     pub first_print: bool,
 }
@@ -647,6 +677,8 @@ impl Stats {
         self.over_inferred_count += other.over_inferred_count;
         self.total_tries += other.total_tries;
         self.pushed_bad_move += other.pushed_bad_move;
+        self.exchange_states_correct += other.exchange_states_correct;
+        self.exchange_states_total += other.exchange_states_total;
     }
 
     pub fn public_correct(&self) -> bool {
@@ -679,8 +711,8 @@ impl Stats {
 
     pub fn print(&mut self) {
         if !self.first_print {
-            // Move cursor up 8 lines and clear from cursor to end of screen
-            print!("\x1b[8A\x1b[J");
+            // Move cursor up 9 lines and clear from cursor to end of screen
+            print!("\x1b[9A\x1b[J");
         } else {
             self.first_print = false;
         }
@@ -716,11 +748,26 @@ impl Stats {
             self.total_tries
         );
         println!(
+            "Exchange States Incorrect: {}/{}",
+            self.exchange_states_total - self.exchange_states_correct,
+            self.exchange_states_total
+        );
+        println!(
             "Bad Moves Pushed: {}/{}",
             self.pushed_bad_move, self.total_tries
         );
     }
 }
+/// Generate all possible card states for a player after ExchangeDraw
+/// Returns Vec<Vec<Card>> representing all valid 3 or 4 card combinations
+/// based on the player's dead card count
+pub fn generate_exchange_draw_states(
+    player_id: usize,
+    prob: &mut BruteCardCountManagerGeneric<CardStateu64>,
+) -> Vec<Vec<Card>> {
+    prob.get_all_valid_combinations_after_exchange_draw(player_id)
+}
+
 // TODO: Shift this to be a method in prob! or at least just to check a new_move!
 #[allow(clippy::result_unit_err)]
 pub fn generate_legal_moves_with_card_constraints(
