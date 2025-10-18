@@ -6,6 +6,7 @@
 
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::constants::MAX_PERM_STATES;
+use crate::prob_manager::engine::constants::{MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PLAYER};
 use crate::traits::prob_manager::card_state::CardPermState;
 use crate::traits::prob_manager::coup_analysis::{
     CoupPossibilityAnalysis, CoupTraversal, ImpossibleConstraints, InferredConstraints,
@@ -251,6 +252,206 @@ where
         } else {
             self.player_can_have_cards(player_id, &check_cards)
         }
+    }
+    /// Checks if player can have cards after exchange draw
+    /// Cards array contains up to 4 cards that the player should have
+    /// These cards can be made up of the player's current cards or at most 2 cards from the pile
+    /// Dead cards (from public_constraints) are excluded from the player's available cards
+    pub fn player_can_have_cards_after_exchange_draw(
+        &self,
+        player_id: usize,
+        cards: &[Card],
+        draw: Option<&[Card]>,
+    ) -> bool {
+        match draw {
+            Some(draw_cards) => {
+                self.player_can_have_cards_after_exchange_draw_private(player_id, cards, draw_cards)
+            }
+            None => self.player_can_have_cards_after_exchange_draw_public(player_id, cards),
+        }
+    }
+    // ASSUMES that we have restricted pile cards in push_ao
+    // so we do not check that pile has draw
+    pub fn player_can_have_cards_after_exchange_draw_private(
+        &self,
+        player_id: usize,
+        cards: &[Card],
+        draw: &[Card],
+    ) -> bool {
+        // Count cards in both arrays
+        let mut draw_count = [0u8; 5];
+        for &card in draw {
+            draw_count[card as usize] += 1;
+        }
+
+        let mut cards_count = [0u8; 5];
+        for &card in cards {
+            cards_count[card as usize] += 1;
+        }
+
+        // Try to remove draw from cards (check if draw is a subset)
+        let mut remaining_count = [0u8; 5];
+        for card_type in 0..5 {
+            if draw_count[card_type] > cards_count[card_type] {
+                return false; // draw is not a subset of cards
+            }
+            remaining_count[card_type] = cards_count[card_type] - draw_count[card_type];
+        }
+
+        // Add dead cards to remaining_count (player must have dead + remaining alive)
+        for &card in &self.public_constraints[player_id] {
+            remaining_count[card as usize] += 1;
+        }
+
+        // Convert remaining_count back to a Vec<Card>
+        let mut remaining_cards = Vec::new();
+        for (card_type, &count) in remaining_count.iter().enumerate() {
+            for _ in 0..count {
+                remaining_cards.push(Card::try_from(card_type as u8).unwrap());
+            }
+        }
+
+        // Check if the player can have the remaining cards (includes dead + alive)
+        remaining_cards.len() <= MAX_HAND_SIZE_PLAYER
+            && self.player_can_have_cards(player_id, &remaining_cards)
+    }
+    pub fn player_can_have_cards_after_exchange_draw_public(
+        &self,
+        player_id: usize,
+        cards: &[Card],
+    ) -> bool {
+        if cards.len() > 4
+            || cards.len() > 3 && self.public_constraints[player_id].len() >= 1
+            || self.public_constraints[player_id].len() >= 2
+        {
+            return false;
+        }
+
+        // Count the cards we're checking for
+        let mut target_count = [0u8; 5];
+        for &card in cards {
+            target_count[card as usize] += 1;
+        }
+
+        // Count the dead cards for this player
+        let mut dead_count = [0u8; 5];
+        for &card in &self.public_constraints[player_id] {
+            dead_count[card as usize] += 1;
+        }
+
+        // Check if any state satisfies the constraint that the player can have these cards
+        // after drawing at most 2 cards from the pile
+        self.calculated_states.iter().any(|state| {
+            let player_cards_total = state.player_card_counts(player_id);
+            let pile_cards = state.player_card_counts(6);
+
+            // Subtract dead cards from player's total cards to get alive cards
+            let mut player_cards_alive = [0u8; 5];
+            for card_type in 0..5 {
+                player_cards_alive[card_type] =
+                    player_cards_total[card_type].saturating_sub(dead_count[card_type]);
+            }
+
+            // For each card type, calculate how many we need from the pile
+            let mut pile_needed = [0u8; 5];
+            let mut total_needed_from_pile = 0u8;
+
+            for card_type in 0..5 {
+                let have = player_cards_alive[card_type];
+                let need = target_count[card_type];
+
+                if need > have {
+                    let deficit = need - have;
+                    pile_needed[card_type] = deficit;
+                    total_needed_from_pile += deficit;
+                }
+            }
+
+            // Can only draw at most 2 cards from pile
+            if total_needed_from_pile > 2 {
+                return false;
+            }
+
+            // Check if pile has the cards we need
+            for card_type in 0..5 {
+                if pile_needed[card_type] > pile_cards[card_type] {
+                    return false;
+                }
+            }
+
+            true
+        })
+    }
+    /// Checks all possible card combinations after exchange draw based on dead cards
+    /// If player has 1 dead card, checks all 3-card combinations
+    /// If player has 0 dead cards, checks all 4-card combinations (max 3 of each type)
+    /// Returns all valid combinations as Vec<Vec<Card>>
+    pub fn get_all_valid_combinations_after_exchange_draw(
+        &self,
+        player_id: usize,
+        draw: Option<&[Card]>,
+    ) -> Vec<Vec<Card>> {
+        debug_assert!(
+            if let Some(draw_cards) = draw {
+                draw_cards.len() <= 2
+            } else {
+                true
+            },
+            "too many cards in draw"
+        );
+        let dead_card_count = self.public_constraints[player_id].len();
+        let mut valid_combinations = Vec::with_capacity(5 * 5 * 5 * 5);
+
+        if dead_card_count == 1 {
+            // Generate all 3-card combinations using nested loops
+            for card1 in 0..MAX_CARD_PERMS_ONE {
+                for card2 in card1..MAX_CARD_PERMS_ONE {
+                    for card3 in card2..MAX_CARD_PERMS_ONE {
+                        let combo = vec![
+                            Card::try_from(card1 as u8).unwrap(),
+                            Card::try_from(card2 as u8).unwrap(),
+                            Card::try_from(card3 as u8).unwrap(),
+                        ];
+                        if self.player_can_have_cards_after_exchange_draw(player_id, &combo, draw) {
+                            valid_combinations.push(combo);
+                        }
+                    }
+                }
+            }
+        } else if dead_card_count == 0 {
+            // Generate all 4-card combinations with max 3 of each type
+            for card1 in 0..MAX_CARD_PERMS_ONE {
+                for card2 in card1..MAX_CARD_PERMS_ONE {
+                    for card3 in card2..MAX_CARD_PERMS_ONE {
+                        for card4 in card3..MAX_CARD_PERMS_ONE {
+                            // Count occurrences of each card type
+                            let mut counts = [0u8; 5];
+                            counts[card1] += 1;
+                            counts[card2] += 1;
+                            counts[card3] += 1;
+                            counts[card4] += 1;
+
+                            // Check that no card type appears more than 3 times
+                            if counts.iter().all(|&count| count <= 3) {
+                                let combo = vec![
+                                    Card::try_from(card1 as u8).unwrap(),
+                                    Card::try_from(card2 as u8).unwrap(),
+                                    Card::try_from(card3 as u8).unwrap(),
+                                    Card::try_from(card4 as u8).unwrap(),
+                                ];
+                                if self.player_can_have_cards_after_exchange_draw(
+                                    player_id, &combo, draw,
+                                ) {
+                                    valid_combinations.push(combo);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        valid_combinations
     }
     /// For each player (0..6), determine which cards they **must** have in *every* possible state.
     /// Returns a `Vec<Vec<char>>` of length 7, where `result[player_id]` is a sorted list
