@@ -743,6 +743,78 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     pub fn possible_to_have_cards_latest(&self, inferred_constraints: &mut [Vec<Card>]) -> bool {
         self.possible_to_have_cards_recurse(self.constraint_history.len() - 1, inferred_constraints)
     }
+
+    /// Generates all possible 3 or 4 card combinations a player can have after exchange draw
+    /// Returns Vec<Vec<Card>> with all valid combinations
+    /// If player has 1 dead card, generates 3-card combinations
+    /// If player has 0 dead cards, generates 4-card combinations (max 3 of each type)
+    pub fn get_all_valid_combinations_after_exchange_draw(
+        &self,
+        player_id: usize,
+    ) -> Vec<Vec<Card>> {
+        let mut valid_combinations = Vec::new();
+        let mut inferred_constraints = Self::create_buffer();
+
+        // Get dead card count to determine if we generate 3 or 4 card combinations
+        let dead_card_count =
+            self.latest_constraint().meta_data.public_constraints()[player_id].len();
+
+        if dead_card_count == 1 {
+            // Generate all 3-card combinations using nested loops
+            for card1 in 0..MAX_CARD_PERMS_ONE {
+                for card2 in card1..MAX_CARD_PERMS_ONE {
+                    for card3 in card2..MAX_CARD_PERMS_ONE {
+                        Self::clear_buffer(&mut inferred_constraints);
+                        let cards = vec![
+                            Card::try_from(card1 as u8).unwrap(),
+                            Card::try_from(card2 as u8).unwrap(),
+                            Card::try_from(card3 as u8).unwrap(),
+                        ];
+                        inferred_constraints[player_id].extend_from_slice(&cards);
+
+                        if self.possible_to_have_cards_latest(&mut inferred_constraints) {
+                            valid_combinations.push(cards);
+                        }
+                    }
+                }
+            }
+        } else if dead_card_count == 0 {
+            // Generate all 4-card combinations with max 3 of each type
+            for card1 in 0..MAX_CARD_PERMS_ONE {
+                for card2 in card1..MAX_CARD_PERMS_ONE {
+                    for card3 in card2..MAX_CARD_PERMS_ONE {
+                        for card4 in card3..MAX_CARD_PERMS_ONE {
+                            // Count occurrences of each card type
+                            let mut counts = [0u8; 5];
+                            counts[card1 as usize] += 1;
+                            counts[card2 as usize] += 1;
+                            counts[card3 as usize] += 1;
+                            counts[card4 as usize] += 1;
+
+                            // Check that no card type appears more than 3 times
+                            if counts.iter().all(|&count| count <= 3) {
+                                Self::clear_buffer(&mut inferred_constraints);
+                                let cards = vec![
+                                    Card::try_from(card1 as u8).unwrap(),
+                                    Card::try_from(card2 as u8).unwrap(),
+                                    Card::try_from(card3 as u8).unwrap(),
+                                    Card::try_from(card4 as u8).unwrap(),
+                                ];
+                                inferred_constraints[player_id].extend_from_slice(&cards);
+
+                                if self.possible_to_have_cards_latest(&mut inferred_constraints) {
+                                    valid_combinations.push(cards);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        valid_combinations
+    }
+
     /// Returns true if possible, false if impossible
     ///
     /// Traces the game tree in reverse (from latest move to earliest move) by backtracking.
@@ -1141,13 +1213,29 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                                 && self.possible_to_have_cards_recurse(index_loop - 1, inf_con)
                         },
                     );
+                    // TODO: unsure if more conditions in FnOnce required
+                    // TODO: also need to ensure that the pile has the cards to be drawn?
+                    // response = MoveGuard::exchange_draw_private(
+                    //     inferred_constraints,
+                    //     player_loop,
+                    //     INDEX_PILE,
+                    //     draw,
+                    //     |inf_con| self.possible_to_have_cards_recurse(index_loop - 1, inf_con),
+                    // );
                 } else {
                     // [REQUIRED FOR LAZY EVAL] Although ExchangeChoice skips over this
                     // When we use lazy evaluation on previous moves,
                     // ExchangeDraw inferred impossibilities cannot just clone from the previous move
                     // We will need this to evaluate ExchangeDraw inference
-                    response =
-                        self.possible_to_have_cards_recurse(index_loop - 1, inferred_constraints);
+                    // response =
+                    //     self.possible_to_have_cards_recurse(index_loop - 1, inferred_constraints);
+                    // TODO: unsure if more conditions in FnOnce required
+                    response = MoveGuard::exchange_draw_public(
+                        inferred_constraints,
+                        player_loop,
+                        INDEX_PILE,
+                        |inf_con| self.possible_to_have_cards_recurse(index_loop - 1, inf_con),
+                    );
                 }
             }
             ActionInfo::ExchangeChoice { relinquish } => {
