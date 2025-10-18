@@ -11,7 +11,8 @@ fn main() {
 }
 pub fn test_variant_recurse() {
     // RecursionTest::test_variant_recurse(LOG_FILE_NAME);
-    RecursionTest::test_exchange_draw_public(LOG_FILE_NAME);
+    // RecursionTest::test_exchange_draw_public(LOG_FILE_NAME);
+    RecursionTest::test_exchange_draw_private(LOG_FILE_NAME);
 }
 pub struct RecursionTest;
 
@@ -939,6 +940,58 @@ impl RecursionTest {
 
         variants
     }
+    pub fn return_variants_exchange_draw_private(
+        player_loop: usize,
+        draw: &[Card],
+        inferred_constraints: &[Vec<Card>],
+    ) -> Vec<Vec<Vec<Card>>> {
+        let mut variants: Vec<Vec<Vec<Card>>> = Vec::new();
+
+        if draw.len() != 2 {
+            return variants;
+        }
+
+        let mut player_hand = inferred_constraints[player_loop].clone();
+        let mut pile_hand = inferred_constraints[6].clone();
+
+        let card0 = draw[0];
+        let card1 = draw[1];
+
+        // Try to remove card0 from player hand
+        let removed_card0 = if let Some(pos) = player_hand.iter().position(|c| *c == card0) {
+            player_hand.swap_remove(pos);
+            true
+        } else {
+            false
+        };
+
+        // Try to remove card1 from player hand
+        let removed_card1 = if let Some(pos) = player_hand.iter().position(|c| *c == card1) {
+            player_hand.swap_remove(pos);
+            true
+        } else {
+            false
+        };
+
+        // Add both cards to pile
+        pile_hand.push(card0);
+        pile_hand.push(card1);
+
+        // Check validity: player must have had space for cards they didn't have
+        // Total cards removed + cards player has = original size
+        let cards_removed = (removed_card0 as usize) + (removed_card1 as usize);
+        let original_size = player_hand.len() + cards_removed;
+
+        // Player must have had enough space for the cards
+        if player_hand.len() <= 2 && pile_hand.len() <= 3 && original_size <= 4 {
+            let mut temp = inferred_constraints.to_vec();
+            temp[player_loop] = player_hand;
+            temp[6] = pile_hand;
+            variants.push(temp);
+        }
+
+        variants
+    }
     pub fn gen_variants(card_types: &[Card], max_cards: usize) -> Vec<Vec<Card>> {
         let mut variants = Vec::new();
         // for each possible hand size 0..=max_cards
@@ -1076,6 +1129,122 @@ impl RecursionTest {
                 }
                 if item[6].len() > 1 {
                     log::warn!("  FAILED: dest pile has > 1 cards");
+                }
+            }
+        }
+    }
+    pub fn test_exchange_draw_private(log_file_name: &str) {
+        Self::logger(log_file_name, LevelFilter::Info);
+        let mut test_inferred_constraints: HashSet<Vec<Vec<Card>>> = HashSet::new();
+
+        // Generate all possible combinations for player_loop (0-4 cards) and player 6 (0-3 cards)
+        for player_hand in Self::gen_variants(
+            &[
+                Card::Ambassador,
+                Card::Assassin,
+                Card::Captain,
+                Card::Duke,
+                Card::Contessa,
+            ],
+            4,
+        ) {
+            'outer: for pile_hand in Self::gen_variants(
+                &[
+                    Card::Ambassador,
+                    Card::Assassin,
+                    Card::Captain,
+                    Card::Duke,
+                    Card::Contessa,
+                ],
+                3,
+            ) {
+                // Check that no card type exceeds 3 total across player and pile
+                for card in [
+                    Card::Ambassador,
+                    Card::Assassin,
+                    Card::Captain,
+                    Card::Duke,
+                    Card::Contessa,
+                ] {
+                    if player_hand.iter().filter(|c| **c == card).count()
+                        + pile_hand.iter().filter(|c| **c == card).count()
+                        > 3
+                        || player_hand.len() + pile_hand.len() > 5
+                    {
+                        continue 'outer;
+                    }
+                }
+                test_inferred_constraints.insert(vec![
+                    player_hand.clone(),
+                    vec![],
+                    vec![],
+                    vec![],
+                    vec![],
+                    vec![],
+                    pile_hand.clone(),
+                ]);
+            }
+        }
+
+        log::info!(
+            "Testing {} unique inferred_constraints configurations for PRIVATE",
+            test_inferred_constraints.len()
+        );
+
+        // Test private exchange_draw with all possible draw combinations
+        let all_cards = [Card::Ambassador, Card::Assassin, Card::Captain];
+        for item in test_inferred_constraints.iter() {
+            // Generate all possible 2-card draw combinations
+            for idx0 in 0..all_cards.len() {
+                for idx1 in idx0..all_cards.len() {
+                    let draw = vec![all_cards[idx0], all_cards[idx1]];
+                    let variants = Self::return_variants_exchange_draw_private(0, &draw, item);
+
+                    if variants.is_empty() {
+                        log::info!("dest: {:?}, draw: {:?} -> NO VALID VARIANT", item, draw);
+                        continue;
+                    }
+
+                    log::info!("dest: {:?}, draw: {:?}", item, draw);
+                    log::info!("variants count: {}", variants.len());
+
+                    if variants.len() > 1 {
+                        log::warn!("  FAILED: more than 1 source found!"); // This test should be here for strict 2 cards only private
+                    }
+
+                    for variant in variants.iter() {
+                        log::info!("  src: {:?}", variant);
+
+                        // Verify constraints
+                        if variant[0].len() > 2 {
+                            log::warn!("  FAILED: player_loop has > 2 cards in source");
+                        }
+                        if variant[6].len() > 3 {
+                            log::warn!("  FAILED: pile has > 3 cards in source");
+                        }
+                        if item[0].len() > 4 {
+                            log::warn!("  FAILED: dest player_loop has > 4 cards");
+                        }
+                        if item[6].len() > 1 {
+                            log::warn!("  FAILED: dest pile has > 1 cards");
+                        }
+
+                        // Verify that the draw cards are in the dest pile
+                        let mut pile_check = variant[6].clone();
+                        let mut draw_check_failed = false;
+                        for card in draw.iter() {
+                            if let Some(pos) = pile_check.iter().position(|c| *c == *card) {
+                                pile_check.swap_remove(pos);
+                            } else {
+                                log::warn!("  FAILED: draw card {:?} not in src pile", card);
+                                draw_check_failed = true;
+                            }
+                        }
+
+                        if !draw_check_failed && variant[6].len() != item[6].len() + 2 {
+                            log::warn!("  FAILED: pile size mismatch after removing draw cards");
+                        }
+                    }
                 }
             }
         }
