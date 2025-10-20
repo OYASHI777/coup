@@ -173,6 +173,7 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
             prob.start_public(7);
             bit_prob.start_public(7);
         }
+        let mut exchange_draw_count_inner = 0;
         while !hh.game_won() {
             // hh.log_state();
             // prob.printlog();
@@ -277,15 +278,23 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
             }
 
             // Check if the latest move was ExchangeDraw and generate all possible card states
-            if let ExchangeDraw { player_id, .. } = action_obs {
-                let validated_exchange_states = generate_exchange_draw_states(player_id, &mut prob);
-                // TODO: Get the states from bit_prob and compare
-                // let test_exchange_states = ...;
-                // let pass_exchange_states = validated_exchange_states == test_exchange_states;
-                // stats.exchange_states_correct += pass_exchange_states as usize;
-                let pass_exchange_draw = true;
-                let _ = validated_exchange_states; // Suppress unused warning for now
-                stats.exchange_states_correct += pass_exchange_draw as usize;
+            if let ExchangeDraw {
+                player_id,
+                card: draw,
+            } = action_obs
+            {
+                // Determine if we should use private logic (if this is the private player)
+                let draw_opt = if Some(player_id) == private_player {
+                    Some(draw.as_slice())
+                } else {
+                    None
+                };
+                let validated_exchange_states =
+                    generate_exchange_draw_states(player_id, &mut prob, draw_opt);
+                let test_exchange_states =
+                    bit_prob.get_all_valid_combinations_after_exchange_draw(player_id);
+                let pass_exchange_states = validated_exchange_states == test_exchange_states;
+                stats.exchange_states_correct += pass_exchange_states as usize;
                 stats.exchange_states_total += 1;
             }
 
@@ -413,6 +422,7 @@ pub fn game_rnd_constraint_bt2_st_lazy<I: InfoArrayTrait>(
         };
         // let private_player: usize = 0;
         let skip_prob: f32 = 0.8;
+        let mut exchange_draw_count_inner = 0;
         if bool_know_priv_info {
             // Choose random player
             // Initialize for that player
@@ -542,16 +552,54 @@ pub fn game_rnd_constraint_bt2_st_lazy<I: InfoArrayTrait>(
             bit_prob.generate_all_constraints();
 
             // Check if the latest move was ExchangeDraw and generate all possible card states
-            if let ExchangeDraw { player_id, .. } = action_obs {
-                let validated_exchange_states = generate_exchange_draw_states(player_id, &mut prob);
-                // TODO: Get the states from bit_prob and compare
-                // let test_exchange_states = ...;
-                // let pass_exchange_states = validated_exchange_states == test_exchange_states;
-                // stats.exchange_states_correct += pass_exchange_states as usize;
-                let pass_exchange_draw = true;
-                let _ = validated_exchange_states; // Suppress unused warning for now
-                stats.exchange_states_correct += pass_exchange_draw as usize;
+            if let ExchangeDraw {
+                player_id,
+                card: draw,
+            } = action_obs
+            {
+                exchange_draw_count_inner += 1;
+                // Determine if we should use private logic (if this is the private player)
+                let draw_opt = if Some(player_id) == private_player {
+                    Some(draw.as_slice())
+                } else {
+                    None
+                };
+                let validated_exchange_states =
+                    generate_exchange_draw_states(player_id, &mut prob, draw_opt);
+                let test_exchange_states =
+                    bit_prob.get_all_valid_combinations_after_exchange_draw(player_id);
+                let pass_exchange_states = validated_exchange_states == test_exchange_states;
+                stats.exchange_states_correct += pass_exchange_states as usize;
                 stats.exchange_states_total += 1;
+
+                // Panic if exchange states don't match
+                if !pass_exchange_states {
+                    println!(
+                        "\n=== ExchangeDraw #{} for Player {} - MISMATCH ===",
+                        exchange_draw_count_inner, player_id
+                    );
+                    println!(
+                        "Dead cards: {:?}",
+                        prob.validated_public_constraints()[player_id]
+                    );
+                    println!(
+                        "\nBrute prob - Number of valid states: {}",
+                        validated_exchange_states.len()
+                    );
+                    println!("Brute prob - Valid card combinations:");
+                    for (idx, state) in validated_exchange_states.iter().enumerate() {
+                        println!("  State {}: {:?}", idx + 1, state);
+                    }
+                    println!(
+                        "\nBit prob - Number of valid states: {}",
+                        test_exchange_states.len()
+                    );
+                    println!("Bit prob - Valid card combinations:");
+                    for (idx, state) in test_exchange_states.iter().enumerate() {
+                        println!("  State {}: {:?}", idx + 1, state);
+                    }
+                    panic!("Exchange states do not match!");
+                }
             }
 
             let total_dead: usize = bit_prob
@@ -761,11 +809,13 @@ impl Stats {
 /// Generate all possible card states for a player after ExchangeDraw
 /// Returns Vec<Vec<Card>> representing all valid 3 or 4 card combinations
 /// based on the player's dead card count
+/// If draw is Some, uses private logic; if None, uses public logic
 pub fn generate_exchange_draw_states(
     player_id: usize,
     prob: &mut BruteCardCountManagerGeneric<CardStateu64>,
+    draw: Option<&[Card]>,
 ) -> Vec<Vec<Card>> {
-    prob.get_all_valid_combinations_after_exchange_draw(player_id)
+    prob.get_all_valid_combinations_after_exchange_draw(player_id, draw)
 }
 
 // TODO: Shift this to be a method in prob! or at least just to check a new_move!
@@ -994,17 +1044,8 @@ pub fn retain_legal_moves_with_card_constraints(
                 relinquish,
             } => {
                 if private_player.is_some() && *player_id == private_player.unwrap() {
-                    if let ExchangeDraw { card: draw, .. } = history.latest_move() {
-                        let player_dead_cards = &prob.validated_public_constraints()[*player_id];
-                        if prob.player_can_have_cards_after_draw(
-                            *player_id,
-                            player_dead_cards,
-                            relinquish,
-                            draw,
-                        ) {
-                            return true;
-                        }
-                    }
+                    return !prob.player_impossible_constraints_paired()[*player_id]
+                        [relinquish[0] as usize][relinquish[1] as usize];
                 } else {
                     return true;
                 }
