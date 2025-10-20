@@ -6,9 +6,7 @@
 
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::constants::MAX_PERM_STATES;
-use crate::prob_manager::engine::constants::{
-    INDEX_PILE, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PLAYER,
-};
+use crate::prob_manager::engine::constants::{INDEX_PILE, MAX_CARD_PERMS_ONE};
 use crate::traits::prob_manager::card_state::CardPermState;
 use crate::traits::prob_manager::coup_analysis::{
     CoupPossibilityAnalysis, CoupTraversal, ImpossibleConstraints, InferredConstraints,
@@ -281,31 +279,16 @@ where
         cards: &[Card],
         draw: &[Card],
     ) -> bool {
-        // Ok we cannot do this as this only applies to the drawing player lol
         // Assuming we have inferred
-        // 1. get temp_cards by combining inferred + public
-        // 2. add draw
-        // 3. sort cards
-        // 4. sort temp_cards
-        // 5. compare them
 
         // 1. get temp_cards by combining inferred + public
         let mut temp_cards = Vec::with_capacity(4);
         temp_cards.extend_from_slice(&self.inferred_constraints[player_id]);
-        // temp_cards.extend_from_slice(&self.public_constraints[player_id]);
 
         // 2. add draw
         temp_cards.extend_from_slice(draw);
 
-        // 3. sort cards
-        // let mut cards_sorted = cards.to_vec();
-        // cards_sorted.extend_from_slice(&self.public_constraints[player_id]);
-        // cards_sorted.sort_unstable();
-
-        // 4. sort temp_cards
-        // temp_cards.sort_unstable();
-
-        // 5. compare them
+        // 3. compare them
         for card_i in cards {
             if let Some(pos) = temp_cards.iter().position(|v| v == card_i) {
                 temp_cards.swap_remove(pos);
@@ -313,45 +296,7 @@ where
                 return false;
             }
         }
-        // return cards_sorted != temp_cards;
-        return true;
-
-        // Count cards in both arrays
-        // let mut draw_count = [0u8; 5];
-        // for &card in draw {
-        //     draw_count[card as usize] += 1;
-        // }
-
-        // let mut cards_count = [0u8; 5];
-        // for &card in cards {
-        //     cards_count[card as usize] += 1;
-        // }
-
-        // // Try to remove draw from cards (check if draw is a subset)
-        // let mut remaining_count = [0u8; 5];
-        // for card_type in 0..5 {
-        //     if draw_count[card_type] > cards_count[card_type] {
-        //         return false; // draw is not a subset of cards
-        //     }
-        //     remaining_count[card_type] = cards_count[card_type] - draw_count[card_type];
-        // }
-
-        // // Add dead cards to remaining_count (player must have dead + remaining alive)
-        // for &card in &self.public_constraints[player_id] {
-        //     remaining_count[card as usize] += 1;
-        // }
-
-        // // Convert remaining_count back to a Vec<Card>
-        // let mut remaining_cards = Vec::new();
-        // for (card_type, &count) in remaining_count.iter().enumerate() {
-        //     for _ in 0..count {
-        //         remaining_cards.push(Card::try_from(card_type as u8).unwrap());
-        //     }
-        // }
-
-        // // Check if the player can have the remaining cards (includes dead + alive)
-        // remaining_cards.len() <= MAX_HAND_SIZE_PLAYER
-        //     && self.player_can_have_cards(player_id, &remaining_cards)
+        true
     }
     pub fn player_can_have_cards_after_exchange_draw_public(
         &self,
@@ -359,7 +304,7 @@ where
         cards: &[Card],
     ) -> bool {
         if cards.len() > 4
-            || cards.len() > 3 && self.public_constraints[player_id].len() >= 1
+            || cards.len() > 3 && !self.public_constraints[player_id].is_empty()
             || self.public_constraints[player_id].len() >= 2
         {
             return false;

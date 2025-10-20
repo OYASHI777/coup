@@ -874,12 +874,12 @@ impl RecursionTest {
             .for_each(|c| player_count[*c as usize] += 1);
 
         // Case 0: Move 0 cards (2 unstated cards)
-        if player_hand_len <= 2 && inferred_constraints[6].len() <= 3 - 0 {
+        if player_hand_len <= 2 && inferred_constraints[6].len() <= 3 {
             variants.push(inferred_constraints.to_vec());
         }
 
         // Case 1: Move 1 known card (1 known card + 1 unstated card)
-        if player_hand_len <= 3 && inferred_constraints[6].len() <= 3 - 1 {
+        if player_hand_len <= 3 && inferred_constraints[6].len() < 3 {
             for card in iter_cards_player.iter() {
                 let mut player_hand = inferred_constraints[player_loop].clone();
                 let mut pile_hand = inferred_constraints[6].clone();
@@ -899,7 +899,7 @@ impl RecursionTest {
         }
 
         // Case 2: Move 2 known cards
-        if player_hand_len >= 2 && player_hand_len <= 4 && inferred_constraints[6].len() <= 3 - 2 {
+        if (2..=4).contains(&player_hand_len) && inferred_constraints[6].len() <= 3 - 2 {
             for idx0 in 0..iter_cards_player.len() {
                 for idx1 in idx0..iter_cards_player.len() {
                     let card0 = iter_cards_player[idx0];

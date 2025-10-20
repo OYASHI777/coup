@@ -241,11 +241,10 @@ impl MoveGuard {
         }
 
         // Case 0: Move 0 cards (2 unstated cards)
-        if player_hand_len <= 2 && inferred_constraint[pile_index].len() <= 3 {
-            if f(inferred_constraint) {
+        if player_hand_len <= 2 && inferred_constraint[pile_index].len() <= 3
+            && f(inferred_constraint) {
                 return true;
             }
-        }
 
         // Case 1: Move 1 known card (1 known card + 1 unstated card)
         if player_hand_len <= 3 && inferred_constraint[pile_index].len() <= 2 {
@@ -285,8 +284,7 @@ impl MoveGuard {
         }
 
         // Case 2: Move 2 known cards
-        if player_hand_len >= 2
-            && player_hand_len <= 4
+        if (2..=4).contains(&player_hand_len)
             && inferred_constraint[pile_index].len() <= 1
         {
             for idx0 in 0..iter_cards_player.len() {

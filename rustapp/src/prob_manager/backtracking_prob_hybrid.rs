@@ -449,8 +449,10 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             }
         }
         for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
-            if !self.latest_constraint_mut().public_constraints()[player_of_interest].is_empty()
-                && !(latest_constraint_is_exchange_draw && player_of_interest == exchange_player)
+            // if !self.latest_constraint_mut().public_constraints()[player_of_interest].is_empty()
+            //     && !(latest_constraint_is_exchange_draw && player_of_interest == exchange_player)
+            if !(self.latest_constraint_mut().public_constraints()[player_of_interest].is_empty()
+                || latest_constraint_is_exchange_draw && player_of_interest == exchange_player)
             {
                 self.latest_constraint_mut()
                     .set_all_impossible_constraints_2(player_of_interest, true);
@@ -794,10 +796,10 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         for card4 in card3..MAX_CARD_PERMS_ONE {
                             // Count occurrences of each card type
                             let mut counts = [0u8; 5];
-                            counts[card1 as usize] += 1;
-                            counts[card2 as usize] += 1;
-                            counts[card3 as usize] += 1;
-                            counts[card4 as usize] += 1;
+                            counts[card1] += 1;
+                            counts[card2] += 1;
+                            counts[card3] += 1;
+                            counts[card4] += 1;
 
                             // Check that no card type appears more than 3 times
                             if counts.iter().all(|&count| count <= 3) {
