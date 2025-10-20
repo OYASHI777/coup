@@ -423,6 +423,12 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
     /// Does Backtracking to calculate impossibilities
     pub fn generate_impossible_constraints(&mut self) {
         // TODO: [OPTIMIZE] consider total dead cards inferred etc...
+        let (latest_constraint_is_exchange_draw, exchange_player) =
+            if let ActionInfo::ExchangeDraw { .. } = self.latest_constraint().action_info() {
+                (true, self.latest_constraint().player() as usize)
+            } else {
+                (false, self.latest_constraint().player() as usize)
+            };
         let mut inferred_constraints = Self::create_buffer();
         for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
             if self.latest_constraint_mut().public_constraints()[player_of_interest].len() == 2 {
@@ -443,7 +449,9 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             }
         }
         for player_of_interest in 0..MAX_PLAYERS_INCL_PILE {
-            if !self.latest_constraint_mut().public_constraints()[player_of_interest].is_empty() {
+            if !self.latest_constraint_mut().public_constraints()[player_of_interest].is_empty()
+                && !(latest_constraint_is_exchange_draw && player_of_interest == exchange_player)
+            {
                 self.latest_constraint_mut()
                     .set_all_impossible_constraints_2(player_of_interest, true);
                 continue;
@@ -2145,7 +2153,9 @@ impl<T: InfoArrayTrait> CoupTraversal for BackTrackCardCountManager<T> {
                     draw: Vec::with_capacity(2),
                 };
                 log::trace!("Adding move ExchangeDraw");
+                // We keep inferred the same as previous (based on standard of brute_prob)
                 self.add_move_clone_all(*player_id, action_info);
+                self.generate_impossible_constraints();
             }
             ActionObservation::ExchangeChoice { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeChoice {
@@ -2430,37 +2440,11 @@ impl<T: InfoArrayTrait> LegalMoveQuery for BackTrackCardCountManager<T> {
                 player_id,
                 relinquish,
             } => {
-                let player_dead = self.public_constraints()[*player_id].len() as u8;
-                let mut required = [0u8; MAX_CARD_PERMS_ONE];
-                relinquish.iter().for_each(|c| required[*c as usize] += 1);
-                // println!("relinquish: {:?}", relinquish);
-                // println!("required: {:?}", required);
-                if let ActionInfo::ExchangeDraw { draw } =
-                    self.constraint_history[self.constraint_history.len() - 1].action_info()
-                {
-                    // println!("draw: {:?}", draw);
-                    draw.iter().for_each(|c| {
-                        if required[*c as usize] > 0 {
-                            required[*c as usize] -= 1
-                        }
-                    });
+                let mut inferred_constraints = Self::create_buffer();
+                for card in relinquish.iter() {
+                    inferred_constraints[*player_id].push(*card);
                 }
-                // println!("required: {:?}", required);
-                let total_cards = required.iter().sum::<u8>();
-                // println!("total_cards: {:?}", total_cards);
-                if total_cards == 0 {
-                    true
-                } else if total_cards + player_dead > 2 {
-                    false
-                } else {
-                    // if updated {..} just check the state
-                    let mut cards = Vec::with_capacity(2);
-                    for (c, &req_count) in required.iter().enumerate() {
-                        let card = Card::try_from(c as u8).unwrap();
-                        cards.extend(std::iter::repeat_n(card, req_count as usize));
-                    }
-                    self.player_can_have_cards_alive_lazy(*player_id, &cards)
-                }
+                self.possible_to_have_cards_latest(&mut inferred_constraints)
             }
             _ => true,
         }
