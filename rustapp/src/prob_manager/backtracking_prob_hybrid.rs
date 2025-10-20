@@ -1202,34 +1202,34 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                         draw.len() == 2,
                         "we assume this for the draw[0] and draw[1] checks below"
                     );
-                    response = MoveGuard::with_needed_cards_present(
-                        inferred_constraints,
-                        INDEX_PILE,
-                        draw,
-                        |inf_con| {
-                            inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
-                                && inf_con
-                                    .iter()
-                                    .map(|v| v.iter().filter(|c| **c == draw[0]).count() as u8)
-                                    .sum::<u8>()
-                                    <= MAX_NUM_PER_CARD
-                                && inf_con
-                                    .iter()
-                                    .map(|v| v.iter().filter(|c| **c == draw[1]).count() as u8)
-                                    .sum::<u8>()
-                                    <= MAX_NUM_PER_CARD
-                                && self.possible_to_have_cards_recurse(index_loop - 1, inf_con)
-                        },
-                    );
-                    // TODO: unsure if more conditions in FnOnce required
-                    // TODO: also need to ensure that the pile has the cards to be drawn?
-                    // response = MoveGuard::exchange_draw_private(
+                    // response = MoveGuard::with_needed_cards_present(
                     //     inferred_constraints,
-                    //     player_loop,
                     //     INDEX_PILE,
                     //     draw,
-                    //     |inf_con| self.possible_to_have_cards_recurse(index_loop - 1, inf_con),
+                    //     |inf_con| {
+                    //         inf_con[INDEX_PILE].len() <= MAX_HAND_SIZE_PILE
+                    //             && inf_con
+                    //                 .iter()
+                    //                 .map(|v| v.iter().filter(|c| **c == draw[0]).count() as u8)
+                    //                 .sum::<u8>()
+                    //                 <= MAX_NUM_PER_CARD
+                    //             && inf_con
+                    //                 .iter()
+                    //                 .map(|v| v.iter().filter(|c| **c == draw[1]).count() as u8)
+                    //                 .sum::<u8>()
+                    //                 <= MAX_NUM_PER_CARD
+                    //             && self.possible_to_have_cards_recurse(index_loop - 1, inf_con)
+                    //     },
                     // );
+                    // TODO: unsure if more conditions in FnOnce required
+                    // TODO: also need to ensure that the pile has the cards to be drawn?
+                    response = MoveGuard::exchange_draw_private(
+                        inferred_constraints,
+                        player_loop,
+                        INDEX_PILE,
+                        draw,
+                        |inf_con| self.possible_to_have_cards_recurse(index_loop - 1, inf_con),
+                    );
                 } else {
                     // [REQUIRED FOR LAZY EVAL] Although ExchangeChoice skips over this
                     // When we use lazy evaluation on previous moves,
@@ -1238,6 +1238,7 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                     // response =
                     //     self.possible_to_have_cards_recurse(index_loop - 1, inferred_constraints);
                     // TODO: unsure if more conditions in FnOnce required
+                    // THIS WORKS IF LAZY is off, and public info! It is code that is used.
                     response = MoveGuard::exchange_draw_public(
                         inferred_constraints,
                         player_loop,

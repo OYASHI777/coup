@@ -24,6 +24,9 @@ fn main() {
     let print_frequency: usize = 100;
     let min_dead_check: usize = 0;
     let num_threads = 16;
+    // TODO: autocalculate is useless and should always be true else it will fail to update
+    // exchangedraw properly as it is supposed to be updated in push_ao and not when retrieving impossibilities
+    // BUG: Inferred is wrong for lazy as we do not keep an updated copy of inferred available!
     game_rnd_constraint_bt_mt::<InfoArray>(
         num_threads,
         game_no,
@@ -139,7 +142,7 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> =
-        BruteCardCountManagerGeneric::new(false, false);
+        BruteCardCountManagerGeneric::new(true, true);
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager<
@@ -151,6 +154,7 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
         let mut step: usize = 0;
         let mut new_moves: Vec<ActionObservation>;
         let mut rng = thread_rng();
+        let mut exchange_draw_count_inner = 0;
         let private_player: Option<usize> = if bool_know_priv_info {
             Some(rng.gen_range(0..6))
         } else {
@@ -173,7 +177,6 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
             prob.start_public(7);
             bit_prob.start_public(7);
         }
-        let mut exchange_draw_count_inner = 0;
         while !hh.game_won() {
             // hh.log_state();
             // prob.printlog();
@@ -283,6 +286,7 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
                 card: draw,
             } = action_obs
             {
+                exchange_draw_count_inner += 1;
                 // Determine if we should use private logic (if this is the private player)
                 let draw_opt = if Some(player_id) == private_player {
                     Some(draw.as_slice())
@@ -296,6 +300,35 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
                 let pass_exchange_states = validated_exchange_states == test_exchange_states;
                 stats.exchange_states_correct += pass_exchange_states as usize;
                 stats.exchange_states_total += 1;
+
+                // Panic if exchange states don't match
+                if !pass_exchange_states {
+                    println!(
+                        "\n=== ExchangeDraw #{} for Player {} - MISMATCH ===",
+                        exchange_draw_count_inner, player_id
+                    );
+                    println!(
+                        "Dead cards: {:?}",
+                        prob.validated_public_constraints()[player_id]
+                    );
+                    println!(
+                        "\nBrute prob - Number of valid states: {}",
+                        validated_exchange_states.len()
+                    );
+                    println!("Brute prob - Valid card combinations:");
+                    for (idx, state) in validated_exchange_states.iter().enumerate() {
+                        println!("  State {}: {:?}", idx + 1, state);
+                    }
+                    println!(
+                        "\nBit prob - Number of valid states: {}",
+                        test_exchange_states.len()
+                    );
+                    println!("Bit prob - Valid card combinations:");
+                    for (idx, state) in test_exchange_states.iter().enumerate() {
+                        println!("  State {}: {:?}", idx + 1, state);
+                    }
+                    // panic!("Exchange states do not match!");
+                }
             }
 
             // TODO: Add test for if player is alive they cannot be all impossible
@@ -348,12 +381,12 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
                 if bool_test_over_inferred {
                     // what we are testing inferred too many things
                     stats.over_inferred_count += 1;
-                    println!("public: {:?}", validated_public_constraints);
-                    println!("vali: {:?}", validated_inferred_constraints);
-                    println!("test: {:?}", test_inferred_constraints);
-                    println!("test im 2: {:?}", test_impossible_constraints_2);
-                    println!("{}", hh.get_replay_history_braindead());
-                    panic!();
+                    // println!("public: {:?}", validated_public_constraints);
+                    // println!("vali: {:?}", validated_inferred_constraints);
+                    // println!("test: {:?}", test_inferred_constraints);
+                    // println!("test im 2: {:?}", test_impossible_constraints_2);
+                    // println!("{}", hh.get_replay_history_braindead());
+                    // panic!();
                     // break;
 
                     // let replay = hh.get_history(hh.store_len());
@@ -365,18 +398,35 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
                     // println!("test: {:?}", test_inferred_constraints);
                     // println!("{}", hh.get_replay_history_braindead());
                     // panic!();
-                    break;
+                    // break;
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     // panic!("Inferred constraints do not match!")
                 }
                 if !pass_impossible_constraints {
-                    // println!("vali: {:?}", validated_impossible_constraints);
-                    // println!("test: {:?}", test_impossible_constraints);
-                    break;
+                    println!("private player: {:?}", private_player);
+                    println!("{}", hh.get_replay_history_braindead());
+                    println!("public: {:?}", validated_public_constraints);
+                    println!("inferred: {:?}", validated_inferred_constraints);
+                    println!("vali: {:?}", validated_impossible_constraints);
+                    println!("test: {:?}", test_impossible_constraints);
+                    // break;
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
-                    // panic!()
+                    panic!()
+                }
+                if !pass_impossible_constraints_2 {
+                    println!("private player: {:?}", private_player);
+                    println!("{}", hh.get_replay_history_braindead());
+                    println!("public: {:?}", validated_public_constraints);
+                    println!("inferred: {:?}", validated_inferred_constraints);
+                    println!("vali: {:?}", validated_impossible_constraints_2);
+                    println!("test: {:?}", test_impossible_constraints_2);
+                    panic!()
+                    // break;
+                }
+                if !pass_impossible_constraints_3 {
+                    break;
                 }
             }
             step += 1;
@@ -403,7 +453,7 @@ pub fn game_rnd_constraint_bt2_st_lazy<I: InfoArrayTrait>(
     let mut game: usize = 0;
     let mut max_steps: usize = 0;
     let mut prob: BruteCardCountManagerGeneric<CardStateu64> =
-        BruteCardCountManagerGeneric::new(false, false);
+        BruteCardCountManagerGeneric::new(true, true);
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraint> = BackTrackCardCountManager::new();
     // let mut bit_prob: BackTrackCardCountManager<BackTrackCollectiveConstraintLight> = BackTrackCardCountManager::new();
     let mut bit_prob: rustapp::prob_manager::backtracking_prob_hybrid::BackTrackCardCountManager<
@@ -979,7 +1029,7 @@ pub fn retain_legal_moves_with_card_constraints(
     // This assumes all moves are by the same player
     // In the case of Challenge, it does not matter
     pub fn is_legal(
-        history: &History,
+        _history: &History,
         ao: &ActionObservation,
         prob: &mut BruteCardCountManagerGeneric<CardStateu64>,
         private_player: Option<usize>,
