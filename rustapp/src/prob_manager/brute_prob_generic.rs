@@ -6,7 +6,9 @@
 
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::constants::MAX_PERM_STATES;
-use crate::prob_manager::engine::constants::{MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PLAYER};
+use crate::prob_manager::engine::constants::{
+    INDEX_PILE, MAX_CARD_PERMS_ONE, MAX_HAND_SIZE_PLAYER,
+};
 use crate::traits::prob_manager::card_state::CardPermState;
 use crate::traits::prob_manager::coup_analysis::{
     CoupPossibilityAnalysis, CoupTraversal, ImpossibleConstraints, InferredConstraints,
@@ -272,48 +274,84 @@ where
     }
     // ASSUMES that we have restricted pile cards in push_ao
     // so we do not check that pile has draw
+    // cards here are assumed to be alive cards
     pub fn player_can_have_cards_after_exchange_draw_private(
         &self,
         player_id: usize,
         cards: &[Card],
         draw: &[Card],
     ) -> bool {
+        // Ok we cannot do this as this only applies to the drawing player lol
+        // Assuming we have inferred
+        // 1. get temp_cards by combining inferred + public
+        // 2. add draw
+        // 3. sort cards
+        // 4. sort temp_cards
+        // 5. compare them
+
+        // 1. get temp_cards by combining inferred + public
+        let mut temp_cards = Vec::with_capacity(4);
+        temp_cards.extend_from_slice(&self.inferred_constraints[player_id]);
+        // temp_cards.extend_from_slice(&self.public_constraints[player_id]);
+
+        // 2. add draw
+        temp_cards.extend_from_slice(draw);
+
+        // 3. sort cards
+        // let mut cards_sorted = cards.to_vec();
+        // cards_sorted.extend_from_slice(&self.public_constraints[player_id]);
+        // cards_sorted.sort_unstable();
+
+        // 4. sort temp_cards
+        // temp_cards.sort_unstable();
+
+        // 5. compare them
+        for card_i in cards {
+            if let Some(pos) = temp_cards.iter().position(|v| v == card_i) {
+                temp_cards.swap_remove(pos);
+            } else {
+                return false;
+            }
+        }
+        // return cards_sorted != temp_cards;
+        return true;
+
         // Count cards in both arrays
-        let mut draw_count = [0u8; 5];
-        for &card in draw {
-            draw_count[card as usize] += 1;
-        }
+        // let mut draw_count = [0u8; 5];
+        // for &card in draw {
+        //     draw_count[card as usize] += 1;
+        // }
 
-        let mut cards_count = [0u8; 5];
-        for &card in cards {
-            cards_count[card as usize] += 1;
-        }
+        // let mut cards_count = [0u8; 5];
+        // for &card in cards {
+        //     cards_count[card as usize] += 1;
+        // }
 
-        // Try to remove draw from cards (check if draw is a subset)
-        let mut remaining_count = [0u8; 5];
-        for card_type in 0..5 {
-            if draw_count[card_type] > cards_count[card_type] {
-                return false; // draw is not a subset of cards
-            }
-            remaining_count[card_type] = cards_count[card_type] - draw_count[card_type];
-        }
+        // // Try to remove draw from cards (check if draw is a subset)
+        // let mut remaining_count = [0u8; 5];
+        // for card_type in 0..5 {
+        //     if draw_count[card_type] > cards_count[card_type] {
+        //         return false; // draw is not a subset of cards
+        //     }
+        //     remaining_count[card_type] = cards_count[card_type] - draw_count[card_type];
+        // }
 
-        // Add dead cards to remaining_count (player must have dead + remaining alive)
-        for &card in &self.public_constraints[player_id] {
-            remaining_count[card as usize] += 1;
-        }
+        // // Add dead cards to remaining_count (player must have dead + remaining alive)
+        // for &card in &self.public_constraints[player_id] {
+        //     remaining_count[card as usize] += 1;
+        // }
 
-        // Convert remaining_count back to a Vec<Card>
-        let mut remaining_cards = Vec::new();
-        for (card_type, &count) in remaining_count.iter().enumerate() {
-            for _ in 0..count {
-                remaining_cards.push(Card::try_from(card_type as u8).unwrap());
-            }
-        }
+        // // Convert remaining_count back to a Vec<Card>
+        // let mut remaining_cards = Vec::new();
+        // for (card_type, &count) in remaining_count.iter().enumerate() {
+        //     for _ in 0..count {
+        //         remaining_cards.push(Card::try_from(card_type as u8).unwrap());
+        //     }
+        // }
 
-        // Check if the player can have the remaining cards (includes dead + alive)
-        remaining_cards.len() <= MAX_HAND_SIZE_PLAYER
-            && self.player_can_have_cards(player_id, &remaining_cards)
+        // // Check if the player can have the remaining cards (includes dead + alive)
+        // remaining_cards.len() <= MAX_HAND_SIZE_PLAYER
+        //     && self.player_can_have_cards(player_id, &remaining_cards)
     }
     pub fn player_can_have_cards_after_exchange_draw_public(
         &self,
@@ -763,6 +801,61 @@ where
             self.set_impossible_constraints_3();
         }
     }
+    // Does the same as update_constraints but for the exchangedraw case
+    // - player_id has 3/4 cards, and impossible_constraints here are found differently for that player
+    // - inferred_constraints continues to represent the player before the exchangedraw
+    // - impossible_constraints_3 should be all true I guess as pile has only 1 card
+    // - impossible_constraints_2 should be all true as pile has only 1 card
+    // ASSUMES
+    // - previous move impossible_constraint updated
+    pub fn update_constraints_exchange_draw(&mut self, player_id: usize, draw: Option<&[Card]>) {
+        // Inferred constraint remains unchanged
+        // Update the player_id impossible_constraints if false as he got more cards
+        for card in 0..MAX_CARD_PERMS_ONE {
+            if self.player_can_have_cards_after_exchange_draw(
+                player_id,
+                &[Card::try_from(card as u8).unwrap()],
+                draw,
+            ) {
+                self.impossible_constraints[player_id][card] = false;
+            }
+        }
+        if let Some(draw_cards) = draw {
+            for card in 0..MAX_CARD_PERMS_ONE {
+                let mut cards = Vec::with_capacity(3);
+                cards.push(Card::try_from(card as u8).unwrap());
+                cards.extend_from_slice(draw_cards);
+                self.impossible_constraints[INDEX_PILE][card] = !self
+                    .calculated_states
+                    .iter()
+                    .any(|state| state.player_has_cards(INDEX_PILE, &cards))
+            }
+        }
+        self.impossible_constraints_2_is_updated = self.auto_calculate_impossible_constraints_2;
+        if self.auto_calculate_impossible_constraints_2 {
+            self.impossible_constraints_2[INDEX_PILE] = [[true; 5]; 5];
+            for card_i in 0..MAX_CARD_PERMS_ONE {
+                for card_j in card_i..MAX_CARD_PERMS_ONE {
+                    if self.player_can_have_cards_after_exchange_draw(
+                        player_id,
+                        &[
+                            Card::try_from(card_i as u8).unwrap(),
+                            Card::try_from(card_j as u8).unwrap(),
+                        ],
+                        draw,
+                    ) {
+                        self.impossible_constraints_2[player_id][card_i][card_j] = false;
+                        self.impossible_constraints_2[player_id][card_j][card_i] = false;
+                    }
+                }
+            }
+        }
+        // Pile has only 1 card now
+        self.impossible_constraints_3_is_updated = self.auto_calculate_impossible_constraints_3;
+        if self.auto_calculate_impossible_constraints_3 {
+            self.impossible_constraints_3 = [[[true; 5]; 5]; 5];
+        }
+    }
     /// Returns all the dead cards for each player that we are certain they have
     /// Assumes calculates states align with latest constraints
     pub fn validated_public_constraints(&self) -> Vec<Vec<Card>> {
@@ -896,6 +989,13 @@ where
                 self.reveal_redraw(*player_id, *reveal);
                 self.update_constraints();
             }
+            ActionObservation::ExchangeDraw { player_id, .. } => {
+                // updates all players except the player_id since player_id has 3/4 cards
+                // In this case, the 2 card impossible_cases for player_id will be if player can have
+                // those cards amongst the 3/4 cards
+                // self.player_can_have_cards_after_exchange_draw
+                self.update_constraints_exchange_draw(*player_id, None);
+            }
             ActionObservation::ExchangeChoice { player_id, .. } => {
                 self.ambassador(*player_id);
                 self.update_constraints();
@@ -938,9 +1038,11 @@ where
                 }
                 self.update_constraints();
             }
-            ActionObservation::ExchangeDraw { card, .. } => {
+            ActionObservation::ExchangeDraw { player_id, card } => {
                 self.restrict(6, card);
-                self.update_constraints();
+                self.set_impossible_constraints();
+                self.set_impossible_constraints_2();
+                self.update_constraints_exchange_draw(*player_id, Some(card));
             }
             ActionObservation::ExchangeChoice {
                 player_id,
