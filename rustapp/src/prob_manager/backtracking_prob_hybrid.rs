@@ -794,27 +794,21 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                 for card2 in card1..MAX_CARD_PERMS_ONE {
                     for card3 in card2..MAX_CARD_PERMS_ONE {
                         for card4 in card3..MAX_CARD_PERMS_ONE {
-                            // Count occurrences of each card type
-                            let mut counts = [0u8; 5];
-                            counts[card1] += 1;
-                            counts[card2] += 1;
-                            counts[card3] += 1;
-                            counts[card4] += 1;
+                            if card1 == card2 && card1 == card3 && card1 == card4 {
+                                continue;
+                            }
 
-                            // Check that no card type appears more than 3 times
-                            if counts.iter().all(|&count| count <= 3) {
-                                Self::clear_buffer(&mut inferred_constraints);
-                                let cards = vec![
-                                    Card::try_from(card1 as u8).unwrap(),
-                                    Card::try_from(card2 as u8).unwrap(),
-                                    Card::try_from(card3 as u8).unwrap(),
-                                    Card::try_from(card4 as u8).unwrap(),
-                                ];
-                                inferred_constraints[player_id].extend_from_slice(&cards);
+                            Self::clear_buffer(&mut inferred_constraints);
+                            let cards = vec![
+                                Card::try_from(card1 as u8).unwrap(),
+                                Card::try_from(card2 as u8).unwrap(),
+                                Card::try_from(card3 as u8).unwrap(),
+                                Card::try_from(card4 as u8).unwrap(),
+                            ];
+                            inferred_constraints[player_id].extend_from_slice(&cards);
 
-                                if self.possible_to_have_cards_latest(&mut inferred_constraints) {
-                                    valid_combinations.push(cards);
-                                }
+                            if self.possible_to_have_cards_latest(&mut inferred_constraints) {
+                                valid_combinations.push(cards);
                             }
                         }
                     }

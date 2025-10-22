@@ -407,33 +407,25 @@ where
                 for card2 in card1..MAX_CARD_PERMS_ONE {
                     for card3 in card2..MAX_CARD_PERMS_ONE {
                         for card4 in card3..MAX_CARD_PERMS_ONE {
-                            // Count occurrences of each card type
-                            let mut counts = [0u8; 5];
-                            counts[card1] += 1;
-                            counts[card2] += 1;
-                            counts[card3] += 1;
-                            counts[card4] += 1;
-
-                            // Check that no card type appears more than 3 times
-                            if counts.iter().all(|&count| count <= 3) {
-                                let combo = vec![
-                                    Card::try_from(card1 as u8).unwrap(),
-                                    Card::try_from(card2 as u8).unwrap(),
-                                    Card::try_from(card3 as u8).unwrap(),
-                                    Card::try_from(card4 as u8).unwrap(),
-                                ];
-                                if self.player_can_have_cards_after_exchange_draw(
-                                    player_id, &combo, draw,
-                                ) {
-                                    valid_combinations.push(combo);
-                                }
+                            if card1 == card2 && card1 == card3 && card1 == card4 {
+                                continue;
+                            }
+                            let combo = vec![
+                                Card::try_from(card1 as u8).unwrap(),
+                                Card::try_from(card2 as u8).unwrap(),
+                                Card::try_from(card3 as u8).unwrap(),
+                                Card::try_from(card4 as u8).unwrap(),
+                            ];
+                            if self
+                                .player_can_have_cards_after_exchange_draw(player_id, &combo, draw)
+                            {
+                                valid_combinations.push(combo);
                             }
                         }
                     }
                 }
             }
         }
-
         valid_combinations
     }
     /// For each player (0..6), determine which cards they **must** have in *every* possible state.

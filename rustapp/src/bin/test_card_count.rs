@@ -710,7 +710,7 @@ pub fn game_rnd_constraint_bt2_st_lazy<I: InfoArrayTrait>(
                     // println!("vali: {:?}", validated_inferred_constraints);
                     // println!("test: {:?}", test_inferred_constraints);
                     // println!("{}", hh.get_replay_history_braindead());
-                    break;
+                    // break;
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
                     // panic!("Inferred constraints do not match!")
