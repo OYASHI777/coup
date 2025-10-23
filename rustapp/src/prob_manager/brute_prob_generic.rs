@@ -6,7 +6,9 @@
 
 use crate::history_public::{ActionObservation, Card};
 use crate::prob_manager::constants::MAX_PERM_STATES;
-use crate::prob_manager::engine::constants::{INDEX_PILE, MAX_CARD_PERMS_ONE};
+use crate::prob_manager::engine::constants::{
+    INDEX_PILE, MAX_CARD_PERMS_ONE, MAX_NUM_PER_CARD, MAX_PLAYERS_INCL_PILE,
+};
 use crate::traits::prob_manager::card_state::CardPermState;
 use crate::traits::prob_manager::coup_analysis::{
     CoupPossibilityAnalysis, CoupTraversal, ImpossibleConstraints, InferredConstraints,
@@ -382,6 +384,11 @@ where
             },
             "too many cards in draw"
         );
+        if draw.is_some() {
+            // ASSUMES inferred is always updated!
+            return vec![self.inferred_constraints[player_id].clone()];
+        }
+
         let dead_card_count = self.public_constraints[player_id].len();
         let mut valid_combinations = Vec::with_capacity(5 * 5 * 5 * 5);
 
@@ -436,34 +443,117 @@ where
     /// then `result[0]` will include 'A' and 'B'. If they sometimes have 'C' and sometimes not,
     /// 'C' won't appear in `result[0]`. If they always have two 'A's (i.e., every state has "AA"),
     /// then `result[0]` will contain `['A','A']`.
-    pub fn must_have_cards(&self) -> Vec<Vec<Card>> {
-        let mut result: Vec<Vec<Card>> = (0..6).map(|_| Vec::with_capacity(2)).collect::<Vec<_>>();
+    pub fn must_have_cards(
+        &self,
+        player_id_exchange_draw: Option<usize>,
+        draw: Option<&[Card]>,
+    ) -> Vec<Vec<Card>> {
+        debug_assert!(
+            player_id_exchange_draw != Some(INDEX_PILE),
+            "Must be proper player"
+        );
+        let mut result: Vec<Vec<Card>> = (0..6).map(|_| Vec::with_capacity(4)).collect::<Vec<_>>();
         result.push(Vec::with_capacity(3));
+        let mut dead_count: [[u8; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE] =
+            [[0; MAX_CARD_PERMS_ONE]; MAX_PLAYERS_INCL_PILE];
+        self.public_constraints
+            .iter()
+            .enumerate()
+            .for_each(|(i, v)| v.iter().for_each(|c| dead_count[i][*c as usize] += 1));
         // If there are no states at all, every player's "must have" set is empty
         if self.calculated_states.is_empty() {
             return result;
         }
-
+        // TODO: handle case for PILE, they have 1 card...
         // For each of the 7 players, compute the "intersection frequency map"
         // across all `calculated_states`.
         for (player_id, result_player) in result.iter_mut().enumerate() {
             // Start by taking the frequency map from the first state
             let iter = self.calculated_states.iter();
-            let mut common_freq = [MAX_CARD_PERMS_ONE as u8; 5];
+            let mut common_freq = [MAX_NUM_PER_CARD as u8; 5];
 
             // Intersect with the frequency maps of all subsequent states
-            for state in iter {
-                let freq = state.player_card_counts(player_id);
+            // For each character currently in common_freq, lower it to the
+            // min frequency if this new state has fewer of that character.
+            if Some(player_id) == player_id_exchange_draw {
+                'state_iter: for state in iter {
+                    let mut freq = state.player_card_counts(player_id);
+                    if player_id_exchange_draw == self.private_player {
+                        let draw_0 = draw.unwrap()[0];
+                        let draw_1 = draw.unwrap()[1];
+                        freq[draw_0 as usize] += 1;
+                        freq[draw_1 as usize] += 1;
+                        for (card_id, common_count) in common_freq.clone().iter().enumerate() {
+                            let freq_count = freq[card_id];
+                            let new_count = *common_count.min(&freq_count);
+                            common_freq[card_id] = new_count;
+                        }
+                    } else {
+                        let freq_pile = state.player_card_counts(INDEX_PILE);
 
-                // For each character currently in common_freq, lower it to the
-                // min frequency if this new state has fewer of that character.
-                for (card_id, common_count) in common_freq.clone().iter().enumerate() {
-                    let freq_count = freq[card_id];
-                    let new_count = *common_count.min(&freq_count);
-                    common_freq[card_id] = new_count;
+                        // Sampling 2 out of 3 cards
+                        // For each card type that could remain in pile (not drawn)
+                        for card_left_in_pile in 0..MAX_CARD_PERMS_ONE {
+                            if freq_pile[card_left_in_pile] == 0 {
+                                continue; // Skip if this card type isn't in pile
+                            }
+
+                            for card_id in 0..MAX_CARD_PERMS_ONE {
+                                let mut freq_count = freq[card_id] + freq_pile[card_id];
+                                if card_id == card_left_in_pile {
+                                    freq_count -= 1; // This is guaranteed > 0 before subtraction
+                                }
+                                common_freq[card_id] = common_freq[card_id].min(freq_count);
+                            }
+                            if common_freq.iter().all(|count| *count == 0) {
+                                break 'state_iter;
+                            }
+                        }
+                    }
                 }
-                if common_freq.iter().all(|count| *count == 0) {
-                    break;
+            } else if player_id == INDEX_PILE && player_id_exchange_draw.is_some() {
+                if let Some(draw_cards) = draw {
+                    // ASSUMES for all states in calculated states, pile has all cards in draw
+                    for state in iter {
+                        let mut freq_pile = state.player_card_counts(INDEX_PILE);
+                        freq_pile[draw_cards[0] as usize] -= 1;
+                        freq_pile[draw_cards[1] as usize] -= 1;
+                        for card_id in 0..MAX_CARD_PERMS_ONE {
+                            common_freq[card_id] = common_freq[card_id].min(freq_pile[card_id]);
+                        }
+                        if common_freq.iter().all(|count| *count == 0) {
+                            break;
+                        }
+                    }
+                } else {
+                    'state_iter: for state in iter {
+                        // Pile only guaranteed to have a particular card if all are the same
+                        // => player drawing any 2 results in the same pile card!
+                        let freq_pile = state.player_card_counts(INDEX_PILE);
+                        for card_left_in_pile in 0..MAX_CARD_PERMS_ONE {
+                            if freq_pile[card_left_in_pile] == 0 {
+                                continue; // Skip if this card type isn't in pile
+                            }
+
+                            for card_id in 0..MAX_CARD_PERMS_ONE {
+                                let freq_count = (card_id == card_left_in_pile) as u8;
+                                common_freq[card_id] = common_freq[card_id].min(freq_count);
+                            }
+                            if common_freq.iter().all(|count| *count == 0) {
+                                break 'state_iter;
+                            }
+                        }
+                    }
+                }
+            } else {
+                for state in iter {
+                    let freq = state.player_card_counts(player_id);
+                    for card_id in 0..MAX_CARD_PERMS_ONE {
+                        common_freq[card_id] = common_freq[card_id].min(freq[card_id]);
+                    }
+                    if common_freq.iter().all(|count| *count == 0) {
+                        break;
+                    }
                 }
             }
 
@@ -471,10 +561,10 @@ where
             // in **every** state for this player. Convert that map to a Vec<char>.
             let mut must_have_for_player = Vec::with_capacity(3);
             for (card_id, count) in common_freq.iter().enumerate() {
-                // Repeat each character `count` times
-                for _ in 0..*count {
-                    must_have_for_player.push(Card::try_from(card_id as u8).unwrap());
-                }
+                let card_count = (*count - dead_count[player_id][card_id]) as usize;
+                must_have_for_player.extend(
+                    std::iter::repeat(Card::try_from(card_id as u8).unwrap()).take(card_count),
+                );
             }
 
             *result_player = must_have_for_player;
@@ -710,18 +800,8 @@ where
     /// Assumes calculates states align with latest constraints
     pub fn update_constraints(&mut self) {
         // Setting to false if no need for auto calculation
-        self.inferred_constraints = self.must_have_cards();
+        self.inferred_constraints = self.must_have_cards(None, None);
         self.set_impossible_constraints();
-        for (player, cards) in self.public_constraints.iter().enumerate() {
-            for card in cards.iter() {
-                if let Some(pos) = self.inferred_constraints[player]
-                    .iter()
-                    .position(|c| *c == *card)
-                {
-                    self.inferred_constraints[player].swap_remove(pos);
-                }
-            }
-        }
         for vec in self.public_constraints.iter_mut() {
             vec.sort_unstable();
         }
@@ -745,7 +825,6 @@ where
     // ASSUMES
     // - previous move impossible_constraint updated
     pub fn update_constraints_exchange_draw(&mut self, player_id: usize, draw: Option<&[Card]>) {
-        // Inferred constraint remains unchanged
         // Update the player_id impossible_constraints if false as he got more cards
         for card in 0..MAX_CARD_PERMS_ONE {
             if self.player_can_have_cards_after_exchange_draw(
@@ -791,6 +870,8 @@ where
         if self.auto_calculate_impossible_constraints_3 {
             self.impossible_constraints_3 = [[[true; 5]; 5]; 5];
         }
+        // This goes last as self.player_can_have_cards_after_exchange_draw depends on previous inferred_constraints
+        self.inferred_constraints = self.must_have_cards(Some(player_id), draw);
     }
     /// Returns all the dead cards for each player that we are certain they have
     /// Assumes calculates states align with latest constraints
@@ -976,8 +1057,6 @@ where
             }
             ActionObservation::ExchangeDraw { player_id, card } => {
                 self.restrict(6, card);
-                self.set_impossible_constraints();
-                self.set_impossible_constraints_2();
                 self.update_constraints_exchange_draw(*player_id, Some(card));
             }
             ActionObservation::ExchangeChoice {
