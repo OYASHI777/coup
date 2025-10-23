@@ -448,9 +448,8 @@ where
         // across all `calculated_states`.
         for (player_id, result_player) in result.iter_mut().enumerate() {
             // Start by taking the frequency map from the first state
-            let mut iter = self.calculated_states.iter();
-            let first_state = iter.next().unwrap();
-            let mut common_freq = first_state.player_card_counts(player_id);
+            let iter = self.calculated_states.iter();
+            let mut common_freq = [MAX_CARD_PERMS_ONE as u8; 5];
 
             // Intersect with the frequency maps of all subsequent states
             for state in iter {
