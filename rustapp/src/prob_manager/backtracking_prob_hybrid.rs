@@ -552,7 +552,19 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
             .inferred_constraints_mut()
             .iter_mut()
             .for_each(|v| v.clear());
+        let is_exchange_draw = self
+            .constraint_history
+            .last()
+            .is_some_and(|ao| matches!(ao.action_info(), ActionInfo::ExchangeDraw { .. }));
+        let player_exchange_draw =
+            is_exchange_draw.then(|| self.constraint_history.last().unwrap().player() as usize);
         for player in 0..INDEX_PILE {
+            // TODO: complete the exchangedraw after pile
+            // TODO: pile basically consists of only 1 card now...
+            if Some(player) == player_exchange_draw {
+                // Handles later
+                continue;
+            }
             if self.latest_constraint_mut().public_constraints()[player].is_empty() {
                 if self
                     .latest_constraint_mut()
@@ -621,34 +633,138 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
                 }
             }
         }
-        let mut must_have_card: [u8; MAX_CARD_PERMS_ONE] = [3; MAX_CARD_PERMS_ONE];
-        for card_num_a in 0..MAX_CARD_PERMS_ONE {
-            for card_num_b in card_num_a..MAX_CARD_PERMS_ONE {
-                for card_num_c in card_num_b..MAX_CARD_PERMS_ONE {
-                    // AA AB BB
-                    // means nothing, I need to check if all have A or all have B
-                    // need count lol
-                    if self
-                        .latest_constraint_mut()
-                        .get_impossible_constraint_3(card_num_a, card_num_b, card_num_c)
-                    {
-                        continue;
+        // Add exchange_draw player inferred constraints
+        if let Some(player) = player_exchange_draw {
+            // TODO: Handle exchange draw here similar to above but player can have 3/4 cards
+            //  - 3 cards if he has 1 card in public_constraints
+            //  - 4 cards if public_constraints is empty
+            // But player can have up to 4 cards.
+            // I can get impossible state from !self.possible_to_have_cards_latest()
+            let mut must_have_card: [u8; MAX_CARD_PERMS_ONE] = [3; MAX_CARD_PERMS_ONE];
+            let mut inferred_constraints = &mut Self::create_buffer();
+            if self.latest_constraint_mut().public_constraints()[player].is_empty() {
+                'outer: for card_a in 0..(MAX_CARD_PERMS_ONE - 1) {
+                    for card_b in card_a..MAX_CARD_PERMS_ONE {
+                        for card_c in card_b..MAX_CARD_PERMS_ONE {
+                            for card_d in card_c..MAX_CARD_PERMS_ONE {
+                                // TODO: Maybe can change this to card_c+1
+                                if card_a == card_b && card_a == card_c && card_a == card_d {
+                                    continue;
+                                }
+                                Self::clear_buffer(&mut inferred_constraints);
+                                inferred_constraints[player].extend_from_slice(&[
+                                    Card::try_from(card_a as u8).unwrap(),
+                                    Card::try_from(card_b as u8).unwrap(),
+                                    Card::try_from(card_c as u8).unwrap(),
+                                    Card::try_from(card_d as u8).unwrap(),
+                                ]);
+                                if self.possible_to_have_cards_latest(&mut inferred_constraints) {
+                                    let mut next = [0; MAX_CARD_PERMS_ONE];
+                                    next[card_a] += 1;
+                                    next[card_b] += 1;
+                                    next[card_c] += 1;
+                                    next[card_d] += 1;
+                                    must_have_card
+                                        .iter_mut()
+                                        .zip(next.iter())
+                                        .for_each(|(m, n)| *m = (*m).min(*n));
+                                    if must_have_card == [0; MAX_CARD_PERMS_ONE] {
+                                        break 'outer;
+                                    }
+                                }
+                            }
+                        }
                     }
-                    let mut next = [0u8; MAX_CARD_PERMS_ONE];
-                    next[card_num_a] += 1;
-                    next[card_num_b] += 1;
-                    next[card_num_c] += 1;
-                    must_have_card
-                        .iter_mut()
-                        .zip(next.iter())
-                        .for_each(|(m, n)| *m = (*m).min(*n));
-                    if must_have_card == [0; MAX_CARD_PERMS_ONE] {
-                        return;
-                        // break 'outer;
+                }
+            } else {
+                // ASSUMES player has 1 life left
+                // let mut must_have_card: [u8; MAX_CARD_PERMS_ONE] = [3; MAX_CARD_PERMS_ONE];
+                let mut inferred_constraints = &mut Self::create_buffer();
+                'outer: for card_a in 0..MAX_CARD_PERMS_ONE {
+                    for card_b in card_a..MAX_CARD_PERMS_ONE {
+                        for card_c in card_b..MAX_CARD_PERMS_ONE {
+                            Self::clear_buffer(&mut inferred_constraints);
+                            inferred_constraints[player].extend_from_slice(&[
+                                Card::try_from(card_a as u8).unwrap(),
+                                Card::try_from(card_b as u8).unwrap(),
+                                Card::try_from(card_c as u8).unwrap(),
+                            ]);
+                            if self.possible_to_have_cards_latest(&mut inferred_constraints) {
+                                let mut next = [0; MAX_CARD_PERMS_ONE];
+                                next[card_a] += 1;
+                                next[card_b] += 1;
+                                next[card_c] += 1;
+                                must_have_card
+                                    .iter_mut()
+                                    .zip(next.iter())
+                                    .for_each(|(m, n)| *m = (*m).min(*n));
+                                if must_have_card == [0; MAX_CARD_PERMS_ONE] {
+                                    break 'outer;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            for (card_num, card_count) in must_have_card.iter().enumerate() {
+                for _ in 0..*card_count {
+                    self.latest_constraint_mut().inferred_constraints_mut()[player]
+                        .push(Card::try_from(card_num as u8).unwrap());
+                }
+            }
+        }
+        // Determine pile inferred constraints
+        let mut must_have_card: [u8; MAX_CARD_PERMS_ONE] = [0; MAX_CARD_PERMS_ONE];
+        match is_exchange_draw {
+            true => {
+                // TODO:
+                if self.latest_constraint_mut().player_impossible_constraints()[INDEX_PILE]
+                    .iter()
+                    .map(|v| *v as u8)
+                    .sum::<u8>()
+                    == 4
+                {
+                    if let Some(card_pile) =
+                        self.latest_constraint_mut().player_impossible_constraints()[INDEX_PILE]
+                            .iter()
+                            .position(|v| !*v)
+                    {
+                        must_have_card[card_pile] = 1;
+                    }
+                }
+            }
+            false => {
+                must_have_card = [3; MAX_CARD_PERMS_ONE];
+                for card_num_a in 0..MAX_CARD_PERMS_ONE {
+                    for card_num_b in card_num_a..MAX_CARD_PERMS_ONE {
+                        for card_num_c in card_num_b..MAX_CARD_PERMS_ONE {
+                            // AA AB BB
+                            // means nothing, I need to check if all have A or all have B
+                            // need count lol
+                            if self
+                                .latest_constraint_mut()
+                                .get_impossible_constraint_3(card_num_a, card_num_b, card_num_c)
+                            {
+                                continue;
+                            }
+                            let mut next = [0u8; MAX_CARD_PERMS_ONE];
+                            next[card_num_a] += 1;
+                            next[card_num_b] += 1;
+                            next[card_num_c] += 1;
+                            must_have_card
+                                .iter_mut()
+                                .zip(next.iter())
+                                .for_each(|(m, n)| *m = (*m).min(*n));
+                            if must_have_card == [0; MAX_CARD_PERMS_ONE] {
+                                return;
+                                // break 'outer;
+                            }
+                        }
                     }
                 }
             }
         }
+        // Add pile inferred cards to inferred_constraints
         for (card_num, card_count) in must_have_card.iter().enumerate() {
             for _ in 0..*card_count {
                 log::trace!(
@@ -762,6 +878,8 @@ impl<T: InfoArrayTrait> BackTrackCardCountManager<T> {
         &self,
         player_id: usize,
     ) -> Vec<Vec<Card>> {
+        // OPTIMIZE: You could just store the inferred on an exchangedraw to get this quickly if you wanted
+        // OPTIMIZE: If private info is known you can just use the latest draw to check only 5 combinations...
         let mut valid_combinations = Vec::new();
         let mut inferred_constraints = Self::create_buffer();
 
@@ -2153,6 +2271,7 @@ impl<T: InfoArrayTrait> CoupTraversal for BackTrackCardCountManager<T> {
                 // We keep inferred the same as previous (based on standard of brute_prob)
                 self.add_move_clone_all(*player_id, action_info);
                 self.generate_impossible_constraints();
+                self.generate_inferred_constraints();
             }
             ActionObservation::ExchangeChoice { player_id, .. } => {
                 let action_info = ActionInfo::ExchangeChoice {
