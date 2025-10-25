@@ -71,6 +71,9 @@ where
             impossible_constraints_3_is_updated: auto_calc_3,
         }
     }
+    pub fn legal_states(&self) -> &Vec<T> {
+        &self.calculated_states
+    }
     /// total number of possible states
     pub fn len(&self) -> usize {
         self.calculated_states.len()
