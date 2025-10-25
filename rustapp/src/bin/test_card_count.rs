@@ -20,11 +20,13 @@ fn main() {
     let game_no = 100000;
     let bool_know_priv_info = false;
     let bool_skip_exchange = false;
-    let bool_lazy = false;
+    let bool_lazy = true;
     let print_frequency: usize = 100;
     let min_dead_check: usize = 0;
-    let num_threads = 16;
+    let num_threads = 12;
     // TODO: autocalculate is useless and should always be true else it will fail to update
+    // TODO: Clean up exchangedraw combi
+    // TODO: OPTIMIZE exchangedraw combi
     // exchangedraw properly as it is supposed to be updated in push_ao and not when retrieving impossibilities
     // BUG: Inferred is wrong for lazy as we do not keep an updated copy of inferred available!
     game_rnd_constraint_bt_mt::<InfoArray>(
@@ -36,6 +38,41 @@ fn main() {
         min_dead_check,
         bool_lazy,
     );
+    // run_single_test::<InfoArray>(
+    //     game_no,
+    //     bool_know_priv_info,
+    //     bool_skip_exchange,
+    //     min_dead_check,
+    //     bool_lazy,
+    // );
+}
+
+/// Run a single test with the given parameters
+pub fn run_single_test<I: InfoArrayTrait>(
+    thread_games: usize,
+    thread_bool_know_priv_info: bool,
+    bool_skip_exchange: bool,
+    thread_min_dead_check: usize,
+    bool_lazy: bool,
+) {
+    let (tx, _rx) = mpsc::channel();
+    if bool_lazy {
+        game_rnd_constraint_bt2_st_lazy::<I>(
+            thread_games,
+            thread_bool_know_priv_info,
+            bool_skip_exchange,
+            thread_min_dead_check,
+            tx,
+        );
+    } else {
+        game_rnd_constraint_bt2_st_new::<I>(
+            thread_games,
+            thread_bool_know_priv_info,
+            bool_skip_exchange,
+            thread_min_dead_check,
+            tx,
+        );
+    }
 }
 pub fn game_rnd_constraint_bt_mt<I: InfoArrayTrait>(
     num_threads: usize,
@@ -327,7 +364,7 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
                     for (idx, state) in test_exchange_states.iter().enumerate() {
                         println!("  State {}: {:?}", idx + 1, state);
                     }
-                    // panic!("Exchange states do not match!");
+                    panic!("Exchange states do not match!");
                 }
             }
 
@@ -394,10 +431,16 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
                     // panic!("Inferred to many items!")
                 }
                 if !pass_inferred_constraints {
-                    // println!("vali: {:?}", validated_inferred_constraints);
-                    // println!("test: {:?}", test_inferred_constraints);
-                    // println!("{}", hh.get_replay_history_braindead());
-                    // panic!();
+                    println!("private player: {:?}", private_player);
+                    println!("{}", hh.get_replay_history_braindead());
+                    println!("public: {:?}", validated_public_constraints);
+                    println!("vali: {:?}", validated_inferred_constraints);
+                    println!("test: {:?}", test_inferred_constraints);
+                    if prob.len() < 100 {
+                        println!("states: {:?}", prob.legal_states());
+                    }
+                    println!("states: {}", prob.len());
+                    panic!();
                     // break;
                     // let replay = hh.get_history(hh.store_len());
                     // replay_game_constraint(replay, bool_know_priv_info, log_bool);
@@ -426,7 +469,7 @@ pub fn game_rnd_constraint_bt2_st_new<I: InfoArrayTrait>(
                     // break;
                 }
                 if !pass_impossible_constraints_3 {
-                    break;
+                    panic!();
                 }
             }
             step += 1;
@@ -624,31 +667,31 @@ pub fn game_rnd_constraint_bt2_st_lazy<I: InfoArrayTrait>(
 
                 // Panic if exchange states don't match
                 if !pass_exchange_states {
-                    println!(
-                        "\n=== ExchangeDraw #{} for Player {} - MISMATCH ===",
-                        exchange_draw_count_inner, player_id
-                    );
-                    println!(
-                        "Dead cards: {:?}",
-                        prob.validated_public_constraints()[player_id]
-                    );
-                    println!(
-                        "\nBrute prob - Number of valid states: {}",
-                        validated_exchange_states.len()
-                    );
-                    println!("Brute prob - Valid card combinations:");
-                    for (idx, state) in validated_exchange_states.iter().enumerate() {
-                        println!("  State {}: {:?}", idx + 1, state);
-                    }
-                    println!(
-                        "\nBit prob - Number of valid states: {}",
-                        test_exchange_states.len()
-                    );
-                    println!("Bit prob - Valid card combinations:");
-                    for (idx, state) in test_exchange_states.iter().enumerate() {
-                        println!("  State {}: {:?}", idx + 1, state);
-                    }
-                    panic!("Exchange states do not match!");
+                    // println!(
+                    //     "\n=== ExchangeDraw #{} for Player {} - MISMATCH ===",
+                    //     exchange_draw_count_inner, player_id
+                    // );
+                    // println!(
+                    //     "Dead cards: {:?}",
+                    //     prob.validated_public_constraints()[player_id]
+                    // );
+                    // println!(
+                    //     "\nBrute prob - Number of valid states: {}",
+                    //     validated_exchange_states.len()
+                    // );
+                    // println!("Brute prob - Valid card combinations:");
+                    // for (idx, state) in validated_exchange_states.iter().enumerate() {
+                    //     println!("  State {}: {:?}", idx + 1, state);
+                    // }
+                    // println!(
+                    //     "\nBit prob - Number of valid states: {}",
+                    //     test_exchange_states.len()
+                    // );
+                    // println!("Bit prob - Valid card combinations:");
+                    // for (idx, state) in test_exchange_states.iter().enumerate() {
+                    //     println!("  State {}: {:?}", idx + 1, state);
+                    // }
+                    // panic!("Exchange states do not match!");
                 }
             }
 
@@ -810,7 +853,7 @@ impl Stats {
     pub fn print(&mut self) {
         if !self.first_print {
             // Move cursor up 9 lines and clear from cursor to end of screen
-            print!("\x1b[9A\x1b[J");
+            // print!("\x1b[9A\x1b[J");
         } else {
             self.first_print = false;
         }

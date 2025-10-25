@@ -1060,6 +1060,11 @@ where
             }
             ActionObservation::ExchangeDraw { player_id, card } => {
                 self.restrict(6, card);
+                // OPTIMIZE: maybe dont overwrite yknow...
+                // set constraints for all players
+                self.set_impossible_constraints();
+                self.set_impossible_constraints_2();
+                // overright constraints for exchange_draw player
                 self.update_constraints_exchange_draw(*player_id, Some(card));
             }
             ActionObservation::ExchangeChoice {
